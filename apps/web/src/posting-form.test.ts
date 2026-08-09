@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { aidPostSchema } from '@patchwork/at-lexicons';
 import {
     buildAidPostCreatePayload,
     buildAidPostEditPayload,
@@ -29,7 +30,8 @@ describe('posting form', () => {
         );
 
         expect(payload.record.$type).toBe('app.patchwork.aid.post');
-        expect(payload.record.location.precisionKm).toBeGreaterThanOrEqual(0.3);
+        expect(payload.record.location.precisionKm).toBeGreaterThanOrEqual(1);
+        expect(aidPostSchema.safeParse(payload.record).success).toBe(true);
         expect(payload.record.status).toBe('open');
         expect(payload.metadata.accessibilityTags).toEqual(['wheelchair']);
     });

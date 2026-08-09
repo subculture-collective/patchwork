@@ -88,10 +88,17 @@ describeWithPostgres('PostgreSQL OAuth persistence', () => {
             'did:plc:postgres-user',
             new Date(Date.now() + 60_000),
         );
+        await repository.setHandle(
+            'did:plc:postgres-user',
+            'postgres-user.example',
+        );
 
         await expect(
             new PostgresBrowserSessionRepository(pool).get(token),
-        ).resolves.toMatchObject({ did: 'did:plc:postgres-user' });
+        ).resolves.toMatchObject({
+            did: 'did:plc:postgres-user',
+            handle: 'postgres-user.example',
+        });
 
         await repository.revoke(token);
         await expect(repository.get(token)).resolves.toBeUndefined();

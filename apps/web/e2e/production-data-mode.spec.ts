@@ -189,8 +189,8 @@ test('public home advertises only implemented alpha capabilities', async ({
     await expect(page.getByRole('link', { name: 'Settings' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Volunteer' })).toBeHidden();
     await expect(page.getByRole('link', { name: 'Chat' })).toBeHidden();
-    await page.locator('.mh-more-menu summary').click();
-    const more = page.locator('.mh-more-menu-panel');
+    await page.getByRole('button', { name: 'More', exact: true }).click();
+    const more = page.locator('#secondary-navigation-links');
     await expect(more.getByRole('link', { name: 'Volunteer' })).toBeVisible();
     await expect(more.getByRole('link', { name: 'Scheduling' })).toHaveCount(0);
     await expect(more.getByRole('link', { name: 'Feedback' })).toHaveCount(0);

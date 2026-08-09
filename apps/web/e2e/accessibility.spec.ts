@@ -201,8 +201,8 @@ test.describe('Form accessibility', () => {
         await expect(
             page.getByRole('link', { name: 'Sign in to continue' }),
         ).toBeVisible();
-        await expect(page.getByRole('button')).toHaveCount(0);
-        await expect(page.locator('form')).toHaveCount(0);
+        await expect(page.locator('#main-content').getByRole('button')).toHaveCount(0);
+        await expect(page.locator('#main-content form')).toHaveCount(0);
     });
 });
 

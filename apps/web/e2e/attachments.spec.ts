@@ -21,6 +21,7 @@ test('posting binds private bytes to the created aid-post without exposing stora
     let uploadUrl = '';
     let uploadToken = '';
     let uploadedBytes = 0;
+    let aidPostBody: Record<string, unknown> | undefined;
 
     await page.route('**/api/**', async route => {
         const request = route.request();
@@ -52,11 +53,12 @@ test('posting binds private bytes to the created aid-post without exposing stora
             return;
         }
         if (pathname === '/at/aid-posts' && request.method() === 'POST') {
+            aidPostBody = request.postDataJSON() as Record<string, unknown>;
             await fulfill(
                 {
                     uri: postUri,
                     cid: 'bafy-private-file',
-                    record: request.postDataJSON(),
+                    record: aidPostBody,
                 },
                 201,
             );
@@ -132,7 +134,12 @@ test('posting binds private bytes to the created aid-post without exposing stora
         '/posting?tab=nearby&r=20000&lat=41.88&lng=-87.63&area=Disposable+test+area',
         { waitUntil: 'networkidle' },
     );
-    await expect(page.getByText(ownerDid)).toBeVisible();
+    await expect(page.getByText('@poster.test', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('Latitude')).toHaveCount(0);
+    await expect(page.getByLabel('Longitude')).toHaveCount(0);
+    await expect(page.getByLabel('Precision meters')).toHaveCount(0);
+    await expect(page.getByText('Selected area: Disposable test area')).toBeVisible();
+    await expect(page.getByText(/Public at 1 km precision or coarser/)).toBeVisible();
     await page.getByLabel('Title').fill('Disposable attachment request');
     await page
         .getByLabel('Description')
@@ -146,6 +153,12 @@ test('posting binds private bytes to the created aid-post without exposing stora
         page.getByText('handoff.png · 1 KB', { exact: true }),
     ).toBeVisible();
     await page.getByRole('button', { name: 'Publish request' }).click();
+
+    expect(aidPostBody).toMatchObject({
+        location: {
+            precisionKm: 1,
+        },
+    });
 
     await expect(
         page.getByText(

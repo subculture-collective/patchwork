@@ -19,6 +19,42 @@ the legal and operational review records.
 | Accessibility and language | No certification is fabricated | Independent assistive-technology/WCAG and professional Spanish reviews remain external launch blockers |
 | Operational ownership | No staffing assertion is fabricated | A distinct secondary responder, human game day acknowledgment, production capacity authority, and live backup/provider exercises remain required |
 
+## Frontend post-remediation record — 2026-08-08
+
+Baseline source: `0c2aed9eec515b9d4bc5f52fab3e76e2452994f7` on
+`codex/public-launch-remediation` (local worktree; changes not committed or
+deployed by this record).
+
+| Finding / control | Local implementation evidence | Status boundary |
+| --- | --- | --- |
+| Responsive secondary navigation | One controlled disclosure now closes on Escape, outside click, route selection, and history navigation. Mobile presents inline labelled route groups without a nested popover. `navigation-geometry.spec.ts` passed at 320, 360, 390, 768, and 1024 CSS pixels and at 200% text sizing; Chat navigation and desktop foreground hit-testing passed. | `VERIFIED_LOCAL` |
+| Public posting location | The web posting module consumes the canonical `@patchwork/at-lexicons` aid-post schema, enforces `PUBLIC_MIN_PRECISION_KM`, derives location from the confirmed approximate area, and exposes no mutable coordinate or precision fields. English and Spanish summaries describe public 1 km-or-coarser precision. Unit schema validation and the mocked production attachment/posting browser path passed with `precisionKm: 1`. | `VERIFIED_LOCAL` |
+| Pagination focus and announcements | Feed, Map, Resources, and Volunteer share the same focus decision helper. Browser evidence covers Feed page 1 to 2, appended-range announcement, final-page status focus, URL history/Back restoration, and Volunteer Back restoration. | `VERIFIED_LOCAL` |
+| Duplicate record-action names | Report, block, lifecycle, timeline, close, and delete labels include localized rendered position and list total. English/Spanish unit checks and same-title Feed browser assertions passed. | `VERIFIED_LOCAL` |
+| Push revoke zero state | No production behavior change was required. Browser assertions passed for disabled at zero, enabled after registration, and disabled after revocation. | `VERIFIED_REGRESSION_LOCAL` |
+| PW-IR-006 legal/policy approval | No policy text, effective date, draft banner, or approval state was changed. | `BLOCKED_EXTERNAL` — public release remains `NO-GO` |
+
+Verification outcomes:
+
+- `npm run check`: passed; 1,038 tests passed and 118 service-dependent tests
+  skipped, plus map, exact-location absence, release-trust, release-state,
+  backup-replication, and sprint-traceability checks.
+- Full web Chromium: 159 passed and 2 protected non-mocked staging journeys
+  skipped because credentials were not supplied.
+- Focused remediation Vitest: 42 passed. Focused navigation, notifications,
+  posting, Feed pagination, and Volunteer pagination browser coverage passed.
+- `npm run build -w @patchwork/web`: passed. Built assets were
+  `assets/index-Ds64aG9J.js`, `assets/index-BILdm333.css`,
+  `assets/InteractiveMap-DHNYp9JO.js`, and
+  `assets/InteractiveMap-CIGW-MKW.css`. The 701.05 kB main JavaScript chunk
+  retains the existing non-blocking size warning.
+- `npm run test:e2e:redact` and `git diff --check`: passed.
+
+These outcomes prove the local source, tests, and generated production bundle.
+No immutable image digest, controlled pre-alpha deployment, `/api/health/ready`
+result, deployed source SHA, or post-deploy Chrome acceptance evidence was
+produced in this implementation run.
+
 ## Local verification record — 2026-08-07
 
 - `npm run check`: passed; 1,034 tests passed and 118 service-dependent tests

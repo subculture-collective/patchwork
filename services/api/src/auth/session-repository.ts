@@ -109,6 +109,7 @@ const withAccountLock = async <T>(
 
 export interface BrowserSession {
     did: string;
+    handle?: string;
     expiresAt: Date;
     /** Browser-session creation follows a successful AT OAuth callback. */
     authenticatedAt: Date;
@@ -124,6 +125,7 @@ export interface BrowserSessionRepository {
 
 interface BrowserSessionRow {
     did: string;
+    handle?: string | null;
     expires_at: Date | string;
     created_at: Date | string;
 }
@@ -167,11 +169,14 @@ export class PostgresBrowserSessionRepository
                 [didHash],
             );
             const result = await client.query<BrowserSessionRow>(
-                `SELECT did, expires_at, created_at
-                 FROM patchwork_browser_sessions
-                 WHERE session_id_hash = $1
-                   AND revoked_at IS NULL
-                   AND expires_at > NOW()
+                `SELECT browser.did, browser.expires_at, browser.created_at,
+                        oauth.handle
+                 FROM patchwork_browser_sessions AS browser
+                 LEFT JOIN at_oauth_sessions AS oauth
+                   ON oauth.did = browser.did AND oauth.revoked_at IS NULL
+                 WHERE browser.session_id_hash = $1
+                   AND browser.revoked_at IS NULL
+                   AND browser.expires_at > NOW()
                    AND NOT EXISTS (
                        SELECT 1 FROM account_deactivations
                        WHERE did_hash = $2
@@ -183,6 +188,7 @@ export class PostgresBrowserSessionRepository
             return row ?
                     {
                         did: row.did,
+                        ...(row.handle ? { handle: row.handle } : {}),
                         expiresAt: new Date(row.expires_at),
                         authenticatedAt: new Date(row.created_at),
                     }

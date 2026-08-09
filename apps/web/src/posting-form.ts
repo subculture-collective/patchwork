@@ -1,4 +1,8 @@
-import { z } from 'zod';
+import {
+    aidPostSchema,
+    type AidPostRecord,
+} from '@patchwork/at-lexicons';
+import { PUBLIC_MIN_PRECISION_KM } from '@patchwork/shared';
 
 export const aidPostingCategories = [
     'food',
@@ -13,24 +17,7 @@ export type AidPostingCategory = (typeof aidPostingCategories)[number];
 
 const aidPostRecordNsid = 'app.patchwork.aid.post' as const;
 
-const aidPostSchema = z.object({
-    $type: z.literal(aidPostRecordNsid),
-    version: z.literal('1.0.0'),
-    title: z.string().min(1).max(140),
-    description: z.string().min(1).max(5000),
-    category: z.enum(aidPostingCategories),
-    urgency: z.enum(['low', 'medium', 'high', 'critical']),
-    status: z.enum(['open', 'in-progress', 'resolved', 'closed']),
-    location: z.object({
-        latitude: z.number().min(-90).max(90),
-        longitude: z.number().min(-180).max(180),
-        precisionKm: z.number().min(0.3).max(50),
-    }),
-    createdAt: z.string().datetime({ offset: true }),
-    updatedAt: z.string().datetime({ offset: true }).optional(),
-});
-
-export type AidPostLexiconRecord = z.infer<typeof aidPostSchema>;
+export type AidPostLexiconRecord = AidPostRecord;
 
 const validateAidPostRecord = (payload: unknown): AidPostLexiconRecord => {
     return aidPostSchema.parse(payload);
@@ -124,7 +111,7 @@ export interface AidPostMutationPayload {
     metadata: PostingPayloadMetadata;
 }
 
-const minimumPublicPrecisionMeters = 300;
+const minimumPublicPrecisionMeters = PUBLIC_MIN_PRECISION_KM * 1000;
 
 const normalizeAccessibilityTags = (tags: readonly string[]): string[] => {
     const normalized = tags

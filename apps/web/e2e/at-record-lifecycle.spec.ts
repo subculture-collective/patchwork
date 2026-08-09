@@ -71,14 +71,14 @@ test.describe('real two-account AT record lifecycle', () => {
             area: 'Disposable staging area',
         });
         await requester.goto(`/posting?${postingArea.toString()}`);
-        await expect(requester.getByText(/did:/).first()).toBeVisible();
+        await expect(requester.locator('.mh-auth-control').getByText(/^@/)).toBeVisible();
         await requester.getByLabel('Title').fill(title);
         await requester
             .getByLabel('Description')
             .fill('Disposable integration record. No private handoff data.');
-        await requester.getByLabel('Latitude').fill(exactLatitude!);
-        await requester.getByLabel('Longitude').fill(exactLongitude!);
-        await requester.getByLabel('Precision meters').fill('1000');
+        await expect(requester.getByLabel('Latitude')).toHaveCount(0);
+        await expect(requester.getByLabel('Longitude')).toHaveCount(0);
+        await expect(requester.getByLabel('Precision meters')).toHaveCount(0);
         await requester.getByRole('button', { name: 'Publish request' }).click();
         await expect(requester.getByText(/persisted via API\/DB/)).toBeVisible();
 
@@ -89,13 +89,13 @@ test.describe('real two-account AT record lifecycle', () => {
                 return helper.getByText(title).count();
             }, { timeout: 60_000, intervals: [2_000, 5_000, 10_000] })
             .toBe(1);
-        await helper.getByRole('button', { name: `Report ${title}` }).click();
+        await helper.getByRole('button', { name: new RegExp(`^Report ${title}, item \\d+ of \\d+$`) }).click();
         await helper.getByLabel('Report reason').selectOption('other');
         await helper.getByLabel('Private report details').fill(privateDetails);
         await helper.getByRole('button', { name: 'Submit report' }).click();
         await expect(helper.getByText('Report submitted.')).toBeVisible();
         await helper
-            .getByRole('button', { name: `Block author of ${title}` })
+            .getByRole('button', { name: new RegExp(`^Block author of ${title}, item \\d+ of \\d+$`) })
             .click();
         await helper.getByRole('button', { name: 'Confirm block author' }).click();
         await expect(helper.getByText('Author blocked.')).toBeVisible();

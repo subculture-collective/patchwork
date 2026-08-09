@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, PropsWithChildren } from 'react';
+import { forwardRef, type ButtonHTMLAttributes, type PropsWithChildren } from 'react';
 
 type ButtonVariant = 'primary' | 'secondary' | 'neutral';
 
@@ -12,7 +12,7 @@ const variantClassMap: Record<ButtonVariant, string> = {
     neutral: 'mh-button--neutral',
 };
 
-export const Button = ({
+export const Button = forwardRef<HTMLButtonElement, PropsWithChildren<ButtonProps>>(({
     children,
     className = '',
     variant = 'primary',
@@ -20,9 +20,10 @@ export const Button = ({
     disabled,
     'aria-label': ariaLabel,
     ...props
-}: PropsWithChildren<ButtonProps>) => {
+}, ref) => {
     return (
         <button
+            ref={ref}
             type={type}
             className={[
                 'mh-button inline-flex items-center justify-center px-4 py-2 text-sm font-semibold tracking-[0.01em] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mh-accent',
@@ -38,4 +39,6 @@ export const Button = ({
             {children}
         </button>
     );
-};
+});
+
+Button.displayName = 'Button';

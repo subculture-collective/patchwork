@@ -221,10 +221,12 @@ import {
     type AccountPreferences,
     type UserSettings,
     geoSharingPrecisions,
+    PUBLIC_MIN_PRECISION_KM,
     privacyExposurePreview,
     privacyLevels,
 } from '@patchwork/shared';
 import { type FeedRecordEnvelope } from './discovery-runtime';
+import { resolvePaginationFocus } from './pagination-focus';
 import { useAuth } from '../auth/AuthProvider';
 import { resolveWebDataMode } from './data-mode';
 
@@ -1087,6 +1089,51 @@ const LazyInteractiveMap = lazy(() =>
     })),
 );
 
+const usePaginationFocus = ({
+    itemCount,
+    isLoading,
+    hasNextPage,
+    announce,
+}: {
+    itemCount: number;
+    isLoading: boolean;
+    hasNextPage: boolean;
+    announce: (start: number, end: number) => string;
+}) => {
+    const [pendingFrom, setPendingFrom] = useState<number>();
+    const [announcement, setAnnouncement] = useState('');
+    const loadMoreRef = useRef<HTMLButtonElement>(null);
+    const loadedCountRef = useRef<HTMLParagraphElement>(null);
+
+    useEffect(() => {
+        if (pendingFrom === undefined) return;
+        const focusTarget = resolvePaginationFocus({
+            previousCount: pendingFrom,
+            itemCount,
+            isLoading,
+            hasNextPage,
+        });
+        if (!focusTarget) return;
+
+        if (itemCount > pendingFrom) {
+            setAnnouncement(announce(pendingFrom + 1, itemCount));
+        }
+        if (focusTarget === 'load-more') loadMoreRef.current?.focus();
+        else loadedCountRef.current?.focus();
+        setPendingFrom(undefined);
+    }, [announce, hasNextPage, isLoading, itemCount, pendingFrom]);
+
+    return {
+        announcement,
+        loadedCountRef,
+        loadMoreRef,
+        loadMore: (callback: () => void) => {
+            setPendingFrom(itemCount);
+            callback();
+        },
+    };
+};
+
 const MapRoute = ({
     discoveryState,
     onPatchDiscovery,
@@ -1108,6 +1155,16 @@ const MapRoute = ({
     onOpenChat,
 }: MapRouteProps) => {
     const { t, fmt } = useLocale();
+    const paginationFocus = usePaginationFocus({
+        itemCount: feedRecords.length,
+        isLoading,
+        hasNextPage,
+        announce: useCallback(
+            (start: number, end: number) =>
+                String(t('discovery.loadedRange', { start, end })),
+            [t],
+        ),
+    });
     const [tileError, setTileError] = useState<string>();
     const [focusedArea, setFocusedArea] = useState<{
         center: { lat: number; lng: number };
@@ -1226,11 +1283,12 @@ const MapRoute = ({
                     <Badge tone={dataOrigin === 'api' ? 'success' : 'info'}>
                         {dataOriginLabel(dataOrigin)}
                     </Badge>
-                    <span className='text-sm text-mh-textMuted' role='status' aria-live='polite'>
+                    <p ref={paginationFocus.loadedCountRef} tabIndex={-1} className='text-sm text-mh-textMuted' role='status'>
                         {t('discovery.loadedCount', { loaded: feedRecords.length, total })}
-                    </span>
+                    </p>
+                    <span className='sr-only' role='status' aria-live='polite'>{paginationFocus.announcement}</span>
                     {hasNextPage ? (
-                        <Button type='button' variant='neutral' className='px-3 py-1 text-xs' onClick={onLoadMore} disabled={isLoading}>
+                        <Button ref={paginationFocus.loadMoreRef} type='button' variant='neutral' className='px-3 py-1 text-xs' onClick={() => paginationFocus.loadMore(onLoadMore)} disabled={isLoading}>
                             {t('discovery.loadMore')}
                         </Button>
                     ) : null}
@@ -1705,7 +1763,15 @@ const replaceRecordFromAtResult = (
             : record,
     );
 
-const SafetyActions = ({ record }: { record: FeedRecordEnvelope }) => {
+const SafetyActions = ({
+    record,
+    position,
+    total,
+}: {
+    record: FeedRecordEnvelope;
+    position: number;
+    total: number;
+}) => {
     const { t } = useLocale();
     const [mode, setMode] = useState<'report' | 'block'>();
     const [reason, setReason] = useState<AidPostReportReason>('other');
@@ -1766,8 +1832,10 @@ const SafetyActions = ({ record }: { record: FeedRecordEnvelope }) => {
                     type='button'
                     variant='neutral'
                     className='px-3 py-1 text-xs'
-                    aria-label={t('safety.reportLabel', {
-                        title: record.card.title,
+                    aria-label={t('safety.positionedAction', {
+                        action: t('safety.reportLabel', { title: record.card.title }),
+                        position,
+                        total,
                     })}
                     onClick={() => setMode('report')}
                 >
@@ -1777,8 +1845,10 @@ const SafetyActions = ({ record }: { record: FeedRecordEnvelope }) => {
                     type='button'
                     variant='neutral'
                     className='px-3 py-1 text-xs'
-                    aria-label={t('safety.blockLabel', {
-                        title: record.card.title,
+                    aria-label={t('safety.positionedAction', {
+                        action: t('safety.blockLabel', { title: record.card.title }),
+                        position,
+                        total,
                     })}
                     onClick={() => setMode('block')}
                 >
@@ -1885,10 +1955,14 @@ const SafetyActions = ({ record }: { record: FeedRecordEnvelope }) => {
 
 const OwnerRecordActions = ({
     record,
+    position,
+    total,
     onReplaceRecord,
     onDeleteRecord,
 }: {
     record: FeedRecordEnvelope;
+    position: number;
+    total: number;
     onReplaceRecord: (record: FeedRecordEnvelope) => void;
     onDeleteRecord: (aidPostUri: string) => void;
 }) => {
@@ -1948,8 +2022,10 @@ const OwnerRecordActions = ({
                 <Button
                     type='button'
                     variant='neutral'
-                    aria-label={t('safety.closeLabel', {
-                        title: record.card.title.toLowerCase(),
+                    aria-label={t('safety.positionedAction', {
+                        action: t('safety.closeLabel', { title: record.card.title }),
+                        position,
+                        total,
                     })}
                     disabled={
                         !record.cid ||
@@ -1965,8 +2041,10 @@ const OwnerRecordActions = ({
                 <Button
                     type='button'
                     variant='neutral'
-                    aria-label={t('safety.deleteLabel', {
-                        title: record.card.title.toLowerCase(),
+                    aria-label={t('safety.positionedAction', {
+                        action: t('safety.deleteLabel', { title: record.card.title }),
+                        position,
+                        total,
                     })}
                     disabled={!record.cid || pending !== undefined}
                     onClick={() => setConfirmDelete(true)}
@@ -2050,6 +2128,16 @@ const FeedRoute = ({
     currentUserDid,
 }: FeedRouteProps) => {
     const { t, fmt } = useLocale();
+    const paginationFocus = usePaginationFocus({
+        itemCount: feedRecords.length,
+        isLoading,
+        hasNextPage,
+        announce: useCallback(
+            (start: number, end: number) =>
+                String(t('discovery.loadedRange', { start, end })),
+            [t],
+        ),
+    });
     const [expandedTimelineId, setExpandedTimelineId] = useState<
         string | undefined
     >();
@@ -2187,7 +2275,7 @@ const FeedRoute = ({
                     </div>
                 ) : (
                     <ul className='space-y-4'>
-                        {feedView.cards.map((card) => {
+                        {feedView.cards.map((card, index) => {
                             const record = feedRecords.find(
                                 (candidate) => candidate.card.id === card.id,
                             );
@@ -2293,9 +2381,11 @@ const FeedRoute = ({
                                                         }
                                                         variant='neutral'
                                                         className='px-3 py-1 text-xs'
-                                                        aria-label={
-                                                            action.ariaLabel
-                                                        }
+                                                        aria-label={t('safety.positionedAction', {
+                                                            action: action.ariaLabel,
+                                                            position: index + 1,
+                                                            total: feedView.cards.length,
+                                                        })}
                                                         onClick={() =>
                                                             onTransition(
                                                                 card.id,
@@ -2348,13 +2438,14 @@ const FeedRoute = ({
                                             <Button
                                                 variant='neutral'
                                                 className='px-3 py-1 text-xs'
-                                                aria-label={t(
-                                                    'feed.timelineFor',
-                                                    {
+                                                aria-label={t('safety.positionedAction', {
+                                                    action: t('feed.timelineFor', {
                                                         title: card.title,
                                                         count: card.timeline.length,
-                                                    },
-                                                )}
+                                                    }),
+                                                    position: index + 1,
+                                                    total: feedView.cards.length,
+                                                })}
                                                 onClick={() =>
                                                     setExpandedTimelineId(
                                                         (current) =>
@@ -2377,12 +2468,18 @@ const FeedRoute = ({
                                     {record &&
                                     currentUserDid &&
                                     currentUserDid !== record.recipientDid ? (
-                                        <SafetyActions record={record} />
+                                        <SafetyActions
+                                            record={record}
+                                            position={index + 1}
+                                            total={feedView.cards.length}
+                                        />
                                     ) : null}
                                     {record &&
                                     currentUserDid === record.recipientDid ? (
                                         <OwnerRecordActions
                                             record={record}
+                                            position={index + 1}
+                                            total={feedView.cards.length}
                                             onReplaceRecord={onReplaceRecord}
                                             onDeleteRecord={onDeleteRecord}
                                         />
@@ -2405,11 +2502,12 @@ const FeedRoute = ({
                         })}
                     </ul>
                 )}
-                <p className='mt-3 text-sm text-mh-textMuted' role='status' aria-live='polite'>
+                <p ref={paginationFocus.loadedCountRef} tabIndex={-1} className='mt-3 text-sm text-mh-textMuted' role='status'>
                     {t('discovery.loadedCount', { loaded: feedRecords.length, total })}
                 </p>
+                <span className='sr-only' role='status' aria-live='polite'>{paginationFocus.announcement}</span>
                 {hasNextPage ? (
-                    <Button className='mt-3' onClick={onLoadMore} disabled={isLoading}>
+                    <Button ref={paginationFocus.loadMoreRef} className='mt-3' onClick={() => paginationFocus.loadMore(onLoadMore)} disabled={isLoading}>
                         {t('discovery.loadMore')}
                     </Button>
                 ) : null}
@@ -2419,7 +2517,10 @@ const FeedRoute = ({
 };
 
 interface PostingRouteProps {
-    center: { lat: number; lng: number };
+    location: {
+        center: { lat: number; lng: number };
+        areaLabel: string;
+    };
     onCreateRecord: (record: FeedRecordEnvelope) => void;
     onNavigate: (route: AppRoute) => void;
     onCreateViaApi: (input: {
@@ -2432,7 +2533,7 @@ interface PostingRouteProps {
 }
 
 const PostingRoute = ({
-    center,
+    location,
     onCreateRecord,
     onNavigate,
     onCreateViaApi,
@@ -2443,9 +2544,6 @@ const PostingRoute = ({
     const [category, setCategory] = useState<AidPostingCategory>('food');
     const [urgency, setUrgency] = useState<1 | 2 | 3 | 4 | 5>(4);
     const [tagsText, setTagsText] = useState('');
-    const [lat, setLat] = useState(center.lat.toFixed(4));
-    const [lng, setLng] = useState(center.lng.toFixed(4));
-    const [precisionMeters, setPrecisionMeters] = useState('450');
     const [startAt, setStartAt] = useState('');
     const [endAt, setEndAt] = useState('');
     const [errors, setErrors] = useState<readonly PostingValidationIssue[]>([]);
@@ -2513,9 +2611,9 @@ const PostingRoute = ({
             urgency,
             accessibilityTags: parseCommaList(tagsText),
             location: {
-                lat: Number.parseFloat(lat),
-                lng: Number.parseFloat(lng),
-                precisionMeters: Number.parseInt(precisionMeters, 10),
+                lat: location.center.lat,
+                lng: location.center.lng,
+                precisionMeters: PUBLIC_MIN_PRECISION_KM * 1000,
             },
             timeWindow:
                 startAt.length > 0 && endAt.length > 0
@@ -2731,77 +2829,22 @@ const PostingRoute = ({
                         />
                     </div>
 
-                    <details className='border-2 border-mh-borderSoft p-3'>
-                        <summary className='cursor-pointer font-bold'>
-                            {t('posting.approximateArea')}
-                        </summary>
+                    <div className='border-2 border-mh-borderSoft p-3'>
+                        <h3 className='font-bold'>{t('posting.approximateArea')}</h3>
                         <p className='mt-2 text-sm text-mh-textMuted'>
-                            {t('posting.approximateAreaHelp')}
+                            {t('posting.selectedArea', { area: location.areaLabel })}
                         </p>
-                        <div className='mt-3 grid gap-4 sm:grid-cols-3'>
-                        <div>
-                            <label
-                                htmlFor='posting-lat'
-                                className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
-                            >
-                                {t('posting.latitudeLabel')}
-                            </label>
-                            <Input
-                                id='posting-lat'
-                                name='latitude'
-                                autoComplete='off'
-                                type='number'
-                                step='0.0001'
-                                min={-90}
-                                max={90}
-                                required
-                                value={lat}
-                                onChange={(event) => setLat(event.target.value)}
-                            />
-                        </div>
-                        <div>
-                            <label
-                                htmlFor='posting-lng'
-                                className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
-                            >
-                                {t('posting.longitudeLabel')}
-                            </label>
-                            <Input
-                                id='posting-lng'
-                                name='longitude'
-                                autoComplete='off'
-                                type='number'
-                                step='0.0001'
-                                min={-180}
-                                max={180}
-                                required
-                                value={lng}
-                                onChange={(event) => setLng(event.target.value)}
-                            />
-                        </div>
-                        <div>
-                            <label
-                                htmlFor='posting-precision'
-                                className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
-                            >
-                                {t('posting.precisionMetersLabel')}
-                            </label>
-                            <Input
-                                id='posting-precision'
-                                name='precisionMeters'
-                                autoComplete='off'
-                                type='number'
-                                min={300}
-                                max={50000}
-                                required
-                                value={precisionMeters}
-                                onChange={(event) =>
-                                    setPrecisionMeters(event.target.value)
-                                }
-                            />
-                        </div>
-                        </div>
-                    </details>
+                        <p className='mt-1 text-sm text-mh-textMuted'>
+                            {t('posting.publicPrecisionSummary')}
+                        </p>
+                        <Button
+                            className='mt-3'
+                            type='button'
+                            onClick={() => onNavigate('/map')}
+                        >
+                            {t('posting.changeArea')}
+                        </Button>
+                    </div>
 
                     <div className='border-2 border-mh-border bg-mh-surfaceElev p-4'>
                         <h3 className='font-bold'>
@@ -3571,6 +3614,16 @@ const ResourceRoute = ({
     currentUserDid,
 }: ResourceRouteProps) => {
     const { t, fmt } = useLocale();
+    const paginationFocus = usePaginationFocus({
+        itemCount: resourceCards.length,
+        isLoading,
+        hasNextPage,
+        announce: useCallback(
+            (start: number, end: number) =>
+                String(t('discovery.loadedRange', { start, end })),
+            [t],
+        ),
+    });
     const [activeCategory, setActiveCategory] =
         useState<DirectoryResourceCategory>();
     const [selectedUri, setSelectedUri] = useState<string>();
@@ -3674,11 +3727,12 @@ const ResourceRoute = ({
                 onPatch={onPatchDiscovery}
             />
 
-            <p className='text-sm text-mh-textMuted' role='status' aria-live='polite'>
+            <p ref={paginationFocus.loadedCountRef} tabIndex={-1} className='text-sm text-mh-textMuted' role='status'>
                 {t('discovery.loadedCount', { loaded: resourceCards.length, total })}
             </p>
+            <span className='sr-only' role='status' aria-live='polite'>{paginationFocus.announcement}</span>
             {hasNextPage ? (
-                <Button type='button' variant='neutral' onClick={onLoadMore} disabled={isLoading}>
+                <Button ref={paginationFocus.loadMoreRef} type='button' variant='neutral' onClick={() => paginationFocus.loadMore(onLoadMore)} disabled={isLoading}>
                     {t('discovery.loadMore')}
                 </Button>
             ) : null}
@@ -4429,6 +4483,17 @@ const VolunteerRoute = ({
     const lastVolunteerRequestKeyRef = useRef<string | undefined>(undefined);
     const [volunteerHasNextPage, setVolunteerHasNextPage] = useState(false);
     const [volunteerTotal, setVolunteerTotal] = useState(0);
+    const [isVolunteerLoading, setIsVolunteerLoading] = useState(false);
+    const paginationFocus = usePaginationFocus({
+        itemCount: profiles.length,
+        isLoading: isVolunteerLoading,
+        hasNextPage: volunteerHasNextPage,
+        announce: useCallback(
+            (start: number, end: number) =>
+                String(t('discovery.loadedRange', { start, end })),
+            [t],
+        ),
+    });
 
     const loadProfiles = useCallback(async (page = 1, force = false) => {
         const requestKey = `${page}\u0000${searchText.trim()}`;
@@ -4446,10 +4511,12 @@ const VolunteerRoute = ({
         }
         restoringVolunteerPageRef.current = false;
         volunteerPageRef.current = page;
+        setIsVolunteerLoading(true);
         setDiscoveryStatus(t('volunteer.loading'));
         const result = await fetchVolunteerProfilePageViaApi({ searchText }, page);
         if (!result.ok) {
             lastVolunteerRequestKeyRef.current = undefined;
+            setIsVolunteerLoading(false);
             setDiscoveryStatus(
                 `${t('common.error')}: ${t('common.requestFailed')}`,
             );
@@ -4463,6 +4530,7 @@ const VolunteerRoute = ({
         setVolunteerPage(page);
         setVolunteerHasNextPage(result.data.hasNextPage);
         setVolunteerTotal(result.data.total);
+        setIsVolunteerLoading(false);
         setDiscoveryStatus(
             result.data.items.length === 0 && page === 1
                 ? t('volunteer.noneFound')
@@ -4608,9 +4676,10 @@ const VolunteerRoute = ({
                 >
                     {discoveryStatus}
                 </p>
-                <p className='mt-2 text-xs text-mh-textMuted' role='status' aria-live='polite'>
+                <p ref={paginationFocus.loadedCountRef} tabIndex={-1} className='mt-2 text-xs text-mh-textMuted' role='status'>
                     {t('discovery.loadedCount', { loaded: profiles.length, total: volunteerTotal })}
                 </p>
+                <span className='sr-only' role='status' aria-live='polite'>{paginationFocus.announcement}</span>
                 <div className='mt-4 grid gap-3 sm:grid-cols-2'>
                     {profiles.map((profile) => (
                         <Card key={profile.uri} title={profile.displayName}>
@@ -4650,10 +4719,16 @@ const VolunteerRoute = ({
                 </div>
                 {volunteerHasNextPage ? (
                     <Button
+                        ref={paginationFocus.loadMoreRef}
                         type='button'
                         variant='neutral'
                         className='mt-4'
-                        onClick={() => void loadProfiles(volunteerPage + 1)}
+                        disabled={isVolunteerLoading}
+                        onClick={() =>
+                            paginationFocus.loadMore(() => {
+                                void loadProfiles(volunteerPage + 1);
+                            })
+                        }
                     >
                         {t('discovery.loadMore')}
                     </Button>
@@ -9679,6 +9754,8 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
     const { locale, changeLocale, t } = useLocale();
     const mainContentRef = useRef<HTMLDivElement>(null);
     const mobileNavToggleRef = useRef<HTMLButtonElement>(null);
+    const secondaryNavRef = useRef<HTMLDivElement>(null);
+    const secondaryNavToggleRef = useRef<HTMLButtonElement>(null);
     const [currentRoute, setCurrentRoute] = useState<AppRoute>(() =>
         readCurrentRoute(),
     );
@@ -9732,6 +9809,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         typeof navigator === 'undefined' ? true : navigator.onLine,
     );
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+    const [isSecondaryNavOpen, setIsSecondaryNavOpen] = useState(false);
     const [historyVersion, setHistoryVersion] = useState(0);
 
     const currentUserDid = auth.session?.did ?? '';
@@ -9741,15 +9819,36 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
     }, [appTitle, currentRoute, locale, t]);
 
     useEffect(() => {
-        if (!isMobileNavOpen) return undefined;
+        if (!isMobileNavOpen && !isSecondaryNavOpen) return undefined;
         const onKeyDown = (event: KeyboardEvent) => {
             if (event.key !== 'Escape') return;
-            setIsMobileNavOpen(false);
-            mobileNavToggleRef.current?.focus();
+            if (isSecondaryNavOpen) {
+                setIsSecondaryNavOpen(false);
+                secondaryNavToggleRef.current?.focus();
+                return;
+            }
+            if (isMobileNavOpen) {
+                setIsMobileNavOpen(false);
+                mobileNavToggleRef.current?.focus();
+            }
         };
         document.addEventListener('keydown', onKeyDown);
         return () => document.removeEventListener('keydown', onKeyDown);
-    }, [isMobileNavOpen]);
+    }, [isMobileNavOpen, isSecondaryNavOpen]);
+
+    useEffect(() => {
+        if (!isSecondaryNavOpen) return undefined;
+        const onPointerDown = (event: PointerEvent) => {
+            if (
+                event.target instanceof Node &&
+                !secondaryNavRef.current?.contains(event.target)
+            ) {
+                setIsSecondaryNavOpen(false);
+            }
+        };
+        document.addEventListener('pointerdown', onPointerDown);
+        return () => document.removeEventListener('pointerdown', onPointerDown);
+    }, [isSecondaryNavOpen]);
 
     useEffect(() => {
         if (!auth.session || webDataMode === 'fixture') return;
@@ -9849,6 +9948,8 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         }
 
         const handlePopState = () => {
+            setIsMobileNavOpen(false);
+            setIsSecondaryNavOpen(false);
             setCurrentRoute(readCurrentRoute());
             setHistoryVersion((version) => version + 1);
             const page = readPaginationPageFromUrl();
@@ -10089,6 +10190,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
     ) => {
         event.preventDefault();
         setIsMobileNavOpen(false);
+        setIsSecondaryNavOpen(false);
         navigate(route);
     };
 
@@ -10439,7 +10541,12 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
     ) : currentRoute === '/posting' ? (
         discoveryState.center ? (
             <PostingRoute
-                center={discoveryState.center}
+                location={{
+                    center: discoveryState.center,
+                    areaLabel:
+                        discoveryState.areaLabel ??
+                        String(t('discovery.areaUnknown')),
+                }}
                 onCreateRecord={(record) => {
                     setFeedRecords((current) => [record, ...current]);
                     patchDiscoveryState({
@@ -10589,13 +10696,14 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                         aria-controls='primary-navigation-links'
                         onClick={() => setIsMobileNavOpen((open) => !open)}
                     >
-                        {t('runtime.more')}
+                        {t('nav.menu')}
                     </button>
                     <div
                         id='primary-navigation-links'
                         className={`mh-nav-collapse${isMobileNavOpen ? ' is-open' : ''}`}
                     >
                     <div className='mh-nav-main'>
+                        <p className='mh-nav-group-label'>{t('nav.discoverGroup')}</p>
                         {primaryRoutes.map((route) => (
                             <a
                                 key={route}
@@ -10613,6 +10721,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                         ))}
                     </div>
                     <div className='mh-nav-tools'>
+                        <p className='mh-nav-group-label'>{t('nav.accountGroup')}</p>
                         {visibleAccountRoutes.map((route) => (
                             <a
                                 key={route}
@@ -10628,12 +10737,24 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                                 {t(routeLabelKeys[route])}
                             </a>
                         ))}
-                        <details className='mh-more-menu'>
-                            <summary className='mh-nav-chip'>
-                                {t('runtime.more')}{' '}
-                                <span aria-hidden='true'>+</span>
-                            </summary>
-                            <div className='mh-more-menu-panel'>
+                        <div className='mh-secondary-nav' ref={secondaryNavRef}>
+                            <p className='mh-nav-group-label'>{t('nav.secondaryGroup')}</p>
+                            <button
+                                ref={secondaryNavToggleRef}
+                                type='button'
+                                className='mh-nav-chip mh-secondary-nav-toggle'
+                                aria-expanded={isSecondaryNavOpen}
+                                aria-controls='secondary-navigation-links'
+                                onClick={() =>
+                                    setIsSecondaryNavOpen((open) => !open)
+                                }
+                            >
+                                {t('runtime.more')}
+                            </button>
+                            <div
+                                id='secondary-navigation-links'
+                                className={`mh-more-menu-panel${isSecondaryNavOpen ? ' is-open' : ''}`}
+                            >
                                 {visibleSecondaryRoutes.map((route) => (
                                     <a
                                         key={route}
@@ -10651,14 +10772,16 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                                     </a>
                                 ))}
                             </div>
-                        </details>
+                        </div>
                         <div className='mh-auth-control' aria-live='polite'>
                             {auth.status === 'booting' ? (
                                 <span>{t('runtime.checkingSession')}</span>
                             ) : auth.session ? (
                                 <>
                                     <span className='max-w-48 truncate text-xs font-bold'>
-                                        {auth.session.did}
+                                        {auth.session.handle
+                                            ? `@${auth.session.handle.replace(/^@/, '')}`
+                                            : t('nav.accountFallback')}
                                     </span>
                                     <Button
                                         variant='neutral'
