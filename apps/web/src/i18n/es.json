@@ -190,7 +190,7 @@
         "selectedAreaHelp": "Los resultados usan el área aproximada elegida explícitamente en estos filtros.",
         "advancedLocation": "Coordenadas avanzadas del área aproximada",
         "coordinateHelp": "Las coordenadas definen un centro público aproximado de búsqueda. No son un lugar exacto de entrega.",
-        "areaLabel": "Etiqueta de área aproximada",
+        "areaLabel": "Etiqueta de área aproximada (opcional)",
         "areaUnknown": "Área aproximada seleccionada",
         "areaLabelPlaceholder": "p. ej., zona norte",
         "areaPickerHelp": "Haz clic en el mapa o enfócalo y presiona Intro para elegir un área aproximada.",

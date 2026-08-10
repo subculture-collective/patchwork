@@ -519,8 +519,9 @@ const DiscoveryFiltersPanel = ({
                                 onSelectPostId={() => undefined}
                                 onTilesFailed={() => undefined}
                                 onConfirmArea={(center) => {
-                                    const label = areaLabel.trim();
-                                    if (!label) return;
+                                    const label =
+                                        areaLabel.trim() ||
+                                        String(t('discovery.areaUnknown'));
                                     onPatch({
                                         center,
                                         areaLabel: label,
@@ -528,7 +529,6 @@ const DiscoveryFiltersPanel = ({
                                         feedTab: 'nearby',
                                     });
                                 }}
-                                canConfirmArea={areaLabel.trim().length > 0}
                             />
                         </Suspense>
                     </div>

@@ -190,7 +190,7 @@
         "selectedAreaHelp": "Results use the approximate area explicitly selected in these filters.",
         "advancedLocation": "Advanced approximate-area coordinates",
         "coordinateHelp": "Coordinates define a public approximate search center. They are not an exact handoff location.",
-        "areaLabel": "Approximate area label",
+        "areaLabel": "Approximate area label (optional)",
         "areaUnknown": "Selected approximate area",
         "areaLabelPlaceholder": "e.g. North side",
         "areaPickerHelp": "Click the map, or focus it and press Enter, to choose an approximate area.",

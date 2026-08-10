@@ -163,10 +163,23 @@ test('map awaiting an area does not report an API failure', async ({ page }) => 
     await expect(
         page.getByText('Choose an approximate area.', { exact: true }),
     ).toBeVisible();
+    await expect(
+        page.getByLabel('Approximate area label (optional)', { exact: true }),
+    ).toBeVisible();
     await expect(page.getByText('API unavailable')).toHaveCount(0);
     await expect(page.getByText(/^API sync issue:/)).toHaveCount(0);
     await expect(page.getByText(/^Public-place sync issue:/)).toHaveCount(0);
     expect(discoveryRequests).toBe(0);
+
+    await page.locator('.mh-interactive-map').click({
+        position: { x: 120, y: 120 },
+    });
+    const confirmArea = page.getByRole('button', {
+        name: 'Confirm approximate area',
+    });
+    await expect(confirmArea).toBeEnabled();
+    await confirmArea.click();
+    await expect(page).toHaveURL(/area=Selected\+approximate\+area/);
 });
 
 test('public home advertises only implemented alpha capabilities', async ({
