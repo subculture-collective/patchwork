@@ -377,6 +377,7 @@ test('named AT account accepts an invitation and receives only its granted stewa
                 body: JSON.stringify({
                     session: {
                         did: stewardDid,
+                        handle: 'steward.test',
                         expiresAt: '2099-01-01T00:00:00.000Z',
                     },
                 }),
@@ -487,7 +488,7 @@ test('named AT account accepts an invitation and receives only its granted stewa
     });
 
     await page.goto('/organizations');
-    await expect(page.getByText(stewardDid, { exact: true })).toBeVisible();
+    await expect(page.getByText('@steward.test', { exact: true })).toBeVisible();
     await page.waitForLoadState('networkidle');
     await page
         .getByLabel('Invitation token')
