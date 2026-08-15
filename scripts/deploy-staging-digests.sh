@@ -72,7 +72,7 @@ if [[ -n "${PATCHWORK_COMPOSE_OVERRIDE_FILE:-}" ]]; then
 fi
 "${compose[@]}" pull \
     patchwork-api patchwork-api-migrations \
-    patchwork-spool patchwork-indexer-migrations \
+    patchwork-spool patchwork-v2-shadow patchwork-indexer-migrations \
     patchwork-thimble patchwork-moderation-migrations \
     patchwork-web
 if [[ "${PATCHWORK_DEPLOY_EXTERNAL_POSTGRES:-false}" != 'true' ]]; then
@@ -82,10 +82,11 @@ fi
 "${compose[@]}" run --rm --no-deps patchwork-indexer-migrations
 "${compose[@]}" run --rm --no-deps patchwork-moderation-migrations
 "${compose[@]}" up -d --no-build --wait \
-    patchwork-spool patchwork-thimble patchwork-api patchwork-web
+    patchwork-spool patchwork-v2-shadow patchwork-thimble patchwork-api patchwork-web
 
 for service in \
     patchwork-spool \
+    patchwork-v2-shadow \
     patchwork-thimble \
     patchwork-api \
     patchwork-web; do
@@ -102,6 +103,7 @@ done
 
 for probe in \
     'patchwork-spool:4100' \
+    'patchwork-v2-shadow:4101' \
     'patchwork-thimble:4200' \
     'patchwork-api:4000'; do
     service=${probe%%:*}

@@ -183,6 +183,8 @@ const indexerSchema = baseSchema.merge(atprotoSchema).extend({
         .string()
         .url()
         .default('wss://jetstream2.us-east.bsky.network/subscribe'),
+    INDEXER_JETSTREAM_VERSION: z.enum(['v1', 'v2']).default('v1'),
+    INDEXER_PROJECTION_MODE: z.enum(['live', 'v2-shadow']).default('live'),
 });
 
 const moderationWorkerSchema = baseSchema.merge(atprotoSchema).extend({

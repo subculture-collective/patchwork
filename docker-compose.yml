@@ -116,6 +116,8 @@ services:
             ATPROTO_PDS_URL: ${ATPROTO_PDS_URL:-https://bsky.social}
             INDEXER_PORT: 4100
             INDEXER_FIREHOSE_URL: ${INDEXER_FIREHOSE_URL:-wss://jetstream2.us-east.bsky.network/subscribe}
+            INDEXER_JETSTREAM_VERSION: ${INDEXER_JETSTREAM_VERSION:-v1}
+            INDEXER_PROJECTION_MODE: ${INDEXER_PROJECTION_MODE:-live}
             DATABASE_URL: postgresql://patchwork:${PATCHWORK_POSTGRES_PASSWORD:?Set PATCHWORK_POSTGRES_PASSWORD in .env}@patchwork-postgres:5432/patchwork
         networks:
             internal:
@@ -123,6 +125,42 @@ services:
                 aliases:
                     - patchwork-spool
                     - patchwork-quilt
+
+    # Opt-in rebuild worker. It cannot address the live projection and is not
+    # started by the default Compose profile.
+    patchwork-v2-shadow:
+        profiles: ['jetstream-v2-shadow']
+        image: ${PATCHWORK_INDEXER_IMAGE:-patchwork-indexer:local}
+        build:
+            context: .
+            dockerfile: Dockerfile
+            target: indexer-runtime
+        restart: unless-stopped
+        healthcheck:
+            test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:4101/health/ready >/dev/null']
+            interval: 10s
+            timeout: 3s
+            retries: 12
+        depends_on:
+            postgres:
+                condition: service_healthy
+            patchwork-indexer-migrations:
+                condition: service_completed_successfully
+            patchwork-api-migrations:
+                condition: service_completed_successfully
+        environment:
+            NODE_ENV: production
+            PATCHWORK_ENV: production
+            LOG_LEVEL: ${LOG_LEVEL:-info}
+            ATPROTO_SERVICE_DID: ${ATPROTO_SERVICE_DID:?Set a real ATPROTO_SERVICE_DID}
+            ATPROTO_PDS_URL: ${ATPROTO_PDS_URL:-https://bsky.social}
+            INDEXER_PORT: 4101
+            INDEXER_FIREHOSE_URL: ${INDEXER_V2_URL:-https://jetstream.us-east.bsky.network}
+            INDEXER_JETSTREAM_VERSION: v2
+            INDEXER_PROJECTION_MODE: v2-shadow
+            DATABASE_URL: postgresql://patchwork:${PATCHWORK_POSTGRES_PASSWORD:?Set PATCHWORK_POSTGRES_PASSWORD in .env}@patchwork-postgres:5432/patchwork
+        networks:
+            internal:
 
     patchwork-indexer-migrations:
         image: ${PATCHWORK_INDEXER_IMAGE:-patchwork-indexer:local}

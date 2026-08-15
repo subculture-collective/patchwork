@@ -124,12 +124,48 @@ services:
             ATPROTO_PDS_URL: ${ATPROTO_PDS_URL:-https://bsky.social}
             INDEXER_PORT: 4100
             INDEXER_FIREHOSE_URL: ${INDEXER_FIREHOSE_URL:-wss://jetstream2.us-east.bsky.network/subscribe}
+            INDEXER_JETSTREAM_VERSION: v1
+            INDEXER_PROJECTION_MODE: live
             DATABASE_URL: postgresql://patchwork:${PATCHWORK_STAGING_POSTGRES_PASSWORD:?Set PATCHWORK_STAGING_POSTGRES_PASSWORD in .env}@patchwork-staging-postgres:5432/patchwork
         networks:
             staging-internal:
             staging-web:
                 aliases:
                     - patchwork-staging-spool
+
+    patchwork-v2-shadow:
+        image: ${PATCHWORK_INDEXER_IMAGE:-patchwork-indexer:local}
+        build:
+            context: .
+            dockerfile: Dockerfile
+            target: indexer-runtime
+        container_name: patchwork-staging-v2-shadow
+        restart: unless-stopped
+        healthcheck:
+            test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:4101/health/ready >/dev/null']
+            interval: 10s
+            timeout: 3s
+            retries: 12
+        depends_on:
+            postgres:
+                condition: service_healthy
+            patchwork-indexer-migrations:
+                condition: service_completed_successfully
+            patchwork-api-migrations:
+                condition: service_completed_successfully
+        environment:
+            NODE_ENV: production
+            PATCHWORK_ENV: staging
+            LOG_LEVEL: ${LOG_LEVEL:-info}
+            ATPROTO_SERVICE_DID: ${STAGING_ATPROTO_SERVICE_DID:?Set STAGING_ATPROTO_SERVICE_DID in .env}
+            ATPROTO_PDS_URL: ${ATPROTO_PDS_URL:-https://bsky.social}
+            INDEXER_PORT: 4101
+            INDEXER_FIREHOSE_URL: ${INDEXER_V2_URL:-https://jetstream.us-east.bsky.network}
+            INDEXER_JETSTREAM_VERSION: v2
+            INDEXER_PROJECTION_MODE: v2-shadow
+            DATABASE_URL: postgresql://patchwork:${PATCHWORK_STAGING_POSTGRES_PASSWORD:?Set PATCHWORK_STAGING_POSTGRES_PASSWORD in .env}@patchwork-staging-postgres:5432/patchwork
+        networks:
+            staging-internal:
 
     patchwork-indexer-migrations:
         image: ${PATCHWORK_INDEXER_IMAGE:-patchwork-indexer:local}

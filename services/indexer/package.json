@@ -13,6 +13,8 @@
         "test": "vitest run --no-file-parallelism"
     },
     "dependencies": {
+        "@atproto/lex": "^0.3.6",
+        "@bsky/jetstream": "^1.0.0",
         "@patchwork/shared": "0.1.0",
         "pg": "^8.19.0",
         "ws": "^8.21.0"

@@ -22,6 +22,7 @@ describe('InMemoryCheckpointStore', () => {
     it('saves and loads a checkpoint', async () => {
         const saved = await store.save(42);
         expect(saved.cursor).toBe(42);
+        expect(saved.source).toBe('jetstream-v1-time-us');
         expect(saved.sequence).toBe(1);
         expect(saved.savedAt).toBeTruthy();
 
@@ -29,6 +30,11 @@ describe('InMemoryCheckpointStore', () => {
         expect(loaded).not.toBeNull();
         expect(loaded!.cursor).toBe(42);
         expect(loaded!.sequence).toBe(1);
+    });
+
+    it('labels v2 sequence checkpoints without accepting a v1 label', async () => {
+        const v2 = new InMemoryCheckpointStore('jetstream-v2-seq');
+        expect((await v2.save(42)).source).toBe('jetstream-v2-seq');
     });
 
     it('increments sequence on successive saves', async () => {
@@ -279,6 +285,7 @@ describe('MetricsCollector', () => {
             lagSeconds: 1.5,
             lastCheckpoint: {
                 cursor: 100,
+                source: 'jetstream-v1-time-us',
                 savedAt: new Date().toISOString(),
                 sequence: 7,
             },

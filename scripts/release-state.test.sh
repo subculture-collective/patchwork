@@ -14,6 +14,7 @@ if [[ "$1" == inspect ]]; then
     exit 0
 fi
 if [[ "$1" == compose ]]; then
+    printf '%s\n' "$*" >> "$DOCKER_CALLS"
     if [[ " $* " == *'/tiles/us.pmtiles'* ]]; then
         exit 1
     elif [[ " $* " == *' ps -q '* ]]; then
@@ -55,9 +56,13 @@ export PATH="$tmpdir/bin:$PATH"
 export PATCHWORK_RELEASE_STATE_DIR="$tmpdir/state"
 export PATCHWORK_RELEASE_VERIFY_SCRIPT="$tmpdir/verify"
 export FAKE_REVISION="$new_sha"
+export DOCKER_CALLS="$tmpdir/docker-calls"
 export PATCHWORK_EXPECTED_WEB_API_BASE_URL=https://patchwork.test/api
 bash "$repo_root/scripts/deploy-staging-digests.sh" \
     "$tmpdir/new.json" "$tmpdir/env" "$tmpdir/compose.yml" >/dev/null
+grep -q 'pull .*patchwork-v2-shadow' "$DOCKER_CALLS"
+grep -q 'up -d --no-build --wait .*patchwork-v2-shadow' "$DOCKER_CALLS"
+grep -q 'exec -T patchwork-v2-shadow .*4101/health/ready' "$DOCKER_CALLS"
 
 cmp -s "$tmpdir/new.json" "$tmpdir/state/current-artifact-digests.json"
 grep -q "$old_sha" "$tmpdir/state/previous-artifact-digests.json"
@@ -70,6 +75,8 @@ grep -q "$old_sha" "$tmpdir/state/previous-artifact-digests.json"
 export FAKE_REVISION="$old_sha"
 bash "$repo_root/scripts/rollback-staging-digests.sh" \
     "$tmpdir/env" "$tmpdir/compose.yml" >/dev/null
+grep -q 'stop patchwork-v2-shadow' "$DOCKER_CALLS"
+grep -q 'rm -f patchwork-v2-shadow' "$DOCKER_CALLS"
 grep -q "$old_sha" "$tmpdir/state/current-artifact-digests.json"
 
 if PATCHWORK_EXPECTED_WEB_API_BASE_URL=http://10.0.0.56:3023 \

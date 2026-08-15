@@ -29,16 +29,28 @@ export class IndexerRuntime {
             }, this.options.heartbeatIntervalMs ?? 10_000);
             this.heartbeatTimer.unref();
         }
-        await this.options.source.start(cursor, async event => {
-            const result = await this.options.pipeline.ingestAndCheckpoint([event]);
-            if (
-                result.normalizedCount + result.quarantinedCount !== 1 ||
-                result.failureCount !== result.quarantinedCount
-            ) {
-                throw new Error('Live AT event was rejected by the ingestion pipeline.');
-            }
-            await this.options.heartbeat?.(result.checkpointSeq);
-        });
+        await this.options.source.start(
+            cursor,
+            async event => {
+                const result =
+                    await this.options.pipeline.ingestAndCheckpoint([event]);
+                if (
+                    result.normalizedCount + result.quarantinedCount !== 1 ||
+                    result.failureCount !== result.quarantinedCount
+                ) {
+                    throw new Error(
+                        'Live AT event was rejected by the ingestion pipeline.',
+                    );
+                }
+                await this.options.heartbeat?.(result.checkpointSeq);
+            },
+            async controlCursor => {
+                await this.options.pipeline.acknowledgeControlCursor(
+                    controlCursor,
+                );
+                await this.options.heartbeat?.(controlCursor);
+            },
+        );
     }
 
     async stop(): Promise<void> {
