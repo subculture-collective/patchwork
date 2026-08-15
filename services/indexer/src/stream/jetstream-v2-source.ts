@@ -1,6 +1,7 @@
 import {
     Jetstream,
     type CollectionFilter,
+    type JetstreamOpts,
     type TypedEvent,
 } from '@bsky/jetstream';
 import type {
@@ -18,9 +19,10 @@ interface JetstreamV2ControlHandlers {
 
 interface JetstreamV2EventSourceOptions {
     service: string;
+    apiKey: string;
     collections: readonly string[];
     controls: JetstreamV2ControlHandlers;
-    createClient?: (service: string) => Pick<Jetstream, 'replay'>;
+    createClient?: (options: JetstreamOpts) => Pick<Jetstream, 'replay'>;
 }
 
 const sdkServiceUrl = (service: string): string => {
@@ -65,9 +67,13 @@ export class JetstreamV2EventSource implements AtEventSource {
         this.abort = new AbortController();
         this.metrics = initialMetrics();
         this.metrics.lastAcknowledgedCursor = cursor;
+        const clientOptions: JetstreamOpts = {
+            service: sdkServiceUrl(this.options.service),
+            apiKey: this.options.apiKey,
+        };
         const client =
-            this.options.createClient?.(sdkServiceUrl(this.options.service)) ??
-            new Jetstream(sdkServiceUrl(this.options.service));
+            this.options.createClient?.(clientOptions) ??
+            new Jetstream(clientOptions);
         this.metrics.connected = true;
         this.metrics.connectionsTotal = 1;
         this.task = this.consume(client, onEvent, onControlCursor).finally(() => {

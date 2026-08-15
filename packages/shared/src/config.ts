@@ -177,15 +177,31 @@ const apiSchemaWithRefinements = apiSchema.superRefine((value, context) => {
     }
 });
 
-const indexerSchema = baseSchema.merge(atprotoSchema).extend({
-    INDEXER_PORT: z.coerce.number().int().min(1).max(65535).default(4100),
-    INDEXER_FIREHOSE_URL: z
-        .string()
-        .url()
-        .default('wss://jetstream2.us-east.bsky.network/subscribe'),
-    INDEXER_JETSTREAM_VERSION: z.enum(['v1', 'v2']).default('v1'),
-    INDEXER_PROJECTION_MODE: z.enum(['live', 'v2-shadow']).default('live'),
-});
+const indexerSchema = baseSchema
+    .merge(atprotoSchema)
+    .extend({
+        INDEXER_PORT: z.coerce.number().int().min(1).max(65535).default(4100),
+        INDEXER_FIREHOSE_URL: z
+            .string()
+            .url()
+            .default('wss://jetstream2.us-east.bsky.network/subscribe'),
+        INDEXER_JETSTREAM_VERSION: z.enum(['v1', 'v2']).default('v1'),
+        INDEXER_PROJECTION_MODE: z.enum(['live', 'v2-shadow']).default('live'),
+        JETSTREAM_API_KEY: optionalSecretField,
+    })
+    .superRefine((value, context) => {
+        if (
+            value.INDEXER_JETSTREAM_VERSION === 'v2' &&
+            !value.JETSTREAM_API_KEY
+        ) {
+            context.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['JETSTREAM_API_KEY'],
+                message:
+                    'JETSTREAM_API_KEY is required for Jetstream v2 replay.',
+            });
+        }
+    });
 
 const moderationWorkerSchema = baseSchema.merge(atprotoSchema).extend({
     MODERATION_PORT: z.coerce.number().int().min(1).max(65535).default(4200),

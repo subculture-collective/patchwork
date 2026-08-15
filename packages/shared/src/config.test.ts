@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     loadApiConfig,
+    loadIndexerConfig,
     validateProductionConfig,
     validateProductionServiceConfig,
     validateAtAuthRuntimeConfig,
@@ -74,6 +75,43 @@ describe('config schema', () => {
             delete process.env.ATPROTO_SERVICE_DID;
         } else {
             process.env.ATPROTO_SERVICE_DID = previousDid;
+        }
+    });
+
+    it('requires an API key only for Jetstream v2 replay', () => {
+        const previousVersion = process.env.INDEXER_JETSTREAM_VERSION;
+        const previousKey = process.env.JETSTREAM_API_KEY;
+        const previousDid = process.env.ATPROTO_SERVICE_DID;
+
+        try {
+            process.env.ATPROTO_SERVICE_DID = 'did:example:test-service';
+            process.env.INDEXER_JETSTREAM_VERSION = 'v1';
+            delete process.env.JETSTREAM_API_KEY;
+            expect(() => loadIndexerConfig()).not.toThrow();
+
+            process.env.INDEXER_JETSTREAM_VERSION = 'v2';
+            expect(() => loadIndexerConfig()).toThrow(/JETSTREAM_API_KEY/);
+
+            process.env.JETSTREAM_API_KEY = 'test-replay-key';
+            expect(loadIndexerConfig().JETSTREAM_API_KEY).toBe(
+                'test-replay-key',
+            );
+        } finally {
+            if (previousVersion === undefined) {
+                delete process.env.INDEXER_JETSTREAM_VERSION;
+            } else {
+                process.env.INDEXER_JETSTREAM_VERSION = previousVersion;
+            }
+            if (previousKey === undefined) {
+                delete process.env.JETSTREAM_API_KEY;
+            } else {
+                process.env.JETSTREAM_API_KEY = previousKey;
+            }
+            if (previousDid === undefined) {
+                delete process.env.ATPROTO_SERVICE_DID;
+            } else {
+                process.env.ATPROTO_SERVICE_DID = previousDid;
+            }
         }
     });
 });

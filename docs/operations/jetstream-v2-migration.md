@@ -17,6 +17,12 @@ The first v2 run calls the SDK's `replay()` with `afterSeq: 0`. Later runs use
 only the `jetstream-v2-seq` checkpoint. Commit records still pass through
 Patchwork's `@patchwork/at-lexicons` and Zod normalization boundary.
 
+Bluesky-hosted v2 replay combines an unauthenticated live WebSocket with
+metered HTTP archive requests. Create an API key at
+`https://bsky.network/account#api-keys-section-heading` and inject it only as
+the `JETSTREAM_API_KEY` deployment secret. Patchwork refuses to start a v2
+replay without it; the v1 worker neither requires nor receives this key.
+
 ## Start a rebuild
 
 Apply the API and indexer migrations, then explicitly enable the shadow
@@ -27,9 +33,10 @@ docker compose --profile jetstream-v2-shadow up -d \
   patchwork-api-migrations patchwork-indexer-migrations patchwork-v2-shadow
 ```
 
-The profile is opt-in and does not replace `patchwork-spool`. The SDK service
-origin defaults to `https://jetstream.us-east.bsky.network` and may be
-overridden with `INDEXER_V2_URL`.
+The profile is opt-in and does not replace `patchwork-spool`. Set
+`JETSTREAM_API_KEY` before starting it. The SDK service origin defaults to
+`https://jetstream.us-east.bsky.network` and may be overridden with
+`INDEXER_V2_URL`.
 
 ## Compare projections
 

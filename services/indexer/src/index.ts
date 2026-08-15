@@ -333,6 +333,14 @@ export const startIndexerServer = async () => {
             'FATAL: Jetstream v2 must use v2-shadow, and the live projection must remain on v1 until an explicit cutover.',
         );
     }
+    const requireJetstreamV2ApiKey = (): string => {
+        if (!config.JETSTREAM_API_KEY) {
+            throw new Error(
+                'FATAL: JETSTREAM_API_KEY is required for Jetstream v2 replay.',
+            );
+        }
+        return config.JETSTREAM_API_KEY;
+    };
     const { pipeline, pool, projectionStore } = await createPipeline();
     const collections = [
         recordNsid.aidPost,
@@ -343,6 +351,7 @@ export const startIndexerServer = async () => {
         config.INDEXER_JETSTREAM_VERSION === 'v2' ?
             new JetstreamV2EventSource({
                 service: config.INDEXER_FIREHOSE_URL,
+                apiKey: requireJetstreamV2ApiKey(),
                 collections,
                 controls: (() => {
                     const store = new PostgresJetstreamControlStore(pool);

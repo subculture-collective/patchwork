@@ -57,6 +57,7 @@ describe('JetstreamV2EventSource', () => {
         const commits: unknown[] = [];
         const source = new JetstreamV2EventSource({
             service: 'wss://jetstream.us-east.bsky.network/subscribe',
+            apiKey: 'test-replay-key',
             collections: [collection],
             controls: {
                 identity: async event => {
@@ -69,8 +70,11 @@ describe('JetstreamV2EventSource', () => {
                     controls.push(`sync:${event.seq}`);
                 },
             },
-            createClient: service => {
-                expect(service).toBe('https://jetstream.us-east.bsky.network/');
+            createClient: options => {
+                expect(options).toEqual({
+                    service: 'https://jetstream.us-east.bsky.network/',
+                    apiKey: 'test-replay-key',
+                });
                 return {
                     replay: (options?: ReplayOpts) => {
                         replayOptions = options;
@@ -115,6 +119,7 @@ describe('JetstreamV2EventSource', () => {
         let afterSeq: number | undefined;
         const source = new JetstreamV2EventSource({
             service: 'https://jetstream.us-east.bsky.network',
+            apiKey: 'test-replay-key',
             collections: [collection],
             controls: {
                 identity: async () => undefined,

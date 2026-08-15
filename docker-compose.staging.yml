@@ -163,6 +163,7 @@ services:
             INDEXER_FIREHOSE_URL: ${INDEXER_V2_URL:-https://jetstream.us-east.bsky.network}
             INDEXER_JETSTREAM_VERSION: v2
             INDEXER_PROJECTION_MODE: v2-shadow
+            JETSTREAM_API_KEY: ${JETSTREAM_API_KEY:?Set JETSTREAM_API_KEY for v2 replay}
             DATABASE_URL: postgresql://patchwork:${PATCHWORK_STAGING_POSTGRES_PASSWORD:?Set PATCHWORK_STAGING_POSTGRES_PASSWORD in .env}@patchwork-staging-postgres:5432/patchwork
         networks:
             staging-internal:

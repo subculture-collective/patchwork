@@ -158,6 +158,7 @@ services:
             INDEXER_FIREHOSE_URL: ${INDEXER_V2_URL:-https://jetstream.us-east.bsky.network}
             INDEXER_JETSTREAM_VERSION: v2
             INDEXER_PROJECTION_MODE: v2-shadow
+            JETSTREAM_API_KEY: ${JETSTREAM_API_KEY:-}
             DATABASE_URL: postgresql://patchwork:${PATCHWORK_POSTGRES_PASSWORD:?Set PATCHWORK_POSTGRES_PASSWORD in .env}@patchwork-postgres:5432/patchwork
         networks:
             internal:

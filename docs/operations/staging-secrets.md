@@ -19,6 +19,7 @@ do not commit resolved Compose output or an environment file.
 | `STAGING_VITE_MAP_TILE_URL` | Same-origin content-addressed URL matching `/tiles/us.<sha256>.pmtiles` | Web build |
 | `STAGING_MODERATION_SERVICE_TOKEN` | Random internal bearer secret | API and moderation worker |
 | `INDEXER_FIREHOSE_URL` | Approved Jetstream/WebSocket source | Indexer |
+| `JETSTREAM_API_KEY` | Bluesky Preferred Providers API key; required for metered v2 replay HTTP requests and never sent to the v1 source | v2 shadow indexer |
 
 ## Protected browser-lifecycle inputs
 
