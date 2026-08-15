@@ -104,7 +104,7 @@ const createPipeline = async (): Promise<PersistentPipeline> => {
         checkpointInterval: 100,
         projectionStore,
         deadLetterStore: new PostgresDeadLetterStore(pool),
-        ...(config.INDEXER_PROJECTION_MODE === 'live' ?
+        ...(config.INDEXER_PROJECTION_MODE !== 'v2-shadow' ?
             { lifecycleReconciler: new PostgresLifecycleEventReconciler(pool) }
         :   {}),
     });
@@ -325,12 +325,15 @@ export const createIndexerServer = (
 };
 
 export const startIndexerServer = async () => {
-    if (
-        (config.INDEXER_JETSTREAM_VERSION === 'v2') !==
-        (config.INDEXER_PROJECTION_MODE === 'v2-shadow')
-    ) {
+    const validSourceProjectionPair =
+        (config.INDEXER_JETSTREAM_VERSION === 'v1' &&
+            config.INDEXER_PROJECTION_MODE === 'live') ||
+        (config.INDEXER_JETSTREAM_VERSION === 'v2' &&
+            (config.INDEXER_PROJECTION_MODE === 'v2-shadow' ||
+                config.INDEXER_PROJECTION_MODE === 'v2-live'));
+    if (!validSourceProjectionPair) {
         throw new Error(
-            'FATAL: Jetstream v2 must use v2-shadow, and the live projection must remain on v1 until an explicit cutover.',
+            'FATAL: Jetstream source and projection modes are incompatible.',
         );
     }
     const requireJetstreamV2ApiKey = (): string => {

@@ -115,9 +115,10 @@ services:
             ATPROTO_SERVICE_DID: ${ATPROTO_SERVICE_DID:?Set a real ATPROTO_SERVICE_DID}
             ATPROTO_PDS_URL: ${ATPROTO_PDS_URL:-https://bsky.social}
             INDEXER_PORT: 4100
-            INDEXER_FIREHOSE_URL: ${INDEXER_FIREHOSE_URL:-wss://jetstream2.us-east.bsky.network/subscribe}
-            INDEXER_JETSTREAM_VERSION: ${INDEXER_JETSTREAM_VERSION:-v1}
-            INDEXER_PROJECTION_MODE: ${INDEXER_PROJECTION_MODE:-live}
+            INDEXER_FIREHOSE_URL: ${INDEXER_FIREHOSE_URL:-https://jetstream.us-east.bsky.network}
+            INDEXER_JETSTREAM_VERSION: ${INDEXER_JETSTREAM_VERSION:-v2}
+            INDEXER_PROJECTION_MODE: ${INDEXER_PROJECTION_MODE:-v2-live}
+            JETSTREAM_API_KEY: ${JETSTREAM_API_KEY:?Set JETSTREAM_API_KEY for Jetstream v2}
             DATABASE_URL: postgresql://patchwork:${PATCHWORK_POSTGRES_PASSWORD:?Set PATCHWORK_POSTGRES_PASSWORD in .env}@patchwork-postgres:5432/patchwork
         networks:
             internal:

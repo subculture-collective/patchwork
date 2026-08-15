@@ -15,7 +15,10 @@ if [[ "$1" == inspect ]]; then
 fi
 if [[ "$1" == compose ]]; then
     printf '%s\n' "$*" >> "$DOCKER_CALLS"
-    if [[ " $* " == *'/tiles/us.pmtiles'* ]]; then
+    if [[ " $* " == *' config --format json '* ]]; then
+        printf '{"services":{"patchwork-spool":{"environment":{"INDEXER_PROJECTION_MODE":"%s"}}}}\n' \
+            "${FAKE_PROJECTION_MODE:-v2-shadow}"
+    elif [[ " $* " == *'/tiles/us.pmtiles'* ]]; then
         exit 1
     elif [[ " $* " == *' ps -q '* ]]; then
         printf 'fake-container\n'
@@ -56,6 +59,7 @@ export PATH="$tmpdir/bin:$PATH"
 export PATCHWORK_RELEASE_STATE_DIR="$tmpdir/state"
 export PATCHWORK_RELEASE_VERIFY_SCRIPT="$tmpdir/verify"
 export FAKE_REVISION="$new_sha"
+export FAKE_PROJECTION_MODE=v2-shadow
 export DOCKER_CALLS="$tmpdir/docker-calls"
 export PATCHWORK_EXPECTED_WEB_API_BASE_URL=https://patchwork.test/api
 bash "$repo_root/scripts/deploy-staging-digests.sh" \

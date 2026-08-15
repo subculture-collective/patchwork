@@ -1,4 +1,4 @@
-# Jetstream v2 shadow migration
+# Jetstream v2 migration
 
 Patchwork keeps the current v1 projection live while v2 rebuilds an isolated
 copy. Do not point the live worker at v2 or reuse its checkpoint.
@@ -10,8 +10,9 @@ copy. Do not point the live worker at v2 or reuse its checkpoint.
 - v2 checkpoints use `jetstream-v2-seq` and contain network sequence values.
 - v2 records, tombstones, identity state, account state, sync work, and
   projection freshness live in the `jetstream_v2_shadow` schema.
-- The indexer refuses the unsafe combinations `v2 + live` and
-  `v1 + v2-shadow`.
+- Before cutover, v2 writes only in `v2-shadow` mode. After the atomic
+  promotion, `v2-live` writes the public projection. The indexer rejects every
+  other source/projection pairing.
 
 The first v2 run pins a live network sequence, snapshots only Patchwork commits
 from sequence zero, then snapshots identity/account/sync history only for DIDs
@@ -64,19 +65,20 @@ reconciliation has completed.
 
 ## Cutover gate
 
-This change intentionally does not automate cutover. Before a separate atomic
-cutover change is authorized, require all of the following:
+Before running `scripts/cutover-jetstream-v2.sql`, require all of the following:
 
 1. The v2 replay has reached the live tail and the worker remains ready.
 2. URI and current-CID comparisons are clean or every exception is explained.
 3. Pending/failed repository reconciliation work is zero.
 4. Account deletion and identity-cache behavior has been exercised locally or
    in an isolated environment.
-5. The v1 worker, `jetstream-v1-time-us` checkpoint, and public projection
-   tables remain intact until the v2 projection has been accepted.
+5. The v1 worker and v2 shadow worker are both stopped at their durable
+   checkpoints.
 
-Cutover must change readers and the active writer together under a database
-lock or equivalent deployment transaction. Do not rename/drop the v1 tables
-or delete its checkpoint until the v2 projection has been accepted. Because
-Patchwork is not currently serving public traffic, no time-based soak period is
-required.
+The SQL cutover copies the current public projection into the
+`jetstream_v1_rollback` schema, replaces the public projection and control
+tables from `jetstream_v2_shadow` in one transaction, and leaves
+`jetstream-v1-time-us` untouched. Start only `patchwork-spool` afterward with
+`INDEXER_JETSTREAM_VERSION=v2` and `INDEXER_PROJECTION_MODE=v2-live`; leave the
+shadow worker stopped. Because Patchwork is not currently serving public
+traffic, no time-based soak period is required.

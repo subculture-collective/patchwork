@@ -184,9 +184,11 @@ const indexerSchema = baseSchema
         INDEXER_FIREHOSE_URL: z
             .string()
             .url()
-            .default('wss://jetstream2.us-east.bsky.network/subscribe'),
-        INDEXER_JETSTREAM_VERSION: z.enum(['v1', 'v2']).default('v1'),
-        INDEXER_PROJECTION_MODE: z.enum(['live', 'v2-shadow']).default('live'),
+            .default('https://jetstream.us-east.bsky.network'),
+        INDEXER_JETSTREAM_VERSION: z.enum(['v1', 'v2']).default('v2'),
+        INDEXER_PROJECTION_MODE: z
+            .enum(['live', 'v2-shadow', 'v2-live'])
+            .default('v2-live'),
         JETSTREAM_API_KEY: optionalSecretField,
     })
     .superRefine((value, context) => {
