@@ -13,9 +13,14 @@ copy. Do not point the live worker at v2 or reuse its checkpoint.
 - The indexer refuses the unsafe combinations `v2 + live` and
   `v1 + v2-shadow`.
 
-The first v2 run calls the SDK's `replay()` with `afterSeq: 0`. Later runs use
-only the `jetstream-v2-seq` checkpoint. Commit records still pass through
-Patchwork's `@patchwork/at-lexicons` and Zod normalization boundary.
+The first v2 run pins a live network sequence, snapshots only Patchwork commits
+from sequence zero, then snapshots identity/account/sync history only for DIDs
+discovered in those commits. It saves `jetstream-v2-seq` only after both bounded
+phases complete. The normal worker then calls `replay()` from that checkpoint
+for the small cutover gap and seamless realtime handoff. This avoids downloading
+network-wide control history while preserving account deletion, repository sync,
+and identity semantics for Patchwork participants. Commit records still pass
+through Patchwork's `@patchwork/at-lexicons` and Zod normalization boundary.
 
 Bluesky-hosted v2 replay combines an unauthenticated live WebSocket with
 metered HTTP archive requests. Create an API key at
@@ -25,12 +30,14 @@ replay without it; the v1 worker neither requires nor receives this key.
 
 ## Start a rebuild
 
-Apply the API and indexer migrations, then explicitly enable the shadow
-profile:
+Apply the API and indexer migrations, run the bounded backfill, then explicitly
+enable the shadow profile:
 
 ```sh
 docker compose --profile jetstream-v2-shadow up -d \
-  patchwork-api-migrations patchwork-indexer-migrations patchwork-v2-shadow
+  patchwork-api-migrations patchwork-indexer-migrations
+docker compose --profile jetstream-v2-shadow run --rm patchwork-v2-backfill
+docker compose --profile jetstream-v2-shadow up -d patchwork-v2-shadow
 ```
 
 The profile is opt-in and does not replace `patchwork-spool`. Set

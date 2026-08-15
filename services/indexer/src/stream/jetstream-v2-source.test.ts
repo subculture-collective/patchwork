@@ -59,6 +59,7 @@ describe('JetstreamV2EventSource', () => {
             service: 'wss://jetstream.us-east.bsky.network/subscribe',
             apiKey: 'test-replay-key',
             collections: [collection],
+            relevantDids: ['did:plc:alice'],
             controls: {
                 identity: async event => {
                     controls.push(`identity:${event.seq}`);
@@ -137,6 +138,44 @@ describe('JetstreamV2EventSource', () => {
         await source.start(42, async () => undefined);
         await waitFor(() => !source.getMetrics().connected);
         expect(afterSeq).toBe(42);
+        await source.stop();
+    });
+
+    it('acknowledges but does not persist controls for unrelated DIDs', async () => {
+        const controls = vi.fn().mockResolvedValue(undefined);
+        const controlCursors: number[] = [];
+        const source = new JetstreamV2EventSource({
+            service: 'https://jetstream.us-east.bsky.network',
+            apiKey: 'test-replay-key',
+            collections: [collection],
+            relevantDids: [],
+            controls: {
+                identity: controls,
+                account: controls,
+                sync: controls,
+            },
+            createClient: () =>
+                ({
+                    replay: () =>
+                        (async function* () {
+                            yield {
+                                did: 'did:plc:unrelated',
+                                seq: 8,
+                                time: '2026-08-14T12:00:00.000Z',
+                                kind: 'identity',
+                                identity: { did: 'did:plc:unrelated' },
+                            } as unknown as TypedEvent;
+                        })(),
+                }) as Pick<Jetstream, 'replay'>,
+        });
+
+        await source.start(null, async () => undefined, async cursor => {
+            controlCursors.push(cursor);
+        });
+        await waitFor(() => source.getMetrics().lastAcknowledgedCursor === 8);
+
+        expect(controls).not.toHaveBeenCalled();
+        expect(controlCursors).toEqual([8]);
         await source.stop();
     });
 

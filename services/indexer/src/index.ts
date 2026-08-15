@@ -353,6 +353,23 @@ export const startIndexerServer = async () => {
                 service: config.INDEXER_FIREHOSE_URL,
                 apiKey: requireJetstreamV2ApiKey(),
                 collections,
+                relevantDids: (
+                    await pool.query<{ did: string }>(
+                        `SELECT DISTINCT split_part(uri, '/', 3) AS did
+                         FROM (
+                            SELECT uri FROM indexer_aid_post_projections
+                            UNION ALL
+                            SELECT uri FROM indexer_directory_resource_projections
+                            UNION ALL
+                            SELECT uri FROM indexer_volunteer_profile_projections
+                         ) AS projected
+                         WHERE split_part(uri, '/', 3) LIKE 'did:%'
+                         UNION
+                         SELECT did FROM indexer_identity_cache
+                         UNION
+                         SELECT did FROM indexer_repo_reconciliation_queue`,
+                    )
+                ).rows.map(row => row.did),
                 controls: (() => {
                     const store = new PostgresJetstreamControlStore(pool);
                     return {

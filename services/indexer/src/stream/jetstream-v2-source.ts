@@ -11,6 +11,21 @@ import type {
     EventSourceMetrics,
 } from './event-source.js';
 
+interface JetstreamCommitEvent {
+    did: string;
+    seq: number;
+    time: string;
+    kind: 'commit';
+    commit: {
+        operation: 'create' | 'update' | 'delete';
+        collection: string;
+        rkey: string;
+        rev: string;
+        cid?: unknown;
+        record?: unknown;
+    };
+}
+
 interface JetstreamV2ControlHandlers {
     identity(event: Extract<TypedEvent, { kind: 'identity' }>): Promise<void>;
     account(event: Extract<TypedEvent, { kind: 'account' }>): Promise<void>;
@@ -21,11 +36,12 @@ interface JetstreamV2EventSourceOptions {
     service: string;
     apiKey: string;
     collections: readonly string[];
+    relevantDids?: readonly string[];
     controls: JetstreamV2ControlHandlers;
     createClient?: (options: JetstreamOpts) => Pick<Jetstream, 'replay'>;
 }
 
-const sdkServiceUrl = (service: string): string => {
+export const sdkServiceUrl = (service: string): string => {
     const url = new URL(service);
     if (url.protocol === 'wss:') url.protocol = 'https:';
     if (url.protocol === 'ws:') url.protocol = 'http:';
@@ -47,15 +63,35 @@ const initialMetrics = (): EventSourceMetrics => ({
     lastAcknowledgedCursor: null,
 });
 
+export const toAtEvent = (event: JetstreamCommitEvent): unknown => {
+    const commit = event.commit;
+    return {
+        seq: event.seq,
+        receivedAt: event.time,
+        action: commit.operation,
+        uri: `at://${event.did}/${commit.collection}/${commit.rkey}`,
+        collection: commit.collection,
+        authorDid: event.did,
+        ...('cid' in commit ? { cid: String(commit.cid) } : {}),
+        revision: commit.rev,
+        ...('record' in commit ? { record: commit.record } : {}),
+        ...(commit.operation === 'delete'
+            ? { deleteReason: 'deleted-upstream' }
+            : {}),
+    };
+};
+
 export class JetstreamV2EventSource implements AtEventSource {
     private metrics = initialMetrics();
     private abort: AbortController | null = null;
     private task: Promise<void> | null = null;
+    private readonly relevantDids: Set<string>;
 
     constructor(private readonly options: JetstreamV2EventSourceOptions) {
         if (options.collections.length === 0) {
             throw new Error('Jetstream v2 requires collection filters.');
         }
+        this.relevantDids = new Set(options.relevantDids);
     }
 
     async start(
@@ -63,7 +99,8 @@ export class JetstreamV2EventSource implements AtEventSource {
         onEvent: AtEventHandler,
         onControlCursor?: AtCursorHandler,
     ): Promise<void> {
-        if (this.task) throw new Error('Jetstream v2 source is already running.');
+        if (this.task)
+            throw new Error('Jetstream v2 source is already running.');
         this.abort = new AbortController();
         this.metrics = initialMetrics();
         this.metrics.lastAcknowledgedCursor = cursor;
@@ -76,10 +113,12 @@ export class JetstreamV2EventSource implements AtEventSource {
             new Jetstream(clientOptions);
         this.metrics.connected = true;
         this.metrics.connectionsTotal = 1;
-        this.task = this.consume(client, onEvent, onControlCursor).finally(() => {
-            this.metrics.connected = false;
-        });
-        void this.task.catch(error => {
+        this.task = this.consume(client, onEvent, onControlCursor).finally(
+            () => {
+                this.metrics.connected = false;
+            },
+        );
+        void this.task.catch((error) => {
             const metadata: { name: string; code?: string } = {
                 name: error instanceof Error ? error.name : 'UnknownError',
             };
@@ -101,7 +140,7 @@ export class JetstreamV2EventSource implements AtEventSource {
     async stop(): Promise<void> {
         if (!this.task) return;
         this.abort?.abort();
-        await this.task.catch(error => {
+        await this.task.catch((error) => {
             if (!this.abort?.signal.aborted) throw error;
         });
         this.task = null;
@@ -122,7 +161,7 @@ export class JetstreamV2EventSource implements AtEventSource {
         for await (const event of client.replay({
             afterSeq,
             collections: this.options.collections.map(
-                collection => collection as CollectionFilter,
+                (collection) => collection as CollectionFilter,
             ),
             kinds: ['commit', 'identity', 'account', 'sync'],
             signal: this.abort!.signal,
@@ -137,23 +176,12 @@ export class JetstreamV2EventSource implements AtEventSource {
                 continue;
             }
             if (event.kind === 'commit') {
-                const commit = event.commit;
-                await onEvent({
-                    seq: event.seq,
-                    receivedAt: event.time,
-                    action: commit.operation,
-                    uri: `at://${event.did}/${commit.collection}/${commit.rkey}`,
-                    collection: commit.collection,
-                    authorDid: event.did,
-                    ...('cid' in commit ? { cid: String(commit.cid) } : {}),
-                    revision: commit.rev,
-                    ...('record' in commit ? { record: commit.record } : {}),
-                    ...(commit.operation === 'delete' ?
-                        { deleteReason: 'deleted-upstream' }
-                    :   {}),
-                });
+                this.relevantDids.add(event.did);
+                await onEvent(toAtEvent(event));
             } else {
-                await this.options.controls[event.kind](event as never);
+                if (this.relevantDids.has(event.did)) {
+                    await this.options.controls[event.kind](event as never);
+                }
                 await onControlCursor?.(event.seq);
             }
             this.metrics.lastAcknowledgedCursor = event.seq;
