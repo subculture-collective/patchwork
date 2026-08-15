@@ -79,7 +79,23 @@ export class JetstreamV2EventSource implements AtEventSource {
         this.task = this.consume(client, onEvent, onControlCursor).finally(() => {
             this.metrics.connected = false;
         });
-        void this.task.catch(() => undefined);
+        void this.task.catch(error => {
+            const metadata: { name: string; code?: string } = {
+                name: error instanceof Error ? error.name : 'UnknownError',
+            };
+            if (
+                typeof error === 'object' &&
+                error !== null &&
+                'code' in error &&
+                typeof error.code === 'string'
+            ) {
+                metadata.code = error.code;
+            }
+            console.error(
+                '[indexer] Jetstream v2 replay stopped unexpectedly.',
+                metadata,
+            );
+        });
     }
 
     async stop(): Promise<void> {

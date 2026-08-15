@@ -5,6 +5,9 @@ import type { Pool } from 'pg';
 const hash = (value: string): string =>
     createHash('sha256').update(value).digest('hex');
 
+const observedAt = (value: string | undefined): string =>
+    value?.trim() || new Date().toISOString();
+
 export class PostgresJetstreamControlStore {
     constructor(private readonly pool: Pool) {}
 
@@ -19,7 +22,7 @@ export class PostgresJetstreamControlStore {
                 observed_at = EXCLUDED.observed_at,
                 updated_at = NOW()
              WHERE indexer_identity_cache.source_cursor < EXCLUDED.source_cursor`,
-            [did, event.handle ?? null, seq, event.time ?? new Date().toISOString()],
+            [did, event.handle ?? null, seq, observedAt(event.time)],
         );
     }
 
@@ -50,7 +53,7 @@ export class PostgresJetstreamControlStore {
                     event.active,
                     event.status ?? null,
                     seq,
-                    event.time ?? new Date().toISOString(),
+                    observedAt(event.time),
                 ],
             );
             if (accepted.rowCount && !event.active) {
@@ -92,7 +95,7 @@ export class PostgresJetstreamControlStore {
                 updated_at = NOW()
              WHERE indexer_repo_reconciliation_queue.source_cursor
                 < EXCLUDED.source_cursor`,
-            [did, event.rev, seq, event.time ?? new Date().toISOString()],
+            [did, event.rev, seq, observedAt(event.time)],
         );
     }
 }

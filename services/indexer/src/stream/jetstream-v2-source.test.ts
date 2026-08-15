@@ -1,5 +1,5 @@
 import type { Jetstream, ReplayOpts, TypedEvent } from '@bsky/jetstream';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { JetstreamV2EventSource } from './jetstream-v2-source.js';
 
 const collection = 'app.patchwork.aid.post';
@@ -137,6 +137,44 @@ describe('JetstreamV2EventSource', () => {
         await source.start(42, async () => undefined);
         await waitFor(() => !source.getMetrics().connected);
         expect(afterSeq).toBe(42);
+        await source.stop();
+    });
+
+    it('logs only sanitized metadata when replay stops fatally', async () => {
+        const consoleError = vi
+            .spyOn(console, 'error')
+            .mockImplementation(() => undefined);
+        const source = new JetstreamV2EventSource({
+            service: 'https://jetstream.us-east.bsky.network',
+            apiKey: 'secret-replay-key',
+            collections: [collection],
+            controls: {
+                identity: async () => undefined,
+                account: async () => undefined,
+                sync: async () => undefined,
+            },
+            createClient: () =>
+                ({
+                    replay: () =>
+                        (async function* () {
+                            throw Object.assign(new Error('secret-replay-key'), {
+                                code: '22007',
+                            });
+                        })(),
+                }) as Pick<Jetstream, 'replay'>,
+        });
+
+        await source.start(null, async () => undefined);
+        await waitFor(() => !source.getMetrics().connected);
+
+        expect(consoleError).toHaveBeenCalledWith(
+            '[indexer] Jetstream v2 replay stopped unexpectedly.',
+            { name: 'Error', code: '22007' },
+        );
+        expect(JSON.stringify(consoleError.mock.calls)).not.toContain(
+            'secret-replay-key',
+        );
+        consoleError.mockRestore();
         await source.stop();
     });
 });
