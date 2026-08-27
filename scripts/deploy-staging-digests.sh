@@ -72,7 +72,7 @@ if [[ -n "${PATCHWORK_COMPOSE_OVERRIDE_FILE:-}" ]]; then
 fi
 "${compose[@]}" pull \
     patchwork-api patchwork-api-migrations \
-    patchwork-spool patchwork-indexer-migrations \
+    patchwork-spool patchwork-v2-backfill patchwork-v2-shadow patchwork-indexer-migrations \
     patchwork-thimble patchwork-moderation-migrations \
     patchwork-web
 if [[ "${PATCHWORK_DEPLOY_EXTERNAL_POSTGRES:-false}" != 'true' ]]; then
@@ -81,14 +81,26 @@ fi
 "${compose[@]}" run --rm --no-deps patchwork-api-migrations
 "${compose[@]}" run --rm --no-deps patchwork-indexer-migrations
 "${compose[@]}" run --rm --no-deps patchwork-moderation-migrations
-"${compose[@]}" up -d --no-build --wait \
-    patchwork-spool patchwork-thimble patchwork-api patchwork-web
+projection_mode=$("${compose[@]}" config --format json | jq -er \
+    '.services["patchwork-spool"].environment.INDEXER_PROJECTION_MODE')
+runtime_services=(patchwork-spool patchwork-thimble patchwork-api patchwork-web)
+revision_services=(patchwork-spool patchwork-thimble patchwork-api patchwork-web)
+health_probes=(
+    'patchwork-spool:4100'
+    'patchwork-thimble:4200'
+    'patchwork-api:4000'
+)
+if [[ "$projection_mode" == 'v2-shadow' ]]; then
+    "${compose[@]}" run --rm --no-deps patchwork-v2-backfill
+    runtime_services+=(patchwork-v2-shadow)
+    revision_services+=(patchwork-v2-shadow)
+    health_probes+=('patchwork-v2-shadow:4101')
+else
+    "${compose[@]}" stop patchwork-v2-shadow >/dev/null 2>&1 || true
+fi
+"${compose[@]}" up -d --no-build --wait "${runtime_services[@]}"
 
-for service in \
-    patchwork-spool \
-    patchwork-thimble \
-    patchwork-api \
-    patchwork-web; do
+for service in "${revision_services[@]}"; do
     container_id=$("${compose[@]}" ps -q "$service")
     [[ -n "$container_id" ]]
     revision=$(docker inspect --format \
@@ -100,10 +112,7 @@ for service in \
     }
 done
 
-for probe in \
-    'patchwork-spool:4100' \
-    'patchwork-thimble:4200' \
-    'patchwork-api:4000'; do
+for probe in "${health_probes[@]}"; do
     service=${probe%%:*}
     port=${probe##*:}
     "${compose[@]}" exec -T "$service" \

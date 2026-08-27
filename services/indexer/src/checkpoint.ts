@@ -1,6 +1,7 @@
 import type {
     CheckpointData,
     CheckpointHealth,
+    CheckpointSource,
     CheckpointStore,
 } from '@patchwork/shared';
 
@@ -12,6 +13,10 @@ export class InMemoryCheckpointStore implements CheckpointStore {
     private checkpoint: CheckpointData | null = null;
     private sequence = 0;
 
+    constructor(
+        private readonly source: CheckpointSource = 'jetstream-v1-time-us',
+    ) {}
+
     async load(): Promise<CheckpointData | null> {
         return this.checkpoint;
     }
@@ -20,6 +25,7 @@ export class InMemoryCheckpointStore implements CheckpointStore {
         this.sequence += 1;
         this.checkpoint = {
             cursor,
+            source: this.source,
             savedAt: new Date().toISOString(),
             sequence: this.sequence,
         };
@@ -42,7 +48,7 @@ export class InMemoryCheckpointStore implements CheckpointStore {
     }
 }
 
-const CHECKPOINTS_TABLE = 'indexer_checkpoints';
+const CHECKPOINTS_TABLE = 'public.indexer_checkpoints';
 
 const ensureCheckpointsTableSql = `
 CREATE TABLE IF NOT EXISTS ${CHECKPOINTS_TABLE} (
@@ -51,27 +57,45 @@ CREATE TABLE IF NOT EXISTS ${CHECKPOINTS_TABLE} (
     saved_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     sequence BIGINT NOT NULL DEFAULT 1
 );
+ALTER TABLE ${CHECKPOINTS_TABLE}
+    ADD COLUMN IF NOT EXISTS cursor_source TEXT;
+UPDATE ${CHECKPOINTS_TABLE}
+SET cursor_source = 'jetstream-v1-time-us'
+WHERE cursor_source IS NULL;
+ALTER TABLE ${CHECKPOINTS_TABLE}
+    ALTER COLUMN cursor_source SET NOT NULL;
+INSERT INTO ${CHECKPOINTS_TABLE} (
+    id, cursor, cursor_source, saved_at, sequence
+)
+SELECT 'jetstream-v1-time-us', cursor, cursor_source, saved_at, sequence
+FROM ${CHECKPOINTS_TABLE}
+WHERE id = 'default'
+ON CONFLICT (id) DO NOTHING;
 `;
 
 const loadCheckpointSql = `
-SELECT cursor, saved_at, sequence
+SELECT cursor, cursor_source, saved_at, sequence
 FROM ${CHECKPOINTS_TABLE}
-WHERE id = 'default'
+WHERE id = $1
 `;
 
 const upsertCheckpointSql = `
-INSERT INTO ${CHECKPOINTS_TABLE} (id, cursor, saved_at, sequence)
-VALUES ('default', $1, NOW(), 1)
+INSERT INTO ${CHECKPOINTS_TABLE} (
+    id, cursor, cursor_source, saved_at, sequence
+)
+VALUES ($1, $2, $1, NOW(), 1)
 ON CONFLICT (id)
 DO UPDATE SET
-    cursor = $1,
+    cursor = $2,
+    cursor_source = $1,
     saved_at = NOW(),
     sequence = ${CHECKPOINTS_TABLE}.sequence + 1
-RETURNING cursor, saved_at, sequence
+RETURNING cursor, cursor_source, saved_at, sequence
 `;
 
 interface CheckpointRow {
     cursor: string | number;
+    cursor_source: CheckpointSource;
     saved_at: string | Date;
     sequence: string | number;
 }
@@ -94,7 +118,10 @@ export interface PostgresPoolLike {
 export class PostgresCheckpointStore implements CheckpointStore {
     private initialized = false;
 
-    constructor(private readonly pool: PostgresPoolLike) {}
+    constructor(
+        private readonly pool: PostgresPoolLike,
+        private readonly source: CheckpointSource = 'jetstream-v1-time-us',
+    ) {}
 
     private async ensureTable(): Promise<void> {
         if (this.initialized) {
@@ -106,7 +133,9 @@ export class PostgresCheckpointStore implements CheckpointStore {
 
     async load(): Promise<CheckpointData | null> {
         await this.ensureTable();
-        const result = await this.pool.query<CheckpointRow>(loadCheckpointSql);
+        const result = await this.pool.query<CheckpointRow>(loadCheckpointSql, [
+            this.source,
+        ]);
 
         if (result.rows.length === 0) {
             return null;
@@ -115,6 +144,7 @@ export class PostgresCheckpointStore implements CheckpointStore {
         const row = result.rows[0]!;
         return {
             cursor: Number(row.cursor),
+            source: row.cursor_source,
             savedAt: new Date(row.saved_at).toISOString(),
             sequence: Number(row.sequence),
         };
@@ -124,12 +154,13 @@ export class PostgresCheckpointStore implements CheckpointStore {
         await this.ensureTable();
         const result = await this.pool.query<CheckpointRow>(
             upsertCheckpointSql,
-            [cursor],
+            [this.source, cursor],
         );
 
         const row = result.rows[0]!;
         return {
             cursor: Number(row.cursor),
+            source: row.cursor_source,
             savedAt: new Date(row.saved_at).toISOString(),
             sequence: Number(row.sequence),
         };

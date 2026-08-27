@@ -51,6 +51,10 @@ if [[ -n "${PATCHWORK_COMPOSE_OVERRIDE_FILE:-}" ]]; then
     compose+=(-f "$PATCHWORK_COMPOSE_OVERRIDE_FILE")
 fi
 "${compose[@]}" pull
+# A pre-v2 indexer image cannot safely run the v2 shadow service. The live v1
+# projection and checkpoint remain the rollback target.
+"${compose[@]}" stop patchwork-v2-shadow >/dev/null 2>&1 || true
+"${compose[@]}" rm -f patchwork-v2-shadow >/dev/null 2>&1 || true
 "${compose[@]}" up -d --no-build --no-deps \
     patchwork-spool patchwork-thimble patchwork-api patchwork-web
 

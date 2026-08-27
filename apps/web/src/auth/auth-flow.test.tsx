@@ -131,6 +131,7 @@ describe('AT authentication flow', () => {
                 JSON.stringify({
                     session: {
                         did: 'did:plc:alice',
+                        handle: 'alice.example.com',
                         expiresAt: '2026-07-12T12:00:00.000Z',
                     },
                 }),
@@ -146,6 +147,7 @@ describe('AT authentication flow', () => {
 
         expect(session).toEqual({
             did: 'did:plc:alice',
+            handle: 'alice.example.com',
             expiresAt: '2026-07-12T12:00:00.000Z',
         });
         expect(fetchMock).toHaveBeenCalledWith(

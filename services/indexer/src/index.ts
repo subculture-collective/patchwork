@@ -15,12 +15,15 @@ import {
 import { PostgresCheckpointStore } from './checkpoint.js';
 import { PostgresDeadLetterStore } from './db/dead-letter-store.js';
 import { PostgresLifecycleEventReconciler } from './db/lifecycle-reconciler.js';
+import { PostgresJetstreamControlStore } from './db/jetstream-control-store.js';
 import { PostgresProjectionStore } from './db/projection-store.js';
+import { PostgresProjectionComparison } from './db/projection-comparison.js';
 import { renderPrometheusRuntimeMetrics } from './metrics.js';
 import { IndexerPipeline } from './pipeline.js';
 import { IndexerRuntime } from './runtime.js';
 import type { AtEventSource } from './stream/event-source.js';
 import { JetstreamEventSource } from './stream/jetstream-source.js';
+import { JetstreamV2EventSource } from './stream/jetstream-v2-source.js';
 
 const config = loadIndexerConfig();
 
@@ -48,6 +51,9 @@ const createPipeline = async (): Promise<PersistentPipeline> => {
         max: 5,
         idleTimeoutMillis: 30_000,
         connectionTimeoutMillis: 5_000,
+        ...(config.INDEXER_PROJECTION_MODE === 'v2-shadow' ?
+            { options: '-c search_path=jetstream_v2_shadow,public' }
+        :   {}),
     });
     const schema = await pool.query<{
         projections: string | null;
@@ -56,6 +62,7 @@ const createPipeline = async (): Promise<PersistentPipeline> => {
         workflows: string | null;
         audit: string | null;
         deactivations: string | null;
+        networkAccounts: string | null;
     }>(
         `SELECT
             to_regclass('indexer_aid_post_projections')::TEXT AS projections,
@@ -64,7 +71,9 @@ const createPipeline = async (): Promise<PersistentPipeline> => {
             to_regclass('indexer_projection_state')::TEXT AS state,
             to_regclass('request_workflows')::TEXT AS workflows,
             to_regclass('operational_audit_events')::TEXT AS audit,
-            to_regclass('account_deactivations')::TEXT AS deactivations`,
+            to_regclass('account_deactivations')::TEXT AS deactivations,
+            to_regclass('indexer_network_accounts')::TEXT
+                AS "networkAccounts"`,
     );
     if (
         !schema.rows[0]?.projections ||
@@ -73,6 +82,7 @@ const createPipeline = async (): Promise<PersistentPipeline> => {
         !schema.rows[0]?.workflows ||
         !schema.rows[0]?.audit ||
         !schema.rows[0]?.deactivations
+        || !schema.rows[0]?.networkAccounts
     ) {
         await pool.end();
         throw new Error(
@@ -80,14 +90,23 @@ const createPipeline = async (): Promise<PersistentPipeline> => {
         );
     }
 
-    const checkpointStore = new PostgresCheckpointStore(pool);
-    const projectionStore = new PostgresProjectionStore(pool);
+    const checkpointSource =
+        config.INDEXER_JETSTREAM_VERSION === 'v2' ?
+            'jetstream-v2-seq' as const
+        :   'jetstream-v1-time-us' as const;
+    const checkpointStore = new PostgresCheckpointStore(pool, checkpointSource);
+    const projectionStore = new PostgresProjectionStore(
+        pool,
+        `patchwork-indexer-rebuild:${config.INDEXER_PROJECTION_MODE}`,
+    );
     const pipeline = new IndexerPipeline({
         checkpointStore,
         checkpointInterval: 100,
         projectionStore,
         deadLetterStore: new PostgresDeadLetterStore(pool),
-        lifecycleReconciler: new PostgresLifecycleEventReconciler(pool),
+        ...(config.INDEXER_PROJECTION_MODE !== 'v2-shadow' ?
+            { lifecycleReconciler: new PostgresLifecycleEventReconciler(pool) }
+        :   {}),
     });
 
     const cursor = await pipeline.loadCheckpoint();
@@ -124,6 +143,7 @@ type IndexerRouteHandler = (
 const createRouteHandlers = (
     pipeline: IndexerPipeline,
     source?: AtEventSource,
+    compareProjections?: () => Promise<unknown>,
 ): Readonly<Record<string, IndexerRouteHandler>> => ({
     '/health': async () => {
         const healthChecks: HealthCheck[] = [
@@ -229,6 +249,14 @@ const createRouteHandlers = (
             stats: pipeline.getStats(),
         },
     }),
+    ...(compareProjections ?
+        {
+            '/migration/v2/compare': async () => ({
+                statusCode: 200,
+                body: { projections: await compareProjections() },
+            }),
+        }
+    :   {}),
     '/events/sample': () => ({
         statusCode: 200,
         body: {
@@ -247,8 +275,13 @@ const createRouteHandlers = (
 export const createIndexerServer = (
     pipeline: IndexerPipeline,
     source?: AtEventSource,
+    compareProjections?: () => Promise<unknown>,
 ) => {
-    const routeHandlers = createRouteHandlers(pipeline, source);
+    const routeHandlers = createRouteHandlers(
+        pipeline,
+        source,
+        compareProjections,
+    );
 
     return createServer(async (request, response) => {
         const requestUrl = new URL(request.url ?? '/', 'http://localhost');
@@ -292,22 +325,84 @@ export const createIndexerServer = (
 };
 
 export const startIndexerServer = async () => {
+    const validSourceProjectionPair =
+        (config.INDEXER_JETSTREAM_VERSION === 'v1' &&
+            config.INDEXER_PROJECTION_MODE === 'live') ||
+        (config.INDEXER_JETSTREAM_VERSION === 'v2' &&
+            (config.INDEXER_PROJECTION_MODE === 'v2-shadow' ||
+                config.INDEXER_PROJECTION_MODE === 'v2-live'));
+    if (!validSourceProjectionPair) {
+        throw new Error(
+            'FATAL: Jetstream source and projection modes are incompatible.',
+        );
+    }
+    const requireJetstreamV2ApiKey = (): string => {
+        if (!config.JETSTREAM_API_KEY) {
+            throw new Error(
+                'FATAL: JETSTREAM_API_KEY is required for Jetstream v2 replay.',
+            );
+        }
+        return config.JETSTREAM_API_KEY;
+    };
     const { pipeline, pool, projectionStore } = await createPipeline();
-    const source = new JetstreamEventSource({
-        url: config.INDEXER_FIREHOSE_URL,
-        collections: [
-            recordNsid.aidPost,
-            recordNsid.directoryResource,
-            recordNsid.volunteerProfile,
-        ],
-    });
+    const collections = [
+        recordNsid.aidPost,
+        recordNsid.directoryResource,
+        recordNsid.volunteerProfile,
+    ];
+    const source =
+        config.INDEXER_JETSTREAM_VERSION === 'v2' ?
+            new JetstreamV2EventSource({
+                service: config.INDEXER_FIREHOSE_URL,
+                apiKey: requireJetstreamV2ApiKey(),
+                collections,
+                relevantDids: (
+                    await pool.query<{ did: string }>(
+                        `SELECT DISTINCT split_part(uri, '/', 3) AS did
+                         FROM (
+                            SELECT uri FROM indexer_aid_post_projections
+                            UNION ALL
+                            SELECT uri FROM indexer_directory_resource_projections
+                            UNION ALL
+                            SELECT uri FROM indexer_volunteer_profile_projections
+                         ) AS projected
+                         WHERE split_part(uri, '/', 3) LIKE 'did:%'
+                         UNION
+                         SELECT did FROM indexer_identity_cache
+                         UNION
+                         SELECT did FROM indexer_repo_reconciliation_queue`,
+                    )
+                ).rows.map(row => row.did),
+                controls: (() => {
+                    const store = new PostgresJetstreamControlStore(pool);
+                    return {
+                        identity: event =>
+                            store.identity(event.seq, event.did, event.identity),
+                        account: event =>
+                            store.account(event.seq, event.did, event.account),
+                        sync: event =>
+                            store.sync(event.seq, event.did, event.sync),
+                    };
+                })(),
+            })
+        :   new JetstreamEventSource({
+                url: config.INDEXER_FIREHOSE_URL,
+                collections,
+            });
     const runtime = new IndexerRuntime({
         pipeline,
         source,
         heartbeat: cursor => projectionStore.recordHeartbeat(cursor),
     });
     await runtime.start();
-    const server = createIndexerServer(pipeline, source);
+    const comparison = new PostgresProjectionComparison(pool);
+    const server = createIndexerServer(
+        pipeline,
+        source,
+        config.INDEXER_PROJECTION_MODE === 'v2-shadow' ?
+            () => comparison.compare()
+        :   undefined,
+    );
     await new Promise<void>((resolveListen, rejectListen) => {
         server.once('error', rejectListen);
         server.listen(config.INDEXER_PORT, '0.0.0.0', () => {

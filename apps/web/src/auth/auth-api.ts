@@ -65,7 +65,13 @@ const readSession = (payload: unknown): AuthSessionSummary | null => {
         typeof session.did === 'string' &&
         typeof session.expiresAt === 'string'
     ) ?
-            { did: session.did, expiresAt: session.expiresAt }
+            {
+                did: session.did,
+                ...(typeof session.handle === 'string' && session.handle.trim()
+                    ? { handle: session.handle.trim() }
+                    : {}),
+                expiresAt: session.expiresAt,
+            }
         :   null;
 };
 
@@ -98,6 +104,7 @@ export interface LoginStartResult {
 
 export interface AuthSessionSummary {
     did: string;
+    handle?: string;
     expiresAt: string;
 }
 

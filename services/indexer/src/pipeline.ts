@@ -170,6 +170,16 @@ export class IndexerPipeline {
         }
     }
 
+    /** Persist a successfully handled non-record event (account, identity, sync). */
+    async acknowledgeControlCursor(seq: number): Promise<void> {
+        if (!Number.isSafeInteger(seq) || seq < 0) {
+            throw new Error('Control-event cursor must be a non-negative integer.');
+        }
+        this.lastProcessedSeq = Math.max(this.lastProcessedSeq, seq);
+        await this.checkpointStore.save(this.lastProcessedSeq);
+        this.eventsSinceCheckpoint = 0;
+    }
+
     replay(rawEvents: readonly unknown[]): IndexerPipelineIngestResult {
         this.consumer = new FirehoseConsumer();
         this.store = new DiscoveryIndexStore();

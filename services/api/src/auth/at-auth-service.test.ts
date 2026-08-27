@@ -27,10 +27,12 @@ const oauthAdapter = (): OAuthAdapter => ({
 
 const browserSessions = (): BrowserSessionRepository => {
     const sessions = new Map<string, BrowserSession>();
+    let currentHandle: string | undefined;
     return {
         create: vi.fn(async (did, expiresAt) => {
             sessions.set('browser-token', {
                 did,
+                ...(currentHandle ? { handle: currentHandle } : {}),
                 expiresAt,
                 authenticatedAt: new Date(),
             });
@@ -41,7 +43,9 @@ const browserSessions = (): BrowserSessionRepository => {
         revoke: vi.fn(async token => {
             sessions.delete(token);
         }),
-        setHandle: vi.fn(async () => undefined),
+        setHandle: vi.fn(async (_did, handle) => {
+            currentHandle = handle;
+        }),
     };
 };
 
@@ -112,6 +116,10 @@ describe('AtAuthService', () => {
             'did:plc:alice',
             'alice.example',
         );
+        await expect(service.current('browser-token')).resolves.toMatchObject({
+            did: 'did:plc:alice',
+            handle: 'alice.example',
+        });
     });
 
     it('returns a safe stable error when OAuth callback state is rejected', async () => {

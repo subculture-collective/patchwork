@@ -217,7 +217,10 @@ const toVolunteerProjection = (
 });
 
 export class PostgresProjectionStore {
-    constructor(private readonly pool: Pool) {}
+    constructor(
+        private readonly pool: Pool,
+        private readonly rebuildLock = 'patchwork-indexer-rebuild:live',
+    ) {}
 
     async apply(event: NormalizedFirehoseEvent): Promise<void> {
         if (
@@ -238,7 +241,8 @@ export class PostgresProjectionStore {
                 [authorDidHash],
             );
             await client.query(
-                `SELECT pg_advisory_xact_lock_shared(hashtext('patchwork-indexer-rebuild'))`,
+                `SELECT pg_advisory_xact_lock_shared(hashtext($1))`,
+                [this.rebuildLock],
             );
             await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
                 event.uri,
@@ -290,7 +294,11 @@ export class PostgresProjectionStore {
                 return;
             }
             const deactivated = await client.query(
-                'SELECT 1 FROM account_deactivations WHERE did_hash = $1',
+                `SELECT 1 FROM account_deactivations WHERE did_hash = $1
+                 UNION ALL
+                 SELECT 1 FROM indexer_network_accounts
+                 WHERE did_hash = $1 AND active = FALSE
+                 LIMIT 1`,
                 [authorDidHash],
             );
             if (deactivated.rowCount) {
@@ -651,7 +659,8 @@ export class PostgresProjectionStore {
         try {
             await client.query('BEGIN');
             await client.query(
-                `SELECT pg_advisory_xact_lock(hashtext('patchwork-indexer-rebuild'))`,
+                `SELECT pg_advisory_xact_lock(hashtext($1))`,
+                [this.rebuildLock],
             );
             await client.query(
                 `TRUNCATE indexer_projection_events,

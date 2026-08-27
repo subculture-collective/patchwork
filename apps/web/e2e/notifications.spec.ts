@@ -302,12 +302,17 @@ test('notification center persists state and requests push permission only after
         ),
     ).toBeVisible();
 
+    const revokePush = page.getByRole('button', {
+        name: 'Revoke browser push',
+    });
+    await expect(revokePush).toBeDisabled();
     await page.getByRole('button', {
         name: 'Enable browser push',
     }).click();
     await expect(
         page.getByText('Browser push enabled by explicit opt-in.'),
     ).toBeVisible();
+    await expect(revokePush).toBeEnabled();
     await expect.poll(() =>
         page.evaluate(
             () =>
@@ -318,10 +323,9 @@ test('notification center persists state and requests push permission only after
                 }).__notificationPushState.permissionRequests,
         ),
     ).toBe(1);
-    await page.getByRole('button', {
-        name: 'Revoke browser push',
-    }).click();
+    await revokePush.click();
     await expect(page.getByText('Browser push revoked.')).toBeVisible();
+    await expect(revokePush).toBeDisabled();
 
     expect(notificationBodies).toEqual(
         expect.arrayContaining([

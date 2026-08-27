@@ -136,6 +136,7 @@ export class AtAuthService {
 
     async current(sessionToken: string): Promise<{
         did: string;
+        handle?: string;
         expiresAt: string;
         authenticatedAt: string;
     }> {
@@ -149,6 +150,7 @@ export class AtAuthService {
         await this.browserSessions.touch(sessionToken);
         return {
             did: session.did,
+            ...(session.handle ? { handle: session.handle } : {}),
             expiresAt: session.expiresAt.toISOString(),
             authenticatedAt: session.authenticatedAt.toISOString(),
         };

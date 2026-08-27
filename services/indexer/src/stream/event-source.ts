@@ -1,4 +1,5 @@
 export type AtEventHandler = (event: unknown) => Promise<void>;
+export type AtCursorHandler = (cursor: number) => Promise<void>;
 
 export interface EventSourceMetrics {
     connected: boolean;
@@ -13,7 +14,11 @@ export interface EventSourceMetrics {
 }
 
 export interface AtEventSource {
-    start(cursor: number | null, onEvent: AtEventHandler): Promise<void>;
+    start(
+        cursor: number | null,
+        onEvent: AtEventHandler,
+        onControlCursor?: AtCursorHandler,
+    ): Promise<void>;
     stop(): Promise<void>;
     getMetrics(): EventSourceMetrics;
 }

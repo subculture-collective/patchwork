@@ -63,6 +63,7 @@ const composeEnvironment = {
     STAGING_PATCHWORK_PM_TILES_FILENAME: 'us.0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef.pmtiles',
     VITE_MAP_TILE_URL: '/tiles/us.0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef.pmtiles',
     STAGING_VITE_MAP_TILE_URL: '/tiles/us.0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef.pmtiles',
+    JETSTREAM_API_KEY: 'test-v2-replay-key',
 };
 
 interface ComposeService {
