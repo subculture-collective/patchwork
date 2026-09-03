@@ -156,7 +156,7 @@ jobs:
                     POSTGRES_USER: patchwork
                     POSTGRES_PASSWORD: patchwork_ci
                 ports:
-                    - 5432:5432
+                    - 55432:5432
                 options: >-
                     --health-cmd "pg_isready -U patchwork -d patchwork"
                     --health-interval 5s
@@ -166,9 +166,9 @@ jobs:
         env:
             NODE_ENV: production
             API_DATA_SOURCE: postgres
-            API_DATABASE_URL: postgresql://patchwork:patchwork_ci@localhost:5432/patchwork
-            DATABASE_URL: postgresql://patchwork:patchwork_ci@localhost:5432/patchwork
-            TEST_DATABASE_URL: postgresql://patchwork:patchwork_ci@localhost:5432/patchwork
+            API_DATABASE_URL: postgresql://patchwork:patchwork_ci@localhost:55432/patchwork
+            DATABASE_URL: postgresql://patchwork:patchwork_ci@localhost:55432/patchwork
+            TEST_DATABASE_URL: postgresql://patchwork:patchwork_ci@localhost:55432/patchwork
             ATPROTO_SERVICE_DID: did:example:patchwork-ci
             ATPROTO_PDS_URL: https://bsky.social
 
