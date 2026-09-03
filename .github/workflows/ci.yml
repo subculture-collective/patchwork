@@ -114,23 +114,21 @@ jobs:
                     -t patchwork-web:ci .
 
             - name: Trivy container scan — API
-              uses: aquasecurity/trivy-action@v0.36.0
-              with:
-                  image-ref: patchwork-api:ci
-                  format: table
-                  exit-code: '1'
-                  severity: HIGH,CRITICAL
-                  output: trivy-api-report.txt
+              run: |
+                  docker run --rm \
+                    --volume /var/run/docker.sock:/var/run/docker.sock \
+                    aquasec/trivy@sha256:be1190afcb28352bfddc4ddeb71470835d16462af68d310f9f4bca710961a41e \
+                    image --scanners vuln --severity HIGH,CRITICAL --exit-code 1 \
+                    --format table patchwork-api:ci | tee trivy-api-report.txt
 
             - name: Trivy container scan — Web
-              uses: aquasecurity/trivy-action@v0.36.0
               if: success() || failure()
-              with:
-                  image-ref: patchwork-web:ci
-                  format: table
-                  exit-code: '1'
-                  severity: HIGH,CRITICAL
-                  output: trivy-web-report.txt
+              run: |
+                  docker run --rm \
+                    --volume /var/run/docker.sock:/var/run/docker.sock \
+                    aquasec/trivy@sha256:be1190afcb28352bfddc4ddeb71470835d16462af68d310f9f4bca710961a41e \
+                    image --scanners vuln --severity HIGH,CRITICAL --exit-code 1 \
+                    --format table patchwork-web:ci | tee trivy-web-report.txt
 
             - name: Upload security scan reports
               uses: actions/upload-artifact@v4
