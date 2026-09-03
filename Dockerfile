@@ -40,6 +40,16 @@ RUN apk upgrade --no-cache \
     && mv /tmp/ip-address/package \
         /usr/local/lib/node_modules/npm/node_modules/ip-address \
     && rm -rf /tmp/ip-address /tmp/ip-address.tgz \
+    && wget -qO /tmp/tar.tgz \
+        https://registry.npmjs.org/tar/-/tar-7.5.21.tgz \
+    && echo 'bcedf25a21daecd1a18fb5e19ab855b7d79ec8ef1da175e8ba85cfc0ed0069d1  /tmp/tar.tgz' \
+        | sha256sum -c - \
+    && mkdir /tmp/tar \
+    && tar -xzf /tmp/tar.tgz -C /tmp/tar \
+    && rm -rf /usr/local/lib/node_modules/npm/node_modules/tar \
+    && mv /tmp/tar/package \
+        /usr/local/lib/node_modules/npm/node_modules/tar \
+    && rm -rf /tmp/tar /tmp/tar.tgz \
     && npm --version
 
 COPY package.json package-lock.json ./
