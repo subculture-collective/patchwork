@@ -40,7 +40,7 @@ jobs:
               run: npm run test:coverage
 
             - name: Upload coverage report
-              uses: actions/upload-artifact@v4
+              uses: https://gitea.com/actions/upload-artifact@c24449f33cd45d4826c6702db7e49f7cdb9b551d
               if: always()
               with:
                   name: test-coverage
@@ -131,7 +131,7 @@ jobs:
                     --format table patchwork-web:ci | tee trivy-web-report.txt
 
             - name: Upload security scan reports
-              uses: actions/upload-artifact@v4
+              uses: https://gitea.com/actions/upload-artifact@c24449f33cd45d4826c6702db7e49f7cdb9b551d
               if: always()
               with:
                   name: security-reports
