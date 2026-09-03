@@ -172,7 +172,7 @@ test.describe('Form accessibility', () => {
             }
         }
         await expect(
-            page.getByRole('button', { name: 'Continue with AT Protocol' }),
+            page.getByRole('button', { name: 'Continue with Bluesky' }),
         ).toBeVisible();
     });
 

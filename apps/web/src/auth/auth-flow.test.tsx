@@ -253,7 +253,8 @@ describe('AT authentication flow', () => {
         expect(html).toContain('id="at-handle"');
         expect(html).toContain('type="submit"');
         expect(html).toContain('aria-live="polite"');
-        expect(html).toContain('Continue with AT Protocol');
+        expect(html).toContain('Continue with Bluesky');
+        expect(html).toContain('Bluesky or AT Protocol handle');
     });
 
     it('renders a labelled signup form without exposing secrets', () => {

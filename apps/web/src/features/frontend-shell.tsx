@@ -1341,12 +1341,6 @@ const MapRoute = ({
                 ) : null}
             </header>
 
-            <DiscoveryFiltersPanel
-                idPrefix='map'
-                state={discoveryState}
-                onPatch={onPatchDiscovery}
-            />
-
             <section className='rounded-none border-2 border-mh-borderSoft bg-mh-surfaceElev p-3'>
                 {tileError ? (
                     <div
@@ -1424,6 +1418,12 @@ const MapRoute = ({
                     </div>
                 )}
             </section>
+
+            <DiscoveryFiltersPanel
+                idPrefix='map'
+                state={discoveryState}
+                onPatch={onPatchDiscovery}
+            />
 
             <div className='grid gap-6 xl:grid-cols-2'>
                 <Card title={String(t('map.clusterOverviewTitle'))}>
