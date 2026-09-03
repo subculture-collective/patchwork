@@ -171,7 +171,10 @@ jobs:
               run: |
                   set -euo pipefail
                   container="patchwork-ci-postgres-${GITHUB_RUN_ID}-${GITHUB_JOB}"
+                  network=$(docker inspect --format '{{range $name, $network := .NetworkSettings.Networks}}{{$name}}{{end}}' "$HOSTNAME")
+                  test -n "$network"
                   docker run --detach --name "$container" \
+                    --network "$network" \
                     --env POSTGRES_DB=patchwork \
                     --env POSTGRES_USER=patchwork \
                     --env POSTGRES_PASSWORD=patchwork_ci \
@@ -222,7 +225,10 @@ jobs:
                   set -euo pipefail
                   objects="patchwork-ci-objects-${GITHUB_RUN_ID}-${GITHUB_JOB}"
                   clamav="patchwork-ci-clamav-${GITHUB_RUN_ID}-${GITHUB_JOB}"
+                  network=$(docker inspect --format '{{range $name, $network := .NetworkSettings.Networks}}{{$name}}{{end}}' "$HOSTNAME")
+                  test -n "$network"
                   docker run --detach --name "$objects" \
+                    --network "$network" \
                     --env MINIO_ROOT_USER="$ATTACHMENT_OBJECT_ACCESS_KEY" \
                     --env MINIO_ROOT_PASSWORD="$ATTACHMENT_OBJECT_SECRET_KEY" \
                     --health-cmd "curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null" \
@@ -232,6 +238,7 @@ jobs:
                     minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e \
                     server /data
                   docker run --detach --name "$clamav" \
+                    --network "$network" \
                     --health-cmd "clamdscan --ping 1 >/dev/null" \
                     --health-interval 30s \
                     --health-timeout 10s \
