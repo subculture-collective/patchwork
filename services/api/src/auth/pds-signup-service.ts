@@ -34,10 +34,13 @@ const MAX_EMAIL_LENGTH = 254;
 const MAX_PASSWORD_LENGTH = 256;
 const MAX_INVITE_CODE_LENGTH = 128;
 
-const signupInputSchema = z.object({
+const accountInputSchema = z.object({
     handle: z.string().trim().min(1).max(MAX_HANDLE_LENGTH),
     email: z.string().trim().email().max(MAX_EMAIL_LENGTH),
     password: z.string().min(8).max(MAX_PASSWORD_LENGTH),
+}).strict();
+
+const signupInputSchema = accountInputSchema.extend({
     inviteCode: z.string().trim().min(1).max(MAX_INVITE_CODE_LENGTH),
 }).strict();
 
@@ -55,6 +58,7 @@ export interface PdsSignupResult {
 
 export interface PdsSignupServiceOptions {
     pdsUrl: string;
+    adminPassword?: string;
     fetchImpl?: typeof fetch;
     timeoutMs?: number;
 }
@@ -96,9 +100,14 @@ const mapUpstreamError = (statusCode: number, errorCode?: string): PublicHttpErr
     }
 };
 
-export const createPdsSignupService = ({ pdsUrl, fetchImpl = fetch, timeoutMs = 10_000 }: PdsSignupServiceOptions) => {
-    const createAccount = async (input: PdsSignupInput): Promise<PdsSignupResult> => {
-        const parsed = signupInputSchema.safeParse(input);
+export const createPdsSignupService = ({
+    pdsUrl,
+    adminPassword,
+    fetchImpl = fetch,
+    timeoutMs = 10_000,
+}: PdsSignupServiceOptions) => {
+    const validateAccountInput = (input: Omit<PdsSignupInput, 'inviteCode'>) => {
+        const parsed = accountInputSchema.safeParse(input);
         if (!parsed.success) throw invalidSignupInput();
         const handle = parsed.data.handle;
         if (!handle.endsWith(HANDLE_SUFFIX)) {
@@ -111,6 +120,77 @@ export const createPdsSignupService = ({ pdsUrl, fetchImpl = fetch, timeoutMs = 
         if (RESERVED_LABELS.has(label)) {
             throw buildPublicError('RESERVED_HANDLE', 'That handle label is reserved.');
         }
+        return parsed.data;
+    };
+
+    const createInviteCode = async (): Promise<string> => {
+        if (!adminPassword) {
+            throw buildPublicError(
+                'PDS_INVITE_ISSUANCE_UNAVAILABLE',
+                'Invitation-based signup is temporarily unavailable.',
+                503,
+            );
+        }
+        const controller = new AbortController();
+        const timeout = globalThis.setTimeout(() => controller.abort(), timeoutMs);
+        try {
+            const authorization = Buffer.from(
+                `admin:${adminPassword}`,
+                'utf8',
+            ).toString('base64');
+            const response = await fetchImpl(
+                `${pdsUrl.replace(/\/$/, '')}/xrpc/com.atproto.server.createInviteCode`,
+                {
+                    method: 'POST',
+                    redirect: 'error',
+                    headers: {
+                        authorization: `Basic ${authorization}`,
+                        'content-type': 'application/json',
+                    },
+                    body: JSON.stringify({ useCount: 1 }),
+                    signal: controller.signal,
+                },
+            );
+            if (!response.ok) {
+                throw buildPublicError(
+                    'PDS_INVITE_ISSUANCE_UNAVAILABLE',
+                    'Invitation-based signup is temporarily unavailable.',
+                    503,
+                );
+            }
+            const body = await response.json() as { code?: unknown };
+            if (
+                typeof body.code !== 'string' ||
+                body.code.length < 1 ||
+                body.code.length > MAX_INVITE_CODE_LENGTH
+            ) {
+                throw buildPublicError(
+                    'PDS_INVITE_ISSUANCE_UNAVAILABLE',
+                    'Invitation-based signup is temporarily unavailable.',
+                    503,
+                );
+            }
+            return body.code;
+        } catch (error) {
+            if (error instanceof PublicHttpError) throw error;
+            throw buildPublicError(
+                'PDS_INVITE_ISSUANCE_UNAVAILABLE',
+                'Invitation-based signup is temporarily unavailable.',
+                503,
+            );
+        } finally {
+            globalThis.clearTimeout(timeout);
+        }
+    };
+
+    const createAccount = async (input: PdsSignupInput): Promise<PdsSignupResult> => {
+        const parsed = signupInputSchema.safeParse(input);
+        if (!parsed.success) throw invalidSignupInput();
+        const { handle } = validateAccountInput({
+            handle: parsed.data.handle,
+            email: parsed.data.email,
+            password: parsed.data.password,
+        });
 
         const controller = new AbortController();
         const timeout = globalThis.setTimeout(() => controller.abort(), timeoutMs);
@@ -162,5 +242,5 @@ export const createPdsSignupService = ({ pdsUrl, fetchImpl = fetch, timeoutMs = 
         }
     };
 
-    return { createAccount };
+    return { createAccount, createInviteCode, validateAccountInput };
 };

@@ -160,6 +160,7 @@ describe('validateAtAuthRuntimeConfig', () => {
                 DATABASE_URL: 'postgresql://localhost/patchwork',
                 API_MODERATION_SERVICE_URL: 'http://moderation:4200',
                 MODERATION_SERVICE_TOKEN: 'service-secret',
+                ATPROTO_ACCOUNT_PDS_ADMIN_PASSWORD: 'pds-admin-secret',
             }),
         ).toThrow(/ATPROTO_OAUTH_CLIENT_ID/);
     });
@@ -237,6 +238,7 @@ describe('validateProductionConfig', () => {
                 DATABASE_URL: 'postgresql://localhost/patchwork',
                 API_MODERATION_SERVICE_URL: 'http://moderation:4200',
                 MODERATION_SERVICE_TOKEN: 'service-secret',
+                ATPROTO_ACCOUNT_PDS_ADMIN_PASSWORD: 'pds-admin-secret',
                 ...productionAttachmentConfig,
                 ...productionNotificationConfig,
             }),
@@ -263,6 +265,7 @@ describe('validateProductionConfig', () => {
                 API_DATABASE_URL: 'postgresql://localhost/patchwork',
                 API_MODERATION_SERVICE_URL: 'http://moderation:4200',
                 MODERATION_SERVICE_TOKEN: 'service-secret',
+                ATPROTO_ACCOUNT_PDS_ADMIN_PASSWORD: 'pds-admin-secret',
                 ...productionAttachmentConfig,
                 ...productionNotificationConfig,
             }),
@@ -278,6 +281,7 @@ describe('validateProductionConfig', () => {
                 DATABASE_URL: 'postgresql://localhost/patchwork',
                 API_MODERATION_SERVICE_URL: 'http://moderation:4200',
                 MODERATION_SERVICE_TOKEN: 'service-secret',
+                ATPROTO_ACCOUNT_PDS_ADMIN_PASSWORD: 'pds-admin-secret',
             }),
         ).toThrow(/private attachment runtime requires/);
     });
@@ -291,6 +295,7 @@ describe('validateProductionConfig', () => {
                 DATABASE_URL: 'postgresql://localhost/patchwork',
                 API_MODERATION_SERVICE_URL: 'http://moderation:4200',
                 MODERATION_SERVICE_TOKEN: 'service-secret',
+                ATPROTO_ACCOUNT_PDS_ADMIN_PASSWORD: 'pds-admin-secret',
                 ...productionAttachmentConfig,
             }),
         ).toThrow(/durable notification delivery requires/);
@@ -303,6 +308,7 @@ describe('validateProductionConfig', () => {
                 DATABASE_URL: 'postgresql://localhost/patchwork',
                 API_MODERATION_SERVICE_URL: 'http://moderation:4200',
                 MODERATION_SERVICE_TOKEN: 'service-secret',
+                ATPROTO_ACCOUNT_PDS_ADMIN_PASSWORD: 'pds-admin-secret',
                 ...productionAttachmentConfig,
                 ...productionNotificationConfig,
                 NOTIFICATION_VAPID_PRIVATE_KEY: '',

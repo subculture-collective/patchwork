@@ -125,12 +125,7 @@ describe('POST /auth/signup', () => {
         await expect(response.json()).resolves.toMatchObject({
             error: { code: 'INVALID_SIGNUP_INPUT' },
         });
-        expect(createAccount).toHaveBeenCalledWith({
-            handle: 'alice.subcult.tv',
-            email: '',
-            password: '',
-            inviteCode: '',
-        });
+        expect(createAccount).not.toHaveBeenCalled();
     });
 
     it.each([

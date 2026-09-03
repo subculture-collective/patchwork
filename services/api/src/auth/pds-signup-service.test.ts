@@ -10,6 +10,44 @@ const baseInput = {
 };
 
 describe('createPdsSignupService', () => {
+    it('creates one-use invite codes through PDS admin authentication', async () => {
+        const fetchImpl = vi.fn().mockResolvedValue({
+            ok: true,
+            json: vi.fn().mockResolvedValue({ code: 'pds-code' }),
+        });
+        const service = createPdsSignupService({
+            pdsUrl: 'https://pds.subcult.tv',
+            adminPassword: 'admin-secret',
+            fetchImpl: fetchImpl as unknown as typeof fetch,
+        });
+
+        await expect(service.createInviteCode()).resolves.toBe('pds-code');
+        expect(fetchImpl).toHaveBeenCalledWith(
+            'https://pds.subcult.tv/xrpc/com.atproto.server.createInviteCode',
+            expect.objectContaining({
+                method: 'POST',
+                body: JSON.stringify({ useCount: 1 }),
+                headers: expect.objectContaining({
+                    authorization: `Basic ${Buffer.from('admin:admin-secret').toString('base64')}`,
+                }),
+            }),
+        );
+    });
+
+    it('fails closed when PDS invite issuance is not configured', async () => {
+        const fetchImpl = vi.fn();
+        const service = createPdsSignupService({
+            pdsUrl: 'https://pds.subcult.tv',
+            fetchImpl: fetchImpl as unknown as typeof fetch,
+        });
+
+        await expect(service.createInviteCode()).rejects.toMatchObject({
+            code: 'PDS_INVITE_ISSUANCE_UNAVAILABLE',
+            statusCode: 503,
+        });
+        expect(fetchImpl).not.toHaveBeenCalled();
+    });
+
     it('forwards credentials to the configured PDS and returns only did and handle', async () => {
         const fetchImpl = vi.fn().mockResolvedValue({
             ok: true,

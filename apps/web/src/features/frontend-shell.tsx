@@ -10783,6 +10783,11 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                                             ? `@${auth.session.handle.replace(/^@/, '')}`
                                             : t('nav.accountFallback')}
                                     </span>
+                                    {auth.session.canManageSignupInvitations ? (
+                                        <a className='mh-nav-chip' href='/admin/invites'>
+                                            {t('route.invites')}
+                                        </a>
+                                    ) : null}
                                     <Button
                                         variant='neutral'
                                         className='px-3 py-1 text-xs'

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useAuth } from './AuthProvider.js';
 import {
     sanitizeReturnTo,
@@ -20,6 +20,11 @@ const safeReturnTo = (): string => {
     return sanitizeReturnTo(candidate ?? '/');
 };
 
+const sharedInviteToken = (): string => {
+    if (typeof window === 'undefined') return '';
+    return new URLSearchParams(window.location.search).get('invite') ?? '';
+};
+
 const signupErrorMessage = (
     error: AuthApiError,
     t: ReturnType<typeof useLocale>['t'],
@@ -38,6 +43,9 @@ const signupErrorMessage = (
     }
     if (error.code === 'INVALID_INVITE_CODE') {
         return t('auth.invalidInvite');
+    }
+    if (error.code === 'INVALID_SIGNUP_INVITATION') {
+        return t('auth.invalidSharedInvite');
     }
     if (error.code === 'INVALID_PASSWORD') {
         return t('auth.invalidPassword');
@@ -62,6 +70,7 @@ export const SignupPage = () => {
     const [password, setPassword] = useState('');
     const [passwordConfirm, setPasswordConfirm] = useState('');
     const [inviteCode, setInviteCode] = useState('');
+    const [inviteToken] = useState(sharedInviteToken);
     const [termsAccepted, setTermsAccepted] = useState(false);
     const [eligibilityAccepted, setEligibilityAccepted] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -86,6 +95,17 @@ export const SignupPage = () => {
     };
 
     const returnTo = safeReturnTo();
+
+    useEffect(() => {
+        if (!inviteToken || typeof window === 'undefined') return;
+        const scrubbed = new URL(window.location.href);
+        scrubbed.searchParams.delete('invite');
+        window.history.replaceState(
+            window.history.state,
+            '',
+            `${scrubbed.pathname}${scrubbed.search}${scrubbed.hash}`,
+        );
+    }, [inviteToken]);
 
     const submit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -128,7 +148,9 @@ export const SignupPage = () => {
                 handle: fullHandle,
                 email: email.trim(),
                 password,
-                inviteCode: inviteCode.trim(),
+                ...(inviteToken ?
+                    { inviteToken }
+                :   { inviteCode: inviteCode.trim() }),
                 policyVersion: CURRENT_POLICY_VERSION,
                 asserted18OrOlder: true,
                 acceptedDocuments: [...requiredPolicyDocuments],
@@ -228,7 +250,7 @@ export const SignupPage = () => {
                     {t('auth.joinHeading')}
                 </h1>
                 <p className='mt-5 max-w-md text-mh-textMuted'>
-                    {t('auth.joinHelp')}
+                    {t(inviteToken ? 'auth.joinHelpShared' : 'auth.joinHelp')}
                 </p>
                 <p className='mt-4 max-w-md text-sm text-mh-textSoft'>
                     {t('auth.pdsOwnership')}
@@ -240,6 +262,18 @@ export const SignupPage = () => {
                 aria-describedby={error ? 'signup-error' : undefined}
             >
                 <p className='mh-kicker'>{t('auth.createYourAccount')}</p>
+
+                {inviteToken ? (
+                    <div
+                        className='border-2 border-mh-success bg-mh-success/10 p-3'
+                        role='status'
+                    >
+                        <strong>{t('auth.sharedInviteReady')}</strong>
+                        <p className='mt-1 text-sm text-mh-textMuted'>
+                            {t('auth.sharedInviteHelp')}
+                        </p>
+                    </div>
+                ) : null}
 
                 <div>
                     <label htmlFor='handle-label' className='block font-bold'>
@@ -355,7 +389,7 @@ export const SignupPage = () => {
                     )}
                 </div>
 
-                <div>
+                {!inviteToken ? <div>
                     <label htmlFor='invite-code' className='block font-bold'>
                         {t('auth.inviteCode')}
                     </label>
@@ -370,7 +404,7 @@ export const SignupPage = () => {
                         className='mh-input w-full px-3 py-2'
                         disabled={isLoading}
                     />
-                </div>
+                </div> : null}
 
                 <div className='flex items-start gap-2'>
                     <input
