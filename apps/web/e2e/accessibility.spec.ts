@@ -172,7 +172,7 @@ test.describe('Form accessibility', () => {
             }
         }
         await expect(
-            page.getByRole('button', { name: 'Continue with AT Protocol' }),
+            page.getByRole('button', { name: 'Continue with Bluesky' }),
         ).toBeVisible();
     });
 
@@ -215,20 +215,32 @@ test.describe('ARIA attributes', () => {
         expect(count).toBeGreaterThan(0);
     });
 
-    test('cards use article elements', async ({ page }) => {
+    test('landing paths have descriptive button names', async ({ page }) => {
         await page.goto('/');
 
-        const articles = page.locator('article');
-        const count = await articles.count();
-        expect(count).toBeGreaterThan(0);
+        await expect(
+            page.getByRole('button', {
+                name: /I need support.+Browse community needs/,
+            }),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('button', {
+                name: /I can lend a hand.+Explore volunteering/,
+            }),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('button', {
+                name: /I know a resource.+Open the directory/,
+            }),
+        ).toBeVisible();
     });
 
-    test('panels use role="region"', async ({ page }) => {
+    test('landing sections are exposed as named regions', async ({ page }) => {
         await page.goto('/');
 
-        const regions = page.locator('[role="region"]');
+        const regions = page.getByRole('region');
         const count = await regions.count();
-        expect(count).toBeGreaterThan(0);
+        expect(count).toBeGreaterThanOrEqual(3);
     });
 
     test('loading states use aria-live', async ({ page }) => {

@@ -10,7 +10,6 @@ import {
     type MouseEvent,
 } from 'react';
 import { ariaLive } from '../a11y';
-import { shellSections } from '../app-shell';
 import {
     aidCategories,
     applyDiscoveryFilterPatch,
@@ -319,10 +318,6 @@ const secondaryRoutes = appRoutes.filter(
         !accountRoutes.includes(route) &&
         !route.startsWith('/legal/'),
 );
-const productionSecondaryRoutes = secondaryRoutes.filter(
-    (route) => !deferredFixtureRoutes.has(route),
-);
-
 const resourceCategoryOptions: readonly DirectoryResourceCategory[] = [
     'food-bank',
     'shelter',
@@ -358,6 +353,27 @@ const nowIso = (): string => new Date().toISOString();
 
 const nearbyDefaultRadiusMeters = 20000;
 
+const demoAreaPresets = {
+    cook: {
+        center: { lat: 41.86, lng: -87.72 },
+        areaLabel: 'Cook County demo',
+        radiusMeters: 50000,
+        feedTab: 'nearby' as const,
+    },
+    dupage: {
+        center: { lat: 41.84, lng: -88.08 },
+        areaLabel: 'DuPage County demo',
+        radiusMeters: 40000,
+        feedTab: 'nearby' as const,
+    },
+    chicagoland: {
+        center: { lat: 41.85, lng: -87.93 },
+        areaLabel: 'Cook & DuPage demo',
+        radiusMeters: 65000,
+        feedTab: 'nearby' as const,
+    },
+} as const;
+
 const defaultShellDiscoveryState = applyDiscoveryFilterPatch(
     defaultDiscoveryFilterState,
     {
@@ -366,8 +382,7 @@ const defaultShellDiscoveryState = applyDiscoveryFilterPatch(
 );
 
 const buildNearbyPatch = (): Partial<DiscoveryFilterState> => ({
-    feedTab: 'nearby',
-    radiusMeters: undefined,
+    ...demoAreaPresets.chicagoland,
 });
 
 const toSeverityTone = (
@@ -495,6 +510,31 @@ const DiscoveryFiltersPanel = ({
             )}
             {!state.center ? (
                 <div className='mb-4 border-2 border-mh-borderSoft bg-mh-surfaceElev p-3'>
+                    <div className='mb-4'>
+                        <p className='mb-2 text-xs font-bold uppercase tracking-[0.12em] text-mh-text'>
+                            {t('discovery.demoAreas')}
+                        </p>
+                        <p className='mb-3 text-xs text-mh-textMuted'>
+                            {t('discovery.demoAreasHelp')}
+                        </p>
+                        <div className='flex flex-wrap gap-2'>
+                            <Button
+                                type='button'
+                                className='px-3 py-2 text-xs'
+                                onClick={() => onPatch(demoAreaPresets.cook)}
+                            >
+                                {t('discovery.cookDemo')}
+                            </Button>
+                            <Button
+                                type='button'
+                                variant='secondary'
+                                className='px-3 py-2 text-xs'
+                                onClick={() => onPatch(demoAreaPresets.dupage)}
+                            >
+                                {t('discovery.dupageDemo')}
+                            </Button>
+                        </div>
+                    </div>
                     <label
                         htmlFor={`${idPrefix}-area-label`}
                         className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
@@ -776,7 +816,6 @@ const DiscoveryFiltersPanel = ({
 };
 
 interface DashboardRouteProps {
-    appTitle: string;
     onNavigate: (route: AppRoute) => void;
     discoveryState: DiscoveryFilterState;
     onPatchDiscovery: (patch: Partial<DiscoveryFilterState>) => void;
@@ -858,7 +897,6 @@ const LegalPolicyRoute = ({
 };
 
 const DashboardRoute = ({
-    appTitle,
     onNavigate,
     discoveryState,
     onPatchDiscovery,
@@ -866,198 +904,266 @@ const DashboardRoute = ({
     const { t } = useLocale();
     return (
         <>
-            <header className='mh-hero mb-8 pb-6 sm:pb-8'>
-                <div className='mb-5 flex flex-wrap items-center justify-between gap-3'>
-                    <p className='mh-kicker'>{t('dashboard.phaseLabel')}</p>
-                    <Badge tone='danger'>{t('dashboard.safetyBadge')}</Badge>
-                </div>
-
-                <div className='grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]'>
-                    <div>
-                        <h1 className='font-heading text-5xl font-black leading-[0.88] tracking-[-0.055em] sm:text-6xl md:text-7xl lg:text-8xl'>
-                            {appTitle}
-                        </h1>
-                        <p className='mt-4 max-w-xl text-base text-mh-textMuted sm:text-lg'>
-                            {t('dashboard.description')}
-                        </p>
-                        <div className='mt-5 flex flex-wrap gap-2'>
-                            <Button
-                                onClick={() => {
-                                    onPatchDiscovery(buildNearbyPatch());
-                                    onNavigate('/map');
-                                }}
-                            >
-                                {t('dashboard.openMapTriage')}
-                            </Button>
-                            <Button
-                                variant='secondary'
-                                onClick={() => onNavigate('/posting')}
-                            >
-                                {t('dashboard.openPostingForm')}
-                            </Button>
-                            {webDataMode === 'fixture' ? (
-                                <Button
-                                    variant='neutral'
-                                    onClick={() => onNavigate('/chat')}
-                                >
-                                    {t('dashboard.openChatHandoff')}
-                                </Button>
-                            ) : null}
-                        </div>
+            <header className='mh-landing-hero'>
+                <div className='mh-landing-hero__copy'>
+                    <p className='mh-kicker'>{t('dashboard.eyebrow')}</p>
+                    <h1 className='mh-landing-title'>
+                        {t('dashboard.heading')}
+                    </h1>
+                    <p className='mh-landing-deck'>
+                        {t('dashboard.description')}
+                    </p>
+                    <div className='mt-7 flex flex-wrap gap-3'>
+                        <Button
+                            onClick={() => {
+                                onPatchDiscovery(buildNearbyPatch());
+                                onNavigate('/map');
+                            }}
+                        >
+                            {t('dashboard.browseNeeds')}
+                        </Button>
+                        <Button
+                            variant='secondary'
+                            onClick={() => onNavigate('/posting')}
+                        >
+                            {t('dashboard.askForHelp')}
+                        </Button>
+                        <Button
+                            variant='neutral'
+                            onClick={() => onNavigate('/resources')}
+                        >
+                            {t('dashboard.findResources')}
+                        </Button>
                     </div>
-
-                    <aside className='mh-card p-4 sm:p-5'>
-                        <p className='mh-kicker'>
-                            {t('dashboard.servicePosture')}
-                        </p>
-                        <ul className='mt-3 grid gap-2'>
-                            <li className='mh-stat-tile'>
-                                <p className='text-xs uppercase tracking-widest text-mh-textSoft'>
-                                    {t('dashboard.discoverySource')}
-                                </p>
-                                <p className='mt-1 text-sm font-black text-mh-text'>
-                                    {t('dashboard.durableProjections')}
-                                </p>
-                            </li>
-                            <li className='mh-stat-tile'>
-                                <p className='text-xs uppercase tracking-widest text-mh-textSoft'>
-                                    {t('dashboard.safetyControls')}
-                                </p>
-                                <p className='mt-1 text-sm font-black text-mh-text'>
-                                    {t('dashboard.reportsAndBlocks')}
-                                </p>
-                            </li>
-                            <li className='mh-stat-tile'>
-                                <p className='text-xs uppercase tracking-widest text-mh-textSoft'>
-                                    {t('dashboard.accountControls')}
-                                </p>
-                                <p className='mt-1 text-sm font-black text-mh-text'>
-                                    {t('dashboard.exportAndDeactivation')}
-                                </p>
-                            </li>
-                        </ul>
-                    </aside>
+                    <p className='mh-landing-note'>
+                        <span aria-hidden='true' />{' '}
+                        {t('dashboard.locationPromise')}
+                    </p>
                 </div>
+
+                <aside
+                    className='mh-how-card'
+                    aria-labelledby='how-patchwork-works'
+                >
+                    <div className='mh-how-card__patches' aria-hidden='true'>
+                        <span />
+                        <span />
+                        <span />
+                        <span />
+                    </div>
+                    <p className='mh-kicker'>{t('dashboard.howEyebrow')}</p>
+                    <h2 id='how-patchwork-works' className='mh-how-card__title'>
+                        {t('dashboard.howTitle')}
+                    </h2>
+                    <ol className='mt-5 grid gap-4'>
+                        {(['discover', 'connect', 'coordinate'] as const).map(
+                            (step, index) => (
+                                <li key={step} className='mh-how-step'>
+                                    <span
+                                        className='mh-how-step__number'
+                                        aria-hidden='true'
+                                    >
+                                        {index + 1}
+                                    </span>
+                                    <div>
+                                        <h3 className='font-bold text-mh-text'>
+                                            {t(`dashboard.${step}Title`)}
+                                        </h3>
+                                        <p className='mt-1 text-sm text-mh-textMuted'>
+                                            {t(`dashboard.${step}Description`)}
+                                        </p>
+                                    </div>
+                                </li>
+                            ),
+                        )}
+                    </ol>
+                </aside>
             </header>
 
-            <div className='grid gap-6 lg:grid-cols-5'>
-                <section className='lg:col-span-3'>
-                    <Panel title={String(t('dashboard.discoveryShellTitle'))}>
-                        <p className='mb-3 text-sm text-mh-textMuted'>
-                            {t('dashboard.discoveryShellDescription')}
+            <section
+                className='mh-landing-section'
+                aria-labelledby='start-heading'
+            >
+                <div className='mh-landing-section__header'>
+                    <div>
+                        <p className='mh-kicker'>
+                            {t('dashboard.startEyebrow')}
                         </p>
-                        <label
-                            htmlFor='search-requests'
-                            className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
+                        <h2
+                            id='start-heading'
+                            className='mh-landing-section__title'
                         >
-                            {t('dashboard.searchRequests')}
-                        </label>
-                        <Input
-                            id='search-requests'
-                            name='searchRequests'
-                            autoComplete='off'
-                            placeholder={String(
-                                t('discovery.searchPlaceholder'),
-                            )}
-                            value={discoveryState.text ?? ''}
-                            onChange={(event) => {
-                                const nextValue = event.target.value.trim();
-                                onPatchDiscovery({
-                                    text:
-                                        nextValue.length > 0
-                                            ? nextValue
-                                            : undefined,
-                                });
-                            }}
-                        />
-                        <div className='mt-4 flex flex-wrap gap-2'>
-                            <Button
-                                onClick={() => {
-                                    onPatchDiscovery(buildNearbyPatch());
-                                    onNavigate('/map');
-                                }}
-                            >
-                                {t('dashboard.findNearby')}
-                            </Button>
-                            <Button
-                                variant='secondary'
-                                onClick={() => onNavigate('/posting')}
-                            >
-                                {t('dashboard.createPost')}
-                            </Button>
-                            <Button
-                                variant='neutral'
-                                onClick={() => onNavigate('/feed')}
-                            >
-                                {t('dashboard.openLiveFeed')}
-                            </Button>
-                        </div>
-                    </Panel>
-                </section>
+                            {t('dashboard.startTitle')}
+                        </h2>
+                    </div>
+                    <p>{t('dashboard.startDescription')}</p>
+                </div>
 
-                <section className='lg:col-span-2'>
-                    <Card title={String(t('dashboard.operatingBoundaryTitle'))}>
-                        <ul className='list-disc space-y-1 pl-5 text-sm'>
-                            <li>{t('dashboard.notEmergency')}</li>
-                            <li>{t('dashboard.approximateLocations')}</li>
-                            <li>{t('dashboard.signInBoundary')}</li>
-                        </ul>
-                        <p className='mt-3'>
-                            {t('dashboard.readGuidelinesPrefix')}{' '}
-                            <TextLink href='/legal/community-guidelines'>
-                                {t('dashboard.communityGuidelines')}
-                            </TextLink>{' '}
-                            {t('dashboard.readGuidelinesSuffix')}
-                        </p>
-                    </Card>
-                </section>
-
-                <section className='lg:col-span-5'>
-                    <Card
-                        title={String(t('dashboard.quickRouteHandoffsTitle'))}
+                <div className='grid gap-4 md:grid-cols-3'>
+                    <button
+                        type='button'
+                        className='mh-path-card mh-path-card--needs'
+                        onClick={() => {
+                            onPatchDiscovery(buildNearbyPatch());
+                            onNavigate('/feed');
+                        }}
                     >
-                        <ul className='grid gap-3 sm:grid-cols-2 lg:grid-cols-3'>
-                            {shellSections
-                                .filter(
-                                    (section) =>
-                                        primaryRoutes.includes(
-                                            section.route as AppRoute,
-                                        ) ||
-                                        (webDataMode === 'fixture'
-                                            ? accountRoutes
-                                            : productionAccountRoutes
-                                        ).includes(section.route as AppRoute),
-                                )
-                                .map((section) => (
-                                    <li
-                                        key={section.route}
-                                        className='rounded-none border-2 border-mh-borderSoft bg-mh-surfaceElev p-3'
-                                    >
-                                        <p className='text-sm font-bold text-mh-text'>
-                                            {section.title}
-                                        </p>
-                                        <p className='mt-1 text-xs text-mh-textSoft'>
-                                            {section.description}
-                                        </p>
-                                        <p className='mt-2'>
-                                            <button
-                                                type='button'
-                                                className='mh-link text-sm'
-                                                onClick={() =>
-                                                    onNavigate(section.route)
-                                                }
-                                            >
-                                                {t('dashboard.openSection', {
-                                                    title: section.title,
-                                                })}
-                                            </button>
-                                        </p>
-                                    </li>
-                                ))}
-                        </ul>
-                    </Card>
-                </section>
-            </div>
+                        <span
+                            className='mh-path-card__index'
+                            aria-hidden='true'
+                        >
+                            {t('dashboard.needsIndex')}
+                        </span>
+                        <span className='mh-path-card__title'>
+                            {t('dashboard.needsTitle')}
+                        </span>
+                        <span className='mh-path-card__description'>
+                            {t('dashboard.needsDescription')}
+                        </span>
+                        <span className='mh-path-card__link'>
+                            {t('dashboard.needsAction')}{' '}
+                            <span aria-hidden='true'>→</span>
+                        </span>
+                    </button>
+                    <button
+                        type='button'
+                        className='mh-path-card mh-path-card--offer'
+                        onClick={() => onNavigate('/volunteer')}
+                    >
+                        <span
+                            className='mh-path-card__index'
+                            aria-hidden='true'
+                        >
+                            {t('dashboard.offerIndex')}
+                        </span>
+                        <span className='mh-path-card__title'>
+                            {t('dashboard.offerTitle')}
+                        </span>
+                        <span className='mh-path-card__description'>
+                            {t('dashboard.offerDescription')}
+                        </span>
+                        <span className='mh-path-card__link'>
+                            {t('dashboard.offerAction')}{' '}
+                            <span aria-hidden='true'>→</span>
+                        </span>
+                    </button>
+                    <button
+                        type='button'
+                        className='mh-path-card mh-path-card--resources'
+                        onClick={() => onNavigate('/resources')}
+                    >
+                        <span
+                            className='mh-path-card__index'
+                            aria-hidden='true'
+                        >
+                            {t('dashboard.resourcesIndex')}
+                        </span>
+                        <span className='mh-path-card__title'>
+                            {t('dashboard.resourcesTitle')}
+                        </span>
+                        <span className='mh-path-card__description'>
+                            {t('dashboard.resourcesDescription')}
+                        </span>
+                        <span className='mh-path-card__link'>
+                            {t('dashboard.resourcesAction')}{' '}
+                            <span aria-hidden='true'>→</span>
+                        </span>
+                    </button>
+                </div>
+            </section>
+
+            <section
+                className='mh-nearby-band'
+                aria-labelledby='nearby-heading'
+            >
+                <div>
+                    <p className='mh-kicker'>{t('dashboard.nearbyEyebrow')}</p>
+                    <h2 id='nearby-heading' className='mh-nearby-band__title'>
+                        {t('dashboard.nearbyTitle')}
+                    </h2>
+                    <p className='mt-2 max-w-xl text-sm text-mh-textMuted sm:text-base'>
+                        {t('dashboard.nearbyDescription')}
+                    </p>
+                </div>
+                <div className='mh-nearby-band__search'>
+                    <label htmlFor='search-requests' className='sr-only'>
+                        {t('dashboard.searchRequests')}
+                    </label>
+                    <Input
+                        id='search-requests'
+                        name='searchRequests'
+                        autoComplete='off'
+                        placeholder={String(t('discovery.searchPlaceholder'))}
+                        value={discoveryState.text ?? ''}
+                        onChange={(event) => {
+                            const nextValue = event.target.value.trim();
+                            onPatchDiscovery({
+                                text:
+                                    nextValue.length > 0
+                                        ? nextValue
+                                        : undefined,
+                            });
+                        }}
+                    />
+                    <Button
+                        onClick={() => {
+                            onPatchDiscovery(buildNearbyPatch());
+                            onNavigate('/map');
+                        }}
+                    >
+                        {t('dashboard.exploreMap')}
+                    </Button>
+                </div>
+            </section>
+
+            <section
+                className='mh-trust-section'
+                aria-labelledby='trust-heading'
+            >
+                <div className='mh-trust-section__intro'>
+                    <p className='mh-kicker'>{t('dashboard.trustEyebrow')}</p>
+                    <h2
+                        id='trust-heading'
+                        className='mh-landing-section__title'
+                    >
+                        {t('dashboard.trustTitle')}
+                    </h2>
+                    <p>{t('dashboard.trustDescription')}</p>
+                </div>
+                <ul className='mh-trust-list'>
+                    <li>
+                        <strong>{t('dashboard.approximateTitle')}</strong>
+                        <span>{t('dashboard.approximateDescription')}</span>
+                    </li>
+                    <li>
+                        <strong>{t('dashboard.privateTitle')}</strong>
+                        <span>{t('dashboard.privateDescription')}</span>
+                    </li>
+                    <li>
+                        <strong>{t('dashboard.controlTitle')}</strong>
+                        <span>{t('dashboard.controlDescription')}</span>
+                    </li>
+                </ul>
+            </section>
+
+            <aside className='mh-safety-note' aria-labelledby='safety-heading'>
+                <div>
+                    <p className='mh-kicker'>{t('dashboard.safetyEyebrow')}</p>
+                    <h2
+                        id='safety-heading'
+                        className='font-heading text-xl font-bold'
+                    >
+                        {t('dashboard.notEmergency')}
+                    </h2>
+                </div>
+                <p>
+                    {t('dashboard.safetyDescription')}{' '}
+                    <TextLink href='/legal/community-guidelines'>
+                        {t('dashboard.communityGuidelines')}
+                    </TextLink>
+                    {t('dashboard.safetySuffix')}
+                </p>
+            </aside>
         </>
     );
 };
@@ -1341,12 +1447,6 @@ const MapRoute = ({
                 ) : null}
             </header>
 
-            <DiscoveryFiltersPanel
-                idPrefix='map'
-                state={discoveryState}
-                onPatch={onPatchDiscovery}
-            />
-
             <section className='rounded-none border-2 border-mh-borderSoft bg-mh-surfaceElev p-3'>
                 {tileError ? (
                     <div
@@ -1425,6 +1525,12 @@ const MapRoute = ({
                 )}
             </section>
 
+            <DiscoveryFiltersPanel
+                idPrefix='map'
+                state={discoveryState}
+                onPatch={onPatchDiscovery}
+            />
+
             <div className='grid gap-6 xl:grid-cols-2'>
                 <Card title={String(t('map.clusterOverviewTitle'))}>
                     {isLoading ? (
@@ -1447,7 +1553,9 @@ const MapRoute = ({
                             {mapView.clusters.map((cluster) => (
                                 <li key={cluster.id} className='mh-record-card'>
                                     <p className='text-sm font-bold text-mh-text'>
-                                        {cluster.label}
+                                        {t('map.requestsInArea', {
+                                            count: cluster.count,
+                                        })}
                                     </p>
                                     <p className='mt-1 text-xs text-mh-textSoft'>
                                         {t('map.clusterRequests', {
@@ -10358,16 +10466,27 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         currentRoute === '/settings';
     const isDeferredFixtureRoute =
         webDataMode !== 'fixture' && deferredFixtureRoutes.has(currentRoute);
-    const visibleAccountRoutes =
-        webDataMode === 'fixture' ? accountRoutes : productionAccountRoutes;
-    const visibleSecondaryRoutes =
-        webDataMode === 'fixture'
-            ? secondaryRoutes
-            : (
-                  [...productionSecondaryRoutes, '/volunteer', '/chat'] as const
-              ).filter(
-                  (route) => route !== '/scheduling' || Boolean(auth.session),
-              );
+    const visibleAccountRoutes: readonly AppRoute[] =
+        webDataMode === 'fixture' ? accountRoutes
+        : !auth.session ? []
+        : productionAccountRoutes.filter(
+              route =>
+                  route !== '/moderation' ||
+                  auth.session?.role === 'admin' ||
+                  auth.session?.role === 'moderator',
+          );
+    const visibleSecondaryRoutes: readonly AppRoute[] =
+        webDataMode === 'fixture' ? secondaryRoutes
+        : auth.session ? [
+              '/volunteer',
+              '/organizations',
+              '/posting',
+              '/verification',
+              '/chat',
+              '/scheduling',
+              '/groups',
+          ]
+        : ['/volunteer', '/organizations'];
 
     const content = isDeferredFixtureRoute ? (
         <Panel title={t('runtime.deferred')}>
@@ -10638,7 +10757,6 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         <LegalPolicyRoute route={currentRoute} />
     ) : (
         <DashboardRoute
-            appTitle={appTitle}
             onNavigate={navigate}
             discoveryState={discoveryState}
             onPatchDiscovery={patchDiscoveryState}
@@ -10783,6 +10901,11 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                                             ? `@${auth.session.handle.replace(/^@/, '')}`
                                             : t('nav.accountFallback')}
                                     </span>
+                                    {auth.session.canManageSignupInvitations ? (
+                                        <a className='mh-nav-chip' href='/admin/invites'>
+                                            {t('route.invites')}
+                                        </a>
+                                    ) : null}
                                     <Button
                                         variant='neutral'
                                         className='px-3 py-1 text-xs'

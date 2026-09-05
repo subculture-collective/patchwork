@@ -182,15 +182,24 @@ test('map awaiting an area does not report an API failure', async ({ page }) => 
     await expect(page).toHaveURL(/area=Selected\+approximate\+area/);
 });
 
-test('public home advertises only implemented alpha capabilities', async ({
+test('public home advertises only implemented demonstration capabilities', async ({
     page,
 }) => {
     await page.goto('/');
 
+    await expect(page.getByRole('status')).toContainText(
+        'Demonstration environment',
+    );
     await expect(
-        page.getByRole('heading', { name: 'Pre-alpha operating boundary' }),
+        page.getByRole('heading', {
+            name: 'Find help. Offer help. Strengthen your neighborhood.',
+        }),
     ).toBeVisible();
-    await expect(page.getByText('Durable projections')).toBeVisible();
+    await expect(
+        page.getByText(
+            'Public discovery uses approximate areas, never exact addresses.',
+        ),
+    ).toBeVisible();
     await expect(page.getByText('127', { exact: true })).toHaveCount(0);
     await expect(page.getByText('11m', { exact: true })).toHaveCount(0);
     await expect(page.getByText('42', { exact: true })).toHaveCount(0);
@@ -199,16 +208,17 @@ test('public home advertises only implemented alpha capabilities', async ({
         page.getByRole('button', { name: 'Open chat handoff' }),
     ).toHaveCount(0);
 
-    await expect(page.getByRole('link', { name: 'Settings' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Settings' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Volunteer' })).toBeHidden();
     await expect(page.getByRole('link', { name: 'Chat' })).toBeHidden();
     await page.getByRole('button', { name: 'More', exact: true }).click();
     const more = page.locator('#secondary-navigation-links');
     await expect(more.getByRole('link', { name: 'Volunteer' })).toBeVisible();
+    await expect(more.getByRole('link', { name: 'Organizations' })).toBeVisible();
     await expect(more.getByRole('link', { name: 'Scheduling' })).toHaveCount(0);
     await expect(more.getByRole('link', { name: 'Feedback' })).toHaveCount(0);
-    await expect(more.getByRole('link', { name: 'Groups' })).toBeVisible();
-    await expect(more.getByRole('link', { name: 'Chat' })).toBeVisible();
+    await expect(more.getByRole('link', { name: 'Groups' })).toHaveCount(0);
+    await expect(more.getByRole('link', { name: 'Chat' })).toHaveCount(0);
 });
 
 test('direct deferred feedback route never exposes fixture implementations', async ({

@@ -71,6 +71,10 @@ const readSession = (payload: unknown): AuthSessionSummary | null => {
                     ? { handle: session.handle.trim() }
                     : {}),
                 expiresAt: session.expiresAt,
+                ...(typeof session.role === 'string' ? { role: session.role } : {}),
+                ...(typeof session.canManageSignupInvitations === 'boolean' ?
+                    { canManageSignupInvitations: session.canManageSignupInvitations }
+                :   {}),
             }
         :   null;
 };
@@ -106,6 +110,8 @@ export interface AuthSessionSummary {
     did: string;
     handle?: string;
     expiresAt: string;
+    role?: string;
+    canManageSignupInvitations?: boolean;
 }
 
 export const beginLogin = async (
@@ -216,7 +222,8 @@ export interface SignupCredentials {
     handle: string;
     email: string;
     password: string;
-    inviteCode: string;
+    inviteCode?: string;
+    inviteToken?: string;
     policyVersion: string;
     asserted18OrOlder: true;
     acceptedDocuments: string[];
@@ -241,7 +248,9 @@ export const signup = async (credentials: SignupCredentials): Promise<SignupResu
             handle: credentials.handle.trim(),
             email: credentials.email.trim(),
             password: credentials.password,
-            inviteCode: credentials.inviteCode.trim(),
+            ...(credentials.inviteToken ?
+                { inviteToken: credentials.inviteToken }
+            :   { inviteCode: credentials.inviteCode?.trim() ?? '' }),
             policyVersion: credentials.policyVersion,
             asserted18OrOlder: credentials.asserted18OrOlder,
             acceptedDocuments: credentials.acceptedDocuments,
@@ -266,4 +275,67 @@ export const signup = async (credentials: SignupCredentials): Promise<SignupResu
         'INVALID_SIGNUP_RESPONSE',
         'The signup response was invalid.',
     );
+};
+
+export interface SignupInvitationSummary {
+    inviteId: string;
+    createdByDid: string;
+    createdAt: string;
+    expiresAt: string;
+    revokedAt: string | null;
+    successfulUseCount: number;
+    lastUsedAt: string | null;
+    status: 'active' | 'expired' | 'revoked';
+}
+
+const invitationRequest = async (
+    method: 'GET' | 'POST',
+    path: string,
+    body?: unknown,
+): Promise<unknown> => {
+    const response = await fetch(`${apiBaseUrl()}${path}`, {
+        method,
+        credentials: 'include',
+        headers: {
+            accept: 'application/json',
+            ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+            ...cookieCsrfHeaders(),
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+    const payload: unknown = await response.json().catch(() => undefined);
+    if (!response.ok) {
+        throw errorForResponse(payload, 'Unable to manage signup invitations.');
+    }
+    return payload;
+};
+
+export const listSignupInvitations = async (): Promise<SignupInvitationSummary[]> => {
+    const payload = await invitationRequest('GET', '/admin/signup-invitations');
+    if (isRecord(payload) && Array.isArray(payload.invitations)) {
+        return payload.invitations as SignupInvitationSummary[];
+    }
+    throw new AuthApiError('INVALID_INVITATION_RESPONSE', 'The invitation response was invalid.');
+};
+
+export const createSignupInvitation = async (validForHours: number): Promise<{
+    invitation: SignupInvitationSummary;
+    url: string;
+}> => {
+    const payload = await invitationRequest('POST', '/admin/signup-invitations', { validForHours });
+    if (isRecord(payload) && isRecord(payload.invitation) && typeof payload.url === 'string') {
+        return {
+            invitation: payload.invitation as unknown as SignupInvitationSummary,
+            url: payload.url,
+        };
+    }
+    throw new AuthApiError('INVALID_INVITATION_RESPONSE', 'The invitation response was invalid.');
+};
+
+export const revokeSignupInvitation = async (inviteId: string): Promise<SignupInvitationSummary> => {
+    const payload = await invitationRequest('POST', '/admin/signup-invitations/revoke', { inviteId });
+    if (isRecord(payload) && isRecord(payload.invitation)) {
+        return payload.invitation as unknown as SignupInvitationSummary;
+    }
+    throw new AuthApiError('INVALID_INVITATION_RESPONSE', 'The invitation response was invalid.');
 };

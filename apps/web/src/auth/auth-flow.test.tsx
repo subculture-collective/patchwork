@@ -133,6 +133,8 @@ describe('AT authentication flow', () => {
                         did: 'did:plc:alice',
                         handle: 'alice.example.com',
                         expiresAt: '2026-07-12T12:00:00.000Z',
+                        role: 'administrator',
+                        canManageSignupInvitations: true,
                     },
                 }),
                 {
@@ -149,6 +151,8 @@ describe('AT authentication flow', () => {
             did: 'did:plc:alice',
             handle: 'alice.example.com',
             expiresAt: '2026-07-12T12:00:00.000Z',
+            role: 'administrator',
+            canManageSignupInvitations: true,
         });
         expect(fetchMock).toHaveBeenCalledWith(
             '/api/auth/session',
@@ -253,7 +257,8 @@ describe('AT authentication flow', () => {
         expect(html).toContain('id="at-handle"');
         expect(html).toContain('type="submit"');
         expect(html).toContain('aria-live="polite"');
-        expect(html).toContain('Continue with AT Protocol');
+        expect(html).toContain('Continue with Bluesky');
+        expect(html).toContain('Bluesky or AT Protocol handle');
     });
 
     it('renders a labelled signup form without exposing secrets', () => {
@@ -330,6 +335,64 @@ describe('AT authentication flow', () => {
             }),
         );
         expect(JSON.stringify(result)).not.toMatch(/accessJwt|refreshJwt|jwt|token|supersecret|invite-123/i);
+    });
+
+    it('submits a shared invitation token without a raw PDS invite code', async () => {
+        const fetchMock = vi.fn(async (
+            _input: RequestInfo | URL,
+            _init?: RequestInit,
+        ) =>
+            new Response(
+                JSON.stringify({ did: 'did:plc:alice', handle: 'alice.subcult.tv' }),
+                { status: 200, headers: { 'content-type': 'application/json' } },
+            ),
+        );
+        globalThis.fetch = fetchMock as typeof fetch;
+
+        await signup({
+            handle: 'alice.subcult.tv',
+            email: 'alice@example.com',
+            password: 'supersecret',
+            inviteToken: 'a'.repeat(43),
+            policyVersion: CURRENT_POLICY_VERSION,
+            asserted18OrOlder: true,
+            acceptedDocuments: [...requiredPolicyDocuments],
+        });
+
+        const request = fetchMock.mock.calls[0]![1] as RequestInit;
+        expect(request.body).toBe(JSON.stringify({
+            handle: 'alice.subcult.tv',
+            email: 'alice@example.com',
+            password: 'supersecret',
+            inviteToken: 'a'.repeat(43),
+            policyVersion: CURRENT_POLICY_VERSION,
+            asserted18OrOlder: true,
+            acceptedDocuments: [...requiredPolicyDocuments],
+        }));
+        expect(String(request.body)).not.toContain('inviteCode');
+    });
+
+    it('recognizes an invite URL, removes its bearer token from the address bar, and hides the code field', async () => {
+        const token = 'b'.repeat(43);
+        window.history.replaceState({}, '', `/signup?invite=${token}&returnTo=%2Fmap`);
+        const container = document.createElement('div');
+        const root = createRoot(container);
+
+        await act(async () => {
+            root.render(
+                <AuthProvider initialStatus='anonymous'>
+                    <SignupPage />
+                </AuthProvider>,
+            );
+            await new Promise(resolve => setTimeout(resolve, 0));
+        });
+
+        expect(container.textContent).toContain('Your invitation is ready');
+        expect(container.querySelector('#invite-code')).toBeNull();
+        expect(window.location.search).toBe('?returnTo=%2Fmap');
+        expect(container.innerHTML).not.toContain(token);
+        await act(async () => root.unmount());
+        window.history.replaceState({}, '', '/');
     });
 
     it('does not submit mismatched passwords', async () => {
