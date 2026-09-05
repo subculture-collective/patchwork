@@ -121,13 +121,48 @@ test('API failure stays visible and never substitutes fixture discovery data', a
     await expect.poll(() => discoveryRequests).toBeGreaterThan(1);
 });
 
-test('map awaiting an area does not report an API failure', async ({ page }) => {
+test('map requests location and loads an approximate nearby area automatically', async ({ page }) => {
     let discoveryRequests = 0;
+    await page.addInitScript(() => {
+        Object.defineProperty(navigator, 'geolocation', {
+            configurable: true,
+            value: {
+                getCurrentPosition: (
+                    success: PositionCallback,
+                ) => success({
+                    coords: {
+                        latitude: 41.881234,
+                        longitude: -87.632345,
+                        accuracy: 100,
+                        altitude: null,
+                        altitudeAccuracy: null,
+                        heading: null,
+                        speed: null,
+                        toJSON: () => ({}),
+                    },
+                    timestamp: Date.now(),
+                    toJSON: () => ({}),
+                }),
+            },
+        });
+    });
     await page.route('**/api/**', async route => {
         const requestUrl = new URL(route.request().url());
         const path = requestUrl.pathname.replace(/^\/api/, '');
         if (path.startsWith('/query/')) {
             discoveryRequests += 1;
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    total: 0,
+                    page: 1,
+                    pageSize: 20,
+                    hasNextPage: false,
+                    results: [],
+                }),
+            });
+            return;
         }
         if (path === '/status') {
             await route.fulfill({
@@ -160,26 +195,18 @@ test('map awaiting an area does not report an API failure', async ({ page }) => 
 
     await page.goto('/map');
 
+    await expect(page).toHaveURL(/lat=41\.88/);
+    await expect(page).toHaveURL(/lng=-87\.63/);
+    await expect(page).toHaveURL(/area=Near\+you/);
+    await expect(page.getByText(/rounded, approximate version/)).toBeVisible();
+    await expect(page.getByLabel('Approximate area label')).toHaveCount(0);
     await expect(
-        page.getByText('Choose an approximate area.', { exact: true }),
-    ).toBeVisible();
-    await expect(
-        page.getByLabel('Approximate area label (optional)', { exact: true }),
-    ).toBeVisible();
+        page.getByRole('button', { name: 'Confirm approximate area' }),
+    ).toHaveCount(0);
     await expect(page.getByText('API unavailable')).toHaveCount(0);
     await expect(page.getByText(/^API sync issue:/)).toHaveCount(0);
     await expect(page.getByText(/^Public-place sync issue:/)).toHaveCount(0);
-    expect(discoveryRequests).toBe(0);
-
-    await page.locator('.mh-interactive-map').click({
-        position: { x: 120, y: 120 },
-    });
-    const confirmArea = page.getByRole('button', {
-        name: 'Confirm approximate area',
-    });
-    await expect(confirmArea).toBeEnabled();
-    await confirmArea.click();
-    await expect(page).toHaveURL(/area=Selected\+approximate\+area/);
+    expect(discoveryRequests).toBeGreaterThan(0);
 });
 
 test('public home advertises only implemented demonstration capabilities', async ({

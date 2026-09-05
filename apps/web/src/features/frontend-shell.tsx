@@ -240,7 +240,7 @@ const dataOriginLabel = (origin: ApiDataOrigin): string =>
         : origin === 'fixture'
           ? 'Local fixture demo'
           : origin === 'idle'
-            ? 'Awaiting area selection'
+            ? 'Requesting location'
             : 'API unavailable';
 
 const appRoutes = [
@@ -352,20 +352,9 @@ const urgencyPreferenceOptions: readonly VolunteerOnboardingDraft['preferredUrge
 const nowIso = (): string => new Date().toISOString();
 
 const nearbyDefaultRadiusMeters = 20000;
+const locationCoordinatePrecision = 100;
 
 const demoAreaPresets = {
-    cook: {
-        center: { lat: 41.86, lng: -87.72 },
-        areaLabel: 'Cook County demo',
-        radiusMeters: 50000,
-        feedTab: 'nearby' as const,
-    },
-    dupage: {
-        center: { lat: 41.84, lng: -88.08 },
-        areaLabel: 'DuPage County demo',
-        radiusMeters: 40000,
-        feedTab: 'nearby' as const,
-    },
     chicagoland: {
         center: { lat: 41.85, lng: -87.93 },
         areaLabel: 'Cook & DuPage demo',
@@ -382,7 +371,10 @@ const defaultShellDiscoveryState = applyDiscoveryFilterPatch(
 );
 
 const buildNearbyPatch = (): Partial<DiscoveryFilterState> => ({
-    ...demoAreaPresets.chicagoland,
+    center: undefined,
+    areaLabel: undefined,
+    radiusMeters: undefined,
+    feedTab: 'nearby',
 });
 
 const toSeverityTone = (
@@ -484,96 +476,104 @@ const DiscoveryFiltersPanel = ({
     onPatch,
 }: DiscoveryFiltersPanelProps) => {
     const { t } = useLocale();
-    const [areaLatitude, setAreaLatitude] = useState('');
-    const [areaLongitude, setAreaLongitude] = useState('');
-    const [areaLabel, setAreaLabel] = useState(state.areaLabel ?? '');
-    const [areaRadius, setAreaRadius] = useState(String(state.radiusMeters ?? nearbyDefaultRadiusMeters));
+    const [locationAccess, setLocationAccess] = useState<
+        'idle' | 'requesting' | 'granted' | 'fallback'
+    >('idle');
+    const requestedLocationRef = useRef(false);
     const chipModel = useMemo(
         () => buildDiscoveryFilterChipModel(state),
         [state],
     );
 
-    const latValue = state.center ? String(state.center.lat) : areaLatitude;
-    const lngValue = state.center ? String(state.center.lng) : areaLongitude;
+    const requestLocation = useCallback(() => {
+        setLocationAccess('requesting');
+
+        if (!navigator.geolocation) {
+            setLocationAccess('fallback');
+            onPatch(demoAreaPresets.chicagoland);
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            position => {
+                const approximateCenter = {
+                    lat:
+                        Math.round(
+                            position.coords.latitude * locationCoordinatePrecision,
+                        ) / locationCoordinatePrecision,
+                    lng:
+                        Math.round(
+                            position.coords.longitude * locationCoordinatePrecision,
+                        ) / locationCoordinatePrecision,
+                };
+                setLocationAccess('granted');
+                onPatch({
+                    center: approximateCenter,
+                    areaLabel: String(t('discovery.nearYou')),
+                    radiusMeters: nearbyDefaultRadiusMeters,
+                    feedTab: 'nearby',
+                });
+            },
+            () => {
+                setLocationAccess('fallback');
+                onPatch(demoAreaPresets.chicagoland);
+            },
+            {
+                enableHighAccuracy: false,
+                maximumAge: 300000,
+                timeout: 5000,
+            },
+        );
+    }, [onPatch, t]);
+
+    useEffect(() => {
+        if (state.center || requestedLocationRef.current) return;
+        requestedLocationRef.current = true;
+        requestLocation();
+    }, [requestLocation, state.center]);
 
     return (
         <Panel title={String(t('discovery.title'))}>
             {!state.center ? (
                 <div className='mh-alert mb-4 text-sm' role='status'>
-                    <strong>{t('discovery.areaRequiredTitle')}</strong>{' '}
-                    {t('discovery.demoAreaHelp')}
+                    <strong>{t('discovery.locationPermissionTitle')}</strong>{' '}
+                    {locationAccess === 'requesting'
+                        ? t('discovery.locationRequesting')
+                        : t('discovery.locationPermissionHelp')}
+                    <div>
+                        <Button
+                            type='button'
+                            className='mt-3 px-3 py-2 text-xs'
+                            disabled={locationAccess === 'requesting'}
+                            onClick={requestLocation}
+                        >
+                            {locationAccess === 'requesting'
+                                ? t('discovery.locationRequestingButton')
+                                : t('discovery.locationButton')}
+                        </Button>
+                    </div>
                 </div>
             ) : (
-                <p className='mb-4 text-sm text-mh-textMuted' role='status'>
-                    {t('discovery.selectedAreaHelp')}
-                </p>
-            )}
-            {!state.center ? (
-                <div className='mb-4 border-2 border-mh-borderSoft bg-mh-surfaceElev p-3'>
-                    <div className='mb-4'>
-                        <p className='mb-2 text-xs font-bold uppercase tracking-[0.12em] text-mh-text'>
-                            {t('discovery.demoAreas')}
-                        </p>
-                        <p className='mb-3 text-xs text-mh-textMuted'>
-                            {t('discovery.demoAreasHelp')}
-                        </p>
-                        <div className='flex flex-wrap gap-2'>
-                            <Button
-                                type='button'
-                                className='px-3 py-2 text-xs'
-                                onClick={() => onPatch(demoAreaPresets.cook)}
-                            >
-                                {t('discovery.cookDemo')}
-                            </Button>
-                            <Button
-                                type='button'
-                                variant='secondary'
-                                className='px-3 py-2 text-xs'
-                                onClick={() => onPatch(demoAreaPresets.dupage)}
-                            >
-                                {t('discovery.dupageDemo')}
-                            </Button>
-                        </div>
-                    </div>
-                    <label
-                        htmlFor={`${idPrefix}-area-label`}
-                        className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
+                <div
+                    className='mb-4 flex flex-wrap items-center justify-between gap-3 text-sm text-mh-textMuted'
+                    role='status'
+                >
+                    <span>
+                        {locationAccess === 'fallback'
+                            ? t('discovery.locationFallback')
+                            : t('discovery.locationActive')}
+                    </span>
+                    <Button
+                        type='button'
+                        variant='neutral'
+                        className='px-3 py-1 text-xs'
+                        disabled={locationAccess === 'requesting'}
+                        onClick={requestLocation}
                     >
-                        {t('discovery.areaLabel')}
-                    </label>
-                    <Input
-                        id={`${idPrefix}-area-label`}
-                        name={`${idPrefix}-area-label`}
-                        autoComplete='off'
-                        placeholder={String(t('discovery.areaLabelPlaceholder'))}
-                        value={areaLabel}
-                        onChange={(event) => setAreaLabel(event.target.value)}
-                    />
-                    <p className='mt-2 text-xs text-mh-textMuted'>
-                        {t('discovery.areaPickerDescription')}
-                    </p>
-                    <div className='mt-3'>
-                        <Suspense fallback={<div className='mh-skeleton h-64 w-full' />}>
-                            <LazyInteractiveMap
-                                cards={[]}
-                                onSelectPostId={() => undefined}
-                                onTilesFailed={() => undefined}
-                                onConfirmArea={(center) => {
-                                    const label =
-                                        areaLabel.trim() ||
-                                        String(t('discovery.areaUnknown'));
-                                    onPatch({
-                                        center,
-                                        areaLabel: label,
-                                        radiusMeters: nearbyDefaultRadiusMeters,
-                                        feedTab: 'nearby',
-                                    });
-                                }}
-                            />
-                        </Suspense>
-                    </div>
+                        {t('discovery.updateLocation')}
+                    </Button>
                 </div>
-            ) : null}
+            )}
             <label
                 htmlFor={`${idPrefix}-search`}
                 className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
@@ -689,117 +689,17 @@ const DiscoveryFiltersPanel = ({
                     </div>
                 </div>
 
-                <details>
-                    <summary className='cursor-pointer text-sm font-bold'>
-                        {t('discovery.advancedLocation')}
-                    </summary>
-                    <p className='mt-2 text-xs text-mh-textMuted'>
-                        {t('discovery.coordinateHelp')}
-                    </p>
-                    <div className='mt-3 grid gap-3 sm:grid-cols-3'>
-                        <div>
-                        <label
-                            htmlFor={`${idPrefix}-radius`}
-                            className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-textMuted'
-                        >
-                            {t('discovery.radiusMeters')}
-                        </label>
-                        <Input
-                            id={`${idPrefix}-radius`}
-                            name={`${idPrefix}-radius`}
-                            autoComplete='off'
-                            type='number'
-                            min={300}
-                            max={100000}
-                            placeholder={String(nearbyDefaultRadiusMeters)}
-                            value={areaRadius}
-                            onChange={(event) => {
-                                setAreaRadius(event.target.value);
-                            }}
-                        />
-                        </div>
-                        <div>
-                        <label
-                            htmlFor={`${idPrefix}-lat`}
-                            className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-textMuted'
-                        >
-                            {t('discovery.centerLat')}
-                        </label>
-                        <Input
-                            id={`${idPrefix}-lat`}
-                            name={`${idPrefix}-lat`}
-                            autoComplete='off'
-                            type='number'
-                            step='0.0001'
-                            min={-90}
-                            max={90}
-                            value={latValue}
-                            onChange={(event) => {
-                                const value = event.target.value;
-                                setAreaLatitude(value);
-                            }}
-                        />
-                        </div>
-                        <div>
-                        <label
-                            htmlFor={`${idPrefix}-lng`}
-                            className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-textMuted'
-                        >
-                            {t('discovery.centerLng')}
-                        </label>
-                        <Input
-                            id={`${idPrefix}-lng`}
-                            name={`${idPrefix}-lng`}
-                            autoComplete='off'
-                            type='number'
-                            step='0.0001'
-                            min={-180}
-                            max={180}
-                            value={lngValue}
-                            onChange={(event) => {
-                                const value = event.target.value;
-                                setAreaLongitude(value);
-                            }}
-                        />
-                        </div>
-                    </div>
-                    <Button
-                        type='button'
-                        className='mt-3 px-3 py-1 text-xs'
-                        disabled={
-                            !areaLabel.trim() ||
-                            Number.isNaN(Number.parseFloat(areaLatitude)) ||
-                            Number.isNaN(Number.parseFloat(areaLongitude)) ||
-                            Number.isNaN(Number.parseInt(areaRadius, 10))
-                        }
-                        onClick={() => onPatch({
-                            center: {
-                                lat: Number.parseFloat(areaLatitude),
-                                lng: Number.parseFloat(areaLongitude),
-                            },
-                            areaLabel: areaLabel.trim(),
-                            radiusMeters: Number.parseInt(areaRadius, 10),
-                            feedTab: 'nearby',
-                        })}
-                    >
-                        {t('discovery.confirmArea')}
-                    </Button>
-                </details>
-
                 <div className='flex flex-wrap items-center justify-between gap-3 border-t-2 border-mh-borderSoft pt-4'>
                     <Button
                         variant='neutral'
                         className='px-3 py-1 text-xs'
                         onClick={() => {
                             onPatch({
-                                feedTab: 'latest',
+                                feedTab: state.center ? 'nearby' : 'latest',
                                 text: undefined,
                                 category: undefined,
                                 status: undefined,
                                 minUrgency: undefined,
-                                center: undefined,
-                                areaLabel: undefined,
-                                radiusMeters: undefined,
                                 since: undefined,
                             });
                         }}
