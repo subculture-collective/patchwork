@@ -40,7 +40,7 @@ jobs:
               run: npm run test:coverage
 
             - name: Upload coverage report
-              uses: actions/upload-artifact@v4
+              uses: https://gitea.com/actions/upload-artifact@c24449f33cd45d4826c6702db7e49f7cdb9b551d
               if: always()
               with:
                   name: test-coverage
@@ -114,26 +114,24 @@ jobs:
                     -t patchwork-web:ci .
 
             - name: Trivy container scan — API
-              uses: aquasecurity/trivy-action@v0.36.0
-              with:
-                  image-ref: patchwork-api:ci
-                  format: table
-                  exit-code: '1'
-                  severity: HIGH,CRITICAL
-                  output: trivy-api-report.txt
+              run: |
+                  docker run --rm \
+                    --volume /var/run/docker.sock:/var/run/docker.sock \
+                    aquasec/trivy@sha256:be1190afcb28352bfddc4ddeb71470835d16462af68d310f9f4bca710961a41e \
+                    image --scanners vuln --severity HIGH,CRITICAL --exit-code 1 \
+                    --format table patchwork-api:ci | tee trivy-api-report.txt
 
             - name: Trivy container scan — Web
-              uses: aquasecurity/trivy-action@v0.36.0
               if: success() || failure()
-              with:
-                  image-ref: patchwork-web:ci
-                  format: table
-                  exit-code: '1'
-                  severity: HIGH,CRITICAL
-                  output: trivy-web-report.txt
+              run: |
+                  docker run --rm \
+                    --volume /var/run/docker.sock:/var/run/docker.sock \
+                    aquasec/trivy@sha256:be1190afcb28352bfddc4ddeb71470835d16462af68d310f9f4bca710961a41e \
+                    image --scanners vuln --severity HIGH,CRITICAL --exit-code 1 \
+                    --format table patchwork-web:ci | tee trivy-web-report.txt
 
             - name: Upload security scan reports
-              uses: actions/upload-artifact@v4
+              uses: https://gitea.com/actions/upload-artifact@c24449f33cd45d4826c6702db7e49f7cdb9b551d
               if: always()
               with:
                   name: security-reports
@@ -150,27 +148,9 @@ jobs:
         needs: quality-gates
         timeout-minutes: 30
 
-        services:
-            postgres:
-                image: postgres:16-alpine
-                env:
-                    POSTGRES_DB: patchwork
-                    POSTGRES_USER: patchwork
-                    POSTGRES_PASSWORD: patchwork_ci
-                ports:
-                    - 5432:5432
-                options: >-
-                    --health-cmd "pg_isready -U patchwork -d patchwork"
-                    --health-interval 5s
-                    --health-timeout 3s
-                    --health-retries 20
-
         env:
             NODE_ENV: production
             API_DATA_SOURCE: postgres
-            API_DATABASE_URL: postgresql://patchwork:patchwork_ci@localhost:5432/patchwork
-            DATABASE_URL: postgresql://patchwork:patchwork_ci@localhost:5432/patchwork
-            TEST_DATABASE_URL: postgresql://patchwork:patchwork_ci@localhost:5432/patchwork
             ATPROTO_SERVICE_DID: did:example:patchwork-ci
             ATPROTO_PDS_URL: https://bsky.social
 
@@ -186,6 +166,38 @@ jobs:
 
             - name: Install dependencies
               run: npm ci --include=dev
+
+            - name: Start PostgreSQL integration service
+              run: |
+                  set -euo pipefail
+                  container="patchwork-ci-postgres-${GITHUB_RUN_ID}-${GITHUB_JOB}"
+                  network=$(docker inspect --format '{{range $name, $network := .NetworkSettings.Networks}}{{$name}}{{end}}' "$HOSTNAME")
+                  test -n "$network"
+                  docker run --detach --name "$container" \
+                    --network "$network" \
+                    --env POSTGRES_DB=patchwork \
+                    --env POSTGRES_USER=patchwork \
+                    --env POSTGRES_PASSWORD=patchwork_ci \
+                    --health-cmd "pg_isready -U patchwork -d patchwork" \
+                    --health-interval 5s \
+                    --health-timeout 3s \
+                    --health-retries 20 \
+                    postgres:16-alpine
+                  for attempt in $(seq 1 20); do
+                    status=$(docker inspect --format '{{.State.Health.Status}}' "$container")
+                    if [ "$status" = healthy ]; then break; fi
+                    if [ "$status" = unhealthy ] || [ "$attempt" -eq 20 ]; then
+                      docker logs "$container"
+                      exit 1
+                    fi
+                    sleep 5
+                  done
+                  address=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$container")
+                  test -n "$address"
+                  echo "PATCHWORK_CI_POSTGRES_CONTAINER=$container" >> "$GITHUB_ENV"
+                  echo "API_DATABASE_URL=postgresql://patchwork:patchwork_ci@$address:5432/patchwork" >> "$GITHUB_ENV"
+                  echo "DATABASE_URL=postgresql://patchwork:patchwork_ci@$address:5432/patchwork" >> "$GITHUB_ENV"
+                  echo "TEST_DATABASE_URL=postgresql://patchwork:patchwork_ci@$address:5432/patchwork" >> "$GITHUB_ENV"
 
             - name: Run database migrations
               run: |
@@ -211,8 +223,29 @@ jobs:
                   ATTACHMENT_OBJECT_SECRET_KEY: patchwork-ci-secret-key
               run: |
                   set -euo pipefail
-                  docker compose -f docker-compose.postgres.yml up -d objects clamav
-                  for container in patchwork-objects patchwork-clamav; do
+                  objects="patchwork-ci-objects-${GITHUB_RUN_ID}-${GITHUB_JOB}"
+                  clamav="patchwork-ci-clamav-${GITHUB_RUN_ID}-${GITHUB_JOB}"
+                  network=$(docker inspect --format '{{range $name, $network := .NetworkSettings.Networks}}{{$name}}{{end}}' "$HOSTNAME")
+                  test -n "$network"
+                  docker run --detach --name "$objects" \
+                    --network "$network" \
+                    --env MINIO_ROOT_USER="$ATTACHMENT_OBJECT_ACCESS_KEY" \
+                    --env MINIO_ROOT_PASSWORD="$ATTACHMENT_OBJECT_SECRET_KEY" \
+                    --health-cmd "curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null" \
+                    --health-interval 10s \
+                    --health-timeout 5s \
+                    --health-retries 18 \
+                    minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e \
+                    server /data
+                  docker run --detach --name "$clamav" \
+                    --network "$network" \
+                    --health-cmd "clamdscan --ping 1 >/dev/null" \
+                    --health-interval 30s \
+                    --health-timeout 10s \
+                    --health-retries 20 \
+                    --health-start-period 360s \
+                    clamav/clamav@sha256:6b7c8e09559250f25b0184516b0a2ae805136e57485260e16c780c9fd6e6aba9
+                  for container in "$objects" "$clamav"; do
                     for attempt in $(seq 1 90); do
                       status=$(docker inspect --format '{{.State.Health.Status}}' "$container")
                       if [ "$status" = healthy ]; then break; fi
@@ -223,20 +256,31 @@ jobs:
                       sleep 10
                     done
                   done
+                  objects_address=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$objects")
+                  clamav_address=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$clamav")
+                  test -n "$objects_address"
+                  test -n "$clamav_address"
+                  echo "PATCHWORK_CI_OBJECTS_CONTAINER=$objects" >> "$GITHUB_ENV"
+                  echo "PATCHWORK_CI_CLAMAV_CONTAINER=$clamav" >> "$GITHUB_ENV"
+                  echo "TEST_ATTACHMENT_OBJECT_ENDPOINT=http://$objects_address:9000" >> "$GITHUB_ENV"
+                  echo "TEST_ATTACHMENT_CLAMD_HOST=$clamav_address" >> "$GITHUB_ENV"
 
             - name: Private attachment provider integration tests
               env:
-                  TEST_ATTACHMENT_OBJECT_ENDPOINT: http://127.0.0.1:9000
                   TEST_ATTACHMENT_OBJECT_ACCESS_KEY: patchwork-ci
                   TEST_ATTACHMENT_OBJECT_SECRET_KEY: patchwork-ci-secret-key
                   TEST_ATTACHMENT_OBJECT_BUCKET: patchwork-ci
-                  TEST_ATTACHMENT_CLAMD_HOST: 127.0.0.1
                   TEST_ATTACHMENT_CLAMD_PORT: '3310'
               run: npm run test:integration:attachments -w @patchwork/api
 
-            - name: Stop private attachment integration services
+            - name: Stop integration services
               if: always()
-              run: docker compose -f docker-compose.postgres.yml down -v
+              run: |
+                  docker rm -f \
+                    "${PATCHWORK_CI_OBJECTS_CONTAINER:-patchwork-ci-objects-${GITHUB_RUN_ID}-${GITHUB_JOB}}" \
+                    "${PATCHWORK_CI_CLAMAV_CONTAINER:-patchwork-ci-clamav-${GITHUB_RUN_ID}-${GITHUB_JOB}}" \
+                    "${PATCHWORK_CI_POSTGRES_CONTAINER:-patchwork-ci-postgres-${GITHUB_RUN_ID}-${GITHUB_JOB}}" \
+                    >/dev/null 2>&1 || true
 
     # -----------------------------------------------------------------------
     # Wave 4 (#108): Auto-deploy to staging on main push

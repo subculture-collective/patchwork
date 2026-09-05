@@ -61,7 +61,10 @@ describe('AT authentication flow', () => {
 
     it('begins OAuth with a safe intended destination and no browser token', async () => {
         document.cookie = 'patchwork_csrf=csrf-proof; Path=/';
-        const fetchMock = vi.fn(async () =>
+        const fetchMock = vi.fn(async (
+            _input: RequestInfo | URL,
+            _init?: RequestInit,
+        ) =>
             new Response(
                 JSON.stringify({
                     authorizationUrl: 'https://pds.example/oauth/authorize?request=opaque',
@@ -759,6 +762,10 @@ describe('AT authentication flow', () => {
         );
 
         expect(html).toContain('href="/signup?returnTo=%2Ffeed"');
+        expect(html).toContain('Create an account on Subcult’s PDS');
+        expect(html).toContain(
+            'Get your own portable AT Protocol handle, hosted on our community PDS.',
+        );
         expect(html).not.toContain('secret');
         expect(html).not.toContain('token');
     });

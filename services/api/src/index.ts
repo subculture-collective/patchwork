@@ -143,6 +143,11 @@ import {
     writePublicError,
 } from './http/error-response.js';
 import { createPdsSignupService } from './auth/pds-signup-service.js';
+import { SignupInviteService } from './signup-invite-service.js';
+import {
+    createSignupInviteHandler,
+    isSignupInviteRoute,
+} from './http/signup-invite-handler.js';
 import { PostgresRetentionService } from './db/retention-service.js';
 import {
     startRetentionScheduler,
@@ -402,7 +407,17 @@ const idempotencyExecutor =
     postgresPool ? new PostgresIdempotencyExecutor(postgresPool) : undefined;
 const pdsSignupService = createPdsSignupService({
     pdsUrl: config.ATPROTO_ACCOUNT_PDS_URL,
+    adminPassword: config.ATPROTO_ACCOUNT_PDS_ADMIN_PASSWORD,
 });
+const signupInviteService = postgresPool ? new SignupInviteService(postgresPool) : undefined;
+const signupInviteHandler =
+    signupInviteService && authenticateSessionRequest ?
+        createSignupInviteHandler({
+            service: signupInviteService,
+            authenticate: authenticateSessionRequest,
+            publicOrigin: config.API_PUBLIC_ORIGIN,
+        })
+    :   undefined;
 
 const executeIdempotentMutation = async (
     request: IncomingMessage,
@@ -900,6 +915,7 @@ const handleRealAuthRoute = (
                     'email',
                     'password',
                     'inviteCode',
+                    'inviteToken',
                     'policyVersion',
                     'asserted18OrOlder',
                     'acceptedDocuments',
@@ -925,12 +941,43 @@ const handleRealAuthRoute = (
                         'Current policy consent and 18+ eligibility are required.',
                     );
                 }
+                const inviteToken = typeof record.inviteToken === 'string' ? record.inviteToken : '';
+                const directInviteCode = typeof record.inviteCode === 'string' ? record.inviteCode : '';
+                if ((inviteToken ? 1 : 0) + (directInviteCode ? 1 : 0) !== 1) {
+                    throw new PublicHttpError(
+                        400,
+                        'INVALID_SIGNUP_INPUT',
+                        'Provide exactly one signup invitation.',
+                    );
+                }
+                let signupInviteId: string | undefined;
+                let pdsInviteCode = directInviteCode;
+                if (inviteToken) {
+                    pdsSignupService.validateAccountInput({
+                        handle: typeof record.handle === 'string' ? record.handle : '',
+                        email: typeof record.email === 'string' ? record.email : '',
+                        password: typeof record.password === 'string' ? record.password : '',
+                    });
+                    if (!signupInviteService) {
+                        throw new PublicHttpError(
+                            503,
+                            'SIGNUP_INVITATIONS_UNAVAILABLE',
+                            'Invitation-based signup is temporarily unavailable.',
+                        );
+                    }
+                    signupInviteId = await signupInviteService.requireUsable(inviteToken);
+                    pdsInviteCode = await pdsSignupService.createInviteCode();
+                    await signupInviteService.requireUsable(inviteToken);
+                }
                 const result = await pdsSignupService.createAccount({
                     handle: typeof record.handle === 'string' ? record.handle : '',
                     email: typeof record.email === 'string' ? record.email : '',
                     password: typeof record.password === 'string' ? record.password : '',
-                    inviteCode: typeof record.inviteCode === 'string' ? record.inviteCode : '',
+                    inviteCode: pdsInviteCode,
                 });
+                if (signupInviteId) {
+                    await signupInviteService!.recordSuccessfulUse(signupInviteId);
+                }
                 if (accountOnboardingService) {
                     try {
                         await accountOnboardingService.accept(
@@ -1060,7 +1107,14 @@ const handleRealAuthRoute = (
                 requestUrl.pathname === '/auth/session'
             ) {
                 writeJson(response, 200, {
-                    session: authenticated.session,
+                    session: {
+                        ...authenticated.session,
+                        role: authenticated.principal.role,
+                        canManageSignupInvitations:
+                            authenticated.principal.authorization.capabilities.includes(
+                                'admin:system_config',
+                            ),
+                    },
                 });
                 return;
             }
@@ -1072,7 +1126,17 @@ const handleRealAuthRoute = (
                 const refreshed = await atAuthRuntime.service.refresh(
                     authenticated.sessionToken,
                 );
-                writeJson(response, 200, { session: refreshed, refreshed: true });
+                writeJson(response, 200, {
+                    session: {
+                        ...refreshed,
+                        role: authenticated.principal.role,
+                        canManageSignupInvitations:
+                            authenticated.principal.authorization.capabilities.includes(
+                                'admin:system_config',
+                            ),
+                    },
+                    refreshed: true,
+                });
                 return;
             }
 
@@ -1676,6 +1740,8 @@ type ApiRouteHandler = (
 const contractRoutes = [
     '/oauth/client-metadata.json',
     '/auth/signup',
+    '/admin/signup-invitations',
+    '/admin/signup-invitations/revoke',
     '/oauth/login',
     '/oauth/callback',
     '/auth/session',
@@ -1940,6 +2006,19 @@ export const createApiServer = () => {
         }
 
         if (handleRealAuthRoute(request, response, requestUrl)) {
+            return;
+        }
+
+        if (signupInviteHandler?.(request, response, requestUrl)) {
+            return;
+        }
+        if (isSignupInviteRoute(request, requestUrl)) {
+            writeJson(response, 503, {
+                error: {
+                    code: 'SIGNUP_INVITATIONS_UNAVAILABLE',
+                    message: 'Signup invitation management is unavailable.',
+                },
+            });
             return;
         }
 

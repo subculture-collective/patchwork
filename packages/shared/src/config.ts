@@ -47,6 +47,7 @@ const apiSchema = baseSchema.merge(atprotoSchema).extend({
     API_PORT: z.coerce.number().int().min(1).max(65535).default(4000),
     API_PUBLIC_ORIGIN: z.string().url().default('http://localhost:5173'),
     ATPROTO_ACCOUNT_PDS_URL: z.string().url().default('http://localhost:3000'),
+    ATPROTO_ACCOUNT_PDS_ADMIN_PASSWORD: optionalSecretField,
     API_TRUSTED_PROXIES: z
         .string()
         .default('')
@@ -296,6 +297,7 @@ export interface ProductionApiConfig extends ProductionConfigBase {
     ATPROTO_OAUTH_CLIENT_ID?: string;
     ATPROTO_OAUTH_REDIRECT_URI?: string;
     ATPROTO_SESSION_ENCRYPTION_KEY?: string;
+    ATPROTO_ACCOUNT_PDS_ADMIN_PASSWORD?: string;
     API_MODERATION_SERVICE_URL?: string;
     MODERATION_SERVICE_TOKEN?: string;
     ATTACHMENT_OBJECT_ENDPOINT?: string;
@@ -381,6 +383,12 @@ export const validateProductionConfig = (
     if (!config.API_MODERATION_SERVICE_URL || !config.MODERATION_SERVICE_TOKEN) {
         throw new Error(
             'FATAL: API_MODERATION_SERVICE_URL and MODERATION_SERVICE_TOKEN are required in production.',
+        );
+    }
+
+    if (!config.ATPROTO_ACCOUNT_PDS_ADMIN_PASSWORD) {
+        throw new Error(
+            'FATAL: ATPROTO_ACCOUNT_PDS_ADMIN_PASSWORD is required in production.',
         );
     }
 
