@@ -1,3 +1,4 @@
+import { discoveryFallback } from './discovery-location';
 import { useMapSelection } from './use-map-selection';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { DiscoveryMapAggregates } from '@patchwork/shared';
@@ -59,6 +60,7 @@ const toMapAidCard = (record: FeedRecordEnvelope): MapAidCard => {
 
 interface MapRouteProps {
     filters: ReactNode;
+    renderRequestActions?: (record: FeedRecordEnvelope, position: number, total: number) => ReactNode;
     fixtureMode: boolean;
     originLabel: string;
     aggregates?: DiscoveryMapAggregates;
@@ -88,6 +90,7 @@ const LazyInteractiveMap = lazy(() =>
 
 export const MapRoute = ({
     filters,
+    renderRequestActions,
     fixtureMode,
     originLabel,
     aggregates,
@@ -126,6 +129,8 @@ export const MapRoute = ({
     const selectedPostId = selectedRecord?.card.id;
     const onSelectPost = selection.selectRequest;
     const setSelectedResourceUri = selection.selectResource;
+    const [cameraCenter, setCameraCenter] = useState(discoveryState.center ?? discoveryFallback.center);
+    useEffect(() => { if (discoveryState.center) setCameraCenter(discoveryState.center); }, [discoveryState.center]);
     const [tileError, setTileError] = useState<string>();
     const [focusedArea, setFocusedArea] = useState<{
         center: { lat: number; lng: number };
@@ -190,9 +195,9 @@ export const MapRoute = ({
     const drawer = selectedRecord ? openMapDetailDrawer([toMapAidCard(selectedRecord)], selectedRecord.card.id) : closeMapDetailDrawer();
 
     return (
-        <section className='space-y-6'>
-            <header className='mh-route-header'>
-                <h1 className='mh-route-title'>{t('map.heading')}</h1>
+        <section className='mh-discovery-route space-y-4'>
+            <header className='space-y-2'>
+                <h1 className='text-2xl font-bold'>{t('map.heading')}</h1>
                 <p className='mt-2 text-sm text-mh-textMuted'>
                     {t('map.description')}
                 </p>
@@ -312,7 +317,7 @@ export const MapRoute = ({
                         </Button>
                     </div>
                 ) : null}
-                {discoveryState.center ? (
+                {(
                     <Suspense
                         fallback={<div className='mh-skeleton h-96 w-full' />}
                     >
@@ -321,7 +326,7 @@ export const MapRoute = ({
                             resources={mapResourceView.cards}
                             aggregateCells={aggregates && aggregates.requestCount > mapView.filteredCards.length ? aggregates.cells : undefined}
                             selectedPostId={selectedPostId}
-                            center={discoveryState.center}
+                            center={cameraCenter}
                             onSelectPostId={onSelectPost}
                             focusedArea={activeArea}
                             onViewportChange={setViewport}
@@ -329,10 +334,6 @@ export const MapRoute = ({
                             onTilesFailed={setTileError}
                         />
                     </Suspense>
-                ) : (
-                    <div className='mh-alert p-4' role='status'>
-                        {t('map.areaRequired')}
-                    </div>
                 )}
             </section>
 
@@ -346,14 +347,14 @@ export const MapRoute = ({
             {selectedResource && <MapDetailSheet closeLabel={t('resources.close')} onClose={selection.close}><Panel title={selectedResource.name}>
                 <ResourceActions resource={selectedResource} />
             </Panel></MapDetailSheet>}
-            <details className='rounded-xl border border-mh-borderSoft bg-mh-surface p-3'>
+            <details className='mh-filter-disclosure rounded-xl border border-mh-borderSoft bg-mh-surface p-2'>
                 <summary className='cursor-pointer py-2 font-bold'>{t('nav.mapFilters')}{discoveryState.areaLabel ? ` · ${discoveryState.areaLabel}` : ''}</summary>
                 {filters}
             </details>
 
             <div>
                 <Card title={String(t('map.requestMarkersTitle'))}>
-                    {isLoading ? (
+                    {isLoading && mapView.filteredCards.length === 0 ? (
                         <ul className='space-y-3' aria-live='polite'>
                             {Array.from({ length: 3 }).map((_, index) => (
                                 <li
@@ -371,7 +372,7 @@ export const MapRoute = ({
                         <p>{t('map.noRequests')}</p>
                     ) : (
                         <ul className='space-y-3'>
-                            {mapView.filteredCards.map((card) => (
+                            {mapView.filteredCards.map((card, index) => (
                                 <li key={card.id} className='mh-record-card'>
                                     <div className='flex flex-wrap items-start justify-between gap-2'>
                                         <p className='text-sm font-bold text-mh-text'>
@@ -399,6 +400,7 @@ export const MapRoute = ({
                                     <p className='mt-2 text-xs text-mh-textSoft'>
                                         {card.summary}
                                     </p>
+                                    {feedRecords.find(record => record.card.id === card.id)?.recordOrigin === 'synthetic' && <Badge tone='neutral'>{t('feed.synthetic')}</Badge>}
                                     <div className='mt-3'>
                                         <Button
                                             variant='neutral'
@@ -414,6 +416,7 @@ export const MapRoute = ({
                                             {t('map.openTriageDrawer')}
                                         </Button>
                                     </div>
+                                    {(() => { const record = feedRecords.find(item => item.card.id === card.id); return record && renderRequestActions?.(record, index + 1, mapView.filteredCards.length); })()}
                                 </li>
                             ))}
                         </ul>

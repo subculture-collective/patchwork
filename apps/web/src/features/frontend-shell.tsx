@@ -1,3 +1,4 @@
+import { DiscoveryLocationContext, useDiscoveryLocation, useDiscoveryLocationController } from './discovery-location';
 import type { DiscoveryMapAggregates } from '@patchwork/shared';
 import { canonicalRouteUrl, resolveRouteAlias } from './navigation';
 import { RequestContextLink } from './request-context-link';
@@ -83,7 +84,6 @@ import { TextLink } from '../components/TextLink';
 import {
     type AidPostReportReason,
     type ApiDataOrigin,
-    type AtAidPostResult,
     type AtDirectoryResourceResult,
     type AtVolunteerProfileResult,
     type MyOrganization,
@@ -165,13 +165,11 @@ import {
     matchRequestViaApi,
     reportAidPostViaApi,
     requestNotificationEmailVerificationViaApi,
-    reconcileAidPostStatusViaApi,
     reconfirmOrganizationStewardshipViaApi,
     requestExactPublicAddressViaApi,
     requestPrivateAttachmentAccessViaApi,
     removeOrganizationMemberViaApi,
     updateSettingsViaApi,
-    transitionAidPostViaApi,
     transitionCoordinationConnectionViaApi,
     proposeCoordinationWindowViaApi,
     decideCoordinationWindowViaApi,
@@ -359,8 +357,6 @@ const urgencyPreferenceOptions: readonly VolunteerOnboardingDraft['preferredUrge
 
 const nowIso = (): string => new Date().toISOString();
 
-const nearbyDefaultRadiusMeters = 20000;
-const locationCoordinatePrecision = 100;
 
 const demoAreaPresets = {
     chicagoland: {
@@ -379,9 +375,6 @@ const defaultShellDiscoveryState = applyDiscoveryFilterPatch(
 );
 
 const buildNearbyPatch = (): Partial<DiscoveryFilterState> => ({
-    center: undefined,
-    areaLabel: undefined,
-    radiusMeters: undefined,
     feedTab: 'nearby',
 });
 
@@ -445,106 +438,19 @@ const DiscoveryFiltersPanel = ({
     onPatch,
 }: DiscoveryFiltersPanelProps) => {
     const { t } = useLocale();
-    const [locationAccess, setLocationAccess] = useState<
-        'idle' | 'requesting' | 'granted' | 'fallback'
-    >('idle');
-    // A supplied area already satisfies initial discovery. Clearing it is a
-    // deliberate action and must not silently restart automatic geolocation.
-    const requestedLocationRef = useRef(Boolean(state.center));
-    const chipModel = useMemo(
-        () => buildDiscoveryFilterChipModel(state),
-        [state],
-    );
-
-    const requestLocation = useCallback(() => {
-        setLocationAccess('requesting');
-
-        if (!navigator.geolocation) {
-            setLocationAccess('fallback');
-            onPatch(demoAreaPresets.chicagoland);
-            return;
-        }
-
-        navigator.geolocation.getCurrentPosition(
-            position => {
-                const approximateCenter = {
-                    lat:
-                        Math.round(
-                            position.coords.latitude * locationCoordinatePrecision,
-                        ) / locationCoordinatePrecision,
-                    lng:
-                        Math.round(
-                            position.coords.longitude * locationCoordinatePrecision,
-                        ) / locationCoordinatePrecision,
-                };
-                setLocationAccess('granted');
-                onPatch({
-                    center: approximateCenter,
-                    areaLabel: String(t('discovery.nearYou')),
-                    radiusMeters: nearbyDefaultRadiusMeters,
-                    feedTab: 'nearby',
-                });
-            },
-            () => {
-                setLocationAccess('fallback');
-                onPatch(demoAreaPresets.chicagoland);
-            },
-            {
-                enableHighAccuracy: false,
-                maximumAge: 300000,
-                timeout: 5000,
-            },
-        );
-    }, [onPatch, t]);
-
-    useEffect(() => {
-        if (state.center || requestedLocationRef.current) return;
-        requestedLocationRef.current = true;
-        requestLocation();
-    }, [requestLocation, state.center]);
-
+    const location = useDiscoveryLocation();
+    const chipModel = useMemo(() => buildDiscoveryFilterChipModel(state), [state]);
     return (
-        <Panel title={String(t('discovery.title'))}>
-            {!state.center ? (
-                <div className='mh-alert mb-4 text-sm' role='status'>
-                    <strong>{t('discovery.locationPermissionTitle')}</strong>{' '}
-                    {locationAccess === 'requesting'
-                        ? t('discovery.locationRequesting')
-                        : t('discovery.locationPermissionHelp')}
-                    <div>
-                        <Button
-                            type='button'
-                            className='mt-3 px-3 py-2 text-xs'
-                            disabled={locationAccess === 'requesting'}
-                            onClick={requestLocation}
-                        >
-                            {locationAccess === 'requesting'
-                                ? t('discovery.locationRequestingButton')
-                                : t('discovery.locationButton')}
-                        </Button>
-                    </div>
-                </div>
-            ) : (
-                <div
-                    className='mb-4 flex flex-wrap items-center justify-between gap-3 text-sm text-mh-textMuted'
-                    role='status'
-                >
-                    <span>
-                        {locationAccess === 'fallback'
-                            ? t('discovery.locationFallback')
-                            : t('discovery.locationActive')}
-                    </span>
-                    <Button
-                        type='button'
-                        variant='neutral'
-                        className='px-3 py-1 text-xs'
-                        disabled={locationAccess === 'requesting'}
-                        onClick={requestLocation}
-                    >
-                        {t('discovery.updateLocation')}
-                    </Button>
-                </div>
-            )}
+        <div className='mh-discovery-filters'><Panel title={String(t('discovery.title'))}>
+            <div className='mb-3 flex flex-wrap items-center justify-between gap-2 text-sm' role='status'>
+                <span>{location.status === 'requesting' ? t('discovery.locationRequesting')
+                    : !state.center ? t('discovery.allAreas')
+                    : location.status === 'denied' ? t('discovery.locationDenied')
+                    : location.status === 'timeout' ? t('discovery.locationTimedOut')
+                    : location.status === 'unavailable' ? t('discovery.locationNotFound')
+                    : state.areaLabel === t('discovery.nearYou') ? t('discovery.locationActive') : t('discovery.selectedAreaActive')}</span>
+                <Button variant='neutral' disabled={location.status === 'requesting'} onClick={location.request}>{t('discovery.updateLocation')}</Button>
+            </div>
             <label
                 htmlFor={`${idPrefix}-search`}
                 className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
@@ -565,25 +471,7 @@ const DiscoveryFiltersPanel = ({
                 }}
             />
 
-            <div className='mt-4 grid gap-4'>
-                <div>
-                    <p className='mb-2 text-xs font-bold uppercase tracking-[0.12em] text-mh-textMuted'>
-                        {t('discovery.feedTab')}
-                    </p>
-                    <div className='flex flex-wrap gap-2'>
-                        {chipModel.tabs.map((tab) => (
-                            <Button
-                                key={tab.id}
-                                variant={tab.active ? 'secondary' : 'neutral'}
-                                className='px-3 py-1 text-xs'
-                                onClick={() => onPatch({ feedTab: tab.value })}
-                            >
-                                {tab.label}
-                            </Button>
-                        ))}
-                    </div>
-                </div>
-
+            <div className='mh-filter-grid mt-3 grid gap-3'>
                 <div>
                     <p className='mb-2 text-xs font-bold uppercase tracking-[0.12em] text-mh-textMuted'>
                         {t('discovery.category')}
@@ -682,7 +570,7 @@ const DiscoveryFiltersPanel = ({
                     </p>
                 </div>
             </div>
-        </Panel>
+        </Panel></div>
     );
 };
 
@@ -1173,25 +1061,6 @@ interface PublicSyncFailure {
     message: string;
 }
 
-const replaceRecordFromAtResult = (
-    records: readonly FeedRecordEnvelope[],
-    result: AtAidPostResult,
-): FeedRecordEnvelope[] =>
-    records.map((record) =>
-        record.aidPostUri === result.uri
-            ? {
-                  ...record,
-                  cid: result.cid,
-                  card: {
-                      ...record.card,
-                      status: result.record.status,
-                      updatedAt:
-                          result.record.updatedAt ?? result.record.createdAt,
-                  },
-              }
-            : record,
-    );
-
 const SafetyActions = ({
     record,
     position,
@@ -1534,7 +1403,7 @@ const OwnerRecordActions = ({
     );
 };
 
-const FeedRoute = ({
+export const FeedRoute = ({
     discoveryState,
     onPatchDiscovery,
     feedRecords,
@@ -3177,11 +3046,7 @@ const ResourceRoute = ({
                     editUri={manageUri}
                     onEditHandled={() => setManageUri(undefined)}
                 />
-            ) : (
-                <div className='mh-alert p-4' role='status'>
-                    {t('discovery.demoAreaHelp')}
-                </div>
-            )}
+            ) : null}
 
             <DiscoveryFiltersPanel
                 idPrefix='resources'
@@ -9194,6 +9059,10 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         () => readDiscoveryStateFromUrl(defaultShellDiscoveryState),
     );
 
+    const location = useDiscoveryLocationController(discoveryState,
+        patch => setDiscoveryState(current => applyDiscoveryFilterPatch(current, patch)),
+        ['/map','/feed','/resources'].includes(currentRoute), String(t('discovery.nearYou')));
+
     const [feedRecords, setFeedRecords] = useState<FeedRecordEnvelope[]>([]);
     const [resourceCards, setResourceCards] = useState<ResourceDirectoryCard[]>(
         [],
@@ -9201,9 +9070,6 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
     const [isAidLoading, setIsAidLoading] = useState(false);
     const [isDirectoryLoading, setIsDirectoryLoading] = useState(false);
     const [aidErrorMessage, setAidErrorMessage] = useState<string>();
-    const [publicSyncFailure, setPublicSyncFailure] =
-        useState<PublicSyncFailure>();
-    const [publicSyncRetrying, setPublicSyncRetrying] = useState(false);
     const [directoryErrorMessage, setDirectoryErrorMessage] =
         useState<string>();
     const [aidDataOrigin, setAidDataOrigin] = useState<ApiDataOrigin>(
@@ -9426,27 +9292,13 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
             return undefined;
         }
         if (webDataMode === 'fixture') return undefined;
-        if (
-            !discoveryState.center &&
-            (currentRoute === '/map' || discoveryState.feedTab === 'nearby')
-        ) {
-            setFeedRecords([]);
-            setAidHasNextPage(false);
-            setAidTotal(0);
-        setAidAggregates(undefined);
-            setAidDataOrigin('idle');
-            setAidErrorMessage(undefined);
-            setIsAidLoading(false);
-            return undefined;
-        }
-
         const controller = new AbortController();
         setIsAidLoading(true);
         setAidErrorMessage(undefined);
 
         void fetchFeedRecordPageFromApi(
             discoveryState,
-            currentRoute === '/map' ? 'map' : 'feed',
+            'map',
             aidPage,
             controller.signal,
         )
@@ -9562,16 +9414,6 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
             return undefined;
         }
         if (webDataMode === 'fixture') return undefined;
-        if (!discoveryState.center) {
-            setResourceCards([]);
-            setDirectoryHasNextPage(false);
-            setDirectoryTotal(0);
-            setDirectoryDataOrigin('idle');
-            setDirectoryErrorMessage(undefined);
-            setIsDirectoryLoading(false);
-            return undefined;
-        }
-
         const controller = new AbortController();
         setIsDirectoryLoading(true);
         setDirectoryErrorMessage(undefined);
@@ -9634,10 +9476,12 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
     };
 
     const patchDiscoveryState = (patch: Partial<DiscoveryFilterState>) => {
+        if ('center' in patch) location.cancel();
         pushDiscoveryState(patch);
     };
 
     const pushDiscoveryState = (patch: Partial<DiscoveryFilterState>) => {
+        if ('center' in patch) location.cancel();
         setDiscoveryState((current) => {
             const next = applyDiscoveryFilterPatch(current, patch);
             if (typeof window !== 'undefined') {
@@ -9765,30 +9609,6 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         setChatRequestPreview(undefined);
     };
 
-    const retryPublicSync = () => {
-        const failure = publicSyncFailure;
-        if (!failure || !failure.expectedCid) return;
-        setPublicSyncRetrying(true);
-        void reconcileAidPostStatusViaApi({
-            uri: failure.postUri,
-            expectedCid: failure.expectedCid,
-            updatedAt: failure.updatedAt,
-        }).then((result) => {
-            setPublicSyncRetrying(false);
-            if (!result.ok) {
-                setPublicSyncFailure({
-                    ...failure,
-                    message: `${result.code}: ${result.error}`,
-                });
-                return;
-            }
-            setFeedRecords((current) =>
-                replaceRecordFromAtResult(current, result.data),
-            );
-            setPublicSyncFailure(undefined);
-        });
-    };
-
     const requiresAuthentication =
         currentRoute === '/posting' ||
         currentRoute === '/chat' ||
@@ -9861,8 +9681,12 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                 {t('runtime.pausedHelp')}
             </p>
         </Panel>
-    ) : currentRoute === '/map' ? (
+    ) : currentRoute === '/map' || currentRoute === '/feed' ? (
         <Suspense fallback={<p role='status'>{t('handoff.loadingRequest')}</p>}><LazyMapRoute
+            renderRequestActions={(record, position, total) => currentUserDid ? currentUserDid === record.recipientDid ? <><RequestLifecycleActions record={record} onRefresh={() => setAidReload(value => value + 1)} /><OwnerRecordActions record={record} position={position} total={total}
+                onReplaceRecord={replacement => setFeedRecords(records => records.map(item => item.aidPostUri === replacement.aidPostUri ? replacement : item))}
+                onDeleteRecord={uri => { setFeedRecords(records => records.filter(item => item.aidPostUri !== uri)); setAidTotal(value => Math.max(0, value - 1)); setAidAggregates(undefined); }}
+            /></> : <SafetyActions record={record} position={position} total={total} /> : null}
             aggregates={aidAggregates}
             resourceTotal={directoryTotal}
             discoveryState={discoveryState}
@@ -9904,96 +9728,6 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         /></Suspense>
     ) : currentRoute === '/requests/view' ? (
         <Suspense fallback={<p role='status'>{t('handoff.loadingRequest')}</p>}><LazyRequestDetail /></Suspense>
-    ) : currentRoute === '/feed' ? (
-        <FeedRoute
-            discoveryState={discoveryState}
-            onPatchDiscovery={patchDiscoveryState}
-            feedRecords={feedRecords}
-            isLoading={isAidLoading}
-            errorMessage={aidErrorMessage}
-            dataOrigin={aidDataOrigin}
-            onRetry={() => setAidReload((value) => value + 1)}
-            hasNextPage={aidHasNextPage}
-            total={aidTotal}
-            onLoadMore={() => setAidPage((page) => page + 1)}
-            publicSyncFailure={publicSyncFailure}
-            publicSyncRetrying={publicSyncRetrying}
-            onRetryPublicSync={retryPublicSync}
-            onNavigate={navigate}
-            onOpenChat={openChatFromRecord}
-            onUpdateCard={(id, patch) => {
-                applyLifecycleAction({
-                    action: 'edit',
-                    id,
-                    patch,
-                });
-            }}
-            onReplaceRecord={(replacement) =>
-                setFeedRecords((current) =>
-                    current.map((record) =>
-                        record.aidPostUri === replacement.aidPostUri
-                            ? replacement
-                            : record,
-                    ),
-                )
-            }
-            onDeleteRecord={(aidPostUri) =>
-                setFeedRecords((current) =>
-                    current.filter(
-                        (record) => record.aidPostUri !== aidPostUri,
-                    ),
-                )
-            }
-            onTransition={(id, postUri, targetStatus) => {
-                const record = feedRecords.find(
-                    (candidate) => candidate.aidPostUri === postUri,
-                );
-                const updatedAt = nowIso();
-                setPublicSyncFailure(undefined);
-                void transitionAidPostViaApi({
-                    postUri,
-                    targetStatus,
-                    now: updatedAt,
-                }).then((result) => {
-                    if (result.ok) {
-                        applyLifecycleAction({
-                            action: 'transition',
-                            id,
-                            targetStatus,
-                            actorDid: result.data.transition.actorDid,
-                            actorRole: result.data.transition.actorRole,
-                        });
-                        if (!record?.cid) {
-                            setAidErrorMessage(t('feed.indexedUnavailable'));
-                            return;
-                        }
-                        void reconcileAidPostStatusViaApi({
-                            uri: postUri,
-                            expectedCid: record.cid,
-                            updatedAt,
-                        }).then((syncResult) => {
-                            if (!syncResult.ok) {
-                                setPublicSyncFailure({
-                                    postUri,
-                                    expectedCid: record.cid!,
-                                    updatedAt,
-                                    message: `${syncResult.code}: ${syncResult.error}`,
-                                });
-                                return;
-                            }
-                            setFeedRecords((current) =>
-                                replaceRecordFromAtResult(
-                                    current,
-                                    syncResult.data,
-                                ),
-                            );
-                            setPublicSyncFailure(undefined);
-                        });
-                    }
-                });
-            }}
-            currentUserDid={currentUserDid}
-        />
     ) : currentRoute === '/posting' ? (
             <PostingRoute
                 onLocationChange={patchDiscoveryState}
@@ -10089,7 +9823,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
     );
 
     return (
-        <main className='mh-grain min-h-screen overflow-x-clip bg-mh-bg text-mh-text'>
+        <DiscoveryLocationContext.Provider value={location}><main className='mh-grain min-h-screen overflow-x-clip bg-mh-bg text-mh-text'>
             <a
                 href='#main-content'
                 className='mh-skip-link sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-mh-accent focus:px-4 focus:py-2 focus:text-white focus:outline-2 focus:outline-offset-2'
@@ -10278,17 +10012,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                     tabIndex={-1}
                     className='focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-mh-accent'
                 >
-                    {currentRoute === '/map' || currentRoute === '/feed' ? (
-                        <nav aria-label={t('nav.nearbyView')} className='mb-4 flex gap-2'>
-                            {(['/feed', '/map'] as const).map(route => (
-                                <a key={route} className='mh-nav-chip' href={canonicalRouteUrl(route, discoveryQueryString)}
-                                    aria-current={currentRoute === route ? 'page' : undefined}
-                                    onClick={event => handleRouteClick(event, route)}>
-                                    {t(route === '/feed' ? 'nav.listView' : 'route.map')}
-                                </a>
-                            ))}
-                        </nav>
-                    ) : null}
+
                     {content}
                 </div>
 
@@ -10325,6 +10049,6 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                     </div>
                 </footer>
             </div>
-        </main>
+        </main></DiscoveryLocationContext.Provider>
     );
 };

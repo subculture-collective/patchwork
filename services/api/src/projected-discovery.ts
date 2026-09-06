@@ -18,7 +18,7 @@ export interface BoundedPage<T> { rows: T[]; total: number; page: number; pageSi
 export async function readProjectionPage<T extends QueryResultRow>(pool: Pool, params: URLSearchParams, kind: 'map' | 'feed' | 'directory', viewerDid?: string, uri?: string): Promise<BoundedPage<T>> {
     const dataset = discoveryDataset(params);
     const raw = queryInput(params);
-    const input = kind === 'directory' ? validateDirectoryQueryInput(raw) : kind === 'map' ? validateAidQueryInput(raw) : validateAidFeedQueryInput(raw);
+    const input = kind === 'directory' ? validateDirectoryQueryInput(raw) : kind === 'map' && (raw.latitude !== undefined || raw.longitude !== undefined || raw.radiusKm !== undefined) ? validateAidQueryInput(raw) : validateAidFeedQueryInput(raw);
     const page = input.page ?? 1, pageSize = input.pageSize ?? 20;
     const values: unknown[] = [];
     const bind = (value: unknown) => { values.push(value); return `$${values.length}`; };
@@ -67,9 +67,9 @@ export async function readProjectionPage<T extends QueryResultRow>(pool: Pool, p
     ), stats AS (
         SELECT count(*) AS total, count(latitude) AS located, max(projected_at) AS projected_at FROM filtered
     ), cells AS (
-        SELECT least(89.95, greatest(-89.95, floor(latitude * 10) / 10 + .05)) AS latitude,
-            least(179.95, greatest(-179.95, floor(longitude * 10) / 10 + .05)) AS longitude,
-            count(*)::integer AS count, max(precision_km) + 8 AS "radiusKm"
+        SELECT least(89.995, greatest(-89.995, floor(latitude * 100) / 100 + .005)) AS latitude,
+            least(179.995, greatest(-179.995, floor(longitude * 100) / 100 + .005)) AS longitude,
+            count(*)::integer AS count, max(precision_km) + 1 AS "radiusKm"
         FROM filtered WHERE latitude IS NOT NULL AND longitude IS NOT NULL
         GROUP BY 1, 2 ORDER BY 1, 2
     ) SELECT ${nowParam}::timestamptz AS query_at, stats.total::text AS total, stats.projected_at,

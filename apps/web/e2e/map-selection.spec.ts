@@ -42,7 +42,8 @@ test('integrated discovery removes the examples switch and normalizes legacy dat
     await expect.poll(() => datasets.includes('all')).toBe(true);
     await expect(page.getByRole('button', { name: 'Explore examples', exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Community', exact: true })).toHaveCount(0);
-    await page.getByRole('navigation', { name: 'Nearby view' }).getByRole('link', { name: 'Map', exact: true }).click();
+    await expect(page.locator('.leaflet-container')).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Nearby view' })).toHaveCount(0);
     expect(new URL(page.url()).searchParams.has('dataset')).toBe(false);
     expect(datasets.every(dataset => dataset === 'all')).toBe(true);
 });

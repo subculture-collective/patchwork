@@ -21,7 +21,7 @@ test('request context survives the sign-in link and anonymous visitors have no o
     await expect(page.getByRole('button', { name: /^Resolve:/ })).toHaveCount(0);
 });
 
-test('an uncertain direct offer retains its note and reuses the operation key', async ({ page, baseURL }) => {
+for (const failure of ['UNAVAILABLE', 'ACTIVE_VOLUNTEER_PROFILE_REQUIRED']) test(`a direct offer preserves its note and recovers from ${failure}`, async ({ page, baseURL }) => {
     let attempts = 0;
     const commands: { key: string | undefined; body: unknown }[] = [];
     await page.context().addCookies([{ name: 'patchwork_csrf', value: 'handoff-test', url: baseURL! }]);
@@ -38,7 +38,7 @@ test('an uncertain direct offer retains its note and reuses the operation key', 
         if (path.endsWith('/coordination/offers')) {
             commands.push({ key: route.request().headers()['idempotency-key'], body: route.request().postDataJSON() });
             attempts += 1;
-            return attempts === 1 ? respond({ error: { code: 'UNAVAILABLE', message: 'Uncertain response' } }, 503)
+            return attempts === 1 ? respond({ error: { code: failure, message: 'Offer could not be created' } }, failure === 'UNAVAILABLE' ? 503 : 409)
                 : respond({ offer: { id: 'offer-1', requestUri: uri, status: 'pending' } }, 201);
         }
         return respond({ error: { code: 'NOT_FOUND' } }, 404);
@@ -48,11 +48,13 @@ test('an uncertain direct offer retains its note and reuses the operation key', 
     await page.getByRole('button', { name: 'Offer help', exact: true }).click();
     await expect(page.getByRole('alert')).toContainText('Your offer was not confirmed');
     await expect(page.getByRole('textbox')).toHaveValue('I can collect the order at 3 pm.');
+    if (failure === 'ACTIVE_VOLUNTEER_PROFILE_REQUIRED') await expect(page.getByRole('link', { name: 'Set up profile (opens a new tab)' })).toHaveAttribute('target', '_blank');
     await page.getByRole('button', { name: 'Offer help', exact: true }).click();
     await expect(page.getByText('Your offer was sent. You can follow its progress in My activity.')).toBeVisible();
     expect(commands).toHaveLength(2);
     expect(commands[0]?.key).toBeTruthy();
-    expect(commands[0]).toEqual(commands[1]);
+    if (failure === 'UNAVAILABLE') expect(commands[0]).toEqual(commands[1]);
+    else expect(commands[0]?.key).not.toEqual(commands[1]?.key);
     expect(commands[0]?.body).toEqual({ requestUri: uri, note: 'I can collect the order at 3 pm.' });
 });
 

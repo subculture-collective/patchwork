@@ -2366,7 +2366,7 @@ export const fetchFeedRecordPageFromApi = async (
     page = 1,
     signal?: AbortSignal,
 ): Promise<ApiClientResult<PagedResult<FeedRecordEnvelope>>> => {
-    if ((scope === 'map' || state.feedTab === 'nearby') && !state.center) return areaRequiredFailure();
+    if (scope !== 'map' && state.feedTab === 'nearby' && !state.center) return areaRequiredFailure();
     const result = await requestJson(
         scope === 'map' ? '/query/map' : '/query/feed',
         buildAidQueryParams(state, scope, page),
@@ -2374,7 +2374,7 @@ export const fetchFeedRecordPageFromApi = async (
     );
     if (!result.ok) return result;
     const envelope = pageEnvelope(result.data, mapAidPayloadToRecords(result.data));
-    if ((scope === 'map' || state.feedTab === 'nearby') && envelope?.items.some(record => !record.card.location)) {
+    if (state.center && (scope === 'map' || state.feedTab === 'nearby') && envelope?.items.some(record => !record.card.location)) {
         return invalidResponseFailure('Nearby discovery returned a request without an approximate location.');
     }
     return envelope ? { ok: true, data: envelope }
@@ -2395,7 +2395,6 @@ export const fetchDirectoryCardPageFromApi = async (
     page = 1,
     signal?: AbortSignal,
 ): Promise<ApiClientResult<PagedResult<ResourceDirectoryCard>>> => {
-    if (!state.center) return areaRequiredFailure();
     const result = await requestJson('/query/directory', buildDirectoryQueryParams(state, page), signal);
     if (!result.ok) return result;
     const envelope = pageEnvelope(result.data, mapDirectoryPayloadToCards(result.data));

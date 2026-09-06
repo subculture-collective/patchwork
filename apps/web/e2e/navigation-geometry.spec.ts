@@ -58,9 +58,9 @@ for (const width of widths) {
             await expect(navigation.getByRole('link', { name, exact: true })).toBeVisible();
         }
         await navigation.getByRole('link', { name: 'Nearby', exact: true }).click();
-        await expect(page).toHaveURL(/\/nearby\?.*view=list/);
-        await page.getByRole('navigation', { name: 'Nearby view' }).getByRole('link', { name: 'Map', exact: true }).click();
-        await expect(page).toHaveURL(/\/nearby\?.*view=map/);
+        await expect(page).toHaveURL(/\/nearby(?:\?|$)/);
+        await expect(page.locator('.leaflet-container')).toBeVisible();
+        await expect(page.getByRole('navigation', { name: 'Nearby view' })).toHaveCount(0);
         await expect(navigation.getByRole('link', { name: 'Nearby', exact: true })).toHaveAttribute('aria-current', 'page');
 
     });
@@ -136,13 +136,10 @@ test('desktop secondary navigation renders above page content', async ({ page })
 test('legacy discovery aliases canonicalize without trapping browser Back', async ({ page }) => {
     await page.goto('/');
     await page.goto('/map?dataset=demo&category=food&lat=41.85&lng=-87.93&r=20000');
-    await expect(page).toHaveURL(/\/nearby\?.*view=map/);
+    await expect(page).toHaveURL(/\/nearby\?/);
     expect(new URL(page.url()).searchParams.get('dataset')).toBe(null);
-    await page.getByRole('navigation', { name: 'Nearby view' }).getByRole('link', { name: 'List', exact: true }).click();
-    await expect(page).toHaveURL(/view=list/);
-    expect(new URL(page.url()).searchParams.get('dataset')).toBe(null);
-    await page.goBack();
-    await expect(page).toHaveURL(/view=map/);
+    expect(new URL(page.url()).searchParams.get('view')).toBe(null);
+    await expect(page.locator('.leaflet-container')).toBeVisible();
     await page.goBack();
     await expect(page).toHaveURL(/\/$/);
 });

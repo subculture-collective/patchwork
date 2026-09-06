@@ -111,7 +111,7 @@ const mockProductionSession = async (page: Page, language: 'en' | 'es') => {
         }
         if (path === '/inbox') return fulfill({ items: [], unread: 0 });
         if (path === '/outcomes/mine') return fulfill({ feedback: [] });
-        if (path === '/query/feed') return fulfill({
+        if ((path === '/query/feed' || path === '/query/map')) return fulfill({
             total: 0,
             page: 1,
             pageSize: 20,

@@ -40,7 +40,7 @@ test('showcase origin is visible and stale retained results are disclosed', asyn
             });
             return;
         }
-        if (path === '/query/feed') {
+        if ((path === '/query/feed' || path === '/query/map')) {
             if (requestUrl.searchParams.get('searchText') === 'grocery') {
                 await route.abort('failed');
                 return;
@@ -90,6 +90,7 @@ test('showcase origin is visible and stale retained results are disclosed', asyn
 
     await page.goto('/feed');
     await expect(page.getByText('Fictional listing')).toBeVisible();
+    await page.locator('.mh-filter-disclosure summary').click();
     await page.getByLabel('Search text').fill('grocery');
     await expect(page.getByRole('alert')).toContainText(
         'Showing previously loaded results; they may be stale.',

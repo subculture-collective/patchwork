@@ -29,7 +29,7 @@ test('feed pagination announces appended records, preserves focus, and restores 
                 acceptedAt: '2026-08-08T00:00:00.000Z',
             });
         }
-        if (path === '/query/feed') {
+        if ((path === '/query/feed' || path === '/query/map')) {
             const requestedPage = Number(requestUrl.searchParams.get('page') ?? 1);
             requestedPages.push(requestedPage);
             const indices = requestedPage === 1

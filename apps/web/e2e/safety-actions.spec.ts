@@ -41,7 +41,7 @@ test.beforeEach(async ({ page, baseURL }) => {
             });
             return;
         }
-        if (apiPath === '/query/feed') {
+        if ((apiPath === '/query/feed' || apiPath === '/query/map')) {
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
@@ -84,7 +84,7 @@ test('authenticated user reports a discovered request with private details', asy
         });
     });
 
-    await page.goto('/feed');
+    await page.goto('/feed?lat=41.85&lng=-87.93&r=65000');
     await page.getByRole('button', { name: 'Report suspicious request' }).click();
     await page.getByLabel('Report reason').selectOption('fraud');
     await page
@@ -118,7 +118,7 @@ test('authenticated user confirms a private block against the record author', as
         });
     });
 
-    await page.goto('/feed');
+    await page.goto('/feed?lat=41.85&lng=-87.93&r=65000');
     await page
         .getByRole('button', { name: 'Block author of Suspicious request' })
         .click();
@@ -172,7 +172,7 @@ test('record owner closes with compare-and-swap then deletes the AT record', asy
             });
             return;
         }
-        if (apiPath === '/query/feed') {
+        if ((apiPath === '/query/feed' || apiPath === '/query/map')) {
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
@@ -238,7 +238,7 @@ test('record owner closes with compare-and-swap then deletes the AT record', asy
         await route.fallback();
     });
 
-    await page.goto('/feed');
+    await page.goto('/feed?lat=41.85&lng=-87.93&r=65000');
     await page.getByRole('button', { name: 'Close owned request' }).click();
     await expect(page.getByText('Request closed.')).toBeVisible();
     await page.getByRole('button', { name: 'Delete owned request' }).click();
@@ -291,7 +291,7 @@ test('owner can recover when private lifecycle transition outpaces public AT syn
             });
             return;
         }
-        if (apiPath === '/query/feed') {
+        if ((apiPath === '/query/feed' || apiPath === '/query/map')) {
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
@@ -392,7 +392,7 @@ test('owner can recover when private lifecycle transition outpaces public AT syn
         await route.fallback();
     });
 
-    await page.goto('/feed');
+    await page.goto('/feed?lat=41.85&lng=-87.93&r=65000');
     await page
         .getByRole('button', { name: 'Resolve: Lifecycle sync recovery' })
         .click();

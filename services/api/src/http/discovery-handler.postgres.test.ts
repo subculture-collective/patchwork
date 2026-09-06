@@ -187,6 +187,26 @@ describePostgres('session-aware durable discovery HTTP boundary', () => {
         expect(JSON.stringify(body)).not.toContain(blockedDid);
     });
 
+    it('supports a cleared map area with fine public cells and still validates partial coordinates', async () => {
+        const running = await startServer(pool);
+        try {
+            const response = await fetch(`${running.origin}/query/map`);
+            expect(response.status).toBe(200);
+            const body = await response.json() as { total: number; aggregates: { locatedRequestCount: number; cells: Array<{ latitude: number; longitude: number; count: number; radiusKm: number }> } };
+            expect(body.total).toBe(2);
+            expect(body.aggregates.locatedRequestCount).toBe(2);
+            expect(body.aggregates.cells).toHaveLength(1);
+            expect(body.aggregates.cells[0]).toMatchObject({ count: 2, radiusKm: 4 });
+            expect(body.aggregates.cells[0]?.latitude).toBeCloseTo(41.885);
+            expect(body.aggregates.cells[0]?.longitude).toBeCloseTo(-87.625);
+            const directory = await fetch(`${running.origin}/query/directory`);
+            expect(directory.status).toBe(200);
+            expect(await directory.json()).toMatchObject({ total: 1 });
+            const partial = await fetch(`${running.origin}/query/map?latitude=41.88`);
+            expect(partial.status).toBe(400);
+        } finally { await stopServer(running.server); }
+    });
+
     it('rejects an expired supplied session instead of falling back to anonymous discovery', async () => {
         const running = await startServer(pool);
         const response = await fetch(

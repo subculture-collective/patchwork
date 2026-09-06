@@ -1,3 +1,4 @@
+import { clusterCells } from './cluster-cells';
 import type { DiscoveryMapAggregates } from '@patchwork/shared';
 import 'leaflet/dist/leaflet.css';
 import { useEffect, useMemo, useRef, useId, useState } from 'react';
@@ -5,7 +6,6 @@ import L from 'leaflet';
 import { leafletLayer } from 'protomaps-leaflet';
 import type { MapAidCard } from '../../map-ux.js';
 import {
-    clusterExpansionZoom,
     clusterDistanceMetersForZoom,
     clusterMapCards,
     toApproximateMapMarker,
@@ -93,6 +93,8 @@ export const InteractiveMap = ({
     const onConfirmAreaRef = useRef(onConfirmArea);
     const initialCenterRef = useRef(center ?? { lat: 0, lng: 0 });
     const [zoom, setZoom] = useState(9);
+    const [focusedKeys,setFocusedKeys] = useState<readonly string[]>([]);
+    const cellClusters = useMemo(() => clusterCells(aggregateCells ?? [], zoom), [aggregateCells,zoom]);
     const [circleStyle, setCircleStyle] =
         useState<CircleStyle>(readCircleStyle);
     const [areaCandidate, setAreaCandidate] = useState<{
@@ -182,6 +184,7 @@ export const InteractiveMap = ({
         };
         map.on('moveend', onMoveEnd);
         const selectMapPoint = (event: L.LeafletMouseEvent) => {
+            if (!event.originalEvent?.defaultPrevented) setFocusedKeys([]);
             if (!onConfirmAreaRef.current) return;
             setAreaCandidate({ lat: event.latlng.lat, lng: event.latlng.lng });
         };
@@ -231,16 +234,30 @@ export const InteractiveMap = ({
         if (!mapInstance.current) return;
         const map = mapInstance.current;
         const layers: L.Layer[] = [];
-        for (const cell of aggregateCells ?? []) {
-            const circle = L.circle([cell.latitude, cell.longitude], { radius: cell.radiusKm * 1000, className: 'mh-map-cluster' }).addTo(map);
-            circle.bindTooltip(String(cell.count), { permanent: true, direction: 'center', className: 'mh-map-circle-label mh-map-cluster-label' });
-            circle.on('click', () => map.fitBounds(circle.getBounds()));
-            layers.push(circle);
+        const focus = (lat:number,lng:number,keys:readonly string[]) => {
+            setFocusedKeys(keys);
+            map.setView([lat,lng],Math.min(18,map.getZoom()+1));
+        };
+        const isDimmed = (keys:readonly string[]) => focusedKeys.length > 0 && !keys.some(key=>focusedKeys.includes(key));
+        const keyboard = (circle:L.Path,label:string,activate:()=>void) => {
+            const element=circle.getElement?.();
+            if(!element)return;
+            element.setAttribute('tabindex','0');element.setAttribute('role','button');element.setAttribute('aria-label',label);
+            element.addEventListener('keydown',event=>{const key=(event as KeyboardEvent).key;if(key==='Enter'||key===' '){event.preventDefault();activate();}});
+        };
+        for (const cell of cellClusters) {
+            const dimmed=isDimmed(cell.keys);
+            const circle = L.circleMarker([cell.latitude,cell.longitude], { radius:Math.min(27,12+Math.sqrt(cell.count)),bubblingMouseEvents:false,
+                className:`mh-map-cluster ${dimmed?'is-dimmed':focusedKeys.length?'is-selected':''}` }).addTo(map);
+            circle.bindTooltip(String(cell.count), { permanent:true,direction:'center',className:`mh-map-circle-label mh-map-cluster-label ${dimmed?'is-dimmed':''}` });
+            const activate=()=>focus(cell.latitude,cell.longitude,cell.keys);
+            circle.on('click',activate);keyboard(circle,String(t('map.zoomCluster',{count:cell.count})),activate);layers.push(circle);
         }
         for (const cluster of aggregateCells ? [] : clusters) {
             if (cluster.count <= 1) continue;
             const circle = L.circle([cluster.lat, cluster.lng], {
                 radius: cluster.radiusMeters,
+                bubblingMouseEvents: false,
                 className:
                     (selectedPostId &&
                         cluster.postIds.includes(selectedPostId)) ||
@@ -250,41 +267,34 @@ export const InteractiveMap = ({
                             lng: cluster.lng,
                         }))
                         ? 'mh-map-cluster is-selected'
-                        : 'mh-map-cluster',
+                        : `mh-map-cluster ${isDimmed(cluster.postIds)?'is-dimmed':''}`.trim(),
             }).addTo(map);
             circle.bindTooltip(`${cluster.count} · U${cluster.urgencyMax}`, {
                 permanent: true,
                 direction: 'center',
-                className: 'mh-map-circle-label mh-map-cluster-label',
+                className: `mh-map-circle-label mh-map-cluster-label ${isDimmed(cluster.postIds) ? 'is-dimmed' : ''}`,
             });
-            circle.on('click', () => {
-                const nextZoom = clusterExpansionZoom(
-                    cards,
-                    cluster.postIds,
-                    map.getZoom(),
-                    cluster.lat,
-                );
-                map.setView([cluster.lat, cluster.lng], nextZoom);
-
-            });
+            const activate=()=>focus(cluster.lat,cluster.lng,cluster.postIds);
+            circle.on('click',activate);keyboard(circle,String(t('map.zoomCluster',{count:cluster.count})),activate);
             layers.push(circle);
         }
         for (const marker of aggregateCells ? [] : markers) {
             if (!marker || clusteredPostIds.has(marker.id)) continue;
             const circle = L.circle([marker.lat, marker.lng], {
                 radius: marker.radiusMeters,
+                bubblingMouseEvents: false,
                 className:
                     marker.id === selectedPostId
                         ? 'mh-map-circle is-selected'
-                        : 'mh-map-circle',
+                        : `mh-map-circle ${isDimmed([marker.id])?'is-dimmed':''}`,
             }).addTo(map);
             circle.bindTooltip(`${marker.label} · U${marker.urgency}`, {
                 permanent: true,
                 direction: 'center',
-                className: 'mh-map-circle-label mh-map-request-label',
+                className: `mh-map-circle-label mh-map-request-label ${isDimmed([marker.id]) ? 'is-dimmed' : ''}`,
             });
             circle.on('click', () => {
-                map.setView([marker.lat, marker.lng], map.getZoom());
+                focus(marker.lat,marker.lng,[marker.id]);
                 onFocusAreaRef.current?.({
                     center: { lat: marker.lat, lng: marker.lng },
                     radiusMeters: marker.radiusMeters,
@@ -297,6 +307,7 @@ export const InteractiveMap = ({
         for (const { resource, exact } of exactPlaces) {
             const marker = L.circleMarker([exact.latitude, exact.longitude], {
                 radius: 7,
+                bubblingMouseEvents: false,
                 className:
                     focusedArea &&
                     sameCenter(focusedArea.center, {
@@ -304,7 +315,7 @@ export const InteractiveMap = ({
                         lng: exact.longitude,
                     })
                         ? 'mh-map-place is-selected'
-                        : 'mh-map-place',
+                        : `mh-map-place ${isDimmed([resource.uri]) ? 'is-dimmed' : ''}`.trim(),
             }).addTo(map);
             const resourceLabel = document.createElement('span');
             resourceLabel.textContent = `${resource.name} · ${resource.openHours ?? ''}`;
@@ -313,11 +324,11 @@ export const InteractiveMap = ({
                 {
                     permanent: true,
                     direction: 'right',
-                    className: 'mh-map-place-label',
+                    className: `mh-map-place-label ${isDimmed([resource.uri]) ? 'is-dimmed' : ''}`,
                 },
             );
             marker.on('click', () => {
-                map.setView([exact.latitude, exact.longitude], 15);
+                focus(exact.latitude, exact.longitude, [resource.uri]);
                 selectResourceRef.current?.(resource.uri);
             });
             layers.push(marker);
@@ -325,16 +336,16 @@ export const InteractiveMap = ({
         for (const resource of resources) {
             if (currentExactPublicAddress(resource)) continue;
             const circle = L.circle([resource.location.lat, resource.location.lng], {
-                radius: Math.max(1000, resource.location.precisionMeters), className: 'mh-map-place',
+                radius: Math.max(1000, resource.location.precisionMeters), bubblingMouseEvents: false, className: `mh-map-place ${isDimmed([resource.uri]) ? 'is-dimmed' : ''}`.trim(),
             }).addTo(map);
             const label = document.createElement('span');
             label.textContent = resource.name;
             circle.bindTooltip(label, { direction: 'top' });
-            circle.on('click', () => selectResourceRef.current?.(resource.uri));
+            circle.on('click', () => { focus(resource.location.lat, resource.location.lng, [resource.uri]); selectResourceRef.current?.(resource.uri); });
             layers.push(circle);
         }
         return () => layers.forEach((layer) => layer.remove());
-    }, [aggregateCells,
+    }, [aggregateCells, cellClusters, focusedKeys, t,
         cards,
         clusteredPostIds,
         clusters,
@@ -422,6 +433,7 @@ export const InteractiveMap = ({
                 tabIndex={0}
                 onKeyDown={(event) => {
                     if (event.key === 'Escape') {
+                        setFocusedKeys([]);
                         onSelectPostIdRef.current(undefined);
                     }
                 }}

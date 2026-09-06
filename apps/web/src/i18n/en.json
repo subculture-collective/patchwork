@@ -250,7 +250,12 @@
         "loadMore": "Load more",
         "retryProjection": "Retry projection check",
         "resetFilters": "Reset filters",
-        "filtersPersist": "Filters persist in the URL for sharable triage context."
+        "filtersPersist": "Filters persist in the URL for sharable triage context.",
+        "allAreas": "Showing all areas. Location is optional.",
+        "locationDenied": "Location permission was denied. The selected area is still available.",
+        "locationTimedOut": "Finding your location timed out. The selected area is still available.",
+        "locationNotFound": "Your device could not provide a location. The selected area is still available.",
+        "selectedAreaActive": "Showing the selected area."
     },
     "map": {
         "aggregateHelp": "The map summarizes all {{count}} matching requests. Select an area, then Search this area to narrow the list.",
@@ -262,8 +267,8 @@
         "apiSyncIssue": "API sync issue: {{message}}",
         "clusterOverviewTitle": "Cluster overview",
         "noClusters": "No clusters for current filters. Try widening radius or clearing category/status chips.",
-        "clusterRequests_one": "{{count}} request \u00b7 Max urgency {{urgency}}",
-        "clusterRequests_other": "{{count}} requests \u00b7 Max urgency {{urgency}}",
+        "clusterRequests_one": "{{count}} request · Max urgency {{urgency}}",
+        "clusterRequests_other": "{{count}} requests · Max urgency {{urgency}}",
         "requestMarkersTitle": "Requests in this area",
         "noRequests": "No requests in selected area. Set a wider radius or switch to latest feed tab.",
         "urgencyLabel": "Urgency {{level}}",
@@ -294,7 +299,8 @@
         "singleRequest": "Single request (approximate area)",
         "cluster": "Multiple requests cluster",
         "publicPlace": "Approved public place (exact)",
-        "legendNote": "Circles show approximate areas, not private addresses. Numbers show how many requests are nearby."
+        "legendNote": "Circles show approximate areas, not private addresses. Numbers show how many requests are nearby.",
+        "zoomCluster": "Zoom into {{count}} requests"
     },
     "exactLocation": {
         "initial": "Both participants must start within two minutes.",
@@ -1394,5 +1400,28 @@
         "allActivity": "Show all activity",
         "activityPartial": "Some activity could not be refreshed. Available sections are shown; use Refresh to try again.",
         "refresh": "Refresh"
+    },
+    "requestPage": {
+        "needed": "What is needed",
+        "area": "Approximate area",
+        "approximate": "Location is approximate to within {{distance}} km.",
+        "noArea": "No public area has been shared.",
+        "locationPrivacy": "Private addresses are not shown here. Agree on any meeting details after an offer is accepted.",
+        "viewArea": "View area on map",
+        "resources": "Find nearby resources",
+        "updates": "Request updates",
+        "posted": "Posted",
+        "updated": "Last updated",
+        "manage": "Manage your request",
+        "next": "How to help",
+        "ownerHelp": "Review offers and keep your request status current. Accepted handoffs continue in My activity.",
+        "helperHelp": "Describe what you can help with and when you are available. The requester can accept your offer before you coordinate a handoff.",
+        "ask": "Post your own request",
+        "share": "Copy request link",
+        "copied": "Link copied",
+        "copyFailed": "Could not copy the link. You can copy this page’s address from your browser.",
+        "profileHelp": "An active volunteer profile is needed before sending an offer. Set it up, then return here and retry.",
+        "profile": "Set up profile (opens a new tab)",
+        "sequence": "Offer help → requester accepts → message and agree on a time → complete the handoff."
     }
 }

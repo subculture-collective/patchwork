@@ -1219,3 +1219,14 @@ code {
 @media (max-width: 600px) {
     .mh-map-detail-sheet { left: 0; right: 0; bottom: 0; width: 100%; max-height: 55dvh; border-radius: 16px 16px 0 0; padding-bottom: env(safe-area-inset-bottom); }
 }
+
+/* Discovery controls are compact without shrinking the rest of the product. */
+.mh-discovery-filters .mh-button { padding: .3rem .55rem; min-height: 32px; font-size: .78rem; border-width: 1px; box-shadow: none; }
+.mh-discovery-filters .mh-input { padding: .45rem .6rem; }
+.mh-filter-grid { grid-template-columns: 1fr; }
+@media (min-width: 640px) { .mh-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.mh-filter-disclosure summary { padding: .35rem .5rem; }
+.mh-map-cluster.is-dimmed, .mh-map-circle.is-dimmed, .mh-map-circle-label.is-dimmed, .mh-map-place.is-dimmed, .mh-map-place-label.is-dimmed { opacity: .18; }
+.mh-map-cluster, .mh-map-circle { transition: opacity 180ms ease; }
+.mh-map-cluster:focus-visible { outline: 3px solid #176854; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .mh-map-cluster, .mh-map-circle { transition: none; } }

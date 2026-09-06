@@ -589,22 +589,15 @@ describe('api client', () => {
         expect(String(url)).toContain('pageSize=20');
     });
 
-    it('does not substitute an implicit city when map discovery has no selected area', async () => {
-        const fetchMock = vi.fn();
+    it('loads all-area map results without substituting a city after clearing the area', async () => {
+        const fetchMock = vi.fn(async () => createJsonResponse({ total: 0, page: 1, pageSize: 20, hasNextPage: false, results: [] }));
         globalThis.fetch = fetchMock as unknown as typeof fetch;
-
-        const result = await fetchFeedRecordsFromApi(
-            { feedTab: 'nearby' },
-            'map',
-        );
-
-        expect(result).toMatchObject({
-            ok: false,
-            code: 'AREA_REQUIRED',
-            kind: 'validation',
-            retryable: false,
-        });
-        expect(fetchMock).not.toHaveBeenCalled();
+        const result = await fetchFeedRecordsFromApi({ feedTab: 'nearby' }, 'map');
+        expect(result).toEqual({ ok: true, data: [] });
+        const url = String((fetchMock.mock.calls as unknown as Array<[unknown]>)[0]?.[0]);
+        expect(url).toContain('/query/map?');
+        expect(url).not.toContain('latitude=');
+        expect(url).not.toContain('radiusKm=');
     });
 
     it('keeps unlocated requests in latest and rejects inconsistent nearby counts', async () => {
