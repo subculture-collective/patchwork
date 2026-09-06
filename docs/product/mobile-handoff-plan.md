@@ -175,3 +175,8 @@ observed onboarding/handoff friction and measured discovery capacity; verify act
 notification receipt and role-reversed phone journeys; qualify recovery and close
 independent operational/review gates before any public launch. Do not mark the mixed
 implementation-plus-verification checkboxes above complete while their gates remain open.
+
+2026-09-06: At the user's explicit request, application `8a4a38a` was also promoted
+to https://patchwork.subcult.tv, preserving its existing data and OAuth settings.
+See [public promotion evidence](../operations/evidence/public-promotion-2026-09-06.md).
+The protected candidate remains available; open qualification gates are unchanged.

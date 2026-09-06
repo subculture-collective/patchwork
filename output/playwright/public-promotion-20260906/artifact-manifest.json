@@ -1,0 +1,17 @@
+{
+  "sourceSha": "8a4a38a699332811f7ab132295c2968d19fd6d16",
+  "builtAt": "2026-09-06T20:24:34.393050+00:00",
+  "purpose": "public-hostname-testing",
+  "images": {
+    "api": "127.0.0.1:5000/subculture-collective/patchwork-candidate-api@sha256:04572c839f399b925e11584322ae28547f0948e974414c14ba28eb7bf53154be",
+    "indexer": "127.0.0.1:5000/subculture-collective/patchwork-candidate-indexer@sha256:319a6199c6f5cab8fa26db49728c8a7c51c9af2b5a91fd315b44346f1d133af5",
+    "moderation": "127.0.0.1:5000/subculture-collective/patchwork-candidate-moderation@sha256:06114e4870b855499b3bb54c885533e6893a10c63b0148dfafab41d759786b4c",
+    "web": "127.0.0.1:5000/subculture-collective/patchwork-public-web@sha256:f0d3e548408be3cbdfd4302c5bd2fd55e0e2d9f1b80e75644a026a2a4ce1cb54"
+  },
+  "tileSha256": "9a7697125792ba1aa267fca4fa8751172ddd9347e00e9462beb727edf9bbde82",
+  "sharedExternalProviders": [
+    "managed AT PDS",
+    "Jetstream v2"
+  ],
+  "publicOrigin": "https://patchwork.subcult.tv"
+}
