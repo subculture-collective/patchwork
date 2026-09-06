@@ -91,3 +91,13 @@ Verification:
 - Initial JS: 197,801 gzip bytes (713,931 raw bytes; gzip level 9), below the 200,000-byte budget. No public deployment, real recipient send, load qualification, restore drill or human phone test was performed.
 
 Remaining sequence now starts with the focused activity/handoff workspace, direct posting location and notification destinations, then full navigation/map UX, dataset separation, SQL paging/aggregation, route extraction and protected candidate qualification. A source-write/DB-commit failure still spans two systems; receipt transactions do not establish an atomic PDS/PostgreSQL commit. Real recipient and phone participants remain unconfirmed.
+
+## Implementation checkpoint — contextual handoff and posting recovery
+
+The second tranche now keeps the selected handoff through chat, scheduling and notification links. Explicit unknown conversation targets never silently open another conversation. Accepted connections expose message and scheduling actions; request titles link back to public context. Authentication failures clear affected private views.
+
+Posting now requests approximate browser location within the form, retains text through denial, and offers an explicit Cook & DuPage fallback with 50 km source precision. Granted coordinates are rounded before submission. Acceptance and completion preserve their idempotency keys after uncertain failures and disable overlapping actions.
+
+Verification: repository checks pass (1,065 passed, 135 infrastructure skips); the database-enabled API suite passes 425 cases with one real-attachment skip. The full Chromium run completed with a passed last-run record and no failed tests (171 enumerated cases, including two credential-dependent skips). Added browser cases cover explicit conversation/connection targeting, unknown-target isolation, actual posting with granted/denied location, and acceptance/completion retries. Notification database checks verify contextual destinations and absence of private message bodies. Initial JS is 198,426 gzip bytes (716,908 raw, gzip level 9).
+
+This remains local implementation and automated qualification. Real recipient delivery, the navigation/map redesign, server dataset enforcement, bounded SQL discovery, protected candidate qualification and human phone handoffs remain outstanding.

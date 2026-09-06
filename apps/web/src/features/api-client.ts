@@ -2695,6 +2695,7 @@ export const decideCoordinationOfferViaApi = async (
         decision: 'accept' | 'decline' | 'cancel';
     },
     signal?: AbortSignal,
+    idempotencyKey?: string,
 ): Promise<
     ApiClientResult<{
         offer: CoordinationOffer;
@@ -2705,6 +2706,7 @@ export const decideCoordinationOfferViaApi = async (
         '/coordination/offer-decisions',
         input,
         signal,
+        idempotencyKey,
     );
     return result.ok ?
             parseRecordPayload(
@@ -2721,11 +2723,13 @@ export const transitionCoordinationConnectionViaApi = async (
         action: 'complete' | 'cancel';
     },
     signal?: AbortSignal,
+    idempotencyKey?: string,
 ): Promise<ApiClientResult<{ connection: CoordinationConnection }>> => {
     const result = await requestJsonPost(
         '/coordination/connections',
         input,
         signal,
+        idempotencyKey,
     );
     return result.ok ?
             parseRecordPayload(

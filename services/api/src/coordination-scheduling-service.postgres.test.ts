@@ -75,6 +75,7 @@ describePostgres('CoordinationSchedulingService PostgreSQL boundary', () => {
         expect(serialized).not.toMatch(/latitude|longitude|streetAddress|message/i);
         expect(serialized).not.toContain('2026-07-10T17:00:00');
         expect(notifications.rows.length).toBeGreaterThanOrEqual(4);
+        expect(notifications.rows.every(row => row.action_url === `/scheduling?connection=${connectionId}`)).toBe(true);
         await expect(new AccountPrivacyService(pool).exportFor(requester))
             .resolves.toMatchObject({
                 data: {

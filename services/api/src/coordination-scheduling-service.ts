@@ -307,10 +307,11 @@ export class CoordinationSchedulingService {
         const title = kind === 'schedule_reminder' ? 'Coordination reminder' : kind === 'schedule_expired' ? 'Coordination window expired' : 'Coordination schedule updated';
         const body = kind === 'schedule_reminder' ? 'A confirmed coordination window begins soon.' : 'Open your connection to review the schedule status.';
         const key = `schedule:${row.window_id}:${row.version}:${kind}:${recipientDid}`;
-        await client.query(`INSERT INTO activity_inbox_items (item_id,recipient_did,item_type,title,summary,action_url,source_key,metadata,occurred_at,retention_until) VALUES ($1,$2,'scheduling',$3,$4,'/inbox',$5,$6::jsonb,$7,$8) ON CONFLICT (recipient_did,source_key) DO NOTHING`,
-            [randomUUID(), recipientDid, title, body, key, JSON.stringify({ windowId: row.window_id, connectionId: row.connection_id, status: row.status }), now, plusDays(now, 365)]);
-        await client.query(`SELECT patchwork_enqueue_notification($1,$2,$3,$4,'normal','/inbox',$5::jsonb,$6,$7)`,
-            [recipientDid, kind, title, body, JSON.stringify({ windowId: row.window_id, connectionId: row.connection_id, status: row.status }), key, now]);
+        const actionUrl = `/scheduling?connection=${encodeURIComponent(row.connection_id)}`;
+        await client.query(`INSERT INTO activity_inbox_items (item_id,recipient_did,item_type,title,summary,action_url,source_key,metadata,occurred_at,retention_until) VALUES ($1,$2,'scheduling',$3,$4,$9,$5,$6::jsonb,$7,$8) ON CONFLICT (recipient_did,source_key) DO NOTHING`,
+            [randomUUID(), recipientDid, title, body, key, JSON.stringify({ windowId: row.window_id, connectionId: row.connection_id, status: row.status }), now, plusDays(now, 365), actionUrl]);
+        await client.query(`SELECT patchwork_enqueue_notification($1,$2,$3,$4,'normal',$8,$5::jsonb,$6,$7)`,
+            [recipientDid, kind, title, body, JSON.stringify({ windowId: row.window_id, connectionId: row.connection_id, status: row.status }), key, now, actionUrl]);
     }
 
     private render(row: WindowRow): Record<string, unknown> {

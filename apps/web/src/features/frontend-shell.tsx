@@ -1,3 +1,4 @@
+import { RequestContextLink } from './request-context-link';
 import type { ResourceDetail } from '../resource-directory-ux';
 import { fetchResourceViaApi } from './api-client';
 import { useVisiblePoll } from './use-visible-poll';
@@ -247,6 +248,7 @@ const dataOriginLabel = (origin: ApiDataOrigin): string =>
             ? 'Requesting location'
             : 'API unavailable';
 
+const LazyPostingLocation = lazy(() => import('./posting-location').then(module => ({ default: module.PostingLocation })));
 const LazyMyRequests = lazy(() => import('./my-requests').then(module => ({ default: module.MyRequests })));
 const LazyProductionChat = lazy(() => import('./production-chat').then(module => ({ default: module.ProductionChat })));
 const LazyProductionGroups = lazy(() => import('./production-groups').then(module => ({ default: module.ProductionGroups })));
@@ -2484,7 +2486,8 @@ const FeedRoute = ({
 };
 
 interface PostingRouteProps {
-    location: {
+    onLocationChange: (patch: Partial<DiscoveryFilterState>) => void;
+    location?: {
         center: { lat: number; lng: number };
         areaLabel: string;
     };
@@ -2501,6 +2504,7 @@ interface PostingRouteProps {
 
 const PostingRoute = ({
     location,
+    onLocationChange,
     onCreateRecord,
     onNavigate,
     onCreateViaApi,
@@ -2570,6 +2574,7 @@ const PostingRoute = ({
 
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+        if (!location) { setApiError(t('posting.areaRequired')); return; }
         setApiError(undefined);
         setProjectionNotice(undefined);
         setProjectionFailed(false);
@@ -2583,7 +2588,8 @@ const PostingRoute = ({
             location: {
                 lat: location.center.lat,
                 lng: location.center.lng,
-                precisionMeters: PUBLIC_MIN_PRECISION_KM * 1000,
+                precisionMeters: location.center.lat === demoAreaPresets.chicagoland.center.lat && location.center.lng === demoAreaPresets.chicagoland.center.lng
+                    ? 50_000 : PUBLIC_MIN_PRECISION_KM * 1000,
             },
             timeWindow:
                 startAt.length > 0 && endAt.length > 0
@@ -2669,6 +2675,8 @@ const PostingRoute = ({
             setSuccessMessage(
                 t('posting.publicationPending', { id: localId }),
             );
+        } catch {
+            setApiError(t('handoff.saveFailed'));
         } finally {
             setIsSubmitting(false);
         }
@@ -2810,18 +2818,13 @@ const PostingRoute = ({
                     <div className='border-2 border-mh-borderSoft p-3'>
                         <h3 className='font-bold'>{t('posting.approximateArea')}</h3>
                         <p className='mt-2 text-sm text-mh-textMuted'>
-                            {t('posting.selectedArea', { area: location.areaLabel })}
+                            {location ? t('posting.selectedArea', { area: location.areaLabel }) : t('handoff.chooseAreaHere')}
                         </p>
                         <p className='mt-1 text-sm text-mh-textMuted'>
                             {t('posting.publicPrecisionSummary')}
                         </p>
-                        <Button
-                            className='mt-3'
-                            type='button'
-                            onClick={() => onNavigate('/map')}
-                        >
-                            {t('posting.changeArea')}
-                        </Button>
+                        <Suspense fallback={null}><LazyPostingLocation hasLocation={Boolean(location)} onSelect={onLocationChange} /></Suspense>
+                        <a className='mt-3 inline-block underline' href='/map'>{t('posting.changeArea')}</a>
                     </div>
 
                     <div className='border-2 border-mh-border bg-mh-surfaceElev p-4'>
@@ -2960,7 +2963,7 @@ const PostingRoute = ({
                     ) : null}
 
                     <div className='flex flex-wrap gap-2'>
-                        <Button type='submit' disabled={isSubmitting || Boolean(successMessage && !apiError)}>
+                        <Button type='submit' disabled={!location || isSubmitting || Boolean(successMessage && !apiError)}>
                             {isSubmitting
                                 ? t('posting.publishing')
                                 : t('posting.publishRequest')}
@@ -7091,6 +7094,7 @@ const CoordinationSchedulingRoute = ({ did }: { did: string }) => {
         [],
     );
     const [windows, setWindows] = useState<CoordinationWindow[]>([]);
+    const requestedConnection = useMemo(() => new URLSearchParams(window.location.search).get('connection'), []);
     const [connectionId, setConnectionId] = useState('');
     const [startAt, setStartAt] = useState('');
     const [endAt, setEndAt] = useState('');
@@ -7114,13 +7118,15 @@ const CoordinationSchedulingRoute = ({ did }: { did: string }) => {
         );
         setConnections(active);
         setWindows(scheduling.data.windows);
-        setConnectionId((current) => current || active[0]?.id || '');
+        setConnectionId((current) => active.some(connection => connection.id === current) ? current
+            : requestedConnection ? active.find(connection => connection.id === requestedConnection)?.id ?? ''
+            : active[0]?.id ?? '');
         setStatus(
             active.length === 0
                 ? String(t('scheduling.empty'))
                 : String(t('scheduling.ready')),
         );
-    }, [t]);
+    }, [t, requestedConnection]);
 
     useEffect(() => {
         void load();
@@ -7167,6 +7173,7 @@ const CoordinationSchedulingRoute = ({ did }: { did: string }) => {
                 >
                     {status}
                 </p>
+                {connectionId && <a href={`/inbox?connection=${encodeURIComponent(connectionId)}`} className='underline'>{t('handoff.viewActivity')}</a>}
             </header>
             <Panel title={String(t('scheduling.proposeHeading'))}>
                 {connections.length === 0 ? (
@@ -7203,6 +7210,7 @@ const CoordinationSchedulingRoute = ({ did }: { did: string }) => {
                                 }
                                 disabled={busy}
                             >
+                                <option value=''>{t('handoff.chooseConnection')}</option>
                                 {connections.map((connection) => (
                                     <option
                                         key={connection.id}
@@ -7353,9 +7361,29 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
     >({});
     const [unreadOnly, setUnreadOnly] = useState(false);
     const [status, setStatus] = useState(t('inbox.loading'));
+    const mutationKeys = useRef(new Map<string, string>());
+    const mutationRunning = useRef(false);
+    const [mutationBusy, setMutationBusy] = useState(false);
+    const mutate = async (operation: string, effect: (key: string) => Promise<{ ok: boolean; error?: string }>) => {
+        if (mutationRunning.current) return { ok: false, error: t('handoff.saving') };
+        mutationRunning.current = true; setMutationBusy(true);
+        const key = mutationKeys.current.get(operation) ?? crypto.randomUUID();
+        mutationKeys.current.set(operation, key);
+        try {
+            const result = await effect(key);
+            if (result.ok) mutationKeys.current.delete(operation);
+            return result;
+        } finally { mutationRunning.current = false; setMutationBusy(false); }
+    };
+    const decideOffer = (input: Parameters<typeof decideCoordinationOfferViaApi>[0]) =>
+        mutate(`offer:${input.offerId}:${input.decision}`, key => decideCoordinationOfferViaApi(input, undefined, key));
+    const changeConnection = (input: Parameters<typeof transitionCoordinationConnectionViaApi>[0]) =>
+        mutate(`connection:${input.connectionId}:${input.action}`, key => transitionCoordinationConnectionViaApi(input, undefined, key));
+
     const requestContext = new URLSearchParams(window.location.search).get('uri');
     const visibleOffers = requestContext ? offers.filter(offer => offer.requestUri === requestContext) : offers;
-    const visibleConnections = requestContext ? connections.filter(connection => connection.requestUri === requestContext) : connections;
+    const connectionContext = new URLSearchParams(window.location.search).get('connection');
+    const visibleConnections = connections.filter(connection => (!requestContext || connection.requestUri === requestContext) && (!connectionContext || connection.id === connectionContext));
     const refreshController = useRef<AbortController | undefined>(undefined);
 
     const load = useCallback(async () => {
@@ -7540,7 +7568,7 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                 </div>
             ) : null}
 
-            {requestContext && <a href='/inbox' className='underline'>{t('myRequests.allActivity')}</a>}
+            {(requestContext || connectionContext) && <a href='/inbox' className='underline'>{t('myRequests.allActivity')}</a>}
             <div id='request-offers' />
             <Panel title={String(t('inbox.offers'))}>
                 {visibleOffers.length === 0 ? (
@@ -7577,6 +7605,7 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                         })}
                                     </span>
                                 </div>
+                                <RequestContextLink uri={offer.requestUri} />
                                 {offer.note ? (
                                     <p className='mt-2 text-sm'>{offer.note}</p>
                                 ) : null}
@@ -7600,12 +7629,13 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                         {offer.direction === 'received' ? (
                                             <>
                                                 <Button
+                                                    disabled={mutationBusy}
                                                     onClick={() =>
                                                         void finish(
                                                             t(
                                                                 'inbox.acceptingOffer',
                                                             ),
-                                                            decideCoordinationOfferViaApi(
+                                                            decideOffer(
                                                                 {
                                                                     offerId:
                                                                         offer.id,
@@ -7619,13 +7649,14 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                                     {t('inbox.accept')}
                                                 </Button>
                                                 <Button
+                                                    disabled={mutationBusy}
                                                     variant='secondary'
                                                     onClick={() =>
                                                         void finish(
                                                             t(
                                                                 'inbox.decliningOffer',
                                                             ),
-                                                            decideCoordinationOfferViaApi(
+                                                            decideOffer(
                                                                 {
                                                                     offerId:
                                                                         offer.id,
@@ -7641,13 +7672,14 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                             </>
                                         ) : (
                                             <Button
+                                                disabled={mutationBusy}
                                                 variant='secondary'
                                                 onClick={() =>
                                                     void finish(
                                                         t(
                                                             'inbox.cancellingOffer',
                                                         ),
-                                                        decideCoordinationOfferViaApi(
+                                                        decideOffer(
                                                             {
                                                                 offerId:
                                                                     offer.id,
@@ -7816,6 +7848,7 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                         ),
                                     })}
                                 >
+                                    <RequestContextLink uri={connection.requestUri} />
                                     <p className='break-all text-xs'>
                                         {t('inbox.connected', {
                                             did: connection.counterpartDid,
@@ -7823,17 +7856,23 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                     </p>
                                     {connection.status === 'active' ? (
                                         <>
+                                            <div className='my-3 flex flex-wrap gap-3'>
+                                                <a className='mh-button px-3 py-2' href={`/chat?connection=${encodeURIComponent(connection.id)}`}>{t('handoff.openMessages')}</a>
+                                                <a className='mh-button px-3 py-2' href={`/scheduling?connection=${encodeURIComponent(connection.id)}`}>{t('inbox.openScheduling')}</a>
+                                                <a className='underline' href={`/requests/view?uri=${encodeURIComponent(connection.requestUri)}`}>{t('myRequests.view')}</a>
+                                            </div>
                                             <ExactLocationExchange
                                                 connectionId={connection.id}
                                             />
                                             <div className='mt-3 flex flex-wrap gap-2'>
                                                 <Button
+                                                    disabled={mutationBusy}
                                                     onClick={() =>
                                                         void finish(
                                                             t(
                                                                 'inbox.completing',
                                                             ),
-                                                            transitionCoordinationConnectionViaApi(
+                                                            changeConnection(
                                                                 {
                                                                     connectionId:
                                                                         connection.id,
@@ -7846,13 +7885,14 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                                     {t('inbox.complete')}
                                                 </Button>
                                                 <Button
+                                                    disabled={mutationBusy}
                                                     variant='secondary'
                                                     onClick={() =>
                                                         void finish(
                                                             t(
                                                                 'inbox.cancellingConnection',
                                                             ),
-                                                            transitionCoordinationConnectionViaApi(
+                                                            changeConnection(
                                                                 {
                                                                     connectionId:
                                                                         connection.id,
@@ -9944,7 +9984,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         const pageParams = new URLSearchParams(discoveryQueryString);
         // Preserve selected-item and authentication return context across filter updates.
         const contextParams = new URLSearchParams(window.location.search);
-        for (const key of ['resource', 'uri', 'connection', 'view', 'dataset', 'resourceName']) {
+        for (const key of ['resource', 'uri', 'connection', 'conversation', 'view', 'dataset', 'resourceName']) {
             const value = contextParams.get(key);
             if (value) pageParams.set(key, value);
         }
@@ -10525,14 +10565,14 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
             currentUserDid={currentUserDid}
         />
     ) : currentRoute === '/posting' ? (
-        discoveryState.center ? (
             <PostingRoute
-                location={{
+                onLocationChange={patchDiscoveryState}
+                location={discoveryState.center ? {
                     center: discoveryState.center,
                     areaLabel:
                         discoveryState.areaLabel ??
                         String(t('discovery.areaUnknown')),
-                }}
+                } : undefined}
                 onCreateRecord={(record) => {
                     setFeedRecords((current) => [record, ...current]);
                     patchDiscoveryState({
@@ -10542,19 +10582,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                 }}
                 onNavigate={navigate}
                 onCreateViaApi={createAidPostViaApi}
-            />
-        ) : (
-            <section className='mh-route-header'>
-                <h1 className='mh-route-title'>{t('posting.heading')}</h1>
-                <p className='mt-2 mh-alert p-4' role='status'>
-                    {t('posting.areaRequired')}
-                </p>
-                <Button className='mt-3' onClick={() => navigate('/map')}>
-                    {t('route.map')}
-                </Button>
-            </section>
-        )
-    ) : currentRoute === '/resources' ? (
+            />    ) : currentRoute === '/resources' ? (
         <ResourceRoute
             discoveryState={discoveryState}
             onPatchDiscovery={patchDiscoveryState}

@@ -109,3 +109,37 @@ test('production chat preserves a draft while offline and localizes the trust di
     await expect(page.getByText('No tienes conexión. Tu borrador permanece en este dispositivo; el envío se desactiva hasta que vuelva la conexión.', { exact: true })).toBeVisible();
     await context.setOffline(false);
 });
+
+
+test('connection and notification links select their own conversation instead of the first conversation', async ({ page }) => {
+    const actor = 'did:plc:context-chat';
+    const targetConnection = '71111111-1111-4111-8111-111111111111';
+    const targetConversation = '71111111-1111-4111-8111-111111111112';
+    let messageReads: string[] = [];
+    const conversation = (id: string, connectionId: string) => ({ id, connectionId, kind: 'direct', roomId: null,
+        title: id, status: 'active', version: 1, unreadCount: 0, lastSequence: null, lastReadSequence: 0,
+        lastMessageAt: null, createdAt: '2026-09-05T12:00:00Z', updatedAt: '2026-09-05T12:00:00Z', closedAt: null });
+    await page.route('**/api/**', async route => {
+        const url = new URL(route.request().url());
+        const path = url.pathname.replace(/^\/api/, '');
+        const respond = (body: unknown, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+        if (path === '/auth/session') return respond({ session: { did: actor, expiresAt: '2099-01-01T00:00:00Z' } });
+        if (path === '/account/onboarding') return respond({ policyVersion: '2026-07-28', requiredDocuments: [], consentRequired: false, acceptedAt: '2026-09-05T12:00:00Z' });
+        if (path === '/groups') return respond({ groups: [], invitations: [], outgoingInvitations: [] });
+        if (path === '/coordination/mine') return respond({ offers: [], connections: [{ id: targetConnection, status: 'active', counterpartDid: 'did:plc:peer' }] });
+        if (path === '/chat/conversations') return respond({ conversations: [conversation('other-conversation', 'other-connection'), conversation(targetConversation, targetConnection)] });
+        if (path === '/chat/messages') { messageReads.push(url.searchParams.get('conversationId')!); return respond({ messages: [], nextCursor: null }); }
+        return respond({ error: { code: 'NOT_FOUND' } }, 404);
+    });
+    for (const query of [`connection=${targetConnection}`, `conversation=${targetConversation}`]) {
+        messageReads = [];
+        await page.goto(`/chat?${query}`);
+        await expect.poll(() => messageReads.length).toBeGreaterThan(0);
+        expect(new Set(messageReads)).toEqual(new Set([targetConversation]));
+    }
+    messageReads = [];
+    await page.goto('/chat?conversation=unavailable');
+    await expect(page.getByRole('button', { name: /other-conversation/ })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Message', exact: true })).toHaveCount(0);
+    expect(messageReads).toEqual([]);
+});

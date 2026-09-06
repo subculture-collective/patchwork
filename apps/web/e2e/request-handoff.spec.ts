@@ -136,3 +136,82 @@ test('a resource deep link loads outside the current result page and retries wit
     await expect(detail.getByRole('link', { name: 'Ask the community for help' })).toHaveAttribute('href', /resource=at%3A/);
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+
+for (const allowed of [true, false]) test(`posting obtains an approximate area in place with location ${allowed ? 'allowed' : 'denied'}`, async ({ page }) => {
+    await page.addInitScript(granted => {
+        Object.defineProperty(navigator, 'geolocation', { configurable: true, value: {
+            getCurrentPosition: (success: (value: unknown) => void, failure: () => void) => granted
+                ? success({ coords: { latitude: 41.88123456, longitude: -87.63123456 } }) : failure(),
+        } });
+    }, allowed);
+    let submitted: Record<string, unknown> | undefined;
+    await page.route('**/api/**', async route => {
+        const path = new URL(route.request().url()).pathname;
+        if (path.endsWith('/at/aid-posts')) {
+            submitted = route.request().postDataJSON();
+            return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'UNAVAILABLE' } }) });
+        }
+        const body = path.endsWith('/auth/session') ? { session: { did: 'did:plc:location-author', expiresAt: '2099-01-01T00:00:00Z' } }
+            : path.endsWith('/account/onboarding') ? { policyVersion: '2026-07-28', requiredDocuments: [], consentRequired: false, acceptedAt: '2026-09-05T12:00:00Z' }
+            : { error: { code: 'NOT_FOUND' } };
+        await route.fulfill({ status: 'error' in body ? 404 : 200, contentType: 'application/json', body: JSON.stringify(body) });
+    });
+    await page.goto('/posting');
+    await page.getByRole('textbox', { name: 'Title', exact: true }).fill('A ride to the pantry');
+    await page.getByRole('textbox', { name: 'Description', exact: true }).fill('I need a ride to pick up groceries tomorrow.');
+    const publish = page.getByRole('button', { name: 'Publish request', exact: true });
+    if (!allowed) {
+        await expect(page.getByRole('alert')).toContainText('Location access is unavailable');
+        await expect(publish).toBeDisabled();
+        await page.getByRole('button', { name: 'Use Cook & DuPage for this request', exact: true }).click();
+    }
+    await expect(publish).toBeEnabled();
+    expect(new URL(page.url()).pathname).toBe('/posting');
+    const query = new URL(page.url()).searchParams;
+    expect(query.get('lat')).toBe(allowed ? '41.88' : '41.85');
+    expect(query.get('lng')).toBe(allowed ? '-87.63' : '-87.93');
+    const saved = await page.evaluate(() => sessionStorage.getItem('patchwork:posting-text:v1'));
+    expect(saved).toContain('A ride to the pantry');
+    expect(saved).not.toMatch(/latitude|longitude|precision|center|41\.88|87\.63/);
+    await publish.click();
+    await expect.poll(() => submitted).toBeTruthy();
+    expect(submitted?.location).toEqual({ latitude: allowed ? 41.88 : 41.85, longitude: allowed ? -87.63 : -87.93, precisionKm: allowed ? 1 : 50 });
+});
+
+
+for (const operation of ['accept', 'complete'] as const) test(`${operation} retries keep the same operation key after an uncertain response`, async ({ page, baseURL }) => {
+    const commands: Array<{ key?: string; body: unknown }> = [];
+    let confirmed = false;
+    const connectionId = '81111111-1111-4111-8111-111111111111';
+    await page.context().addCookies([{ name: 'patchwork_csrf', value: 'handoff-retry', url: baseURL! }]);
+    const offer = () => ({ id: 'offer-retry', requestUri: uri, direction: 'received', note: 'I can help.', status: confirmed ? 'accepted' : 'pending', offeredAt: '2026-09-05T12:00:00Z', expiresAt: '2099-01-01T00:00:00Z' });
+    const connection = () => ({ id: connectionId, offerId: 'offer-retry', requestUri: uri, status: confirmed ? 'completed' : 'active', requesterDid: 'did:plc:requester', helperDid: 'did:plc:helper', counterpartDid: 'did:plc:helper', acceptedAt: '2026-09-05T12:00:00Z' });
+    await page.route('**/api/**', async route => {
+        const path = new URL(route.request().url()).pathname;
+        const respond = (body: unknown, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+        if (path.endsWith('/auth/session')) return respond({ session: { did: 'did:plc:requester', expiresAt: '2099-01-01T00:00:00Z' } });
+        if (path.endsWith('/account/onboarding')) return respond({ policyVersion: '2026-07-28', requiredDocuments: [], consentRequired: false, acceptedAt: '2026-09-05T12:00:00Z' });
+        if (path.endsWith('/coordination/mine')) return respond({ offers: operation === 'accept' ? [offer()] : [], connections: operation === 'complete' ? [connection()] : [] });
+        if (path.endsWith('/inbox')) return respond({ items: [], unread: 0 });
+        if (path.endsWith('/outcomes/mine')) return respond({ feedback: [] });
+        if (path.endsWith('/query/feed')) return respond({ results: [], total: 0, page: 1, pageSize: 20, hasNextPage: false });
+        if (path.endsWith('/account/requests')) return respond({ requests: [], total: 0, page: 1, pageSize: 20, hasNextPage: false });
+        if (path.endsWith(operation === 'accept' ? '/coordination/offer-decisions' : '/coordination/connections')) {
+            commands.push({ key: route.request().headers()['idempotency-key'], body: route.request().postDataJSON() });
+            if (commands.length === 1) return respond({ error: { code: 'UNAVAILABLE' } }, 503);
+            confirmed = true;
+            return respond(operation === 'accept' ? { offer: offer(), connection: null } : { connection: connection() });
+        }
+        return respond({ error: { code: 'NOT_FOUND' } }, 404);
+    });
+    await page.goto('/inbox');
+    const button = page.getByRole('button', { name: operation === 'accept' ? 'Accept' : 'Complete handoff', exact: true });
+    await button.click();
+    await expect(page.getByRole('alert')).toContainText('Error');
+    await button.click();
+    await expect(button).toHaveCount(0);
+    expect(commands).toHaveLength(2);
+    expect(commands[0]?.key).toBeTruthy();
+    expect(commands[0]).toEqual(commands[1]);
+});

@@ -87,6 +87,8 @@ describePostgres('DurableChatService PostgreSQL boundary', () => {
              UNION ALL SELECT title,summary,action_url,metadata FROM activity_inbox_items`,
         )).rows);
         expect(externalArtifacts).not.toContain(privateBody);
+        expect(externalArtifacts).toContain(`/chat?conversation=${conversationId}`);
+        expect((await pool.query("SELECT action_url FROM notification_intents WHERE notification_type = 'message_received'")).rows.every(row => row.action_url === `/chat?conversation=${conversationId}`)).toBe(true);
         const moderation = JSON.stringify((await pool.query(
             `SELECT latest_reason,context,safe_preview FROM moderation_queue_items`,
         )).rows);

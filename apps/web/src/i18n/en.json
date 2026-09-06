@@ -1311,6 +1311,13 @@
         "filterResults": "Filter results updated"
     },
     "handoff": {
+        "findingArea": "Finding your approximate area…",
+        "areaUnavailable": "Location access is unavailable. Your draft is safe. Retry, or use the Cook & DuPage area only if your request belongs there.",
+        "fallbackArea": "Cook & DuPage area (50 km)",
+        "useFallbackArea": "Use Cook & DuPage for this request",
+        "chooseAreaHere": "Set the approximate area for this request here. You can keep writing while location loads.",
+        "openMessages": "Message about this handoff",
+        "chooseConnection": "Choose a connection",
         "stateUnavailable": "Request actions are unavailable until its saved state can be checked.",
         "savedPending": "The request was saved. Its public listing still needs to be synchronized.",
         "savedAwaitingDiscovery": "The change was saved. Public discovery is updating.",

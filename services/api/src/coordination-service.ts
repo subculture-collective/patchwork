@@ -242,7 +242,7 @@ export class CoordinationService {
                 title: 'New offer on your request',
                 summary:
                     'A volunteer offered to help. Their identity stays private until you accept.',
-                actionUrl: '/inbox',
+                actionUrl: `/inbox?${new URLSearchParams({ uri: workflow.post_uri }).toString()}`,
                 sourceKey: `offer:${offerId}:created`,
                 metadata: { offerId, requestUri: workflow.post_uri },
                 now,
@@ -435,7 +435,7 @@ export class CoordinationService {
                         type: 'offer',
                         title: 'Offer closed',
                         summary: 'Another offer was accepted for this request.',
-                        actionUrl: '/inbox',
+                        actionUrl: `/inbox?${new URLSearchParams({ uri: offer.request_uri }).toString()}`,
                         sourceKey: `offer:${other.offer_id}:cancelled`,
                         metadata: { offerId: other.offer_id },
                         now,
@@ -469,7 +469,8 @@ export class CoordinationService {
                     nextStatus === 'accepted'
                         ? 'The offer was accepted. Participant identities are now available in the connection.'
                         : `The offer was ${nextStatus}.`,
-                actionUrl: '/inbox',
+                actionUrl: connection ? `/inbox?connection=${encodeURIComponent(connection.connection_id)}`
+                    : `/inbox?${new URLSearchParams({ uri: offer.request_uri }).toString()}`,
                 sourceKey: `offer:${offer.offer_id}:${nextStatus}`,
                 metadata: {
                     offerId: offer.offer_id,
@@ -632,7 +633,7 @@ export class CoordinationService {
                         nextStatus === 'completed'
                             ? 'The handoff is complete. You can now record structured outcome feedback.'
                             : 'The connection was cancelled.',
-                    actionUrl: '/inbox',
+                    actionUrl: `/inbox?connection=${encodeURIComponent(connection.connection_id)}`,
                     sourceKey: `connection:${connection.connection_id}:${nextStatus}`,
                     metadata: {
                         connectionId: connection.connection_id,
@@ -1533,7 +1534,7 @@ export class CoordinationService {
                 type: 'expiry',
                 title: 'Offer expired',
                 summary: 'An offer expired without being accepted.',
-                actionUrl: '/inbox',
+                actionUrl: `/inbox?${new URLSearchParams({ uri: offer.request_uri }).toString()}`,
                 sourceKey: `offer:${offer.offer_id}:expired`,
                 metadata: { offerId: offer.offer_id },
                 now,

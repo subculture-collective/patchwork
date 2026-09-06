@@ -1311,6 +1311,13 @@
         "filterResults": "Resultados de filtro actualizados"
     },
     "handoff": {
+        "findingArea": "Buscando tu zona aproximada…",
+        "areaUnavailable": "No se puede acceder a la ubicación. Tu borrador está guardado. Reintenta o usa la zona de Cook y DuPage solo si corresponde a tu solicitud.",
+        "fallbackArea": "Zona de Cook y DuPage (50 km)",
+        "useFallbackArea": "Usar Cook y DuPage para esta solicitud",
+        "chooseAreaHere": "Indica aquí la zona aproximada de la solicitud. Puedes seguir escribiendo mientras se carga la ubicación.",
+        "openMessages": "Enviar un mensaje sobre esta ayuda",
+        "chooseConnection": "Elige una conexión",
         "stateUnavailable": "Las acciones no están disponibles hasta comprobar el estado guardado.",
         "savedPending": "La solicitud se guardó. Su publicación aún debe sincronizarse.",
         "savedAwaitingDiscovery": "El cambio se guardó. La búsqueda pública se está actualizando.",

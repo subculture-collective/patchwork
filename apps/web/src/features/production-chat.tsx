@@ -34,6 +34,11 @@ const workspaceResourceKeys: Record<WorkspaceResource, string> = {
 
 export const ProductionChat = ({ currentUserDid }: { currentUserDid: string }) => {
     const { t, fmt } = useLocale();
+    const target = useMemo(() => {
+        const query = new URLSearchParams(window.location.search);
+        return { conversation: query.get('conversation'), connection: query.get('connection') };
+    }, []);
+
     const [conversations, setConversations] = useState<ProductionChatConversation[]>([]);
     const [connections, setConnections] = useState<CoordinationConnection[]>([]);
     const [groups, setGroups] = useState<ProductionGroup[]>([]);
@@ -76,14 +81,27 @@ export const ProductionChat = ({ currentUserDid }: { currentUserDid: string }) =
         for (const [resource, result] of results) {
             if (!result.ok) {
                 failures[resource] = result.error;
+                if (result.kind === 'authentication') {
+                    if (resource === 'conversations') { setConversations([]); setSelectedId(''); setMessages([]); setNextCursor(null); }
+                    if (resource === 'coordination') { setConnections([]); setScopeKey(''); }
+                    if (resource === 'groups') setGroups([]);
+                }
                 continue;
             }
             loaded += 1;
             if (resource === 'conversations') {
                 setConversations(result.data.conversations);
-                setSelectedId((current) => current || result.data.conversations[0]?.id || '');
+                setSelectedId((current) => {
+                    if (current && result.data.conversations.some(item => item.id === current)) return current;
+                    if (target.conversation) return result.data.conversations.find(item => item.id === target.conversation)?.id ?? '';
+                    if (target.connection) return result.data.conversations.find(item => item.connectionId === target.connection)?.id ?? '';
+                    return result.data.conversations[0]?.id ?? '';
+                });
             } else if (resource === 'coordination') {
                 setConnections(result.data.connections);
+                if (target.connection && result.data.connections.some(item => item.id === target.connection && item.status === 'active')) {
+                    setScopeKey(current => current || `direct:${target.connection}`);
+                }
             } else {
                 setGroups(result.data.groups);
             }
@@ -100,7 +118,7 @@ export const ProductionChat = ({ currentUserDid }: { currentUserDid: string }) =
         if (loaded === 0) setError(t('chat.loadError'));
         if (!silent) setBusy(false);
         return loaded === resources.length;
-    }, [t]);
+    }, [t, target]);
 
     const activeConversation = useRef(selectedId);
     activeConversation.current = selectedId;
