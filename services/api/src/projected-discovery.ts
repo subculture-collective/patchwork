@@ -51,7 +51,7 @@ export async function readProjectionPage<T extends QueryResultRow>(pool: Pool, p
     }
     const table = kind === 'directory' ? 'indexer_directory_resource_projections' : 'indexer_aid_post_projections';
     const radius = located ? `WHERE distance_km <= ${bind(input.radiusKm)}::double precision` : '';
-    const score = kind !== 'directory' && located ? `round(((CASE WHEN distance_km <= 2 THEN 1 WHEN distance_km <= 5 THEN .82 WHEN distance_km <= 10 THEN .66 WHEN distance_km <= 25 THEN .48 ELSE .3 END) * .45 + round(power(.5::numeric, greatest(0, extract(epoch FROM (${nowParam}::timestamptz - record_created_at)) / 3600) / 24), 6) * .35 + .1)::numeric, 6) DESC,` : '';
+    const score = kind !== 'directory' && located ? `round(((CASE WHEN distance_km <= 2 THEN 1 WHEN distance_km <= 5 THEN .82 WHEN distance_km <= 10 THEN .66 WHEN distance_km <= 25 THEN .48 ELSE .3 END) * .45 + round(power(.5::double precision, greatest(0, extract(epoch FROM (${nowParam}::timestamptz - record_created_at))::double precision / 3600) / 24)::numeric, 6) * .35 + .1)::numeric, 6) DESC,` : '';
     const limit = bind(pageSize), offset = bind((page - 1) * pageSize);
     const result = await pool.query<{ rows: T[]; aggregates: DiscoveryMapAggregates | null; total: string; projected_at: string | null; state: { latest_cursor: string | null; heartbeat_at: string } | null }>(`WITH candidates AS (
         SELECT p.*, ${distance} AS distance_km FROM ${table} p WHERE ${where.join(' AND ')}
