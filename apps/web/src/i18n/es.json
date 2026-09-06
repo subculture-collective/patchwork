@@ -223,7 +223,7 @@
         "locationButton": "Permitir acceso a la ubicación",
         "locationRequestingButton": "Solicitando ubicación…",
         "locationActive": "Los resultados cercanos usan una versión redondeada y aproximada de la ubicación de tu dispositivo.",
-        "locationFallback": "La ubicación no estaba disponible, así que Patchwork cargó el área de demostración de Cook y DuPage.",
+        "locationFallback": "La ubicación no estaba disponible, así que Patchwork cargó el área de Chicagoland.",
         "updateLocation": "Actualizar ubicación",
         "nearYou": "Cerca de ti",
         "demoAreaTitle": "No hay área seleccionada.",

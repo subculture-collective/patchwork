@@ -365,7 +365,7 @@ const locationCoordinatePrecision = 100;
 const demoAreaPresets = {
     chicagoland: {
         center: { lat: 41.85, lng: -87.93 },
-        areaLabel: 'Cook & DuPage demo',
+        areaLabel: 'Chicagoland',
         radiusMeters: 65000,
         feedTab: 'nearby' as const,
     },
