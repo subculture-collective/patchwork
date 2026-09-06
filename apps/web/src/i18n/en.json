@@ -255,8 +255,8 @@
     "map": {
         "aggregateHelp": "The map summarizes all {{count}} matching requests. Select an area, then Search this area to narrow the list.",
         "aggregateTruncated": "Zoom into a smaller area to see the remaining groups.",
-        "heading": "Map triage",
-        "description": "Approximate-area clustering with privacy-safe radii and direct handoff actions.",
+        "heading": "Nearby map",
+        "description": "Find requests and resources near you. Open a listing to see how to help.",
         "areaRequired": "Allow location access to load nearby results. If location is unavailable, the demonstration area loads automatically.",
         "dbBackedApi": "DB-backed API",
         "apiSyncIssue": "API sync issue: {{message}}",
@@ -294,7 +294,7 @@
         "singleRequest": "Single request (approximate area)",
         "cluster": "Multiple requests cluster",
         "publicPlace": "Approved public place (exact)",
-        "legendNote": "Request centers are displaced within approximate areas (≥1 km). Exact points are approved public resource addresses only. Cluster labels show count · maximum urgency."
+        "legendNote": "Circles show approximate areas, not private addresses. Numbers show how many requests are nearby."
     },
     "exactLocation": {
         "initial": "Both participants must start within two minutes.",

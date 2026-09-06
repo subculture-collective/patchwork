@@ -255,8 +255,8 @@
     "map": {
         "aggregateHelp": "El mapa resume las {{count}} solicitudes coincidentes. Selecciona una zona y luego Buscar en esta zona para reducir la lista.",
         "aggregateTruncated": "Acerca el mapa a una zona más pequeña para ver los grupos restantes.",
-        "heading": "Triaje de mapa",
-        "description": "Agrupaci\u00f3n de \u00e1rea aproximada con radios seguros para la privacidad y acciones directas de traspaso.",
+        "heading": "Mapa cercano",
+        "description": "Encuentra solicitudes y recursos cerca de ti. Abre una publicación para ver cómo ayudar.",
         "areaRequired": "Permite el acceso a la ubicación para cargar resultados cercanos. Si no está disponible, el área de demostración se carga automáticamente.",
         "dbBackedApi": "API respaldada por BD",
         "apiSyncIssue": "Problema de sincronizaci\u00f3n de API: {{message}}",
@@ -294,7 +294,7 @@
         "singleRequest": "Solicitud única (área aproximada)",
         "cluster": "Grupo de varias solicitudes",
         "publicPlace": "Lugar público aprobado (exacto)",
-        "legendNote": "Los centros de solicitudes se desplazan dentro de áreas aproximadas (≥1 km). Los puntos exactos son solo direcciones aprobadas de recursos públicos. Las etiquetas de grupo muestran cantidad · urgencia máxima."
+        "legendNote": "Los círculos muestran zonas aproximadas, no direcciones privadas. Los números indican cuántas solicitudes hay cerca."
     },
     "exactLocation": {
         "initial": "Ambas personas deben iniciar en un plazo de dos minutos.",

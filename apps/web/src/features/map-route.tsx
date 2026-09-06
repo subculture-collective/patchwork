@@ -197,9 +197,7 @@ export const MapRoute = ({
                     {t('map.description')}
                 </p>
                 <div className='mt-3 flex flex-wrap gap-2'>
-                    <Badge tone={dataOrigin === 'api' ? 'success' : 'info'}>
-                        {originLabel}
-                    </Badge>
+                    {dataOrigin !== 'api' && <Badge tone='info'>{originLabel}</Badge>}
                     <p ref={paginationFocus.loadedCountRef} tabIndex={-1} className='text-sm text-mh-textMuted' role='status'>
                         {t('discovery.loadedCount', { loaded: feedRecords.length, total })}
                     </p>

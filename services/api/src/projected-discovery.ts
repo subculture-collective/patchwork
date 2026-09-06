@@ -52,22 +52,28 @@ export async function readProjectionPage<T extends QueryResultRow>(pool: Pool, p
     const table = kind === 'directory' ? 'indexer_directory_resource_projections' : 'indexer_aid_post_projections';
     const radius = located ? `WHERE distance_km <= ${bind(input.radiusKm)}::double precision` : '';
     const score = kind !== 'directory' && located ? `round(((CASE WHEN distance_km <= 2 THEN 1 WHEN distance_km <= 5 THEN .82 WHEN distance_km <= 10 THEN .66 WHEN distance_km <= 25 THEN .48 ELSE .3 END) * .45 + round(power(.5::double precision, greatest(0, extract(epoch FROM (${nowParam}::timestamptz - record_created_at))::double precision / 3600) / 24)::numeric, 6) * .35 + .1)::numeric, 6) DESC,` : '';
+    const order = `${score} record_updated_at DESC, uri COLLATE "C"`;
     const limit = bind(pageSize), offset = bind((page - 1) * pageSize);
     const result = await pool.query<{ rows: T[]; aggregates: DiscoveryMapAggregates | null; total: string; projected_at: string | null; state: { latest_cursor: string | null; heartbeat_at: string } | null }>(`WITH candidates AS (
-        SELECT p.*, ${distance} AS distance_km FROM ${table} p WHERE ${where.join(' AND ')}
+        SELECT p.uri, p.latitude, p.longitude, p.precision_km, p.record_created_at, p.record_updated_at, p.projected_at, ${distance} AS distance_km FROM ${table} p WHERE ${where.join(' AND ')}
     ), filtered AS MATERIALIZED (SELECT * FROM candidates ${radius}), paged AS (
-        SELECT * FROM filtered ORDER BY ${score} record_updated_at DESC, uri COLLATE "C" LIMIT ${limit} OFFSET ${offset}
+        SELECT * FROM filtered ORDER BY ${order} LIMIT ${limit} OFFSET ${offset}
+    ), page_records AS (
+        SELECT p.*, page.distance_km, page.ordinal FROM (
+            SELECT paged.*, row_number() OVER (ORDER BY ${order}) AS ordinal FROM paged
+        ) page JOIN ${table} p ON p.uri = page.uri
+    ), stats AS (
+        SELECT count(*) AS total, count(latitude) AS located, max(projected_at) AS projected_at FROM filtered
     ), cells AS (
         SELECT least(89.95, greatest(-89.95, floor(latitude * 10) / 10 + .05)) AS latitude,
             least(179.95, greatest(-179.95, floor(longitude * 10) / 10 + .05)) AS longitude,
             count(*)::integer AS count, max(precision_km) + 8 AS "radiusKm"
         FROM filtered WHERE latitude IS NOT NULL AND longitude IS NOT NULL
         GROUP BY 1, 2 ORDER BY 1, 2
-    ) SELECT ${nowParam}::timestamptz AS query_at, (SELECT count(*)::text FROM filtered) AS total,
-        (SELECT max(projected_at) FROM filtered) AS projected_at,
-        ${kind === 'map' ? `jsonb_build_object('requestCount', (SELECT count(*) FROM filtered), 'locatedRequestCount', (SELECT count(*) FROM filtered WHERE latitude IS NOT NULL AND longitude IS NOT NULL), 'truncated', (SELECT count(*) > 500 FROM cells), 'cells', coalesce((SELECT jsonb_agg(to_jsonb(c)) FROM (SELECT * FROM cells LIMIT 500) c), '[]'::jsonb))` : 'NULL::jsonb'} AS aggregates,
-        coalesce((SELECT jsonb_agg(to_jsonb(paged)) FROM paged), '[]'::jsonb) AS rows,
-        (SELECT jsonb_build_object('latest_cursor', latest_cursor::text, 'heartbeat_at', heartbeat_at) FROM indexer_projection_state WHERE singleton = TRUE) AS state`, values);
+    ) SELECT ${nowParam}::timestamptz AS query_at, stats.total::text AS total, stats.projected_at,
+        ${kind === 'map' ? `jsonb_build_object('requestCount', stats.total, 'locatedRequestCount', stats.located, 'truncated', (SELECT count(*) > 500 FROM cells), 'cells', coalesce((SELECT jsonb_agg(to_jsonb(c)) FROM (SELECT * FROM cells LIMIT 500) c), '[]'::jsonb))` : 'NULL::jsonb'} AS aggregates,
+        coalesce((SELECT jsonb_agg(to_jsonb(r) - 'ordinal' ORDER BY r.ordinal) FROM page_records r), '[]'::jsonb) AS rows,
+        (SELECT jsonb_build_object('latest_cursor', latest_cursor::text, 'heartbeat_at', heartbeat_at) FROM indexer_projection_state WHERE singleton = TRUE) AS state FROM stats`, values);
     const data = result.rows[0]!;
     return { rows: data.rows, total: Number(data.total), page, pageSize, now, ...(data.aggregates ? { aggregates: data.aggregates } : {}), freshness: {
         latestCursor: data.state?.latest_cursor ? Number(data.state.latest_cursor) : null,
