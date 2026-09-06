@@ -1,3 +1,5 @@
+import { MapDetailSheet } from './map-detail-sheet';
+import { canonicalRouteUrl, resolveRouteAlias } from './navigation';
 import { RequestContextLink } from './request-context-link';
 import type { ResourceDetail } from '../resource-directory-ux';
 import { fetchResourceViaApi } from './api-client';
@@ -311,15 +313,14 @@ const routeLabelKeys: Readonly<Record<AppRoute, string>> = {
 };
 
 const primaryRoutes: readonly AppRoute[] = [
-    '/',
-    '/map',
     '/feed',
+    '/posting',
     '/resources',
+    '/inbox',
 ];
 
 const accountRoutes: readonly AppRoute[] = ['/volunteer', '/chat', '/settings'];
 const productionAccountRoutes: readonly AppRoute[] = [
-    '/inbox',
     '/notifications',
     '/moderation',
     '/settings',
@@ -329,7 +330,7 @@ const secondaryRoutes = appRoutes.filter(
     (route) =>
         !primaryRoutes.includes(route) &&
         !accountRoutes.includes(route) &&
-        !route.startsWith('/legal/') && route !== '/requests/view',
+        !route.startsWith('/legal/') && route !== '/requests/view' && route !== '/map' && route !== '/',
 );
 const resourceCategoryOptions: readonly DirectoryResourceCategory[] = [
     'food-bank',
@@ -449,8 +450,9 @@ const formatLocalizedLabel = (
     value: string,
 ): string => t(`labels.${value}`, { defaultValue: formatCategoryLabel(value) });
 
-const normalizeRoute = (pathname: string): AppRoute => {
-    return appRoutes.find((route) => route === pathname) ?? '/';
+const normalizeRoute = (pathname: string, search = ''): AppRoute => {
+    const resolved = resolveRouteAlias(pathname, search);
+    return appRoutes.find((route) => route === resolved) ?? '/';
 };
 
 const readCurrentRoute = (): AppRoute => {
@@ -458,7 +460,7 @@ const readCurrentRoute = (): AppRoute => {
         return '/';
     }
 
-    return normalizeRoute(window.location.pathname);
+    return normalizeRoute(window.location.pathname, window.location.search);
 };
 
 const readDiscoveryStateFromUrl = (
@@ -492,7 +494,9 @@ const DiscoveryFiltersPanel = ({
     const [locationAccess, setLocationAccess] = useState<
         'idle' | 'requesting' | 'granted' | 'fallback'
     >('idle');
-    const requestedLocationRef = useRef(false);
+    // A supplied area already satisfies initial discovery. Clearing it is a
+    // deliberate action and must not silently restart automatic geolocation.
+    const requestedLocationRef = useRef(Boolean(state.center));
     const chipModel = useMemo(
         () => buildDiscoveryFilterChipModel(state),
         [state],
@@ -1194,20 +1198,6 @@ const MapRoute = ({
         previousCenter?: { lat: number; lng: number };
         previousRadiusMeters?: number;
     }>();
-    useEffect(() => {
-        if (!selectedPostId) {
-            return undefined;
-        }
-        const handleKeyDown = (event: globalThis.KeyboardEvent) => {
-            if (event.key === 'Escape') {
-                onSelectPost(undefined);
-            }
-        };
-        document.addEventListener('keydown', handleKeyDown);
-        return () => {
-            document.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [selectedPostId, onSelectPost]);
 
     const mapCards = useMemo(
         () => feedRecords.map(toMapAidCard),
@@ -1403,10 +1393,10 @@ const MapRoute = ({
                             resources={mapResourceView.cards}
                             selectedPostId={selectedPostId}
                             center={discoveryState.center}
-                            onSelectPostId={onSelectPost}
+                            onSelectPostId={id => { setSelectedResourceUri(undefined); onSelectPost(id); }}
                             focusedArea={activeArea}
                             onViewportChange={setViewport}
-                            onSelectResource={setSelectedResourceUri}
+                            onSelectResource={uri => { onSelectPost(undefined); setSelectedResourceUri(uri); }}
                             onTilesFailed={setTileError}
                         />
                     </Suspense>
@@ -1418,63 +1408,19 @@ const MapRoute = ({
             </section>
 
             {viewport && <Button onClick={() => { onPushDiscovery({ ...viewport, feedTab: 'nearby' }); setViewport(undefined); }}>{t('handoff.searchArea')}</Button>}
-            {selectedResourceUri && resourceCards.find(card => card.uri === selectedResourceUri) && <Panel title={resourceCards.find(card => card.uri === selectedResourceUri)!.name}>
+            {selectedResourceUri && resourceCards.find(card => card.uri === selectedResourceUri) && <MapDetailSheet closeLabel={t('resources.close')} onClose={() => setSelectedResourceUri(undefined)}><Panel title={resourceCards.find(card => card.uri === selectedResourceUri)!.name}>
                 <ResourceActions resource={resourceCards.find(card => card.uri === selectedResourceUri)!} />
-                <Button onClick={() => setSelectedResourceUri(undefined)}>{t('resources.close')}</Button>
-            </Panel>}
-            <DiscoveryFiltersPanel
-                idPrefix='map'
-                state={discoveryState}
-                onPatch={onPatchDiscovery}
-            />
+                </Panel></MapDetailSheet>}
+            <details className='rounded-xl border border-mh-borderSoft bg-mh-surface p-3'>
+                <summary className='cursor-pointer py-2 font-bold'>{t('nav.mapFilters')}{discoveryState.areaLabel ? ` · ${discoveryState.areaLabel}` : ''}</summary>
+                <DiscoveryFiltersPanel
+                    idPrefix='map'
+                    state={discoveryState}
+                    onPatch={onPatchDiscovery}
+                />
+            </details>
 
-            <div className='grid gap-6 xl:grid-cols-2'>
-                <Card title={String(t('map.clusterOverviewTitle'))}>
-                    {isLoading ? (
-                        <ul className='space-y-3' aria-live='polite'>
-                            {Array.from({ length: 3 }).map((_, index) => (
-                                <li
-                                    key={`cluster-skeleton-${index}`}
-                                    className='mh-record-card'
-                                >
-                                    <div className='mh-skeleton h-4 w-3/4' />
-                                    <div className='mh-skeleton mt-2 h-3 w-1/2' />
-                                    <div className='mh-skeleton mt-3 h-6 w-24' />
-                                </li>
-                            ))}
-                        </ul>
-                    ) : mapView.clusters.length === 0 ? (
-                        <p>{t('map.noClusters')}</p>
-                    ) : (
-                        <ul className='space-y-3'>
-                            {mapView.clusters.map((cluster) => (
-                                <li key={cluster.id} className='mh-record-card'>
-                                    <p className='text-sm font-bold text-mh-text'>
-                                        {t('map.requestsInArea', {
-                                            count: cluster.count,
-                                        })}
-                                    </p>
-                                    <p className='mt-1 text-xs text-mh-textSoft'>
-                                        {t('map.clusterRequests', {
-                                            count: cluster.count,
-                                            urgency: cluster.urgencyMax,
-                                        })}
-                                    </p>
-                                    <div className='mt-2'>
-                                        <Badge
-                                            tone={toSeverityTone(
-                                                cluster.status,
-                                            )}
-                                        >
-                                            {cluster.status}
-                                        </Badge>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </Card>
-
+            <div>
                 <Card title={String(t('map.requestMarkersTitle'))}>
                     {isLoading ? (
                         <ul className='space-y-3' aria-live='polite'>
@@ -1531,7 +1477,7 @@ const MapRoute = ({
                                                 id: card.id,
                                             })}
                                             onClick={() =>
-                                                onSelectPost(card.id)
+                                                { setSelectedResourceUri(undefined); onSelectPost(card.id); }
                                             }
                                         >
                                             {t('map.openTriageDrawer')}
@@ -1545,6 +1491,7 @@ const MapRoute = ({
             </div>
 
             {drawer.open && selectedRecord ? (
+                <MapDetailSheet closeLabel={t('map.closeDrawer')} onClose={() => onSelectPost(undefined)}>
                 <Panel
                     title={String(t('map.mapDetailDrawerTitle'))}
                     aria-label={String(
@@ -1602,15 +1549,10 @@ const MapRoute = ({
                                     {action.label}
                                 </Button>
                             ))}
-                        <Button
-                            variant='neutral'
-                            className='px-3 py-1 text-xs'
-                            onClick={() => onSelectPost(undefined)}
-                        >
-                            {t('map.closeDrawer')}
-                        </Button>
+
                     </div>
                 </Panel>
+                </MapDetailSheet>
             ) : null}
         </section>
     );
@@ -9931,10 +9873,12 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         };
     }, []);
 
-    const discoveryQueryString = useMemo(
-        () => serializeDiscoveryFilterState(discoveryState),
-        [discoveryState],
-    );
+    const discoveryQueryString = useMemo(() => {
+        const params = new URLSearchParams(serializeDiscoveryFilterState(discoveryState));
+        const dataset = new URLSearchParams(window.location.search).get('dataset');
+        if (dataset === 'demo' || dataset === 'community') params.set('dataset', dataset);
+        return `?${params.toString()}`;
+    }, [discoveryState, historyVersion]);
 
     const resetDiscoveryKeyRef = useRef(`${currentRoute}:${discoveryQueryString}`);
     useEffect(() => {
@@ -9990,11 +9934,14 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         }
         if (page > 1) pageParams.set('page', String(page));
         else pageParams.delete('page');
-        const nextUrl = `${currentRoute}${pageParams.toString() ? `?${pageParams.toString()}` : ''}`;
+        const nextUrl = canonicalRouteUrl(currentRoute, pageParams);
         const currentUrl = `${window.location.pathname}${window.location.search}`;
 
         if (nextUrl !== currentUrl) {
-            window.history.pushState({}, '', nextUrl);
+            // Loading another page is a navigation; normalization of an alias is not.
+            const previousPage = Number(contextParams.get('page') ?? 1);
+            if (page !== previousPage) window.history.pushState({}, '', nextUrl);
+            else window.history.replaceState({}, '', nextUrl);
         }
     }, [aidPage, currentRoute, directoryPage, discoveryQueryString]);
 
@@ -10185,7 +10132,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
 
     const navigate = (route: AppRoute) => {
         if (typeof window !== 'undefined') {
-            const nextUrl = `${route}${discoveryQueryString}`;
+            const nextUrl = canonicalRouteUrl(route, discoveryQueryString);
             const currentUrl = `${window.location.pathname}${window.location.search}`;
 
             if (nextUrl !== currentUrl) {
@@ -10201,6 +10148,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         event: MouseEvent<HTMLAnchorElement>,
         route: AppRoute,
     ) => {
+        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
         event.preventDefault();
         setIsMobileNavOpen(false);
         setIsSecondaryNavOpen(false);
@@ -10208,16 +10156,17 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
     };
 
     const patchDiscoveryState = (patch: Partial<DiscoveryFilterState>) => {
-        setDiscoveryState((current) =>
-            applyDiscoveryFilterPatch(current, patch),
-        );
+        pushDiscoveryState(patch);
     };
 
     const pushDiscoveryState = (patch: Partial<DiscoveryFilterState>) => {
         setDiscoveryState((current) => {
             const next = applyDiscoveryFilterPatch(current, patch);
             if (typeof window !== 'undefined') {
-                const nextUrl = `${currentRoute}${serializeDiscoveryFilterState(next)}`;
+                const params = new URLSearchParams(serializeDiscoveryFilterState(next));
+                const dataset = new URLSearchParams(discoveryQueryString).get('dataset');
+                if (dataset) params.set('dataset', dataset);
+                const nextUrl = canonicalRouteUrl(currentRoute, params);
                 const currentUrl = `${window.location.pathname}${window.location.search}`;
                 if (nextUrl !== currentUrl) {
                     window.history.pushState({}, '', nextUrl);
@@ -10385,7 +10334,6 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         : auth.session ? [
               '/volunteer',
               '/organizations',
-              '/posting',
               '/verification',
               '/chat',
               '/scheduling',
@@ -10712,7 +10660,6 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                         {t('nav.menu')}
                     </button>
                     <div
-                        id='primary-navigation-links'
                         className={`mh-nav-collapse${isMobileNavOpen ? ' is-open' : ''}`}
                     >
                     <div className='mh-nav-main'>
@@ -10720,25 +10667,25 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                         {primaryRoutes.map((route) => (
                             <a
                                 key={route}
-                                href={route}
+                                href={canonicalRouteUrl(route, discoveryQueryString)}
                                 className='mh-nav-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mh-accent'
                                 aria-current={
-                                    currentRoute === route ? 'page' : undefined
+                                    (currentRoute === route || route === '/feed' && currentRoute === '/map') ? 'page' : undefined
                                 }
                                 onClick={(event) =>
                                     handleRouteClick(event, route)
                                 }
                             >
-                                {t(routeLabelKeys[route])}
+                                {t(route === '/feed' ? 'nav.nearby' : route === '/posting' ? 'nav.ask' : route === '/inbox' ? 'nav.myActivity' : routeLabelKeys[route])}
                             </a>
                         ))}
                     </div>
-                    <div className='mh-nav-tools'>
+                    <div id='primary-navigation-links' className='mh-nav-tools'>
                         <p className='mh-nav-group-label'>{t('nav.accountGroup')}</p>
                         {visibleAccountRoutes.map((route) => (
                             <a
                                 key={route}
-                                href={route}
+                                href={canonicalRouteUrl(route, discoveryQueryString)}
                                 className='mh-nav-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mh-accent'
                                 aria-current={
                                     currentRoute === route ? 'page' : undefined
@@ -10771,7 +10718,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                                 {visibleSecondaryRoutes.map((route) => (
                                     <a
                                         key={route}
-                                        href={route}
+                                        href={canonicalRouteUrl(route, discoveryQueryString)}
                                         aria-current={
                                             currentRoute === route
                                                 ? 'page'
@@ -10849,6 +10796,17 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                     tabIndex={-1}
                     className='focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-mh-accent'
                 >
+                    {currentRoute === '/map' || currentRoute === '/feed' ? (
+                        <nav aria-label={t('nav.nearbyView')} className='mb-4 flex gap-2'>
+                            {(['/feed', '/map'] as const).map(route => (
+                                <a key={route} className='mh-nav-chip' href={canonicalRouteUrl(route, discoveryQueryString)}
+                                    aria-current={currentRoute === route ? 'page' : undefined}
+                                    onClick={event => handleRouteClick(event, route)}>
+                                    {t(route === '/feed' ? 'nav.listView' : 'route.map')}
+                                </a>
+                            ))}
+                        </nav>
+                    ) : null}
                     {content}
                 </div>
 

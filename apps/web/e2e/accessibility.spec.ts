@@ -87,9 +87,9 @@ test.describe('Navigation landmarks', () => {
     });
 
     test('active nav link has aria-current="page"', async ({ page }) => {
-        await page.goto('/');
+        await page.goto('/nearby?view=list');
 
-        const activeLink = page.locator('nav a[aria-current="page"]');
+        const activeLink = page.getByRole('navigation', { name: 'Primary flows' }).locator('a[aria-current="page"]');
         await expect(activeLink).toBeAttached();
     });
 });
@@ -129,7 +129,7 @@ test.describe('Keyboard navigation', () => {
 
         // Try to open a triage drawer if request markers are present
         const openDrawerButton = page.locator(
-            'button:has-text("Open triage drawer")',
+            'button:has-text("View request")',
         );
         const drawerButtonCount = await openDrawerButton.count();
 
@@ -137,7 +137,7 @@ test.describe('Keyboard navigation', () => {
             await openDrawerButton.first().click();
 
             // Verify drawer opened
-            const drawerPanel = page.locator('text=Map detail drawer');
+            const drawerPanel = page.locator('text=Request details');
             await expect(drawerPanel).toBeVisible();
 
             // Press Escape to close
@@ -280,7 +280,7 @@ test.describe('Screen reader announcements', () => {
         await page.goto('/');
 
         // Navigate to map
-        await page.click('nav a[href="/map"]');
+        await page.getByRole('navigation', { name: 'Primary flows' }).getByRole('link', { name: 'Nearby', exact: true }).click();
 
         // The announcer element should be created
         const announcer = page.locator('#patchwork-a11y-announcer-polite');

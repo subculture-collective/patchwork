@@ -101,3 +101,24 @@ Posting now requests approximate browser location within the form, retains text 
 Verification: repository checks pass (1,065 passed, 135 infrastructure skips); the database-enabled API suite passes 425 cases with one real-attachment skip. The full Chromium run completed with a passed last-run record and no failed tests (171 enumerated cases, including two credential-dependent skips). Added browser cases cover explicit conversation/connection targeting, unknown-target isolation, actual posting with granted/denied location, and acceptance/completion retries. Notification database checks verify contextual destinations and absence of private message bodies. Initial JS is 198,426 gzip bytes (716,908 raw, gzip level 9).
 
 This remains local implementation and automated qualification. Real recipient delivery, the navigation/map redesign, server dataset enforcement, bounded SQL discovery, protected candidate qualification and human phone handoffs remain outstanding.
+
+## Implementation checkpoint — everyday navigation and mobile map details
+
+2026-09-06, continuing from `b6f543c`.
+
+- Main navigation now exposes Nearby, Ask, Resources and My activity, including on narrow phones before the account menu opens. Nearby has explicit List and Map views. Canonical URLs are `/nearby?view=list|map` and `/activity`; incoming `/feed`, `/map` and `/inbox` aliases retain query context and canonicalize with history replacement. Back does not get trapped on an alias. Modified link clicks retain native browser behavior.
+- The map remains one Leaflet instance using the existing PMTiles basemap and privacy-safe overlays. Leaflet owns camera state; React owns discovery filters and selected details. Panning still requires “Search this area” to change the active query. Existing approximate request areas and approved resource-address rules are unchanged.
+- Removed the redundant cluster-summary card. The readable request list remains available, and the long filter panel is disclosed under Location and filters. Request and resource selection are mutually exclusive. Selected details appear in a non-modal, scrollable sheet with a visible close control; narrow screens anchor it to the bottom with a bounded height. Keyboard opening focuses Close, Escape dismisses, and closing restores the connected initiating element. The sheet does not claim modal focus trapping.
+- Public UI wording now uses View request and Request details in English and Spanish. Demo/community URL context survives list/map navigation; this is not the outstanding server-side dataset enforcement.
+
+Remaining map/navigation scope: selected-record restoration from URLs independently of loaded pages; the larger focused activity layout; real-device gesture/tile/offline qualification; bounded SQL discovery and aggregate counts across all matching results. Existing map counts still describe loaded records, not a newly implemented complete aggregate. Route extraction is urgent: the current initial JS is 199,112 gzip bytes (718,142 raw, gzip level 9), below but close to the 200,000-byte budget.
+
+
+Verification for the navigation/map tranche:
+
+- Final repository check passes: 1,065 tests pass and 135 infrastructure-dependent cases skip, plus map artifacts, exact-location absence and operations checks. Database-enabled results from the previous checkpoint still apply to the unchanged backend.
+- The full Chromium run passed 171 cases and skipped two credential-dependent cases. It exposed one map clear-area failure: automatic geolocation could restore a deliberately cleared area. The final fix treats an initially supplied area as satisfying automatic discovery; a user can explicitly request location again.
+- After that fix, all 24 navigation, map, production-mode and feed-pagination browser regressions pass with `--retries=0` (17.3 seconds). This is a broad run followed by a verified correction, not a subsequent all-green full run. The browser regression covers 320–1024px navigation, 200% text, canonical aliases, Back/Forward, dataset context, focus restoration, and populated 390px detail-sheet bounds. The mobile screenshot was also inspected.
+- Both remotes were fetched again and still point to `5b348af`. The original checkout remains untouched. No public push/deployment, real recipient delivery or human phone handoff occurred; the disposable PostgreSQL container was stopped and removed.
+
+The next implementation step is server-enforced community/demo separation and mutation eligibility, followed by bounded SQL discovery and route extraction. The broader activity layout and selected-map-record URL restoration are still open. Protected candidate qualification and the real-device milestone gates remain open.

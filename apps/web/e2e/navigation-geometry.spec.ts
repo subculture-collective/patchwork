@@ -53,18 +53,16 @@ for (const width of widths) {
         }));
         expect(geometry.content).toBeLessThanOrEqual(geometry.viewport);
 
-        const toggle = page.getByRole('button', { name: /menu/i });
-        if (width <= 900) {
-            await expect(toggle).toBeVisible();
-            await toggle.click();
-            await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-            const mapLink = page.getByRole('link', { name: /map/i }).first();
-            await expect(mapLink).toBeVisible();
-            await mapLink.click();
-            await expect(page).toHaveURL(/\/map/);
-        } else {
-            await expect(page.getByRole('link', { name: /map/i }).first()).toBeVisible();
+        const navigation = page.getByRole('navigation', { name: 'Primary flows' });
+        for (const name of ['Nearby', 'Ask', 'Resources', 'My activity']) {
+            await expect(navigation.getByRole('link', { name, exact: true })).toBeVisible();
         }
+        await navigation.getByRole('link', { name: 'Nearby', exact: true }).click();
+        await expect(page).toHaveURL(/\/nearby\?.*view=list/);
+        await page.getByRole('navigation', { name: 'Nearby view' }).getByRole('link', { name: 'Map', exact: true }).click();
+        await expect(page).toHaveURL(/\/nearby\?.*view=map/);
+        await expect(navigation.getByRole('link', { name: 'Nearby', exact: true })).toHaveAttribute('aria-current', 'page');
+
     });
 }
 
@@ -133,4 +131,35 @@ test('desktop secondary navigation renders above page content', async ({ page })
     await page.keyboard.press('Escape');
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
     await expect(toggle).toBeFocused();
+});
+
+test('legacy discovery aliases canonicalize without trapping browser Back', async ({ page }) => {
+    await page.goto('/');
+    await page.goto('/map?dataset=demo&category=food&lat=41.85&lng=-87.93&r=20000');
+    await expect(page).toHaveURL(/\/nearby\?.*view=map/);
+    expect(new URL(page.url()).searchParams.get('dataset')).toBe('demo');
+    await page.getByRole('navigation', { name: 'Nearby view' }).getByRole('link', { name: 'List', exact: true }).click();
+    await expect(page).toHaveURL(/view=list/);
+    expect(new URL(page.url()).searchParams.get('dataset')).toBe('demo');
+    await page.goBack();
+    await expect(page).toHaveURL(/view=map/);
+    await page.goBack();
+    await expect(page).toHaveURL(/\/$/);
+});
+
+test('activity aliases retain the selected connection', async ({ page }) => {
+    await page.goto('/inbox?connection=handoff-target');
+    await expect(page).toHaveURL(/\/activity\?/);
+    expect(new URL(page.url()).searchParams.get('connection')).toBe('handoff-target');
+});
+
+test('map filter changes retain dataset and can be undone through Back', async ({ page }) => {
+    await page.goto('/nearby?view=map&dataset=demo&lat=41.85&lng=-87.93&r=20000');
+    await page.locator('summary').filter({ hasText: 'Location and filters' }).click();
+    const before = page.url();
+    await page.getByRole('button', { name: 'Food', exact: true }).click();
+    expect(new URL(page.url()).searchParams.get('dataset')).toBe('demo');
+    expect(page.url()).not.toBe(before);
+    await page.goBack();
+    await expect(page).toHaveURL(before);
 });

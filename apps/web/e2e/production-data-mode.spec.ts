@@ -198,6 +198,7 @@ test('map requests location and loads an approximate nearby area automatically',
     await expect(page).toHaveURL(/lat=41\.88/);
     await expect(page).toHaveURL(/lng=-87\.63/);
     await expect(page).toHaveURL(/area=Near\+you/);
+    await page.locator('summary').filter({ hasText: 'Location and filters' }).click();
     await expect(page.getByText(/rounded, approximate version/)).toBeVisible();
     await expect(page.getByLabel('Approximate area label')).toHaveCount(0);
     await expect(
@@ -347,6 +348,23 @@ test('map area selection is explicit, reversible, historical, and remembers styl
     // Selecting or zooming changes the viewport, never the active discovery query.
     await expect(page).toHaveURL(/(?:\?|&)r=20000(?:&|$)/);
     await expect(page.getByRole('region', { name: 'Details for Area filter request' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    const requestButton = page.getByRole('button', { name: 'View request: Area filter request (area)', exact: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await requestButton.click();
+    const sheet = page.locator('.mh-map-detail-sheet');
+    await expect(sheet).toBeVisible();
+    const bounds = await sheet.boundingBox();
+    expect(bounds).not.toBeNull();
+    expect(bounds!.x).toBeGreaterThanOrEqual(0);
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(390);
+    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(845);
+    await expect(sheet.getByRole('button', { name: 'Close drawer', exact: true })).toBeFocused();
+    await page.screenshot({ path: 'test-results/mobile-map-detail.png', fullPage: false });
+    await page.keyboard.press('Escape');
+    await expect(sheet).toHaveCount(0);
+    await expect(requestButton).toBeFocused();
+    await page.setViewportSize({ width: 1280, height: 900 });
     await page.getByRole('button', { name: 'Search this area' }).click();
     await expect(page).not.toHaveURL(/(?:\?|&)r=20000(?:&|$)/);
     const searchedUrl = page.url();

@@ -1196,3 +1196,26 @@ code {
         transition: none !important;
     }
 }
+
+/* Keep the four everyday destinations reachable without opening the account menu. */
+@media (max-width: 900px) {
+    .mh-nav-collapse { display: flex; }
+    .mh-nav-collapse .mh-nav-tools { display: none; }
+    .mh-nav-collapse.is-open .mh-nav-tools { display: flex; }
+    .mh-nav-main { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+    .mh-nav-main .mh-nav-group-label { display: none; }
+    .mh-nav-main .mh-nav-chip { white-space: normal; text-align: center; padding: 10px 4px; min-height: 44px; }
+}
+
+.mh-map-detail-sheet {
+    position: fixed; z-index: 1100; right: 16px; bottom: 16px;
+    width: min(440px, calc(100vw - 32px)); max-height: min(640px, 75dvh);
+    overflow-y: auto; overscroll-behavior: contain; background: var(--mh-bg);
+    border: 2px solid var(--mh-border); border-radius: 16px;
+    box-shadow: 0 12px 40px rgb(0 0 0 / 22%);
+}
+.mh-map-detail-close { position: sticky; top: 0; z-index: 1; display: flex; justify-content: flex-end; padding: 8px; background: var(--mh-bg); }
+.mh-map-detail-close button { min-height: 44px; }
+@media (max-width: 600px) {
+    .mh-map-detail-sheet { left: 0; right: 0; bottom: 0; width: 100%; max-height: 55dvh; border-radius: 16px 16px 0 0; padding-bottom: env(safe-area-inset-bottom); }
+}
