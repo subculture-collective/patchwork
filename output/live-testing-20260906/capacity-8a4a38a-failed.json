@@ -1,0 +1,38 @@
+{
+  "kind": "isolated-candidate-distributed-client-read-probe",
+  "target": "http://10.0.0.56:3052",
+  "requestedRps": 40,
+  "durationSeconds": 300.40798169898335,
+  "requestCount": 11968,
+  "missedScheduledRequests": 32,
+  "forwardedClientCount": 100,
+  "publicEdgeIncluded": false,
+  "routes": {
+    "/query/directory": {
+      "count": 2992,
+      "p95Ms": 1510.769460001029,
+      "maxMs": 2724.1175189847127,
+      "statusCounts": {
+        "200": 2992
+      }
+    },
+    "/query/feed": {
+      "count": 5987,
+      "p95Ms": 1033.2703079329804,
+      "maxMs": 1989.4165130099282,
+      "statusCounts": {
+        "200": 5987
+      }
+    },
+    "/query/map": {
+      "count": 2989,
+      "p95Ms": 1070.8043900085613,
+      "maxMs": 2152.018249966204,
+      "statusCounts": {
+        "200": 2989
+      }
+    }
+  },
+  "maxObservedProjectionHeartbeatLagSeconds": 16.994,
+  "passed": false
+}

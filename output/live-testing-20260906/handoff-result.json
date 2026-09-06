@@ -1,0 +1,18 @@
+{
+  "sourceSha": "8a4a38a699332811f7ab132295c2968d19fd6d16",
+  "kind": "real-service-automated-handoff",
+  "publicEdgeIncluded": true,
+  "steps": [
+    "source records created",
+    "public projection verified",
+    "offer accepted",
+    "foreground chat received",
+    "schedule confirmed",
+    "handoff completed"
+  ],
+  "passed": true,
+  "projectionMs": 5584,
+  "foregroundChatMs": 3786,
+  "requestCleanupStatus": 204,
+  "profileCleanupStatus": 204
+}

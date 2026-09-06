@@ -148,3 +148,30 @@ default Docker address pools are exhausted; dedicated unused 10.252.20.0/24 and
 and must not be replaced. Candidate hostname: patchwork-test.subcult.tv. Managed PDS
 and Jetstream remain shared external providers; this is not full identity-provider
 isolation. Human phone participants and notification recipient remain pending.
+
+## Current checkpoint — live for protected testing (2026-09-06)
+
+Application `8a4a38a` is deployed at https://patchwork-test.subcult.tv. The full current
+handoff, evidence, infrastructure boundaries and remaining gates are recorded in
+[the testing handoff](../operations/evidence/mobile-handoff-testing-2026-09-06.md).
+This section supersedes historical statements above that no deployment occurred.
+
+- Implemented: durable ownership and retry flows, request/resource details, contextual
+  offers/chat/scheduling, approximate posting location, mobile map/navigation, server
+  dataset separation, SQL paging and aggregate counts, URL selection restoration.
+- Verified: real-service automated two-account handoff (projection 5.584 s, foreground
+  chat 3.786 s), full API 434 / indexer 65 / moderation 71 integration tests, repository
+  checks, browser regressions, independent notification-channel configuration, local
+  database/object restore, immutable four-image provenance and protected HTTPS access.
+- Open: capacity gate FAILED at 40 RPS (p95 1.03–1.51 s, 32 missed requests; no 5xx).
+  The live candidate is for small functional testing, not capacity-qualified release.
+- Open: designated notification receipt; two role-reversed human phone journeys;
+  contextual missing-helper-profile recovery; remaining broad route extraction;
+  four moderate transitive dependency advisories; qualified rollback/forward and
+  independent off-host backup; review, responder/moderation/support ownership.
+
+Next delivery order: use the live candidate for human functional testing; address
+observed onboarding/handoff friction and measured discovery capacity; verify actual
+notification receipt and role-reversed phone journeys; qualify recovery and close
+independent operational/review gates before any public launch. Do not mark the mixed
+implementation-plus-verification checkboxes above complete while their gates remain open.
