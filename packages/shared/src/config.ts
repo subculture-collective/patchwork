@@ -408,23 +408,23 @@ export const validateProductionConfig = (
             `FATAL: private attachment runtime requires ${missingAttachments.join(', ')}.`,
         );
     }
-    const notificationRequired: Array<keyof ProductionApiConfig> = [
-        'NOTIFICATION_EMAIL_PROVIDER_URL',
-        'NOTIFICATION_EMAIL_PROVIDER_TOKEN',
-        'NOTIFICATION_EMAIL_FROM',
-        'NOTIFICATION_VAPID_SUBJECT',
-        'NOTIFICATION_VAPID_PUBLIC_KEY',
-        'NOTIFICATION_VAPID_PRIVATE_KEY',
-        'NOTIFICATION_PROVIDER_WEBHOOK_TOKEN',
+    const emailKeys: Array<keyof ProductionApiConfig> = [
+        'NOTIFICATION_EMAIL_PROVIDER_URL', 'NOTIFICATION_EMAIL_PROVIDER_TOKEN', 'NOTIFICATION_EMAIL_FROM',
     ];
-    const missingNotifications = notificationRequired.filter(
-        key => !config[key],
-    );
-    if (missingNotifications.length > 0) {
-        throw new Error(
-            `FATAL: durable notification delivery requires ${missingNotifications.join(', ')}.`,
-        );
+    const pushKeys: Array<keyof ProductionApiConfig> = [
+        'NOTIFICATION_VAPID_SUBJECT', 'NOTIFICATION_VAPID_PUBLIC_KEY', 'NOTIFICATION_VAPID_PRIVATE_KEY',
+    ];
+    const emailEnabled = emailKeys.some(key => Boolean(config[key]));
+    const pushEnabled = pushKeys.some(key => Boolean(config[key]));
+    const required = [
+        ...(emailEnabled ? [...emailKeys, 'NOTIFICATION_PROVIDER_WEBHOOK_TOKEN' as const] : []),
+        ...(pushEnabled ? pushKeys : []),
+    ];
+    const missing = required.filter(key => !config[key]);
+    if ((!emailEnabled && !pushEnabled) || missing.length > 0) {
+        throw new Error(`FATAL: durable notification delivery requires ${missing.length ? missing.join(', ') : 'at least one complete email or push channel'}.`);
     }
+
 };
 
 /**

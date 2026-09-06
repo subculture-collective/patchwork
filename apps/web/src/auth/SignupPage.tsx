@@ -429,7 +429,7 @@ export const SignupPage = () => {
                             version: CURRENT_POLICY_VERSION,
                         })}{' '}
                         <a
-                            href='https://subcult.tv/terms'
+                            href='/legal/terms'
                             target='_blank'
                             rel='noopener noreferrer'
                             className='text-mh-link hover:underline'
@@ -438,7 +438,7 @@ export const SignupPage = () => {
                         </a>{' '}
                         {t('auth.and')}{' '}
                         <a
-                            href='https://subcult.tv/privacy'
+                            href='/legal/privacy'
                             target='_blank'
                             rel='noopener noreferrer'
                             className='text-mh-link hover:underline'

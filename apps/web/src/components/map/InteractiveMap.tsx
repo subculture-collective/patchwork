@@ -33,6 +33,8 @@ export interface InteractiveMapProps {
         radiusMeters: number;
     };
     onTilesFailed: (message: string) => void;
+    onViewportChange?: (area: { center: { lat: number; lng: number }; radiusMeters: number }) => void;
+    onSelectResource?: (uri: string) => void;
     /** Uses this Leaflet surface as a deliberate, coarse area picker. */
     onConfirmArea?: (center: { lat: number; lng: number }) => void;
     canConfirmArea?: boolean;
@@ -70,6 +72,8 @@ export const InteractiveMap = ({
     onFocusArea,
     focusedArea,
     onTilesFailed,
+    onViewportChange,
+    onSelectResource,
     onConfirmArea,
     canConfirmArea = true,
 }: InteractiveMapProps) => {
@@ -79,6 +83,10 @@ export const InteractiveMap = ({
     const onTilesFailedRef = useRef(onTilesFailed);
     const onSelectPostIdRef = useRef(onSelectPostId);
     const onFocusAreaRef = useRef(onFocusArea);
+    const viewportRef = useRef(onViewportChange);
+    viewportRef.current = onViewportChange;
+    const selectResourceRef = useRef(onSelectResource);
+    selectResourceRef.current = onSelectResource;
     const onConfirmAreaRef = useRef(onConfirmArea);
     const initialCenterRef = useRef(center ?? { lat: 0, lng: 0 });
     const [zoom, setZoom] = useState(9);
@@ -164,6 +172,12 @@ export const InteractiveMap = ({
         );
         const onZoomEnd = () => setZoom(map.getZoom());
         map.on('zoomend', onZoomEnd);
+        const onMoveEnd = () => {
+            const point = map.getCenter();
+            viewportRef.current?.({ center: { lat: Number(point.lat.toFixed(2)), lng: Number(point.lng.toFixed(2)) },
+                radiusMeters: Math.round(map.distance(point, map.getBounds().getNorthEast())) });
+        };
+        map.on('moveend', onMoveEnd);
         const selectMapPoint = (event: L.LeafletMouseEvent) => {
             if (!onConfirmAreaRef.current) return;
             setAreaCandidate({ lat: event.latlng.lat, lng: event.latlng.lng });
@@ -194,6 +208,7 @@ export const InteractiveMap = ({
         mapInstance.current = map;
         return () => {
             map.off('zoomend', onZoomEnd);
+            map.off('moveend', onMoveEnd);
             map.off('click', selectMapPoint);
             container.removeEventListener('keydown', selectKeyboardPoint);
             mapInstance.current = null;
@@ -241,11 +256,7 @@ export const InteractiveMap = ({
                     cluster.lat,
                 );
                 map.setView([cluster.lat, cluster.lng], nextZoom);
-                onFocusAreaRef.current?.({
-                    center: { lat: cluster.lat, lng: cluster.lng },
-                    radiusMeters: Math.ceil(cluster.radiusMeters),
-                    label: `${cluster.count} requests`,
-                });
+
             });
             layers.push(circle);
         }
@@ -286,8 +297,10 @@ export const InteractiveMap = ({
                         ? 'mh-map-place is-selected'
                         : 'mh-map-place',
             }).addTo(map);
+            const resourceLabel = document.createElement('span');
+            resourceLabel.textContent = `${resource.name} · ${resource.openHours ?? ''}`;
             marker.bindTooltip(
-                `${resource.name} · ${resource.openHours ?? 'hours unavailable'}`,
+                resourceLabel,
                 {
                     permanent: true,
                     direction: 'right',
@@ -296,13 +309,20 @@ export const InteractiveMap = ({
             );
             marker.on('click', () => {
                 map.setView([exact.latitude, exact.longitude], 15);
-                onFocusAreaRef.current?.({
-                    center: { lat: exact.latitude, lng: exact.longitude },
-                    radiusMeters: 1000,
-                    label: resource.name,
-                });
+                selectResourceRef.current?.(resource.uri);
             });
             layers.push(marker);
+        }
+        for (const resource of resources) {
+            if (currentExactPublicAddress(resource)) continue;
+            const circle = L.circle([resource.location.lat, resource.location.lng], {
+                radius: Math.max(1000, resource.location.precisionMeters), className: 'mh-map-place',
+            }).addTo(map);
+            const label = document.createElement('span');
+            label.textContent = resource.name;
+            circle.bindTooltip(label, { direction: 'top' });
+            circle.on('click', () => selectResourceRef.current?.(resource.uri));
+            layers.push(circle);
         }
         return () => layers.forEach((layer) => layer.remove());
     }, [
@@ -310,13 +330,14 @@ export const InteractiveMap = ({
         clusteredPostIds,
         clusters,
         exactPlaces,
+        resources,
         focusedArea,
         markers,
         selectedPostId,
     ]);
 
     const hasItems =
-        markers.length > 0 || clusters.length > 0 || exactPlaces.length > 0;
+        markers.length > 0 || clusters.length > 0 || resources.length > 0;
 
     return (
         <div className={`mh-map-container mh-map-style-${circleStyle}`}>
@@ -359,7 +380,7 @@ export const InteractiveMap = ({
             )}
             {hasItems && (
                 <p id={instructionsId} className='mh-map-instructions'>
-                    {t('map.instructions')}
+                    {t('handoff.mapInstructions')}
                 </p>
             )}
             {onConfirmArea ? (
@@ -413,7 +434,7 @@ export const InteractiveMap = ({
                 </div>
                 <div className='mh-map-legend-item'>
                     <span className='mh-map-legend-place' aria-hidden='true' />
-                    <span>{t('map.publicPlace')}</span>
+                    <span>{t('handoff.resourceMapLegend')}</span>
                 </div>
                 <div className='mh-map-legend-note'>{t('map.legendNote')}</div>
             </div>

@@ -381,6 +381,19 @@ export const assessProjectionReadiness = (
 export class PostgresProjectionQueryService {
     constructor(private readonly pool: Pool) {}
 
+    async queryAidPost(params: URLSearchParams, viewerDid?: string): Promise<ApiRouteResult> {
+        const uri = params.get('uri');
+        if (!uri || !/^at:\/\/did:[^/]+\/app\.patchwork\.aid\.post\/[^/]+$/.test(uri)) {
+            return { statusCode: 400, body: { error: { code: 'INVALID_QUERY', message: 'A request URI is required.' } } };
+        }
+        const snapshot = await this.loadSnapshot(viewerDid, uri);
+        const result = createQueryServiceFromNormalizedEvents(snapshot.events).queryFeed(new URLSearchParams());
+        if ('error' in result.body) return result;
+        const body = result.body as ApiQueryAidResponse;
+        if (body.results.length === 0) return { statusCode: 404, body: { error: { code: 'NOT_FOUND', message: 'This request is unavailable.' } } };
+        return { ...result, body: { ...body, results: body.results.map(row => ({ ...row, recordOrigin: snapshot.origins.get(row.uri) ?? 'visitor-created' })) } };
+    }
+
     async queryMap(
         params: URLSearchParams,
         viewerDid?: string,
@@ -633,7 +646,7 @@ export class PostgresProjectionQueryService {
         };
     }
 
-    private async loadSnapshot(viewerDid?: string): Promise<{
+    private async loadSnapshot(viewerDid?: string, uri?: string): Promise<{
         events: NormalizedFirehoseEvent[];
         freshness: ProjectionFreshness;
         origins: Map<
@@ -648,7 +661,9 @@ export class PostgresProjectionQueryService {
                     record_created_at, record_updated_at, source_cursor,
                     projected_at, record_origin
              FROM indexer_aid_post_projections
+             WHERE ($1::text IS NULL OR uri = $1)
              ORDER BY source_cursor, uri`,
+                [uri ?? null],
             ),
             this.pool.query<ProjectionStateRow>(
                 `SELECT latest_cursor, heartbeat_at

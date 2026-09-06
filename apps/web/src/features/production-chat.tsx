@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useVisiblePoll } from './use-visible-poll';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useLocale } from '../i18n';
 import {
     createChatConversationViaApi,
@@ -62,9 +63,8 @@ export const ProductionChat = ({ currentUserDid }: { currentUserDid: string }) =
             }))),
     ], [connections, groups, t]);
 
-    const loadWorkspace = useCallback(async (only?: WorkspaceResource) => {
-        setBusy(true);
-        setError('');
+    const loadWorkspace = useCallback(async (only?: WorkspaceResource, silent = false) => {
+        if (!silent) { setBusy(true); setError(''); }
         const resources = only ? [only] : (['conversations', 'coordination', 'groups'] as const);
         const results = await Promise.all(resources.map(async (resource) => {
             if (resource === 'conversations') return [resource, await fetchChatConversationsViaApi()] as const;
@@ -98,20 +98,30 @@ export const ProductionChat = ({ currentUserDid }: { currentUserDid: string }) =
         });
         if (loaded > 0) setStatus(t('chat.loaded'));
         if (loaded === 0) setError(t('chat.loadError'));
-        setBusy(false);
+        if (!silent) setBusy(false);
+        return loaded === resources.length;
     }, [t]);
 
-    const loadMessages = useCallback(async (conversationId: string, before?: number) => {
-        if (!conversationId) { setMessages([]); setNextCursor(null); return; }
-        setBusy(true);
-        setError('');
+    const activeConversation = useRef(selectedId);
+    activeConversation.current = selectedId;
+    const loadMessages = useCallback(async (conversationId: string, before?: number, silent = false) => {
+        if (!conversationId) { setMessages([]); setNextCursor(null); return true; }
+        if (!silent) { setBusy(true); setError(''); }
         const result = await fetchChatMessagesViaApi(conversationId,
             { ...(before !== undefined ? { before } : {}), limit: 30 });
+        if (activeConversation.current !== conversationId) return true;
         if (!result.ok) {
+            if (result.kind === 'authentication') { setMessages([]); setNextCursor(null); }
             setError(t('chat.loadError'));
         } else {
-            setMessages((current) => before === undefined ? result.data.messages : [...result.data.messages, ...current]);
-            setNextCursor(result.data.nextCursor);
+            setMessages((current) => {
+                if (!silent && before === undefined) return result.data.messages;
+                const byId = new Map(current.map(message => [message.id, message]));
+                for (const message of result.data.messages) byId.set(message.id, message);
+                return [...byId.values()].sort((a, b) => a.sequence - b.sequence);
+            });
+            if (!silent) setNextCursor(result.data.nextCursor);
+            setError('');
             const newest = result.data.messages.at(-1);
             if (before === undefined && newest) {
                 await markChatReadViaApi({ conversationId, throughMessageId: newest.id });
@@ -119,9 +129,12 @@ export const ProductionChat = ({ currentUserDid }: { currentUserDid: string }) =
                     conversation.id === conversationId ? { ...conversation, unreadCount: 0 } : conversation));
             }
         }
-        setBusy(false);
+        if (!silent) setBusy(false);
+        return result.ok;
     }, [t]);
 
+    useVisiblePoll(() => busy ? Promise.resolve(true) : loadMessages(selectedId, undefined, true), 3000, Boolean(selectedId));
+    useVisiblePoll(() => busy ? Promise.resolve(true) : loadWorkspace(undefined, true), 15000);
     useEffect(() => { void loadWorkspace(); }, [loadWorkspace]);
     useEffect(() => { void loadMessages(selectedId); }, [selectedId, loadMessages]);
     useEffect(() => {

@@ -48,6 +48,7 @@ test('feed pagination announces appended records, preserves focus, and restores 
                     category: 'food',
                     status: 'open',
                     urgency: 'medium',
+                            approximateGeo: { latitude: 41.85, longitude: -87.93, precisionKm: 1 },
                     createdAt: '2026-08-08T00:00:00.000Z',
                     updatedAt: '2026-08-08T00:00:00.000Z',
                     recordOrigin: 'sourced-public',

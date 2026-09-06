@@ -286,6 +286,21 @@ describe('validateProductionConfig', () => {
         ).toThrow(/private attachment runtime requires/);
     });
 
+    it('allows a complete email channel independently of push and vice versa', () => {
+        const base = {
+            NODE_ENV: 'production', ATPROTO_SERVICE_DID: 'did:web:patchwork.example.com',
+            API_DATA_SOURCE: 'postgres', DATABASE_URL: 'postgresql://localhost/patchwork',
+            API_MODERATION_SERVICE_URL: 'http://moderation:4200', MODERATION_SERVICE_TOKEN: 'service-secret',
+            ATPROTO_ACCOUNT_PDS_ADMIN_PASSWORD: 'pds-admin-secret', ...productionAttachmentConfig,
+        };
+        expect(() => validateProductionConfig({ ...base, ...productionNotificationConfig,
+            NOTIFICATION_VAPID_SUBJECT: '', NOTIFICATION_VAPID_PUBLIC_KEY: '', NOTIFICATION_VAPID_PRIVATE_KEY: '',
+        })).not.toThrow();
+        expect(() => validateProductionConfig({ ...base, ...productionNotificationConfig,
+            NOTIFICATION_EMAIL_PROVIDER_URL: '', NOTIFICATION_EMAIL_PROVIDER_TOKEN: '', NOTIFICATION_EMAIL_FROM: '', NOTIFICATION_PROVIDER_WEBHOOK_TOKEN: '',
+        })).not.toThrow();
+    });
+
     it('requires complete email, push, and feedback configuration in production', () => {
         expect(() =>
             validateProductionConfig({

@@ -326,26 +326,19 @@ const attachmentService =
 if (attachmentService) {
     await attachmentService.ensureReady();
 }
-const notificationProviders =
-    config.NOTIFICATION_EMAIL_PROVIDER_URL &&
-    config.NOTIFICATION_EMAIL_PROVIDER_TOKEN &&
-    config.NOTIFICATION_EMAIL_FROM &&
-    config.NOTIFICATION_VAPID_SUBJECT &&
-    config.NOTIFICATION_VAPID_PUBLIC_KEY &&
-    config.NOTIFICATION_VAPID_PRIVATE_KEY ?
-        {
-            email: new HttpEmailProvider(
-                config.NOTIFICATION_EMAIL_PROVIDER_URL,
-                config.NOTIFICATION_EMAIL_PROVIDER_TOKEN,
-                config.NOTIFICATION_EMAIL_FROM,
-            ),
-            push: new VapidPushProvider({
-                subject: config.NOTIFICATION_VAPID_SUBJECT,
-                publicKey: config.NOTIFICATION_VAPID_PUBLIC_KEY,
-                privateKey: config.NOTIFICATION_VAPID_PRIVATE_KEY,
-            }),
-        }
-    :   {};
+const notificationProviders = {
+    ...(config.NOTIFICATION_EMAIL_PROVIDER_URL &&
+        config.NOTIFICATION_EMAIL_PROVIDER_TOKEN && config.NOTIFICATION_EMAIL_FROM ? {
+        email: new HttpEmailProvider(config.NOTIFICATION_EMAIL_PROVIDER_URL,
+            config.NOTIFICATION_EMAIL_PROVIDER_TOKEN, config.NOTIFICATION_EMAIL_FROM),
+    } : {}),
+    ...(config.NOTIFICATION_VAPID_SUBJECT && config.NOTIFICATION_VAPID_PUBLIC_KEY &&
+        config.NOTIFICATION_VAPID_PRIVATE_KEY ? {
+        push: new VapidPushProvider({ subject: config.NOTIFICATION_VAPID_SUBJECT,
+            publicKey: config.NOTIFICATION_VAPID_PUBLIC_KEY,
+            privateKey: config.NOTIFICATION_VAPID_PRIVATE_KEY }),
+    } : {}),
+};
 const notificationService =
     postgresPool ?
         new DurableNotificationService(
@@ -1751,6 +1744,7 @@ const contractRoutes = [
     '/at/aid-posts/status/reconcile',
     '/at/directory-resources',
     '/at/volunteer-profile',
+    '/query/aid-post',
     '/query/map',
     '/query/feed',
     '/query/directory',
@@ -1911,6 +1905,7 @@ const readPaths = new Set([
     '/health/ready',
     '/metrics',
     '/contracts',
+    '/query/aid-post',
     '/query/map',
     '/query/feed',
     '/query/directory',

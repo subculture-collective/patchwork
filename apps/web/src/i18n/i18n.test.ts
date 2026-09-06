@@ -111,6 +111,9 @@ describe('production source localization', () => {
             '../components/map/InteractiveMap.tsx',
             '../features/exact-location-exchange.tsx',
             '../features/production-chat.tsx',
+            '../features/request-actions.tsx',
+            '../features/request-detail.tsx',
+            '../features/resource-actions.tsx',
             '../features/production-groups.tsx',
         ].map((relative) => fileURLToPath(new URL(relative, import.meta.url)));
         const fixtureOnly = new Set([
@@ -192,6 +195,9 @@ describe('production source localization', () => {
             '../components/map/InteractiveMap.tsx',
             '../features/exact-location-exchange.tsx',
             '../features/production-chat.tsx',
+            '../features/request-actions.tsx',
+            '../features/request-detail.tsx',
+            '../features/resource-actions.tsx',
             '../features/production-groups.tsx',
         ].map((relative) => fileURLToPath(new URL(relative, import.meta.url)));
         const referenced = new Set<string>();

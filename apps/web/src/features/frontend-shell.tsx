@@ -1,3 +1,5 @@
+import { loadPostingDraft, savePostingDraft, clearPostingDraft } from './posting-draft';
+import { ResourceActions } from './resource-actions';
 import {
     lazy,
     Suspense,
@@ -195,8 +197,7 @@ import {
 } from './api-client';
 import { useLocale } from '../i18n';
 import { ExactLocationExchange } from './exact-location-exchange';
-import { ProductionGroups } from './production-groups';
-import { ProductionChat } from './production-chat';
+import { RequestLifecycleActions } from './request-actions';
 import {
     type SettingsPatch,
     type SettingsSection,
@@ -243,8 +244,13 @@ const dataOriginLabel = (origin: ApiDataOrigin): string =>
             ? 'Requesting location'
             : 'API unavailable';
 
+const LazyProductionChat = lazy(() => import('./production-chat').then(module => ({ default: module.ProductionChat })));
+const LazyProductionGroups = lazy(() => import('./production-groups').then(module => ({ default: module.ProductionGroups })));
+const LazyRequestDetail = lazy(() => import('./request-detail').then(module => ({ default: module.RequestDetail })));
+
 const appRoutes = [
     '/',
+    '/requests/view',
     '/map',
     '/feed',
     '/resources',
@@ -277,6 +283,7 @@ interface FrontendShellProps {
 
 const routeLabelKeys: Readonly<Record<AppRoute, string>> = {
     '/': 'route.home',
+    '/requests/view': 'handoff.requestDetails',
     '/map': 'route.map',
     '/feed': 'route.feed',
     '/resources': 'route.resources',
@@ -316,7 +323,7 @@ const secondaryRoutes = appRoutes.filter(
     (route) =>
         !primaryRoutes.includes(route) &&
         !accountRoutes.includes(route) &&
-        !route.startsWith('/legal/'),
+        !route.startsWith('/legal/') && route !== '/requests/view',
 );
 const resourceCategoryOptions: readonly DirectoryResourceCategory[] = [
     'food-bank',
@@ -1171,6 +1178,8 @@ const MapRoute = ({
             [t],
         ),
     });
+    const [viewport, setViewport] = useState<{ center: { lat: number; lng: number }; radiusMeters: number }>();
+    const [selectedResourceUri, setSelectedResourceUri] = useState<string>();
     const [tileError, setTileError] = useState<string>();
     const [focusedArea, setFocusedArea] = useState<{
         center: { lat: number; lng: number };
@@ -1228,30 +1237,6 @@ const MapRoute = ({
             setFocusedArea(undefined);
         }
     }, [discoveryState.center, discoveryState.radiusMeters, focusedArea]);
-
-    const focusMapArea = (area: {
-        center: { lat: number; lng: number };
-        radiusMeters: number;
-        label: string;
-    }) => {
-        const normalized = applyDiscoveryFilterPatch(discoveryState, area);
-        if (!normalized.center || !normalized.radiusMeters) return;
-        setFocusedArea({
-            center: normalized.center,
-            radiusMeters: normalized.radiusMeters,
-            label: area.label,
-            ...(discoveryState.center
-                ? { previousCenter: discoveryState.center }
-                : {}),
-            ...(discoveryState.radiusMeters
-                ? { previousRadiusMeters: discoveryState.radiusMeters }
-                : {}),
-        });
-        onPushDiscovery({
-            center: normalized.center,
-            radiusMeters: normalized.radiusMeters,
-        });
-    };
 
     const leaveFocusedArea = (target: 'previous' | 'clear') => {
         const patch =
@@ -1414,7 +1399,8 @@ const MapRoute = ({
                             center={discoveryState.center}
                             onSelectPostId={onSelectPost}
                             focusedArea={activeArea}
-                            onFocusArea={focusMapArea}
+                            onViewportChange={setViewport}
+                            onSelectResource={setSelectedResourceUri}
                             onTilesFailed={setTileError}
                         />
                     </Suspense>
@@ -1425,6 +1411,11 @@ const MapRoute = ({
                 )}
             </section>
 
+            {viewport && <Button onClick={() => { onPushDiscovery({ ...viewport, feedTab: 'nearby' }); setViewport(undefined); }}>{t('handoff.searchArea')}</Button>}
+            {selectedResourceUri && resourceCards.find(card => card.uri === selectedResourceUri) && <Panel title={resourceCards.find(card => card.uri === selectedResourceUri)!.name}>
+                <ResourceActions resource={resourceCards.find(card => card.uri === selectedResourceUri)!} />
+                <Button onClick={() => setSelectedResourceUri(undefined)}>{t('resources.close')}</Button>
+            </Panel>}
             <DiscoveryFiltersPanel
                 idPrefix='map'
                 state={discoveryState}
@@ -1568,14 +1559,15 @@ const MapRoute = ({
                                 {drawer.status}
                             </Badge>
                         ) : null}
-                        <Badge tone='info'>{selectedRecord.recipientDid}</Badge>
+                        {selectedRecord.recordOrigin === 'synthetic' && <Badge tone='info'>{t('feed.synthetic')}</Badge>}
                     </div>
+                    <a className='mh-button inline-flex px-3 py-2' href={`/requests/view?uri=${encodeURIComponent(selectedRecord.aidPostUri)}`}>{t('handoff.requestDetails')}</a>
+                    {webDataMode !== 'fixture' && <RequestLifecycleActions record={selectedRecord} onRefresh={onRetry} />}
                     <div className='mt-4 flex flex-wrap gap-2'>
                         {drawer.actions
                             .filter(
-                                (action) =>
-                                    webDataMode === 'fixture' ||
-                                    action.action !== 'contact_helper',
+                                () =>
+                                    webDataMode === 'fixture',
                             )
                             .map((action) => (
                                 <Button
@@ -2132,7 +2124,6 @@ const FeedRoute = ({
     onUpdateCard,
     onReplaceRecord,
     onDeleteRecord,
-    onTransition,
     currentUserDid,
 }: FeedRouteProps) => {
     const { t, fmt } = useLocale();
@@ -2234,7 +2225,7 @@ const FeedRoute = ({
             />
 
             <Card title={String(t('feed.liveRequestFeedTitle'))}>
-                {isLoading ? (
+                {isLoading && feedRecords.length === 0 ? (
                     <ul className='space-y-4' aria-live='polite'>
                         {Array.from({ length: 3 }).map((_, index) => (
                             <li
@@ -2296,7 +2287,7 @@ const FeedRoute = ({
                                 >
                                     <div className='flex flex-wrap items-start justify-between gap-2'>
                                         <p className='text-base font-bold text-mh-text'>
-                                            {card.title}
+                                            {record ? <a className='underline' href={`/requests/view?uri=${encodeURIComponent(record.aidPostUri)}`}>{card.title}</a> : card.title}
                                         </p>
                                         <div className='flex flex-wrap gap-2'>
                                             {presentation ? (
@@ -2371,43 +2362,7 @@ const FeedRoute = ({
                                         })}
                                     </p>
 
-                                    {/* Lifecycle transition actions */}
-                                    {presentation &&
-                                    presentation.transitionActions.length > 0 &&
-                                    onTransition &&
-                                    record &&
-                                    currentUserDid === record.recipientDid ? (
-                                        <div className='mt-3 flex flex-wrap gap-2'>
-                                            <span className='text-xs font-bold uppercase tracking-[0.12em] text-mh-textMuted'>
-                                                {t('feed.lifecycle')}
-                                            </span>
-                                            {presentation.transitionActions.map(
-                                                (action) => (
-                                                    <Button
-                                                        key={
-                                                            action.targetStatus
-                                                        }
-                                                        variant='neutral'
-                                                        className='px-3 py-1 text-xs'
-                                                        aria-label={t('safety.positionedAction', {
-                                                            action: action.ariaLabel,
-                                                            position: index + 1,
-                                                            total: feedView.cards.length,
-                                                        })}
-                                                        onClick={() =>
-                                                            onTransition(
-                                                                card.id,
-                                                                record.aidPostUri,
-                                                                action.targetStatus,
-                                                            )
-                                                        }
-                                                    >
-                                                        {action.label}
-                                                    </Button>
-                                                ),
-                                            )}
-                                        </div>
-                                    ) : null}
+                                    {webDataMode !== 'fixture' && record && <RequestLifecycleActions record={record} onRefresh={onRetry} />}
 
                                     <div className='mt-4 flex flex-wrap gap-2'>
                                         {record && webDataMode === 'fixture' ? (
@@ -2547,13 +2502,17 @@ const PostingRoute = ({
     onCreateViaApi,
 }: PostingRouteProps) => {
     const { t } = useLocale();
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
-    const [category, setCategory] = useState<AidPostingCategory>('food');
-    const [urgency, setUrgency] = useState<1 | 2 | 3 | 4 | 5>(4);
-    const [tagsText, setTagsText] = useState('');
-    const [startAt, setStartAt] = useState('');
-    const [endAt, setEndAt] = useState('');
+    const [savedDraft] = useState(() => { try { return loadPostingDraft(window.sessionStorage); } catch { return undefined; } });
+    const [title, setTitle] = useState(savedDraft?.title ?? '');
+    const [description, setDescription] = useState(() => {
+        const name = new URLSearchParams(window.location.search).get('resourceName');
+        return savedDraft?.description ?? (name ? t('handoff.resourceRequestContext', { name: name.slice(0, 200) }) : '');
+    });
+    const [category, setCategory] = useState<AidPostingCategory>(savedDraft?.category ?? 'food');
+    const [urgency, setUrgency] = useState<1 | 2 | 3 | 4 | 5>(savedDraft?.urgency ?? 4);
+    const [tagsText, setTagsText] = useState(savedDraft?.tagsText ?? '');
+    const [startAt, setStartAt] = useState(savedDraft?.startAt ?? '');
+    const [endAt, setEndAt] = useState(savedDraft?.endAt ?? '');
     const [errors, setErrors] = useState<readonly PostingValidationIssue[]>([]);
     const [successMessage, setSuccessMessage] = useState<string>();
     const [apiError, setApiError] = useState<string>();
@@ -2563,6 +2522,10 @@ const PostingRoute = ({
     const [projectionNotice, setProjectionNotice] = useState<string>();
     const [projectionFailed, setProjectionFailed] = useState(false);
     const [projectionPostUri, setProjectionPostUri] = useState<string>();
+    const submissionRef = useRef<{ signature: string; rkey: string; now: string; record?: FeedRecordEnvelope; uploaded: number } | undefined>(undefined);
+    useEffect(() => {
+        try { savePostingDraft(window.sessionStorage, { title, description, category, urgency, tagsText, startAt, endAt }); } catch { /* Optional browser storage. */ }
+    }, [title, description, category, urgency, tagsText, startAt, endAt]);
     const projectionTimerRef = useRef<number | undefined>(undefined);
 
     useEffect(
@@ -2580,26 +2543,21 @@ const PostingRoute = ({
             projectionTimerRef.current = undefined;
         }
         const lifecycle = await queryAidPostLifecycleViaApi(postUri);
-        if (!lifecycle.ok || !lifecycle.data.projectionReceipt) {
-            setProjectionNotice('Source accepted. Public discovery is still waiting for projection confirmation.');
+        const receipt = lifecycle.ok ? lifecycle.data.projectionReceipt : undefined;
+        if (receipt?.state === 'projected') {
+            setProjectionNotice(t('handoff.projectionConfirmed'));
             setProjectionFailed(false);
             return;
         }
-        const receipt = lifecycle.data.projectionReceipt;
-        if (receipt.state === 'projected') {
-            setProjectionNotice('Public discovery confirmed this request.');
-            setProjectionFailed(false);
-            return;
-        }
-        if (receipt.state === 'failed') {
-            setProjectionNotice(`Public discovery did not project this request${receipt.failureCode ? ` (${receipt.failureCode})` : ''}. Retry the check or contact support.`);
+        if (receipt?.state === 'failed') {
+            setProjectionNotice(t('handoff.projectionFailed'));
             setProjectionFailed(true);
             return;
         }
-        setProjectionNotice('Source accepted. Public discovery is pending projection.');
-        setProjectionFailed(false);
+        setProjectionNotice(t('handoff.projectionPending'));
+        setProjectionFailed(attempts >= 4);
         if (attempts < 4) {
-            const seconds = Math.max(1, Math.min(receipt.retryAfterSeconds ?? 5, 30));
+            const seconds = Math.max(1, Math.min(receipt?.retryAfterSeconds ?? 5, 30));
             projectionTimerRef.current = window.setTimeout(() => {
                 void pollProjection(postUri, attempts + 1);
             }, seconds * 1000);
@@ -2646,14 +2604,19 @@ const PostingRoute = ({
             return;
         }
 
-        const localId = `post-${Date.now().toString(36)}`;
+        const signature = JSON.stringify(validation.normalizedDraft);
+        if (submissionRef.current?.signature !== signature) {
+            submissionRef.current = { signature, rkey: crypto.randomUUID(), now: nowIso(), uploaded: 0 };
+        }
+        const submission = submissionRef.current;
+        const localId = submission.rkey;
         setIsSubmitting(true);
 
         try {
-            const createResult = await onCreateViaApi({
+            const createResult = submission.record ? { ok: true as const, data: submission.record } : await onCreateViaApi({
                 draft: validation.normalizedDraft,
                 rkey: localId,
-                now: nowIso(),
+                now: submission.now,
             });
 
             if (!createResult.ok) {
@@ -2662,12 +2625,14 @@ const PostingRoute = ({
                 return;
             }
 
+            submission.record = createResult.data;
+            try { clearPostingDraft(window.sessionStorage); } catch { /* Optional browser storage. */ }
             onCreateRecord(createResult.data);
             setProjectionPostUri(createResult.data.aidPostUri);
             void pollProjection(createResult.data.aidPostUri);
 
-            let uploaded = 0;
-            for (const file of attachmentFiles) {
+            let uploaded = submission.uploaded;
+            for (const file of attachmentFiles.slice(uploaded)) {
                 setAttachmentStatus(
                     `Uploading private attachment ${uploaded + 1} of ${attachmentFiles.length}…`,
                 );
@@ -2681,14 +2646,15 @@ const PostingRoute = ({
                         `Created post ${localId}. ${uploaded} attachment(s) were accepted.`,
                     );
                     setApiError(
-                        `The request is public, but a private attachment upload failed: ${attachment.error}`,
+                        `The request was accepted, but a private attachment upload failed: ${attachment.error}`,
                     );
                     setAttachmentStatus(
-                        'Attachment upload stopped. Selected files remain available to retry on a new request.',
+                        'Attachment upload stopped. Submit again to retry the remaining files on this request.',
                     );
                     return;
                 }
                 uploaded += 1;
+                submission.uploaded = uploaded;
             }
             setAttachmentFiles([]);
             setAttachmentStatus(
@@ -2989,7 +2955,7 @@ const PostingRoute = ({
                     ) : null}
 
                     <div className='flex flex-wrap gap-2'>
-                        <Button type='submit' disabled={isSubmitting}>
+                        <Button type='submit' disabled={isSubmitting || Boolean(successMessage && !apiError)}>
                             {isSubmitting
                                 ? t('posting.publishing')
                                 : t('posting.publishRequest')}
@@ -3610,7 +3576,6 @@ interface ResourceRouteProps {
 const ResourceRoute = ({
     discoveryState,
     onPatchDiscovery,
-    onNavigate,
     isLoading,
     errorMessage,
     dataOrigin,
@@ -3634,7 +3599,7 @@ const ResourceRoute = ({
     });
     const [activeCategory, setActiveCategory] =
         useState<DirectoryResourceCategory>();
-    const [selectedUri, setSelectedUri] = useState<string>();
+    const [selectedUri, setSelectedUri] = useState<string | undefined>(() => new URLSearchParams(window.location.search).get('resource') ?? undefined);
     const [manageUri, setManageUri] = useState<string>();
 
     useEffect(() => {
@@ -3858,17 +3823,6 @@ const ResourceRoute = ({
                                     >
                                         {t('resources.openDetails')}
                                     </Button>
-                                    <Button
-                                        variant='secondary'
-                                        className='px-3 py-1 text-xs'
-                                        aria-label={t(
-                                            'resources.startIntakeFor',
-                                            { name: card.name },
-                                        )}
-                                        onClick={() => onNavigate('/posting')}
-                                    >
-                                        {t('resources.startIntake')}
-                                    </Button>
                                     {currentUserDid &&
                                     (card.authorDid === currentUserDid ||
                                         card.uri.startsWith(
@@ -3923,30 +3877,7 @@ const ResourceRoute = ({
                         </div>
                     ) : null}
                     <div className='mt-4 flex flex-wrap gap-2'>
-                        {detailPanel.actions.map((action) => (
-                            <Button
-                                key={action.id}
-                                variant={
-                                    action.id === 'request_intake'
-                                        ? 'primary'
-                                        : 'neutral'
-                                }
-                                className='px-3 py-1 text-xs'
-                                onClick={() => {
-                                    if (action.id === 'request_intake') {
-                                        onNavigate('/posting');
-                                        return;
-                                    }
-
-                                    if (action.id === 'open_map') {
-                                        onNavigate('/map');
-                                        return;
-                                    }
-                                }}
-                            >
-                                {action.label}
-                            </Button>
-                        ))}
+                        {resourceCards.find(card => card.uri === selectedUri) && <ResourceActions resource={resourceCards.find(card => card.uri === selectedUri)!} />}
                         <Button
                             variant='neutral'
                             className='px-3 py-1 text-xs'
@@ -9983,6 +9914,12 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         const page = currentRoute === '/resources' ? directoryPage
             : currentRoute === '/map' || currentRoute === '/feed' ? aidPage : 1;
         const pageParams = new URLSearchParams(discoveryQueryString);
+        // Preserve selected-item and authentication return context across filter updates.
+        const contextParams = new URLSearchParams(window.location.search);
+        for (const key of ['resource', 'uri', 'connection', 'view', 'dataset', 'resourceName']) {
+            const value = contextParams.get(key);
+            if (value) pageParams.set(key, value);
+        }
         if (page > 1) pageParams.set('page', String(page));
         else pageParams.delete('page');
         const nextUrl = `${currentRoute}${pageParams.toString() ? `?${pageParams.toString()}` : ''}`;
@@ -10397,7 +10334,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
             <p>{t('runtime.signInHelp')}</p>
             <a
                 className='mt-3 inline-block font-bold underline'
-                href={`/login?returnTo=${encodeURIComponent(currentRoute)}`}
+                href={`/login?returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`}
             >
                 {t('runtime.signInContinue')}
             </a>
@@ -10467,6 +10404,8 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                 }
             }}
         />
+    ) : currentRoute === '/requests/view' ? (
+        <Suspense fallback={<p role='status'>{t('handoff.loadingRequest')}</p>}><LazyRequestDetail /></Suspense>
     ) : currentRoute === '/feed' ? (
         <FeedRoute
             discoveryState={discoveryState}
@@ -10627,7 +10566,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
             currentUserDid={currentUserDid}
         />
     ) : currentRoute === '/groups' ? (
-        <ProductionGroups />
+        <Suspense fallback={<p role='status'>{t('groups.loading')}</p>}><LazyProductionGroups /></Suspense>
     ) : currentRoute === '/chat' ? (
         webDataMode === 'fixture' ? (
             <ChatRoute
@@ -10643,7 +10582,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                 onReset={resetChat}
             />
         ) : (
-            <ProductionChat currentUserDid={currentUserDid} />
+            <Suspense fallback={<p role='status'>{t('chat.loading')}</p>}><LazyProductionChat currentUserDid={currentUserDid} /></Suspense>
         )
     ) : currentRoute === '/settings' ? (
         webDataMode === 'fixture' ? (
@@ -10817,7 +10756,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                             ) : (
                                 <a
                                     className='mh-nav-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mh-accent'
-                                    href={`/login?returnTo=${encodeURIComponent(currentRoute)}`}
+                                    href={`/login?returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`}
                                 >
                                     {t('runtime.signIn')}
                                 </a>

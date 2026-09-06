@@ -59,6 +59,7 @@ test.beforeEach(async ({ page, baseURL }) => {
                             status: 'open',
                             category: 'food',
                             urgency: 'medium',
+                            approximateGeo: { latitude: 41.85, longitude: -87.93, precisionKm: 1 },
                             updatedAt: '2026-07-11T00:00:00.000Z',
                         },
                     ],
@@ -190,6 +191,7 @@ test('record owner closes with compare-and-swap then deletes the AT record', asy
                             status: 'open',
                             category: 'food',
                             urgency: 'medium',
+                            approximateGeo: { latitude: 41.85, longitude: -87.93, precisionKm: 1 },
                             updatedAt: '2026-07-11T00:00:00.000Z',
                         },
                     ],
@@ -214,8 +216,8 @@ test('record owner closes with compare-and-swap then deletes the AT record', asy
                         urgency: 'medium',
                         status: 'closed',
                         location: {
-                            latitude: 40.71,
-                            longitude: -74.01,
+                            latitude: 41.85,
+                            longitude: -87.93,
                             precisionKm: 1,
                         },
                         createdAt: '2026-07-11T00:00:00.000Z',
@@ -308,6 +310,7 @@ test('owner can recover when private lifecycle transition outpaces public AT syn
                             status: 'open',
                             category: 'food',
                             urgency: 'medium',
+                            approximateGeo: { latitude: 41.85, longitude: -87.93, precisionKm: 1 },
                             updatedAt: '2026-07-11T00:00:00.000Z',
                         },
                     ],
@@ -316,16 +319,11 @@ test('owner can recover when private lifecycle transition outpaces public AT syn
             return;
         }
         if (apiPath === '/aid/post/lifecycle') {
-            await route.fulfill({
-                status: 404,
-                contentType: 'application/json',
-                body: JSON.stringify({
-                    error: {
-                        code: 'NOT_FOUND',
-                        message: 'No lifecycle record was found.',
-                    },
-                }),
-            });
+            await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+                postUri, currentStatus: syncAttempts > 0 ? 'resolved' : 'open',
+                validTransitions: syncAttempts > 0 ? ['archived'] : ['resolved'],
+                timeline: [], updatedAt: '2026-07-11T01:00:00.000Z',
+            }) });
             return;
         }
         if (apiPath === '/aid/post/transition') {
@@ -380,8 +378,8 @@ test('owner can recover when private lifecycle transition outpaces public AT syn
                         urgency: 'medium',
                         status: 'resolved',
                         location: {
-                            latitude: 40.71,
-                            longitude: -74.01,
+                            latitude: 41.85,
+                            longitude: -87.93,
                             precisionKm: 1,
                         },
                         createdAt: '2026-07-11T00:00:00.000Z',
@@ -396,16 +394,16 @@ test('owner can recover when private lifecycle transition outpaces public AT syn
 
     await page.goto('/feed');
     await page
-        .getByRole('button', { name: 'Resolve request "Lifecycle sync recovery"' })
+        .getByRole('button', { name: 'Resolve: Lifecycle sync recovery' })
         .click();
     await expect(
-        page.getByText(/Private workflow saved, but its public AT status is not synchronized/),
+        page.getByText(/The request was saved. Its public listing still needs to be synchronized./),
     ).toBeVisible();
-    await page.getByRole('button', { name: 'Retry public status sync' }).click();
+    await page.getByRole('button', { name: 'Retry public update' }).click();
 
     await expect(
-        page.getByText(/Private workflow saved, but its public AT status is not synchronized/),
+        page.getByText(/The request was saved. Its public listing still needs to be synchronized./),
     ).toHaveCount(0);
-    await expect(page.getByText('Resolved').first()).toBeVisible();
+    await expect(page.getByText('The change was saved. Public discovery is updating.')).toBeVisible();
     expect(syncAttempts).toBe(2);
 });

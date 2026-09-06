@@ -607,6 +607,18 @@ describe('api client', () => {
         expect(fetchMock).not.toHaveBeenCalled();
     });
 
+    it('keeps unlocated requests in latest and rejects inconsistent nearby counts', async () => {
+        globalThis.fetch = vi.fn(async () => createJsonResponse({ total: 1, page: 1, pageSize: 20, hasNextPage: false, results: [{
+            uri: 'at://did:plc:test/app.patchwork.aid.post/unlocated', authorDid: 'did:plc:test', title: 'Unlocated request', summary: 'No coordinates',
+            category: 'food', status: 'open', urgency: 'medium', updatedAt: '2026-09-05T12:00:00Z',
+        }] })) as unknown as typeof fetch;
+        const latest = await fetchFeedRecordsFromApi({ feedTab: 'latest' }, 'feed');
+        expect(latest.ok).toBe(true);
+        if (latest.ok) expect(latest.data).toHaveLength(1);
+        const nearby = await fetchFeedRecordsFromApi(baseDiscoveryState, 'feed');
+        expect(nearby.ok).toBe(false);
+    });
+
     it('does not send an implicit location with a latest feed request', async () => {
         const fetchMock = vi.fn(async () =>
             createJsonResponse({
@@ -619,7 +631,7 @@ describe('api client', () => {
         );
         globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-        await fetchFeedRecordsFromApi({ feedTab: 'latest' }, 'feed');
+        await fetchFeedRecordsFromApi({ ...baseDiscoveryState, feedTab: 'latest' }, 'feed');
 
         const url = String(
             (fetchMock.mock.calls as unknown as Array<[unknown]>)[0]?.[0],

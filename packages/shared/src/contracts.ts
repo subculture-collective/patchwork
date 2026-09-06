@@ -165,7 +165,7 @@ export interface ApiQueryDirectoryResponse {
 
 export interface ApiQueryErrorResponse {
     error: {
-        code: 'INVALID_QUERY' | 'UNSUPPORTED_ROUTE';
+        code: 'INVALID_QUERY' | 'UNSUPPORTED_ROUTE' | 'NOT_FOUND';
         message: string;
         details?: Record<string, unknown>;
     };

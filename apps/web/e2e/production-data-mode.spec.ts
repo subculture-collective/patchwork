@@ -343,21 +343,20 @@ test('map area selection is explicit, reversible, historical, and remembers styl
         '/map?tab=nearby&r=20000&lat=40.72&lng=-73.99&area=Disposable+test+area',
     );
     await expect(page.getByText('Area filter request')).toBeVisible();
-    await page.locator('.mh-map-circle').first().click({ force: true });
-    await expect(page.getByText('Filtered to this area')).toBeVisible();
-    await expect(page).toHaveURL(/r=1000/);
-    await expect(
-        page.getByRole('button', { name: 'Return to previous area' }),
-    ).toBeVisible();
-
+    await page.locator('.mh-map-circle').first().click();
+    // Selecting or zooming changes the viewport, never the active discovery query.
+    await expect(page).toHaveURL(/(?:\?|&)r=20000(?:&|$)/);
+    await expect(page.getByRole('region', { name: 'Details for Area filter request' })).toBeVisible();
+    await page.getByRole('button', { name: 'Search this area' }).click();
+    await expect(page).not.toHaveURL(/(?:\?|&)r=20000(?:&|$)/);
+    const searchedUrl = page.url();
     await page.goBack();
     await expect(page).toHaveURL(/(?:\?|&)r=20000(?:&|$)/);
-    await expect(page.getByText(/within 20 km/)).toBeVisible();
     await page.goForward();
-    await expect(page).toHaveURL(/r=1000/);
-    await expect(page.getByText('Filtered to this area')).toBeVisible();
+    await expect(page).toHaveURL(searchedUrl);
 
-    await page.getByRole('radio', { name: 'Outline' }).check({ force: true });
+    await page.locator('.mh-map-style-control label').filter({ hasText: 'Outline' }).click();
+    await expect(page.getByRole('radio', { name: 'Outline' })).toBeChecked();
     await expect(page.locator('.mh-map-style-outline')).toBeVisible();
     await page.reload();
     await expect(page.locator('.mh-map-style-outline')).toBeVisible();

@@ -227,7 +227,7 @@ const buildAidQueryParams = (
             DEFAULT_FEED_RADIUS_KM
         :   DEFAULT_NEARBY_RADIUS_KM;
 
-    const center = state.center;
+    const center = scope === 'map' || state.feedTab === 'nearby' ? state.center : undefined;
     const radiusKm =
         state.radiusMeters !== undefined ?
             toRadiusKm(state.radiusMeters)
@@ -574,6 +574,7 @@ const requestJsonPost = async (
     path: string,
     body: unknown,
     signal?: AbortSignal,
+    idempotencyKey?: string,
 ): Promise<ApiClientResult<unknown>> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
@@ -599,7 +600,7 @@ const requestJsonPost = async (
                 headers: {
                     'content-type': 'application/json',
                     accept: 'application/json',
-                    'idempotency-key': newIdempotencyKey(),
+                    'idempotency-key': idempotencyKey ?? newIdempotencyKey(),
                     ...csrfHeaders(),
                 },
                 body: JSON.stringify(body),
@@ -733,8 +734,9 @@ const parseAtAidPostResult = (
 export const createAtAidPostViaApi = async (
     record: AidPostRecord,
     signal?: AbortSignal,
+    idempotencyKey?: string,
 ): Promise<ApiClientResult<AtAidPostResult>> => {
-    const result = await requestJsonPost('/at/aid-posts', record, signal);
+    const result = await requestJsonPost('/at/aid-posts', record, signal, idempotencyKey);
     return result.ok ? parseAtAidPostResult(result.data) : result;
 };
 
@@ -2347,6 +2349,9 @@ export const fetchFeedRecordPageFromApi = async (
     );
     if (!result.ok) return result;
     const envelope = pageEnvelope(result.data, mapAidPayloadToRecords(result.data));
+    if ((scope === 'map' || state.feedTab === 'nearby') && envelope?.items.some(record => !record.card.location)) {
+        return invalidResponseFailure('Nearby discovery returned a request without an approximate location.');
+    }
     return envelope ? { ok: true, data: envelope }
         : invalidResponseFailure('Discovery response was malformed.');
 };
@@ -2663,11 +2668,13 @@ export const fetchCoordinationViaApi = async (
 export const createCoordinationOfferViaApi = async (
     input: { requestUri: string; note: string | null },
     signal?: AbortSignal,
+    idempotencyKey?: string,
 ): Promise<ApiClientResult<{ offer: CoordinationOffer }>> => {
     const result = await requestJsonPost(
         '/coordination/offers',
         input,
         signal,
+        idempotencyKey,
     );
     return result.ok ?
             parseRecordPayload(
@@ -3498,6 +3505,8 @@ export interface LifecycleQueryApiResult {
     validTransitions: string[];
     updatedAt: string;
     projectionReceipt?: ProjectionReceipt;
+    publicSyncState?: 'pending' | 'synced' | 'failed';
+    publicCid?: string;
 }
 
 export interface ProjectionReceipt {
@@ -3529,6 +3538,7 @@ const parseProjectionReceipt = (value: unknown): ProjectionReceipt | undefined =
 export const transitionAidPostViaApi = async (
     input: LifecycleTransitionApiInput,
     signal?: AbortSignal,
+    idempotencyKey?: string,
 ): Promise<ApiClientResult<LifecycleTransitionApiResult>> => {
     const body = {
         postUri: input.postUri,
@@ -3541,6 +3551,7 @@ export const transitionAidPostViaApi = async (
         '/aid/post/transition',
         body,
         signal,
+        idempotencyKey,
     );
 
     if (!result.ok) {
@@ -3612,7 +3623,7 @@ export const createAidPostViaApi = async (
         updatedAt: now,
     });
 
-    const result = await createAtAidPostViaApi(record, signal);
+    const result = await createAtAidPostViaApi(record, signal, input.rkey);
     if (!result.ok) {
         return result;
     }
@@ -3766,4 +3777,12 @@ export const applyModerationPolicyViaApi = async (input: {
                 'Moderation action response was malformed.',
             )
         :   result;
+};
+
+export const fetchAidPostViaApi = async (uri: string, signal?: AbortSignal): Promise<ApiClientResult<FeedRecordEnvelope>> => {
+    const result = await requestJson('/query/aid-post', new URLSearchParams({ uri }), signal);
+    if (!result.ok) return result;
+    const records = isRecord(result.data) ? mapAidPayloadToRecords(result.data) : undefined;
+    if (!records?.[0]) return invalidResponseFailure('Request details were unavailable.');
+    return { ok: true, data: records[0] };
 };

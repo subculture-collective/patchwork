@@ -9,6 +9,22 @@ const describePostgres = databaseUrl ? describe : describe.skip;
 describePostgres('PostgresProjectionQueryService', () => {
     const pool = new Pool({ connectionString: databaseUrl });
 
+    it('returns public request details without private lifecycle state and respects blocks', async () => {
+        const service = new PostgresProjectionQueryService(pool);
+        const uri = `at://did:plc:alice/${recordNsid.aidPost}/a`;
+        const result = await service.queryAidPost(new URLSearchParams({ uri }));
+        expect(result.statusCode).toBe(200);
+        expect(result.body).toMatchObject({ total: 1, results: [{ uri, title: 'Food support' }] });
+        expect(JSON.stringify(result.body)).not.toMatch(/validTransitions|assignment|handoff|timeline/);
+        const missing = await service.queryAidPost(new URLSearchParams({ uri: `${uri}-missing` }));
+        expect(missing.statusCode).toBe(404);
+        const invalid = await service.queryAidPost(new URLSearchParams({ uri: 'not-a-request' }));
+        expect(invalid.statusCode).toBe(400);
+        await pool.query(`INSERT INTO user_blocks (command_id, blocker_did, subject_did, created_at)
+            VALUES ('detail-block', 'did:plc:viewer', 'did:plc:alice', NOW())`);
+        expect((await service.queryAidPost(new URLSearchParams({ uri }), 'did:plc:viewer')).statusCode).toBe(404);
+    });
+
     beforeAll(async () => {
         const schema = await pool.query<{
             aid_table: string | null;

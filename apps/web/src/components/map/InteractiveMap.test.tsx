@@ -312,7 +312,7 @@ describe('InteractiveMap', () => {
         const container = document.createElement('div');
         document.body.appendChild(container);
         const root = createRoot(container);
-        const onFocusArea = vi.fn();
+        const onSelectResource = vi.fn();
 
         await act(async () => {
             root.render(
@@ -335,7 +335,7 @@ describe('InteractiveMap', () => {
                     }]}
                     center={{ lat: 40.7, lng: -74 }}
                     onSelectPostId={vi.fn()}
-                    onFocusArea={onFocusArea}
+                    onSelectResource={onSelectResource}
                     onTilesFailed={vi.fn()}
                 />,
             );
@@ -346,11 +346,7 @@ describe('InteractiveMap', () => {
             expect.objectContaining({ className: 'mh-map-place' }),
         );
         (leafletMock.placeOn.mock.calls as unknown as Array<[string, () => void]>)[0]?.[1]?.();
-        expect(onFocusArea).toHaveBeenCalledWith({
-            center: { lat: 40.7128, lng: -74.006 },
-            radiusMeters: 1000,
-            label: 'Public Clinic',
-        });
+        expect(onSelectResource).toHaveBeenCalledWith('at://did:example:org/app.patchwork.directory.resource/clinic');
         await act(async () => root.unmount());
     });
 
@@ -386,9 +382,7 @@ describe('InteractiveMap', () => {
         });
 
         expect(leafletMock.circleMarker).not.toHaveBeenCalled();
-        expect(container.textContent).toContain(
-            'No aid requests or approved public places',
-        );
+        expect(leafletMock.circle).toHaveBeenCalledWith([40.7, -74], expect.objectContaining({ radius: 1000 }));
         await act(async () => root.unmount());
     });
 
