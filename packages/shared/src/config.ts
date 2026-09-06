@@ -153,28 +153,19 @@ const apiSchemaWithRefinements = apiSchema.superRefine((value, context) => {
             message: 'ATTACHMENT_SIGNING_KEY must be at least 32 characters.',
         });
     }
-    const notificationFields = [
-        'NOTIFICATION_EMAIL_PROVIDER_URL',
-        'NOTIFICATION_EMAIL_PROVIDER_TOKEN',
-        'NOTIFICATION_EMAIL_FROM',
-        'NOTIFICATION_VAPID_SUBJECT',
-        'NOTIFICATION_VAPID_PUBLIC_KEY',
-        'NOTIFICATION_VAPID_PRIVATE_KEY',
-        'NOTIFICATION_PROVIDER_WEBHOOK_TOKEN',
+    const notificationChannels = [
+        ['NOTIFICATION_EMAIL_PROVIDER_URL', 'NOTIFICATION_EMAIL_PROVIDER_TOKEN', 'NOTIFICATION_EMAIL_FROM', 'NOTIFICATION_PROVIDER_WEBHOOK_TOKEN'],
+        ['NOTIFICATION_VAPID_SUBJECT', 'NOTIFICATION_VAPID_PUBLIC_KEY', 'NOTIFICATION_VAPID_PRIVATE_KEY'],
     ] as const;
-    const configuredNotifications = notificationFields.filter(field =>
-        Boolean(value[field]),
-    );
-    if (
-        configuredNotifications.length > 0 &&
-        configuredNotifications.length !== notificationFields.length
-    ) {
-        context.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ['NOTIFICATION_EMAIL_PROVIDER_URL'],
-            message:
-                'All email, Web Push, and provider-feedback notification fields are required together.',
-        });
+    for (const fields of notificationChannels) {
+        const configured = fields.filter(field => Boolean(value[field]));
+        if (configured.length > 0 && configured.length !== fields.length) {
+            context.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: [fields[0]],
+                message: `Enabled notification channel requires ${fields.filter(field => !value[field]).join(', ')}.`,
+            });
+        }
     }
 });
 
