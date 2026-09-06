@@ -1,0 +1,35 @@
+{
+  "sourceSha": "22662707af8df2a5ff7bc2c3841c084093928f1b",
+  "origin": "https://patchwork.subcult.tv",
+  "queries": {
+    "requests": {
+      "total": 526,
+      "returned": 20
+    },
+    "resources": {
+      "total": 265,
+      "returned": 20
+    },
+    "organizations": {
+      "total": 259,
+      "returned": 259
+    },
+    "kenosha": {
+      "total": 16,
+      "returned": 16
+    },
+    "rensselaer": {
+      "total": 8,
+      "returned": 8
+    },
+    "dekalb": {
+      "total": 8,
+      "returned": 8
+    }
+  },
+  "assets": {
+    "/assets/index-C_nvFWkA.js": "14f68784cc904494f14c8d878f2652c111071ce16befba90a32fb80dec01cf04",
+    "/assets/index-ZgdPMEm4.css": "8573b5661d796b422d41768ba949202e7e81f9aed938e5986dfc0981662059a5"
+  },
+  "ready": "ok"
+}

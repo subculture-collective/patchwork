@@ -1,0 +1,14 @@
+[
+  {
+    "route": "/organizations",
+    "fictionalOrganizationsVisible": true,
+    "errors": [],
+    "overflow": false
+  },
+  {
+    "route": "/resources",
+    "fictionalOrganizationsVisible": true,
+    "errors": [],
+    "overflow": false
+  }
+]

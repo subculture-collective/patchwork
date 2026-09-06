@@ -89,7 +89,7 @@ test('showcase origin is visible and stale retained results are disclosed', asyn
     });
 
     await page.goto('/feed');
-    await expect(page.getByText('Synthetic showcase')).toBeVisible();
+    await expect(page.getByText('Fictional listing')).toBeVisible();
     await page.getByLabel('Search text').fill('grocery');
     await expect(page.getByRole('alert')).toContainText(
         'Showing previously loaded results; they may be stale.',

@@ -1,0 +1,13 @@
+{
+  "sourceSha": "22662707af8df2a5ff7bc2c3841c084093928f1b",
+  "builtAt": "2026-09-06T21:06:03.602921+00:00",
+  "purpose": "integrated-fictional-chicagoland",
+  "publicOrigin": "https://patchwork.subcult.tv",
+  "images": {
+    "api": "127.0.0.1:5000/subculture-collective/patchwork-public-api@sha256:2c8a8a32e43498bc92c7320eb473f64de74466aabe30d6574a5f648d48d09478",
+    "indexer": "127.0.0.1:5000/subculture-collective/patchwork-public-indexer@sha256:057e5dca341cd755cfc3c00c5111e274fcff660a9727821f725e6b10394b292f",
+    "moderation": "127.0.0.1:5000/subculture-collective/patchwork-public-moderation@sha256:2b4cd6c7bebe050af517886978a00304913ea35abfd626dd198ba341b633822d",
+    "web": "127.0.0.1:5000/subculture-collective/patchwork-public-web@sha256:14c3a44902c6b8517492608f4d7da37b43ffb85147cbc15286ce0f1d11bccb76"
+  },
+  "tileSha256": "9a7697125792ba1aa267fca4fa8751172ddd9347e00e9462beb727edf9bbde82"
+}

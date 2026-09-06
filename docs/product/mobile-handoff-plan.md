@@ -180,3 +180,9 @@ implementation-plus-verification checkboxes above complete while their gates rem
 to https://patchwork.subcult.tv, preserving its existing data and OAuth settings.
 See [public promotion evidence](../operations/evidence/public-promotion-2026-09-06.md).
 The protected candidate remains available; open qualification gates are unchanged.
+
+2026-09-06 user-directed scope change: remove the separate examples UI and integrate
+obviously fictional seed data in ordinary discovery. This supersedes the dataset
+separation requirement above; synthetic provenance and mutation/contact guards remain.
+Public release `2266270` includes the expanded 64-locality seed. See
+[integrated Chicagoland seed evidence](../operations/evidence/chicagoland-integrated-seed-2026-09-06.md).
