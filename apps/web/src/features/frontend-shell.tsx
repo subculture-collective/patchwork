@@ -1716,7 +1716,7 @@ const FeedRoute = ({
                                 >
                                     <div className='flex flex-wrap items-start justify-between gap-2'>
                                         <p className='text-base font-bold text-mh-text'>
-                                            {record ? <a className='underline' href={`/requests/view?uri=${encodeURIComponent(record.aidPostUri)}&dataset=${record.recordOrigin === 'synthetic' ? 'demo' : 'community'}`}>{card.title}</a> : card.title}
+                                            {record ? <a className='underline' href={`/requests/view?uri=${encodeURIComponent(record.aidPostUri)}`}>{card.title}</a> : card.title}
                                         </p>
                                         <div className='flex flex-wrap gap-2'>
                                             {presentation ? (
@@ -3038,7 +3038,7 @@ const ResourceRoute = ({
     useEffect(() => {
         const controller = new AbortController();
         setSelectedResource(undefined); setDetailError(false);
-        if (selectedUri) void fetchResourceViaApi(selectedUri, controller.signal, discoveryState.dataset ?? 'community').then(result => {
+        if (selectedUri) void fetchResourceViaApi(selectedUri, controller.signal, 'all').then(result => {
             if (controller.signal.aborted) return;
             if (result.ok) setSelectedResource(result.data);
             else setDetailError(true);
@@ -9642,7 +9642,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
             const next = applyDiscoveryFilterPatch(current, patch);
             if (typeof window !== 'undefined') {
                 const params = new URLSearchParams(serializeDiscoveryFilterState(next));
-                if ((next.dataset ?? 'community') === (current.dataset ?? 'community')) {
+                {
                     const context = new URLSearchParams(window.location.search);
                     for (const key of ['uri', 'resource']) { const value = context.get(key); if (value) params.set(key, value); }
                 }
@@ -10278,15 +10278,6 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                     tabIndex={-1}
                     className='focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-mh-accent'
                 >
-                    {currentRoute === '/map' || currentRoute === '/feed' || currentRoute === '/resources' ? (
-                        <div className='mb-4 flex flex-wrap items-center gap-2' role='group' aria-label={t('nav.dataset')}>
-                            {(['community', 'demo'] as const).map(dataset => <Button key={dataset}
-                                variant={(discoveryState.dataset ?? 'community') === dataset ? 'primary' : 'neutral'}
-                                aria-pressed={(discoveryState.dataset ?? 'community') === dataset}
-                                onClick={() => patchDiscoveryState({ dataset })}>{t(`nav.dataset_${dataset}`)}</Button>)}
-                            {discoveryState.dataset === 'demo' && <p className='text-sm'>{t('nav.demoHelp')}</p>}
-                        </div>
-                    ) : null}
                     {currentRoute === '/map' || currentRoute === '/feed' ? (
                         <nav aria-label={t('nav.nearbyView')} className='mb-4 flex gap-2'>
                             {(['/feed', '/map'] as const).map(route => (

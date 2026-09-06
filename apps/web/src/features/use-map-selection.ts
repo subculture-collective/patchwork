@@ -8,14 +8,14 @@ const read = (): Selection => {
     const params = new URLSearchParams(window.location.search);
     return params.get('uri') ? { uri: params.get('uri')! } : { resource: params.get('resource') ?? undefined };
 };
-export const useMapSelection = (requests: readonly FeedRecordEnvelope[], resources: readonly ResourceDirectoryCard[], dataset: 'community' | 'demo') => {
+export const useMapSelection = (requests: readonly FeedRecordEnvelope[], resources: readonly ResourceDirectoryCard[], dataset: 'all' | 'community' | 'demo') => {
     const [selection, setSelection] = useState(read);
     const [linkedRequest, setLinkedRequest] = useState<FeedRecordEnvelope>();
     const [linkedResource, setLinkedResource] = useState<ResourceDetail>();
     const [error, setError] = useState<string>();
     const [loading, setLoading] = useState(false);
     const [reload, setReload] = useState(0);
-    const inDataset = (origin?: string) => (origin === 'synthetic' ? 'demo' : 'community') === dataset;
+    const inDataset = (origin?: string) => dataset === 'all' || (origin === 'synthetic' ? 'demo' : 'community') === dataset;
     const localRequest = requests.find(record => record.aidPostUri === selection.uri && inDataset(record.recordOrigin));
     const localResource = resources.find(record => record.uri === selection.resource && inDataset(record.recordOrigin));
     useEffect(() => setSelection(read()), [dataset]);

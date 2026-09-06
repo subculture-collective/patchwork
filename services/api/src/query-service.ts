@@ -345,7 +345,7 @@ export class PostgresProjectionQueryService {
         if (!uri || !/^at:\/\/did:[^/]+\/app\.patchwork\.aid\.post\/[^/]+$/.test(uri)) {
             return { statusCode: 400, body: { error: { code: 'INVALID_QUERY', message: 'A request URI is required.' } } };
         }
-        const result = await queryProjected(this.pool, new URLSearchParams({ dataset: params.get('dataset') ?? 'community' }), 'feed', viewerDid, uri);
+        const result = await queryProjected(this.pool, new URLSearchParams({ dataset: params.get('dataset') ?? 'all' }), 'feed', viewerDid, uri);
         if ('error' in result.body) return result;
         if (!result.body.results.length) return { statusCode: 404, body: { error: { code: 'NOT_FOUND', message: 'This request is unavailable.' } } };
         return result;
@@ -370,7 +370,7 @@ export class PostgresProjectionQueryService {
         if (!uri || !/^at:\/\/did:[^/]+\/app\.patchwork\.directory\.resource\/[^/]+$/.test(uri)) {
             return { statusCode: 400, body: { error: { code: 'INVALID_QUERY', message: 'A resource URI is required.' } } };
         }
-        const result = await this.queryDirectory(new URLSearchParams({ dataset: params.get('dataset') ?? 'community' }), uri);
+        const result = await this.queryDirectory(new URLSearchParams({ dataset: params.get('dataset') ?? 'all' }), uri);
         if ('error' in result.body) return result;
         if (!result.body.results.length) return { statusCode: 404, body: { error: { code: 'NOT_FOUND', message: 'This resource is unavailable.' } } };
         return result;
@@ -462,7 +462,7 @@ export class PostgresProjectionQueryService {
             const [result, stateResult] = await Promise.all([
                 this.pool.query<{ rows: VolunteerProjectionQueryRow[]; total: string }>(`WITH filtered AS MATERIALIZED (
                     SELECT p.* FROM indexer_volunteer_profile_projections p
-                    WHERE (record_origin = 'synthetic') = $1
+                    WHERE ($1::boolean IS NULL OR (record_origin = 'synthetic') = $1)
                         AND ($2::text IS NULL OR capabilities ? $2::text)
                         AND ($3::text IS NULL OR languages ? $3::text)
                         AND ($4::text IS NULL OR availability = $4)
@@ -472,7 +472,7 @@ export class PostgresProjectionQueryService {
                             AND ((b.blocker_did = $6 AND b.subject_did = split_part(p.uri, '/', 3)) OR (b.subject_did = $6 AND b.blocker_did = split_part(p.uri, '/', 3))))
                     ), paged AS (SELECT * FROM filtered ORDER BY record_updated_at DESC, uri COLLATE "C" LIMIT $7 OFFSET $8)
                     SELECT (SELECT count(*)::text FROM filtered) AS total, coalesce((SELECT jsonb_agg(to_jsonb(paged)) FROM paged), '[]'::jsonb) AS rows`,
-                    [dataset === 'demo', input.capability ?? null, input.language ?? null, input.availability ?? null, input.searchText?.toLowerCase() ?? null, viewerDid ?? null, input.pageSize, start]),
+                    [dataset === 'all' ? null : dataset === 'demo', input.capability ?? null, input.language ?? null, input.availability ?? null, input.searchText?.toLowerCase() ?? null, viewerDid ?? null, input.pageSize, start]),
                 this.pool.query<ProjectionStateRow>('SELECT latest_cursor, heartbeat_at FROM indexer_projection_state WHERE singleton = TRUE'),
             ]);
             const total = Number(result.rows[0]?.total ?? 0);

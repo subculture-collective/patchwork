@@ -12,7 +12,7 @@ test('map deep links load outside the result page and restore selection through 
         const url = new URL(route.request().url());
         if (url.pathname.endsWith('/query/aid-post')) {
             expect(url.searchParams.get('uri')).toBe(uri);
-            expect(url.searchParams.get('dataset')).toBe('community');
+            expect(url.searchParams.get('dataset')).toBe('all');
             return route.fulfill({ json: pageResult([request]) });
         }
         if (url.pathname.endsWith('/query/map') || url.pathname.endsWith('/query/directory')) return route.fulfill({ json: pageResult([]) });
@@ -30,7 +30,7 @@ test('map deep links load outside the result page and restore selection through 
     await expect(detail).toBeVisible();
 });
 
-test('dataset controls request the selected dataset and preserve it between list and map', async ({ page }) => {
+test('integrated discovery removes the examples switch and normalizes legacy dataset links', async ({ page }) => {
     const datasets: string[] = [];
     await page.route('**/api/**', route => {
         const url = new URL(route.request().url());
@@ -38,11 +38,11 @@ test('dataset controls request the selected dataset and preserve it between list
         if (url.pathname.includes('/query/')) return route.fulfill({ json: pageResult([]) });
         return route.fulfill({ status: 401, json: { error: { code: 'AUTHENTICATION_REQUIRED', message: 'Sign in.' } } });
     });
-    await page.goto('/nearby?view=list&lat=41.88&lng=-87.63&r=20000');
-    await expect.poll(() => datasets.includes('community')).toBe(true);
-    await page.getByRole('button', { name: 'Explore examples', exact: true }).click();
-    await expect.poll(() => datasets.includes('demo')).toBe(true);
+    await page.goto('/nearby?view=list&dataset=demo&lat=41.88&lng=-87.63&r=20000');
+    await expect.poll(() => datasets.includes('all')).toBe(true);
+    await expect(page.getByRole('button', { name: 'Explore examples', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Community', exact: true })).toHaveCount(0);
     await page.getByRole('navigation', { name: 'Nearby view' }).getByRole('link', { name: 'Map', exact: true }).click();
-    expect(new URL(page.url()).searchParams.get('dataset')).toBe('demo');
-    await expect(page.getByRole('button', { name: 'Explore examples', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    expect(new URL(page.url()).searchParams.has('dataset')).toBe(false);
+    expect(datasets.every(dataset => dataset === 'all')).toBe(true);
 });

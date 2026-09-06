@@ -3,7 +3,7 @@ import type { Pool, QueryResultRow } from 'pg';
 import { computeDiscoveryRank, validateAidFeedQueryInput, validateAidQueryInput, validateDirectoryQueryInput, type ApiQueryAidResponse, type ApiQueryDirectoryResponse, type DiscoveryMapAggregates } from '@patchwork/shared';
 import type { ApiRouteResult } from './query-service.js';
 
-export const discoveryDataset = (params: URLSearchParams) => z.enum(['community', 'demo']).parse(params.get('dataset') ?? 'community');
+export const discoveryDataset = (params: URLSearchParams) => z.enum(['all', 'community', 'demo']).parse(params.get('dataset') ?? 'all');
 const number = (params: URLSearchParams, key: string) => params.has(key) && params.get(key)!.trim() ? Number(params.get(key)) : undefined;
 const queryInput = (params: URLSearchParams) => ({
     latitude: number(params, 'latitude'), longitude: number(params, 'longitude'), radiusKm: number(params, 'radiusKm'),
@@ -24,7 +24,7 @@ export async function readProjectionPage<T extends QueryResultRow>(pool: Pool, p
     const bind = (value: unknown) => { values.push(value); return `$${values.length}`; };
     const now = new Date().toISOString();
     const nowParam = bind(now);
-    const where = [`p.record_origin ${dataset === 'demo' ? '=' : '<>'} 'synthetic'`];
+    const where = [dataset === 'all' ? 'TRUE' : `p.record_origin ${dataset === 'demo' ? '=' : '<>'} 'synthetic'`];
     if (uri) where.push(`p.uri = ${bind(uri)}`);
     if (input.category) where.push(`p.category = ${bind(input.category)}`);
     if (input.status) where.push(`p.${kind === 'directory' ? 'verification_status' : 'status'} = ${bind(input.status)}`);

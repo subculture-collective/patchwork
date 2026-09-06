@@ -120,7 +120,7 @@ export const MapRoute = ({
         ),
     });
     const [viewport, setViewport] = useState<{ center: { lat: number; lng: number }; radiusMeters: number }>();
-    const selection = useMapSelection(feedRecords, resourceCards, discoveryState.dataset ?? 'community');
+    const selection = useMapSelection(feedRecords, resourceCards, 'all');
     const selectedRecord = selection.request;
     const selectedResource = selection.resource;
     const selectedPostId = selectedRecord?.card.id;
@@ -445,7 +445,7 @@ export const MapRoute = ({
                         ) : null}
                         {selectedRecord.recordOrigin === 'synthetic' && <Badge tone='info'>{t('feed.synthetic')}</Badge>}
                     </div>
-                    <a className='mh-button inline-flex px-3 py-2' href={`/requests/view?uri=${encodeURIComponent(selectedRecord.aidPostUri)}&dataset=${selectedRecord.recordOrigin === 'synthetic' ? 'demo' : 'community'}`}>{t('handoff.requestDetails')}</a>
+                    <a className='mh-button inline-flex px-3 py-2' href={`/requests/view?uri=${encodeURIComponent(selectedRecord.aidPostUri)}`}>{t('handoff.requestDetails')}</a>
                     {!fixtureMode && <RequestLifecycleActions record={selectedRecord} onRefresh={onRetry} />}
                     <div className='mt-4 flex flex-wrap gap-2'>
                         {drawer.actions

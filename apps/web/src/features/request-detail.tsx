@@ -23,7 +23,7 @@ export function RequestDetail() {
     useEffect(() => {
         const controller = new AbortController();
         setError('');
-        void fetchAidPostViaApi(uri, controller.signal, new URLSearchParams(window.location.search).get('dataset') === 'demo' ? 'demo' : 'community').then(result => {
+        void fetchAidPostViaApi(uri, controller.signal).then(result => {
             if (controller.signal.aborted) return;
             if (result.ok) setRecord(result.data);
             else setError(t('handoff.requestUnavailable'));

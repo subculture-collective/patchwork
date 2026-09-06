@@ -239,7 +239,7 @@ const buildAidQueryParams = (
     const params = new URLSearchParams({
         page: String(page),
         pageSize: String(DEFAULT_DISCOVERY_PAGE_SIZE),
-        dataset: state.dataset ?? 'community',
+        dataset: 'all',
     });
     if (center) {
         params.set('latitude', center.lat.toFixed(6));
@@ -285,7 +285,7 @@ const buildDirectoryQueryParams = (
     const params = new URLSearchParams({
         page: String(page),
         pageSize: String(DEFAULT_DISCOVERY_PAGE_SIZE),
-        dataset: state.dataset ?? 'community',
+        dataset: 'all',
     });
     if (center) {
         params.set('latitude', center.lat.toFixed(6));
@@ -3808,7 +3808,7 @@ export const applyModerationPolicyViaApi = async (input: {
         :   result;
 };
 
-export const fetchAidPostViaApi = async (uri: string, signal?: AbortSignal, dataset: 'community' | 'demo' = 'community'): Promise<ApiClientResult<FeedRecordEnvelope>> => {
+export const fetchAidPostViaApi = async (uri: string, signal?: AbortSignal, dataset: 'all' | 'community' | 'demo' = 'all'): Promise<ApiClientResult<FeedRecordEnvelope>> => {
     const result = await requestJson('/query/aid-post', new URLSearchParams({ uri, dataset }), signal);
     if (!result.ok) return result;
     const records = isRecord(result.data) ? mapAidPayloadToRecords(result.data) : undefined;
@@ -3840,7 +3840,7 @@ export async function fetchAccountRequestsViaApi(page = 1, signal?: AbortSignal)
         pageSize: 20, total: data.total as number, hasNextPage: data.hasNextPage } };
 }
 
-export async function fetchResourceViaApi(uri: string, signal?: AbortSignal, dataset: 'community' | 'demo' = 'community'): Promise<ApiClientResult<ResourceDetail>> {
+export async function fetchResourceViaApi(uri: string, signal?: AbortSignal, dataset: 'all' | 'community' | 'demo' = 'all'): Promise<ApiClientResult<ResourceDetail>> {
     const result = await requestJson('/query/directory-resource', new URLSearchParams({ uri, dataset }), signal);
     if (!result.ok) return result;
     const cards = isRecord(result.data) ? mapDirectoryPayloadToDetails(result.data) : [];

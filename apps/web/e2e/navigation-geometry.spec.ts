@@ -137,10 +137,10 @@ test('legacy discovery aliases canonicalize without trapping browser Back', asyn
     await page.goto('/');
     await page.goto('/map?dataset=demo&category=food&lat=41.85&lng=-87.93&r=20000');
     await expect(page).toHaveURL(/\/nearby\?.*view=map/);
-    expect(new URL(page.url()).searchParams.get('dataset')).toBe('demo');
+    expect(new URL(page.url()).searchParams.get('dataset')).toBe(null);
     await page.getByRole('navigation', { name: 'Nearby view' }).getByRole('link', { name: 'List', exact: true }).click();
     await expect(page).toHaveURL(/view=list/);
-    expect(new URL(page.url()).searchParams.get('dataset')).toBe('demo');
+    expect(new URL(page.url()).searchParams.get('dataset')).toBe(null);
     await page.goBack();
     await expect(page).toHaveURL(/view=map/);
     await page.goBack();
@@ -153,12 +153,12 @@ test('activity aliases retain the selected connection', async ({ page }) => {
     expect(new URL(page.url()).searchParams.get('connection')).toBe('handoff-target');
 });
 
-test('map filter changes retain dataset and can be undone through Back', async ({ page }) => {
+test('map filter changes discard legacy dataset and can be undone through Back', async ({ page }) => {
     await page.goto('/nearby?view=map&dataset=demo&lat=41.85&lng=-87.93&r=20000');
     await page.locator('summary').filter({ hasText: 'Location and filters' }).click();
     const before = page.url();
     await page.getByRole('button', { name: 'Food', exact: true }).click();
-    expect(new URL(page.url()).searchParams.get('dataset')).toBe('demo');
+    expect(new URL(page.url()).searchParams.get('dataset')).toBe(null);
     expect(page.url()).not.toBe(before);
     await page.goBack();
     await expect(page).toHaveURL(before);

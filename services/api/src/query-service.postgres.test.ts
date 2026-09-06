@@ -40,19 +40,22 @@ describePostgres('PostgresProjectionQueryService', () => {
         expect((await service.queryAidPost(new URLSearchParams({ uri }), 'did:plc:viewer')).statusCode).toBe(404);
     });
 
-    it('separates community and demo before pagination, direct lookup, and counts', async () => {
+    it('includes fictional and community records by default while retaining explicit API filters', async () => {
         const service = new PostgresProjectionQueryService(pool);
         const uri = `at://did:plc:alice/${recordNsid.aidPost}/a`;
         await pool.query("UPDATE indexer_aid_post_projections SET record_origin = 'synthetic', seed_version = 'candidate-test-v1' WHERE uri = $1", [uri]);
-        expect(await service.queryFeed(new URLSearchParams({ pageSize: '1' }))).toMatchObject({ body: { total: 2, hasNextPage: true, results: [expect.objectContaining({ recordOrigin: 'visitor-created' })] } });
+        expect(await service.queryFeed(new URLSearchParams({ pageSize: '1' }))).toMatchObject({ body: { total: 3, hasNextPage: true, results: [expect.objectContaining({ recordOrigin: 'synthetic' })] } });
+        expect(await service.queryFeed(new URLSearchParams({ dataset: 'community' }))).toMatchObject({ body: { total: 2 } });
         expect(await service.queryFeed(new URLSearchParams({ dataset: 'demo' }))).toMatchObject({ body: { total: 1, results: [{ uri, recordOrigin: 'synthetic' }] } });
-        expect((await service.queryAidPost(new URLSearchParams({ uri }))).statusCode).toBe(404);
-        expect((await service.queryAidPost(new URLSearchParams({ uri, dataset: 'demo' }))).statusCode).toBe(200);
-        expect(await service.queryFeed(new URLSearchParams({ page: '999' }))).toMatchObject({ body: { total: 2, results: [], hasNextPage: false } });
-        expect((await service.queryFeed(new URLSearchParams({ dataset: 'all' }))).statusCode).toBe(400);
+        expect((await service.queryAidPost(new URLSearchParams({ uri }))).statusCode).toBe(200);
+        expect((await service.queryAidPost(new URLSearchParams({ uri, dataset: 'community' }))).statusCode).toBe(404);
+        expect(await service.queryFeed(new URLSearchParams({ page: '999' }))).toMatchObject({ body: { total: 3, results: [], hasNextPage: false } });
+        expect((await service.queryFeed(new URLSearchParams({ dataset: 'invalid' }))).statusCode).toBe(400);
         await pool.query("UPDATE indexer_directory_resource_projections SET record_origin = 'synthetic', seed_version = 'candidate-test-v1' WHERE category = 'food-bank'");
-        expect(await service.queryDirectory(new URLSearchParams())).toMatchObject({ body: { total: 1, results: [{ name: 'Regional Legal Line' }] } });
+        expect(await service.queryDirectory(new URLSearchParams())).toMatchObject({ body: { total: 2 } });
         expect(await service.queryDirectory(new URLSearchParams({ dataset: 'demo' }))).toMatchObject({ body: { total: 1, results: [{ name: 'Northside Community Pantry' }] } });
+        const map = await service.queryMap(new URLSearchParams({ latitude: '41.88', longitude: '-87.63', radiusKm: '50' }));
+        expect(map).toMatchObject({ body: { total: 3 } });
     });
 
     it('keeps bounded pages stable across equal timestamps and handles dateline searches', async () => {

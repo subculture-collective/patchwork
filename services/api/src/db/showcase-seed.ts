@@ -1,3 +1,4 @@
+import { seedRegionalFiction, regionalManifest } from './chicagoland-seed.js';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
@@ -167,7 +168,7 @@ const metadata: ReadonlyArray<readonly [string, string, 'synthetic' | 'sourced-p
 ];
 
 const manifestSha256 = createHash('sha256')
-    .update(JSON.stringify(metadata))
+    .update(JSON.stringify({ metadata, regionalManifest }))
     .digest('hex');
 
 export interface ShowcaseSeedResult {
@@ -793,11 +794,15 @@ export const seedBuyerReadyShowcase = async (
                 metadata.length,
             ],
         );
+        const regionalRecords = await seedRegionalFiction(client);
+        // Make the earlier small seed equally obvious in the integrated discovery list.
+        await client.query(`UPDATE indexer_aid_post_projections SET title = 'Milo Makebelieve: ' || title, searchable_text = 'milo makebelieve ' || searchable_text
+            WHERE seed_version = $1 AND record_origin = 'synthetic' AND title NOT LIKE 'Milo Makebelieve:%'`, [SHOWCASE_SEED_VERSION]);
         await client.query('COMMIT');
         return {
             seedVersion: SHOWCASE_SEED_VERSION,
             manifestSha256,
-            metadataRecords: metadata.length,
+            metadataRecords: metadata.length + regionalRecords,
         };
     } catch (error) {
         await client.query('ROLLBACK');

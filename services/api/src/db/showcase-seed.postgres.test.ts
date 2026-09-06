@@ -1,3 +1,4 @@
+import { REGIONAL_SEED_VERSION, regionalAreas } from './chicagoland-seed.js';
 import { Pool } from 'pg';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { AccountPrivacyService } from '../account-privacy-service.js';
@@ -51,7 +52,7 @@ describePostgres('buyer-ready showcase seed', () => {
         expect(replay).toEqual(first);
         expect(first).toMatchObject({
             seedVersion: SHOWCASE_SEED_VERSION,
-            metadataRecords: 41,
+            metadataRecords: 1065,
         });
         const counts = await pool.query<{
             origin: string;
@@ -152,6 +153,23 @@ describePostgres('buyer-ready showcase seed', () => {
                 ),
             }),
         ]);
+    });
+
+    it('seeds hundreds of clearly fictional requests and organizations across all regional areas', async () => {
+        await seedBuyerReadyShowcase(pool);
+        const posts = await pool.query(`SELECT title, description, latitude, longitude, precision_km FROM indexer_aid_post_projections WHERE seed_version=$1`, [REGIONAL_SEED_VERSION]);
+        expect(posts.rows).toHaveLength(512);
+        expect(posts.rows.every(row => /Makebelieve|Talltale|Notreal|Fiction|Pretend|Daydream|Whatif|Rainbow/.test(row.title) && row.description.includes('fictional neighbor') && row.precision_km === 5)).toBe(true);
+        for (const [city,county,state] of regionalAreas) {
+            expect(posts.rows.filter(row => row.description.includes(`${city} · ${county} County, ${state}`))).toHaveLength(8);
+        }
+        const orgs = await pool.query(`SELECT o.name,o.description,o.origin FROM organizations o JOIN showcase_record_metadata m ON m.entity_type='organization' AND m.entity_key=o.organization_id::text WHERE m.seed_version=$1`, [REGIONAL_SEED_VERSION]);
+        expect(orgs.rows).toHaveLength(256);
+        expect(orgs.rows.every(row => /Imaginary|Makebelieve|Pretend|Fictional/.test(row.name) && row.origin === 'synthetic')).toBe(true);
+        const resources = await pool.query(`SELECT name,contact,verification_status,precision_km FROM indexer_directory_resource_projections WHERE seed_version=$1`, [REGIONAL_SEED_VERSION]);
+        expect(resources.rows).toHaveLength(256);
+        expect(resources.rows.every(row => new URL(row.contact.url).hostname === 'showcase.invalid' && row.verification_status === 'unverified' && row.precision_km === 5)).toBe(true);
+        expect(new Set(regionalAreas.map(([,county,state]) => `${county},${state}`)).size).toBe(14);
     });
 
     it('keeps origin immutable and refuses an untagged reserved-key collision', async () => {
