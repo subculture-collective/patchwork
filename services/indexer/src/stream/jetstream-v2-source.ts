@@ -83,6 +83,7 @@ export const toAtEvent = (event: JetstreamCommitEvent): unknown => {
 
 export class JetstreamV2EventSource implements AtEventSource {
     private metrics = initialMetrics();
+    private lastEventTimeMs: number | null = null;
     private abort: AbortController | null = null;
     private task: Promise<void> | null = null;
     private readonly relevantDids: Set<string>;
@@ -103,6 +104,7 @@ export class JetstreamV2EventSource implements AtEventSource {
             throw new Error('Jetstream v2 source is already running.');
         this.abort = new AbortController();
         this.metrics = initialMetrics();
+        this.lastEventTimeMs = null;
         this.metrics.lastAcknowledgedCursor = cursor;
         const clientOptions: JetstreamOpts = {
             service: sdkServiceUrl(this.options.service),
@@ -149,7 +151,7 @@ export class JetstreamV2EventSource implements AtEventSource {
     }
 
     getMetrics(): EventSourceMetrics {
-        return { ...this.metrics };
+        return { ...this.metrics, lagMilliseconds: this.lastEventTimeMs === null ? null : Math.max(0, Date.now() - this.lastEventTimeMs) };
     }
 
     private async consume(
@@ -184,6 +186,7 @@ export class JetstreamV2EventSource implements AtEventSource {
                 }
                 await onControlCursor?.(event.seq);
             }
+            this.lastEventTimeMs = new Date(event.time).getTime();
             this.metrics.lastAcknowledgedCursor = event.seq;
             this.metrics.lagMilliseconds = Math.max(
                 0,

@@ -548,11 +548,11 @@ export class PostgresProjectionStore {
         }
     }
 
-    async recordHeartbeat(cursor: number | null): Promise<void> {
+    async recordHeartbeat(cursor: number | null, observedAt = new Date()): Promise<void> {
         await this.pool.query(
             `INSERT INTO indexer_projection_state (
                 singleton, latest_cursor, heartbeat_at
-             ) VALUES (TRUE, $1, NOW())
+             ) VALUES (TRUE, $1, $2)
              ON CONFLICT (singleton) DO UPDATE SET
                 latest_cursor = CASE
                     WHEN EXCLUDED.latest_cursor IS NULL
@@ -564,8 +564,8 @@ export class PostgresProjectionStore {
                         EXCLUDED.latest_cursor
                     )
                 END,
-                heartbeat_at = NOW()`,
-            [cursor],
+                heartbeat_at = EXCLUDED.heartbeat_at`,
+            [cursor, observedAt],
         );
     }
 

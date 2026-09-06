@@ -12,6 +12,7 @@ import type {
 class FakeEventSource implements AtEventSource {
     startedAt: number | null | undefined;
     stopped = false;
+    lagMilliseconds: number | null = 0;
     handler: AtEventHandler | null = null;
 
     async start(cursor: number | null, onEvent: AtEventHandler): Promise<void> {
@@ -37,7 +38,7 @@ class FakeEventSource implements AtEventSource {
             oversizedFramesTotal: 0,
             duplicateFramesTotal: 0,
             outOfOrderFramesTotal: 0,
-            lagMilliseconds: null,
+            lagMilliseconds: this.lagMilliseconds,
             lastAcknowledgedCursor: this.startedAt ?? null,
         };
     }
@@ -95,4 +96,20 @@ describe('IndexerRuntime', () => {
 
         expect(heartbeats).toEqual([50, 51]);
     });
+    it('does not renew freshness while replaying old events or before a source observation', async () => {
+        const pipeline = new IndexerPipeline({ checkpointStore: new InMemoryCheckpointStore() });
+        const source = new FakeEventSource();
+        source.lagMilliseconds = null;
+        const heartbeats: Array<number | null> = [];
+        const runtime = new IndexerRuntime({ pipeline, source, heartbeat: async cursor => { heartbeats.push(cursor); } });
+        await runtime.start();
+        source.lagMilliseconds = 60_000;
+        await source.emit({ ...(buildPhase3FixtureFirehoseEvents()[0] as Record<string, unknown>), seq: 51 });
+        expect(heartbeats).toEqual([]);
+        source.lagMilliseconds = 0;
+        await source.emit({ ...(buildPhase3FixtureFirehoseEvents()[0] as Record<string, unknown>), seq: 52 });
+        expect(heartbeats).toEqual([52]);
+        await runtime.stop();
+    });
+
 });
