@@ -36,6 +36,7 @@ export interface AidQueryInput extends PaginationInput {
     radiusKm: number;
     category?: AidPostRecord['category'];
     urgency?: AidPostRecord['urgency'];
+    minimumUrgency?: AidPostRecord['urgency'];
     status?: AidPostRecord['status'];
     freshnessHours?: number;
     searchText?: string;
@@ -510,6 +511,11 @@ export class DiscoveryIndexStore {
             sets.push(new Set(this.aidUrgencyIndex.get(input.urgency) ?? []));
         }
 
+        if (input.minimumUrgency) {
+            const levels = ['low', 'medium', 'high', 'critical'] as const;
+            sets.push(new Set(levels.slice(levels.indexOf(input.minimumUrgency)).flatMap(level => [...(this.aidUrgencyIndex.get(level) ?? [])])));
+        }
+
         let uriSet: Set<string>;
 
         if (sets.length === 0) {
@@ -722,6 +728,7 @@ const aidQueryFields = {
         .enum(['food', 'shelter', 'medical', 'transport', 'childcare', 'other'])
         .optional(),
     urgency: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+    minimumUrgency: z.enum(['low', 'medium', 'high', 'critical']).optional(),
     status: z.enum(['open', 'in-progress', 'resolved', 'closed']).optional(),
     freshnessHours: z
         .number()

@@ -1,3 +1,4 @@
+import type { DiscoveryMapAggregates } from '@patchwork/shared';
 import {
     aidCategories,
     aidStatuses,
@@ -65,6 +66,7 @@ export interface PagedResult<T> {
     total: number;
     hasNextPage: boolean;
     projectionFreshness?: unknown;
+    aggregates?: DiscoveryMapAggregates;
 }
 
 export type AidPostReportReason = 'spam' | 'abuse' | 'fraud' | 'other';
@@ -237,6 +239,7 @@ const buildAidQueryParams = (
     const params = new URLSearchParams({
         page: String(page),
         pageSize: String(DEFAULT_DISCOVERY_PAGE_SIZE),
+        dataset: state.dataset ?? 'community',
     });
     if (center) {
         params.set('latitude', center.lat.toFixed(6));
@@ -254,7 +257,7 @@ const buildAidQueryParams = (
 
     const urgency = toApiUrgency(state.minUrgency);
     if (urgency) {
-        params.set('urgency', urgency);
+        params.set('minimumUrgency', urgency);
     }
 
     if (state.text) {
@@ -282,6 +285,7 @@ const buildDirectoryQueryParams = (
     const params = new URLSearchParams({
         page: String(page),
         pageSize: String(DEFAULT_DISCOVERY_PAGE_SIZE),
+        dataset: state.dataset ?? 'community',
     });
     if (center) {
         params.set('latitude', center.lat.toFixed(6));
@@ -2300,11 +2304,27 @@ const mapDirectoryPayloadToDetails = (
     }, []);
 };
 
+const mapAggregates = (value: unknown): DiscoveryMapAggregates | undefined => {
+    if (!isRecord(value) || !Array.isArray(value.cells) || value.cells.length > 500 || typeof value.truncated !== 'boolean') return undefined;
+    const requestCount = readNumber(value, 'requestCount'), locatedRequestCount = readNumber(value, 'locatedRequestCount');
+    if (requestCount === undefined || locatedRequestCount === undefined || !Number.isInteger(requestCount) || !Number.isInteger(locatedRequestCount) || requestCount < 0 || locatedRequestCount < 0 || locatedRequestCount > requestCount) return undefined;
+    const cells: DiscoveryMapAggregates['cells'] = [];
+    for (const item of value.cells) {
+        if (!isRecord(item)) return undefined;
+        const latitude = readNumber(item, 'latitude'), longitude = readNumber(item, 'longitude'), count = readNumber(item, 'count'), radiusKm = readNumber(item, 'radiusKm');
+        if (latitude === undefined || longitude === undefined || count === undefined || radiusKm === undefined || Math.abs(latitude) > 90 || Math.abs(longitude) > 180 || !Number.isInteger(count) || count < 1 || radiusKm < 1) return undefined;
+        cells.push({ latitude, longitude, count, radiusKm });
+    }
+    return { requestCount, locatedRequestCount, truncated: value.truncated, cells };
+};
+
 const pageEnvelope = <T>(
     payload: unknown,
     items: T[] | undefined,
 ): PagedResult<T> | undefined => {
     if (!isRecord(payload) || !items) return undefined;
+    const aggregates = payload.aggregates === undefined ? undefined : mapAggregates(payload.aggregates);
+    if (payload.aggregates !== undefined && !aggregates) return undefined;
     const page = readNumber(payload, 'page');
     const pageSize = readNumber(payload, 'pageSize');
     const total = readNumber(payload, 'total');
@@ -2317,6 +2337,7 @@ const pageEnvelope = <T>(
         pageSize,
         total,
         hasNextPage: payload.hasNextPage,
+        ...(aggregates ? { aggregates } : {}),
         ...(payload.projectionFreshness !== undefined
             ? { projectionFreshness: payload.projectionFreshness }
             : {}),
@@ -3787,8 +3808,8 @@ export const applyModerationPolicyViaApi = async (input: {
         :   result;
 };
 
-export const fetchAidPostViaApi = async (uri: string, signal?: AbortSignal): Promise<ApiClientResult<FeedRecordEnvelope>> => {
-    const result = await requestJson('/query/aid-post', new URLSearchParams({ uri }), signal);
+export const fetchAidPostViaApi = async (uri: string, signal?: AbortSignal, dataset: 'community' | 'demo' = 'community'): Promise<ApiClientResult<FeedRecordEnvelope>> => {
+    const result = await requestJson('/query/aid-post', new URLSearchParams({ uri, dataset }), signal);
     if (!result.ok) return result;
     const records = isRecord(result.data) ? mapAidPayloadToRecords(result.data) : undefined;
     if (!records?.[0]) return invalidResponseFailure('Request details were unavailable.');
@@ -3819,8 +3840,8 @@ export async function fetchAccountRequestsViaApi(page = 1, signal?: AbortSignal)
         pageSize: 20, total: data.total as number, hasNextPage: data.hasNextPage } };
 }
 
-export async function fetchResourceViaApi(uri: string, signal?: AbortSignal): Promise<ApiClientResult<ResourceDetail>> {
-    const result = await requestJson('/query/directory-resource', new URLSearchParams({ uri }), signal);
+export async function fetchResourceViaApi(uri: string, signal?: AbortSignal, dataset: 'community' | 'demo' = 'community'): Promise<ApiClientResult<ResourceDetail>> {
+    const result = await requestJson('/query/directory-resource', new URLSearchParams({ uri, dataset }), signal);
     if (!result.ok) return result;
     const cards = isRecord(result.data) ? mapDirectoryPayloadToDetails(result.data) : [];
     if (!cards || cards.length !== 1 || cards[0]?.uri !== uri) return invalidResponseFailure('Resource details were unavailable.');

@@ -4,6 +4,10 @@
         "skipToContent": "Skip to main content"
     },
     "nav": {
+        "dataset": "Listings",
+        "dataset_community": "Community",
+        "dataset_demo": "Explore examples",
+        "demoHelp": "Example listings show how Patchwork works. Use Community for a real request or handoff.",
         "mapFilters": "Location and filters",
         "nearby": "Nearby",
         "ask": "Ask",
@@ -249,6 +253,8 @@
         "filtersPersist": "Filters persist in the URL for sharable triage context."
     },
     "map": {
+        "aggregateHelp": "The map summarizes all {{count}} matching requests. Select an area, then Search this area to narrow the list.",
+        "aggregateTruncated": "Zoom into a smaller area to see the remaining groups.",
         "heading": "Map triage",
         "description": "Approximate-area clustering with privacy-safe radii and direct handoff actions.",
         "areaRequired": "Allow location access to load nearby results. If location is unavailable, the demonstration area loads automatically.",

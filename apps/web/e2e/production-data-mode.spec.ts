@@ -341,7 +341,7 @@ test('map area selection is explicit, reversible, historical, and remembers styl
     });
 
     await page.goto(
-        '/map?tab=nearby&r=20000&lat=40.72&lng=-73.99&area=Disposable+test+area',
+        '/map?dataset=demo&tab=nearby&r=20000&lat=40.72&lng=-73.99&area=Disposable+test+area',
     );
     await expect(page.getByText('Area filter request')).toBeVisible();
     await page.locator('.mh-map-circle').first().click();

@@ -1,4 +1,4 @@
-import { MapDetailSheet } from './map-detail-sheet';
+import type { DiscoveryMapAggregates } from '@patchwork/shared';
 import { canonicalRouteUrl, resolveRouteAlias } from './navigation';
 import { RequestContextLink } from './request-context-link';
 import type { ResourceDetail } from '../resource-directory-ux';
@@ -36,13 +36,6 @@ import {
     type FeedStatusTransition,
     type LifecycleStatus,
 } from '../feed-ux';
-import {
-    buildMapViewModel,
-    closeMapDetailDrawer,
-    openMapDetailDrawer,
-    type MapAidCard,
-    type MapTriageAction,
-} from '../map-ux';
 import {
     validatePostingDraft,
     type AidPostingCategory,
@@ -232,7 +225,7 @@ import {
     privacyLevels,
 } from '@patchwork/shared';
 import { type FeedRecordEnvelope } from './discovery-runtime';
-import { resolvePaginationFocus } from './pagination-focus';
+import { usePaginationFocus } from './use-pagination-focus';
 import { useAuth } from '../auth/AuthProvider';
 import { resolveWebDataMode } from './data-mode';
 
@@ -250,6 +243,7 @@ const dataOriginLabel = (origin: ApiDataOrigin): string =>
             ? 'Requesting location'
             : 'API unavailable';
 
+const LazyMapRoute = lazy(() => import('./map-route').then(module => ({ default: module.MapRoute })));
 const LazyPostingLocation = lazy(() => import('./posting-location').then(module => ({ default: module.PostingLocation })));
 const LazyMyRequests = lazy(() => import('./my-requests').then(module => ({ default: module.MyRequests })));
 const LazyProductionChat = lazy(() => import('./production-chat').then(module => ({ default: module.ProductionChat })));
@@ -390,46 +384,6 @@ const buildNearbyPatch = (): Partial<DiscoveryFilterState> => ({
     radiusMeters: undefined,
     feedTab: 'nearby',
 });
-
-const toSeverityTone = (
-    status: AidStatus,
-): 'neutral' | 'info' | 'success' | 'danger' => {
-    if (status === 'open') {
-        return 'danger';
-    }
-    if (status === 'in-progress') {
-        return 'info';
-    }
-    if (status === 'resolved') {
-        return 'success';
-    }
-    return 'neutral';
-};
-
-const toUrgencyTone = (
-    urgency: 1 | 2 | 3 | 4 | 5,
-): 'neutral' | 'info' | 'success' | 'danger' => {
-    if (urgency >= 4) {
-        return 'danger';
-    }
-    if (urgency >= 3) {
-        return 'info';
-    }
-    return 'neutral';
-};
-
-const toMapAidCard = (record: FeedRecordEnvelope): MapAidCard => {
-    return {
-        id: record.card.id,
-        title: record.card.title,
-        summary: record.card.description,
-        category: record.card.category,
-        status: record.card.status,
-        urgency: record.card.urgency,
-        updatedAt: record.card.updatedAt,
-        location: record.card.location,
-    };
-};
 
 const parseCommaList = (value: string): string[] => {
     return value
@@ -1082,479 +1036,6 @@ const DashboardRoute = ({
                 </p>
             </aside>
         </>
-    );
-};
-
-interface MapRouteProps {
-    discoveryState: DiscoveryFilterState;
-    onPatchDiscovery: (patch: Partial<DiscoveryFilterState>) => void;
-    onPushDiscovery: (patch: Partial<DiscoveryFilterState>) => void;
-    feedRecords: readonly FeedRecordEnvelope[];
-    resourceCards: readonly ResourceDirectoryCard[];
-    resourceErrorMessage?: string;
-    isLoading: boolean;
-    errorMessage?: string;
-    dataOrigin: ApiDataOrigin;
-    onRetry: () => void;
-    hasNextPage: boolean;
-    total: number;
-    onLoadMore: () => void;
-    onRetryResources: () => void;
-    selectedPostId?: string;
-    onSelectPost: (id: string | undefined) => void;
-    onTriageAction: (postId: string, action: MapTriageAction) => void;
-    onOpenChat: (record: FeedRecordEnvelope, surface: ChatEntrySurface) => void;
-}
-
-const LazyInteractiveMap = lazy(() =>
-    import('../components/map/InteractiveMap.js').then((module) => ({
-        default: module.InteractiveMap,
-    })),
-);
-
-const usePaginationFocus = ({
-    itemCount,
-    isLoading,
-    hasNextPage,
-    announce,
-}: {
-    itemCount: number;
-    isLoading: boolean;
-    hasNextPage: boolean;
-    announce: (start: number, end: number) => string;
-}) => {
-    const [pendingFrom, setPendingFrom] = useState<number>();
-    const [announcement, setAnnouncement] = useState('');
-    const loadMoreRef = useRef<HTMLButtonElement>(null);
-    const loadedCountRef = useRef<HTMLParagraphElement>(null);
-
-    useEffect(() => {
-        if (pendingFrom === undefined) return;
-        const focusTarget = resolvePaginationFocus({
-            previousCount: pendingFrom,
-            itemCount,
-            isLoading,
-            hasNextPage,
-        });
-        if (!focusTarget) return;
-
-        if (itemCount > pendingFrom) {
-            setAnnouncement(announce(pendingFrom + 1, itemCount));
-        }
-        if (focusTarget === 'load-more') loadMoreRef.current?.focus();
-        else loadedCountRef.current?.focus();
-        setPendingFrom(undefined);
-    }, [announce, hasNextPage, isLoading, itemCount, pendingFrom]);
-
-    return {
-        announcement,
-        loadedCountRef,
-        loadMoreRef,
-        loadMore: (callback: () => void) => {
-            setPendingFrom(itemCount);
-            callback();
-        },
-    };
-};
-
-const MapRoute = ({
-    discoveryState,
-    onPatchDiscovery,
-    onPushDiscovery,
-    feedRecords,
-    resourceCards,
-    resourceErrorMessage,
-    isLoading,
-    errorMessage,
-    dataOrigin,
-    onRetry,
-    hasNextPage,
-    total,
-    onLoadMore,
-    onRetryResources,
-    selectedPostId,
-    onSelectPost,
-    onTriageAction,
-    onOpenChat,
-}: MapRouteProps) => {
-    const { t, fmt } = useLocale();
-    const paginationFocus = usePaginationFocus({
-        itemCount: feedRecords.length,
-        isLoading,
-        hasNextPage,
-        announce: useCallback(
-            (start: number, end: number) =>
-                String(t('discovery.loadedRange', { start, end })),
-            [t],
-        ),
-    });
-    const [viewport, setViewport] = useState<{ center: { lat: number; lng: number }; radiusMeters: number }>();
-    const [selectedResourceUri, setSelectedResourceUri] = useState<string>();
-    const [tileError, setTileError] = useState<string>();
-    const [focusedArea, setFocusedArea] = useState<{
-        center: { lat: number; lng: number };
-        radiusMeters: number;
-        label: string;
-        previousCenter?: { lat: number; lng: number };
-        previousRadiusMeters?: number;
-    }>();
-
-    const mapCards = useMemo(
-        () => feedRecords.map(toMapAidCard),
-        [feedRecords],
-    );
-
-    const mapView = useMemo(
-        () => buildMapViewModel(mapCards, discoveryState),
-        [mapCards, discoveryState],
-    );
-    const mapResourceView = useMemo(
-        () => buildResourceOverlayViewModel(resourceCards, discoveryState),
-        [discoveryState, resourceCards],
-    );
-    const activeArea =
-        focusedArea ??
-        (discoveryState.center && discoveryState.radiusMeters
-            ? {
-                  center: discoveryState.center,
-                  radiusMeters: discoveryState.radiusMeters,
-                  label: String(t('map.selectedArea')),
-              }
-            : undefined);
-
-    useEffect(() => {
-        if (!focusedArea) return;
-        if (
-            !discoveryState.center ||
-            discoveryState.radiusMeters !== focusedArea.radiusMeters ||
-            discoveryState.center.lat !== focusedArea.center.lat ||
-            discoveryState.center.lng !== focusedArea.center.lng
-        ) {
-            setFocusedArea(undefined);
-        }
-    }, [discoveryState.center, discoveryState.radiusMeters, focusedArea]);
-
-    const leaveFocusedArea = (target: 'previous' | 'clear') => {
-        const patch =
-            target === 'previous' && focusedArea
-                ? {
-                      center: focusedArea.previousCenter,
-                      radiusMeters: focusedArea.previousRadiusMeters,
-                  }
-                : {
-                      center: undefined,
-                      areaLabel: undefined,
-                      radiusMeters: undefined,
-                  };
-        setFocusedArea(undefined);
-        onSelectPost(undefined);
-        onPushDiscovery(patch);
-    };
-
-    const selectedRecord = selectedPostId
-        ? feedRecords.find((record) => record.card.id === selectedPostId)
-        : undefined;
-
-    const drawer = selectedPostId
-        ? openMapDetailDrawer(mapView.filteredCards, selectedPostId)
-        : closeMapDetailDrawer();
-
-    return (
-        <section className='space-y-6'>
-            <header className='mh-route-header'>
-                <h1 className='mh-route-title'>{t('map.heading')}</h1>
-                <p className='mt-2 text-sm text-mh-textMuted'>
-                    {t('map.description')}
-                </p>
-                <div className='mt-3 flex flex-wrap gap-2'>
-                    <Badge tone={dataOrigin === 'api' ? 'success' : 'info'}>
-                        {dataOriginLabel(dataOrigin)}
-                    </Badge>
-                    <p ref={paginationFocus.loadedCountRef} tabIndex={-1} className='text-sm text-mh-textMuted' role='status'>
-                        {t('discovery.loadedCount', { loaded: feedRecords.length, total })}
-                    </p>
-                    <span className='sr-only' role='status' aria-live='polite'>{paginationFocus.announcement}</span>
-                    {hasNextPage ? (
-                        <Button ref={paginationFocus.loadMoreRef} type='button' variant='neutral' className='px-3 py-1 text-xs' onClick={() => paginationFocus.loadMore(onLoadMore)} disabled={isLoading}>
-                            {t('discovery.loadMore')}
-                        </Button>
-                    ) : null}
-                </div>
-                {errorMessage || resourceErrorMessage ? (
-                    <div
-                        role='alert'
-                        className='mh-alert mt-3 text-xs font-bold'
-                    >
-                        {errorMessage ? (
-                            <p>
-                                {t('map.apiSyncIssue', {
-                                    message: errorMessage,
-                                })}
-                            </p>
-                        ) : null}
-                        {errorMessage && feedRecords.length > 0 ? (
-                            <p>{t('map.staleResults')}</p>
-                        ) : null}
-                        {resourceErrorMessage ? (
-                            <p>
-                                {t('map.publicPlaceIssue', {
-                                    message: resourceErrorMessage,
-                                })}
-                            </p>
-                        ) : null}
-                        <div className='mt-2 flex flex-wrap gap-2'>
-                            {errorMessage ? (
-                                <Button
-                                    type='button'
-                                    variant='neutral'
-                                    className='px-3 py-1 text-xs'
-                                    onClick={onRetry}
-                                >
-                                    {t('map.retryDiscovery')}
-                                </Button>
-                            ) : null}
-                            {resourceErrorMessage ? (
-                                <Button
-                                    type='button'
-                                    variant='neutral'
-                                    className='px-3 py-1 text-xs'
-                                    onClick={onRetryResources}
-                                >
-                                    {t('map.retryPlaces')}
-                                </Button>
-                            ) : null}
-                        </div>
-                    </div>
-                ) : null}
-            </header>
-
-            <section className='rounded-none border-2 border-mh-borderSoft bg-mh-surfaceElev p-3'>
-                {tileError ? (
-                    <div
-                        role='alert'
-                        className='mh-alert mb-3 text-xs font-bold'
-                    >
-                        <p>{tileError}</p>
-                    </div>
-                ) : null}
-                {activeArea ? (
-                    <div
-                        className='mb-3 flex flex-wrap items-center gap-2 border-2 border-mh-borderSoft bg-mh-surface p-3'
-                        role='status'
-                        aria-live='polite'
-                    >
-                        <Badge tone='info'>{t('map.filteredArea')}</Badge>
-                        <p className='mr-auto text-sm text-mh-textMuted'>
-                            <strong className='text-mh-text'>
-                                {activeArea.label}
-                            </strong>{' '}
-                            ·{' '}
-                            {t('map.areaSummary', {
-                                requests: fmt.number(
-                                    mapView.filteredCards.length,
-                                ),
-                                places: fmt.number(
-                                    mapResourceView.cards.length,
-                                ),
-                                distance: fmt.number(
-                                    activeArea.radiusMeters / 1000,
-                                    {
-                                        maximumFractionDigits: 1,
-                                    },
-                                ),
-                            })}
-                        </p>
-                        {focusedArea ? (
-                            <Button
-                                type='button'
-                                variant='neutral'
-                                className='px-3 py-1 text-xs'
-                                onClick={() => leaveFocusedArea('previous')}
-                            >
-                                {t('map.returnArea')}
-                            </Button>
-                        ) : null}
-                        <Button
-                            type='button'
-                            variant='neutral'
-                            className='px-3 py-1 text-xs'
-                            onClick={() => leaveFocusedArea('clear')}
-                        >
-                            {t('map.clearArea')}
-                        </Button>
-                    </div>
-                ) : null}
-                {discoveryState.center ? (
-                    <Suspense
-                        fallback={<div className='mh-skeleton h-96 w-full' />}
-                    >
-                        <LazyInteractiveMap
-                            cards={mapView.filteredCards}
-                            resources={mapResourceView.cards}
-                            selectedPostId={selectedPostId}
-                            center={discoveryState.center}
-                            onSelectPostId={id => { setSelectedResourceUri(undefined); onSelectPost(id); }}
-                            focusedArea={activeArea}
-                            onViewportChange={setViewport}
-                            onSelectResource={uri => { onSelectPost(undefined); setSelectedResourceUri(uri); }}
-                            onTilesFailed={setTileError}
-                        />
-                    </Suspense>
-                ) : (
-                    <div className='mh-alert p-4' role='status'>
-                        {t('map.areaRequired')}
-                    </div>
-                )}
-            </section>
-
-            {viewport && <Button onClick={() => { onPushDiscovery({ ...viewport, feedTab: 'nearby' }); setViewport(undefined); }}>{t('handoff.searchArea')}</Button>}
-            {selectedResourceUri && resourceCards.find(card => card.uri === selectedResourceUri) && <MapDetailSheet closeLabel={t('resources.close')} onClose={() => setSelectedResourceUri(undefined)}><Panel title={resourceCards.find(card => card.uri === selectedResourceUri)!.name}>
-                <ResourceActions resource={resourceCards.find(card => card.uri === selectedResourceUri)!} />
-                </Panel></MapDetailSheet>}
-            <details className='rounded-xl border border-mh-borderSoft bg-mh-surface p-3'>
-                <summary className='cursor-pointer py-2 font-bold'>{t('nav.mapFilters')}{discoveryState.areaLabel ? ` · ${discoveryState.areaLabel}` : ''}</summary>
-                <DiscoveryFiltersPanel
-                    idPrefix='map'
-                    state={discoveryState}
-                    onPatch={onPatchDiscovery}
-                />
-            </details>
-
-            <div>
-                <Card title={String(t('map.requestMarkersTitle'))}>
-                    {isLoading ? (
-                        <ul className='space-y-3' aria-live='polite'>
-                            {Array.from({ length: 3 }).map((_, index) => (
-                                <li
-                                    key={`marker-skeleton-${index}`}
-                                    className='mh-record-card'
-                                >
-                                    <div className='mh-skeleton h-4 w-2/3' />
-                                    <div className='mh-skeleton mt-2 h-3 w-full' />
-                                    <div className='mh-skeleton mt-2 h-3 w-4/5' />
-                                    <div className='mh-skeleton mt-3 h-8 w-32' />
-                                </li>
-                            ))}
-                        </ul>
-                    ) : mapView.filteredCards.length === 0 ? (
-                        <p>{t('map.noRequests')}</p>
-                    ) : (
-                        <ul className='space-y-3'>
-                            {mapView.filteredCards.map((card) => (
-                                <li key={card.id} className='mh-record-card'>
-                                    <div className='flex flex-wrap items-start justify-between gap-2'>
-                                        <p className='text-sm font-bold text-mh-text'>
-                                            {card.title}
-                                        </p>
-                                        <div className='flex flex-wrap gap-2'>
-                                            <Badge
-                                                tone={toUrgencyTone(
-                                                    card.urgency,
-                                                )}
-                                            >
-                                                {t('map.urgencyLabel', {
-                                                    level: card.urgency,
-                                                })}
-                                            </Badge>
-                                            <Badge
-                                                tone={toSeverityTone(
-                                                    card.status,
-                                                )}
-                                            >
-                                                {card.status}
-                                            </Badge>
-                                        </div>
-                                    </div>
-                                    <p className='mt-2 text-xs text-mh-textSoft'>
-                                        {card.summary}
-                                    </p>
-                                    <div className='mt-3'>
-                                        <Button
-                                            variant='neutral'
-                                            className='px-3 py-1 text-xs'
-                                            aria-label={t('map.openTriageDrawerFor', {
-                                                title: card.title,
-                                                id: card.id,
-                                            })}
-                                            onClick={() =>
-                                                { setSelectedResourceUri(undefined); onSelectPost(card.id); }
-                                            }
-                                        >
-                                            {t('map.openTriageDrawer')}
-                                        </Button>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </Card>
-            </div>
-
-            {drawer.open && selectedRecord ? (
-                <MapDetailSheet closeLabel={t('map.closeDrawer')} onClose={() => onSelectPost(undefined)}>
-                <Panel
-                    title={String(t('map.mapDetailDrawerTitle'))}
-                    aria-label={String(
-                        t('map.detailsFor', {
-                            title: drawer.title ?? t('map.selectedRequest'),
-                        }),
-                    )}
-                >
-                    <p className='text-lg font-bold text-mh-text'>
-                        {drawer.title}
-                    </p>
-                    <p className='mt-1 text-sm text-mh-textMuted'>
-                        {drawer.summary}
-                    </p>
-                    <div className='mt-3 flex flex-wrap gap-2'>
-                        {drawer.status ? (
-                            <Badge tone={toSeverityTone(drawer.status)}>
-                                {drawer.status}
-                            </Badge>
-                        ) : null}
-                        {selectedRecord.recordOrigin === 'synthetic' && <Badge tone='info'>{t('feed.synthetic')}</Badge>}
-                    </div>
-                    <a className='mh-button inline-flex px-3 py-2' href={`/requests/view?uri=${encodeURIComponent(selectedRecord.aidPostUri)}`}>{t('handoff.requestDetails')}</a>
-                    {webDataMode !== 'fixture' && <RequestLifecycleActions record={selectedRecord} onRefresh={onRetry} />}
-                    <div className='mt-4 flex flex-wrap gap-2'>
-                        {drawer.actions
-                            .filter(
-                                () =>
-                                    webDataMode === 'fixture',
-                            )
-                            .map((action) => (
-                                <Button
-                                    key={action.action}
-                                    variant={
-                                        action.action === 'contact_helper'
-                                            ? 'primary'
-                                            : 'neutral'
-                                    }
-                                    className='px-3 py-1 text-xs'
-                                    aria-label={action.ariaLabel}
-                                    onClick={() => {
-                                        if (
-                                            action.action === 'contact_helper'
-                                        ) {
-                                            onOpenChat(selectedRecord, 'map');
-                                            return;
-                                        }
-
-                                        onTriageAction(
-                                            selectedRecord.card.id,
-                                            action.action,
-                                        );
-                                    }}
-                                >
-                                    {action.label}
-                                </Button>
-                            ))}
-
-                    </div>
-                </Panel>
-                </MapDetailSheet>
-            ) : null}
-        </section>
     );
 };
 
@@ -2235,7 +1716,7 @@ const FeedRoute = ({
                                 >
                                     <div className='flex flex-wrap items-start justify-between gap-2'>
                                         <p className='text-base font-bold text-mh-text'>
-                                            {record ? <a className='underline' href={`/requests/view?uri=${encodeURIComponent(record.aidPostUri)}`}>{card.title}</a> : card.title}
+                                            {record ? <a className='underline' href={`/requests/view?uri=${encodeURIComponent(record.aidPostUri)}&dataset=${record.recordOrigin === 'synthetic' ? 'demo' : 'community'}`}>{card.title}</a> : card.title}
                                         </p>
                                         <div className='flex flex-wrap gap-2'>
                                             {presentation ? (
@@ -3557,13 +3038,13 @@ const ResourceRoute = ({
     useEffect(() => {
         const controller = new AbortController();
         setSelectedResource(undefined); setDetailError(false);
-        if (selectedUri) void fetchResourceViaApi(selectedUri, controller.signal).then(result => {
+        if (selectedUri) void fetchResourceViaApi(selectedUri, controller.signal, discoveryState.dataset ?? 'community').then(result => {
             if (controller.signal.aborted) return;
             if (result.ok) setSelectedResource(result.data);
             else setDetailError(true);
         });
         return () => controller.abort();
-    }, [selectedUri, detailReload]);
+    }, [selectedUri, detailReload, discoveryState.dataset]);
 
 
     useEffect(() => {
@@ -7411,50 +6892,6 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
 
             <Suspense fallback={null}><LazyMyRequests key={did} /></Suspense>
 
-            <Panel title={String(t('inbox.discover'))}>
-                {availableRequests.length === 0 ? (
-                    <p className='text-sm text-mh-textMuted'>
-                        {t('inbox.noRequests')}
-                    </p>
-                ) : (
-                    <div className='grid gap-3 sm:grid-cols-2'>
-                        {availableRequests.map((request) => (
-                            <Card
-                                key={request.aidPostUri}
-                                title={request.card.title}
-                            >
-                                <p className='text-sm'>
-                                    {request.card.description}
-                                </p>
-                                <p className='mt-2 text-xs text-mh-textMuted'>
-                                    {formatLocalizedLabel(
-                                        t,
-                                        request.card.category,
-                                    )}{' '}
-                                    ·{' '}
-                                    {formatLocalizedLabel(
-                                        t,
-                                        request.card.status,
-                                    )}
-                                </p>
-                                <Button
-                                    className='mt-3'
-                                    aria-label={t('inbox.offerHelpFor', {
-                                        title: request.card.title,
-                                    })}
-                                    onClick={() => {
-                                        setOfferRequestUri(request.aidPostUri);
-                                        setOfferNote('');
-                                    }}
-                                >
-                                    {t('inbox.offerHelp')}
-                                </Button>
-                            </Card>
-                        ))}
-                    </div>
-                )}
-            </Panel>
-
             {offerRequest ? (
                 <div
                     role='dialog'
@@ -7640,125 +7077,6 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                             </Card>
                         ))}
                     </div>
-                )}
-            </Panel>
-
-            <Panel title={String(t('inbox.matching'))}>
-                <p className='mb-3 text-sm text-mh-textMuted'>
-                    {t('inbox.matchingHelp')}
-                </p>
-                <div className='grid gap-3 sm:grid-cols-2'>
-                    <label className='text-sm font-bold'>
-                        {t('inbox.languages')}
-                        <Input
-                            value={languages}
-                            onChange={(event) =>
-                                setLanguages(event.target.value)
-                            }
-                            placeholder={t('inbox.languagesPlaceholder')}
-                        />
-                    </label>
-                    <label className='text-sm font-bold'>
-                        {t('inbox.accessibility')}
-                        <Input
-                            value={accessibility}
-                            onChange={(event) =>
-                                setAccessibility(event.target.value)
-                            }
-                            placeholder={t('inbox.accessibilityPlaceholder')}
-                        />
-                    </label>
-                </div>
-                {ownedRequests.length === 0 ? (
-                    <p className='mt-3 text-sm text-mh-textMuted'>
-                        {t('inbox.publishFirst')}
-                    </p>
-                ) : (
-                    ownedRequests.map((request) => (
-                        <div
-                            key={request.aidPostUri}
-                            className='mt-4 border-t border-mh-borderSoft pt-4'
-                        >
-                            <div className='flex flex-wrap items-center justify-between gap-2'>
-                                <h2 className='font-bold'>
-                                    {request.card.title}
-                                </h2>
-                                <Button
-                                    onClick={() =>
-                                        void (async () => {
-                                            setStatus(t('inbox.ranking'));
-                                            const result =
-                                                await matchRequestViaApi({
-                                                    requestUri:
-                                                        request.aidPostUri,
-                                                    requiredLanguages:
-                                                        parseCommaList(
-                                                            languages,
-                                                        ),
-                                                    accessibilityNeeds:
-                                                        parseCommaList(
-                                                            accessibility,
-                                                        ),
-                                                });
-                                            if (!result.ok) {
-                                                setStatus(
-                                                    `${t('common.error')}: ${t('common.requestFailed')}`,
-                                                );
-                                                return;
-                                            }
-                                            setMatches((current) => ({
-                                                ...current,
-                                                [request.aidPostUri]:
-                                                    result.data.candidates,
-                                            }));
-                                            setStatus(
-                                                t('inbox.ranked', {
-                                                    count: result.data
-                                                        .candidates.length,
-                                                }),
-                                            );
-                                        })()
-                                    }
-                                >
-                                    {t('inbox.find')}
-                                </Button>
-                            </div>
-                            <ol className='mt-3 space-y-2'>
-                                {(matches[request.aidPostUri] ?? []).map(
-                                    (candidate) => (
-                                        <li
-                                            key={candidate.candidateRef}
-                                            className='rounded border border-mh-borderSoft p-3'
-                                        >
-                                            <p className='font-bold'>
-                                                #{candidate.rank}{' '}
-                                                {candidate.label}
-                                            </p>
-                                            <p className='text-xs text-mh-textMuted'>
-                                                {candidate.kind} ·{' '}
-                                                {candidate.availability} ·{' '}
-                                                {t('inbox.verification', {
-                                                    status: candidate.verification,
-                                                })}
-                                            </p>
-                                            <ul className='mt-2 list-disc pl-5 text-sm'>
-                                                {candidate.explanations.map(
-                                                    (explanation) => (
-                                                        <li key={explanation}>
-                                                            {explanation}
-                                                        </li>
-                                                    ),
-                                                )}
-                                            </ul>
-                                            <p className='mt-2 text-xs font-bold'>
-                                                {t('inbox.manual')}
-                                            </p>
-                                        </li>
-                                    ),
-                                )}
-                            </ol>
-                        </div>
-                    ))
                 )}
             </Panel>
 
@@ -8059,6 +7377,169 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                     </div>
                 )}
             </Panel>
+            <Panel title={String(t('inbox.discover'))}>
+                {availableRequests.length === 0 ? (
+                    <p className='text-sm text-mh-textMuted'>
+                        {t('inbox.noRequests')}
+                    </p>
+                ) : (
+                    <div className='grid gap-3 sm:grid-cols-2'>
+                        {availableRequests.map((request) => (
+                            <Card
+                                key={request.aidPostUri}
+                                title={request.card.title}
+                            >
+                                <p className='text-sm'>
+                                    {request.card.description}
+                                </p>
+                                <p className='mt-2 text-xs text-mh-textMuted'>
+                                    {formatLocalizedLabel(
+                                        t,
+                                        request.card.category,
+                                    )}{' '}
+                                    ·{' '}
+                                    {formatLocalizedLabel(
+                                        t,
+                                        request.card.status,
+                                    )}
+                                </p>
+                                <Button
+                                    className='mt-3'
+                                    aria-label={t('inbox.offerHelpFor', {
+                                        title: request.card.title,
+                                    })}
+                                    onClick={() => {
+                                        setOfferRequestUri(request.aidPostUri);
+                                        setOfferNote('');
+                                    }}
+                                >
+                                    {t('inbox.offerHelp')}
+                                </Button>
+                            </Card>
+                        ))}
+                    </div>
+                )}
+            </Panel>
+
+            <Panel title={String(t('inbox.matching'))}>
+                <p className='mb-3 text-sm text-mh-textMuted'>
+                    {t('inbox.matchingHelp')}
+                </p>
+                <div className='grid gap-3 sm:grid-cols-2'>
+                    <label className='text-sm font-bold'>
+                        {t('inbox.languages')}
+                        <Input
+                            value={languages}
+                            onChange={(event) =>
+                                setLanguages(event.target.value)
+                            }
+                            placeholder={t('inbox.languagesPlaceholder')}
+                        />
+                    </label>
+                    <label className='text-sm font-bold'>
+                        {t('inbox.accessibility')}
+                        <Input
+                            value={accessibility}
+                            onChange={(event) =>
+                                setAccessibility(event.target.value)
+                            }
+                            placeholder={t('inbox.accessibilityPlaceholder')}
+                        />
+                    </label>
+                </div>
+                {ownedRequests.length === 0 ? (
+                    <p className='mt-3 text-sm text-mh-textMuted'>
+                        {t('inbox.publishFirst')}
+                    </p>
+                ) : (
+                    ownedRequests.map((request) => (
+                        <div
+                            key={request.aidPostUri}
+                            className='mt-4 border-t border-mh-borderSoft pt-4'
+                        >
+                            <div className='flex flex-wrap items-center justify-between gap-2'>
+                                <h2 className='font-bold'>
+                                    {request.card.title}
+                                </h2>
+                                <Button
+                                    onClick={() =>
+                                        void (async () => {
+                                            setStatus(t('inbox.ranking'));
+                                            const result =
+                                                await matchRequestViaApi({
+                                                    requestUri:
+                                                        request.aidPostUri,
+                                                    requiredLanguages:
+                                                        parseCommaList(
+                                                            languages,
+                                                        ),
+                                                    accessibilityNeeds:
+                                                        parseCommaList(
+                                                            accessibility,
+                                                        ),
+                                                });
+                                            if (!result.ok) {
+                                                setStatus(
+                                                    `${t('common.error')}: ${t('common.requestFailed')}`,
+                                                );
+                                                return;
+                                            }
+                                            setMatches((current) => ({
+                                                ...current,
+                                                [request.aidPostUri]:
+                                                    result.data.candidates,
+                                            }));
+                                            setStatus(
+                                                t('inbox.ranked', {
+                                                    count: result.data
+                                                        .candidates.length,
+                                                }),
+                                            );
+                                        })()
+                                    }
+                                >
+                                    {t('inbox.find')}
+                                </Button>
+                            </div>
+                            <ol className='mt-3 space-y-2'>
+                                {(matches[request.aidPostUri] ?? []).map(
+                                    (candidate) => (
+                                        <li
+                                            key={candidate.candidateRef}
+                                            className='rounded border border-mh-borderSoft p-3'
+                                        >
+                                            <p className='font-bold'>
+                                                #{candidate.rank}{' '}
+                                                {candidate.label}
+                                            </p>
+                                            <p className='text-xs text-mh-textMuted'>
+                                                {candidate.kind} ·{' '}
+                                                {candidate.availability} ·{' '}
+                                                {t('inbox.verification', {
+                                                    status: candidate.verification,
+                                                })}
+                                            </p>
+                                            <ul className='mt-2 list-disc pl-5 text-sm'>
+                                                {candidate.explanations.map(
+                                                    (explanation) => (
+                                                        <li key={explanation}>
+                                                            {explanation}
+                                                        </li>
+                                                    ),
+                                                )}
+                                            </ul>
+                                            <p className='mt-2 text-xs font-bold'>
+                                                {t('inbox.manual')}
+                                            </p>
+                                        </li>
+                                    ),
+                                )}
+                            </ol>
+                        </div>
+                    ))
+                )}
+            </Panel>
+
         </section>
     );
 };
@@ -9737,10 +9218,10 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
     const [aidPage, setAidPage] = useState(() => readPaginationPageFromUrl());
     const [aidHasNextPage, setAidHasNextPage] = useState(false);
     const [aidTotal, setAidTotal] = useState(0);
+    const [aidAggregates, setAidAggregates] = useState<DiscoveryMapAggregates>();
     const [directoryPage, setDirectoryPage] = useState(() => readPaginationPageFromUrl());
     const [directoryHasNextPage, setDirectoryHasNextPage] = useState(false);
     const [directoryTotal, setDirectoryTotal] = useState(0);
-    const [selectedMapPostId, setSelectedMapPostId] = useState<string>();
     const [chatIntent, setChatIntent] = useState<ChatInitiationIntent>();
     const [chatState, setChatState] = useState<ChatLaunchState>(
         defaultChatLaunchState,
@@ -9873,12 +9354,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         };
     }, []);
 
-    const discoveryQueryString = useMemo(() => {
-        const params = new URLSearchParams(serializeDiscoveryFilterState(discoveryState));
-        const dataset = new URLSearchParams(window.location.search).get('dataset');
-        if (dataset === 'demo' || dataset === 'community') params.set('dataset', dataset);
-        return `?${params.toString()}`;
-    }, [discoveryState, historyVersion]);
+    const discoveryQueryString = useMemo(() => serializeDiscoveryFilterState(discoveryState), [discoveryState]);
 
     const resetDiscoveryKeyRef = useRef(`${currentRoute}:${discoveryQueryString}`);
     useEffect(() => {
@@ -9888,6 +9364,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         setAidPage(1);
         setAidHasNextPage(false);
         setAidTotal(0);
+        setAidAggregates(undefined);
         setDirectoryPage(1);
         setDirectoryHasNextPage(false);
         setDirectoryTotal(0);
@@ -9909,7 +9386,6 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
             setDiscoveryState(
                 readDiscoveryStateFromUrl(defaultShellDiscoveryState),
             );
-            setSelectedMapPostId(undefined);
         };
 
         window.addEventListener('popstate', handlePopState);
@@ -9928,7 +9404,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         const pageParams = new URLSearchParams(discoveryQueryString);
         // Preserve selected-item and authentication return context across filter updates.
         const contextParams = new URLSearchParams(window.location.search);
-        for (const key of ['resource', 'uri', 'connection', 'conversation', 'view', 'dataset', 'resourceName']) {
+        for (const key of ['resource', 'uri', 'connection', 'conversation', 'view', 'resourceName']) {
             const value = contextParams.get(key);
             if (value) pageParams.set(key, value);
         }
@@ -9957,6 +9433,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
             setFeedRecords([]);
             setAidHasNextPage(false);
             setAidTotal(0);
+        setAidAggregates(undefined);
             setAidDataOrigin('idle');
             setAidErrorMessage(undefined);
             setIsAidLoading(false);
@@ -10061,6 +9538,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                     );
                     setAidHasNextPage(result.data.hasNextPage);
                     setAidTotal(result.data.total);
+                    setAidAggregates(result.data.aggregates);
                     setAidDataOrigin('api');
                     return;
                 }
@@ -10164,8 +9642,10 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
             const next = applyDiscoveryFilterPatch(current, patch);
             if (typeof window !== 'undefined') {
                 const params = new URLSearchParams(serializeDiscoveryFilterState(next));
-                const dataset = new URLSearchParams(discoveryQueryString).get('dataset');
-                if (dataset) params.set('dataset', dataset);
+                if ((next.dataset ?? 'community') === (current.dataset ?? 'community')) {
+                    const context = new URLSearchParams(window.location.search);
+                    for (const key of ['uri', 'resource']) { const value = context.get(key); if (value) params.set(key, value); }
+                }
                 const nextUrl = canonicalRouteUrl(currentRoute, params);
                 const currentUrl = `${window.location.pathname}${window.location.search}`;
                 if (nextUrl !== currentUrl) {
@@ -10382,9 +9862,13 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
             </p>
         </Panel>
     ) : currentRoute === '/map' ? (
-        <MapRoute
+        <Suspense fallback={<p role='status'>{t('handoff.loadingRequest')}</p>}><LazyMapRoute
+            aggregates={aidAggregates}
+            resourceTotal={directoryTotal}
             discoveryState={discoveryState}
-            onPatchDiscovery={patchDiscoveryState}
+            filters={<DiscoveryFiltersPanel idPrefix='map' state={discoveryState} onPatch={patchDiscoveryState} />}
+            fixtureMode={webDataMode === 'fixture'}
+            originLabel={dataOriginLabel(aidDataOrigin)}
             onPushDiscovery={pushDiscoveryState}
             feedRecords={feedRecords}
             resourceCards={resourceCards}
@@ -10397,8 +9881,6 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
             total={aidTotal}
             onLoadMore={() => setAidPage((page) => page + 1)}
             onRetryResources={() => setDirectoryReload((value) => value + 1)}
-            selectedPostId={selectedMapPostId}
-            onSelectPost={setSelectedMapPostId}
             onOpenChat={openChatFromRecord}
             onTriageAction={(postId, action) => {
                 const nextStatus: AidStatus =
@@ -10419,7 +9901,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                     });
                 }
             }}
-        />
+        /></Suspense>
     ) : currentRoute === '/requests/view' ? (
         <Suspense fallback={<p role='status'>{t('handoff.loadingRequest')}</p>}><LazyRequestDetail /></Suspense>
     ) : currentRoute === '/feed' ? (
@@ -10796,6 +10278,15 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                     tabIndex={-1}
                     className='focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-mh-accent'
                 >
+                    {currentRoute === '/map' || currentRoute === '/feed' || currentRoute === '/resources' ? (
+                        <div className='mb-4 flex flex-wrap items-center gap-2' role='group' aria-label={t('nav.dataset')}>
+                            {(['community', 'demo'] as const).map(dataset => <Button key={dataset}
+                                variant={(discoveryState.dataset ?? 'community') === dataset ? 'primary' : 'neutral'}
+                                aria-pressed={(discoveryState.dataset ?? 'community') === dataset}
+                                onClick={() => patchDiscoveryState({ dataset })}>{t(`nav.dataset_${dataset}`)}</Button>)}
+                            {discoveryState.dataset === 'demo' && <p className='text-sm'>{t('nav.demoHelp')}</p>}
+                        </div>
+                    ) : null}
                     {currentRoute === '/map' || currentRoute === '/feed' ? (
                         <nav aria-label={t('nav.nearbyView')} className='mb-4 flex gap-2'>
                             {(['/feed', '/map'] as const).map(route => (

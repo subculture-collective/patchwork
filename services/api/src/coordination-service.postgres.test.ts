@@ -20,6 +20,17 @@ const hash = (value: string) =>
 describePostgres('CoordinationService PostgreSQL boundary', () => {
     const pool = new Pool({ connectionString: databaseUrl });
 
+    it('rejects real offers involving an example request or volunteer before creating notifications', async () => {
+        const service = new CoordinationService(pool);
+        await pool.query("UPDATE indexer_aid_post_projections SET record_origin = 'synthetic', seed_version = 'candidate-test-v1' WHERE uri = $1", [requestUri]);
+        await expect(service.createOffer(helperDid, { requestUri, note: 'I can help.' })).rejects.toMatchObject({ code: 'DEMO_COORDINATION_FORBIDDEN' });
+        await pool.query("UPDATE indexer_aid_post_projections SET record_origin = 'visitor-created', seed_version = NULL WHERE uri = $1", [requestUri]);
+        await pool.query("UPDATE indexer_volunteer_profile_projections SET record_origin = 'synthetic', seed_version = 'candidate-test-v1' WHERE uri = $1", [profileUri]);
+        await expect(service.createOffer(helperDid, { requestUri, note: 'I can help.' })).rejects.toMatchObject({ code: 'DEMO_COORDINATION_FORBIDDEN' });
+        expect(Number((await pool.query('SELECT count(*) AS count FROM coordination_offers')).rows[0].count)).toBe(0);
+        expect(Number((await pool.query('SELECT count(*) AS count FROM activity_inbox_items')).rows[0].count)).toBe(0);
+    });
+
     beforeEach(async () => {
         await pool.query(
             `TRUNCATE moderation_notification_events,

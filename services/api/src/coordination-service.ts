@@ -1432,6 +1432,9 @@ export class CoordinationService {
         helperDid: string,
         allowedStatuses: string[],
     ): Promise<void> {
+        const demo = await client.query(`SELECT 1 FROM indexer_aid_post_projections WHERE uri = $1 AND record_origin = 'synthetic'
+            UNION ALL SELECT 1 FROM indexer_volunteer_profile_projections WHERE author_did_hash = $2 AND record_origin = 'synthetic' LIMIT 1`, [workflow.post_uri, hash(helperDid)]);
+        if (demo.rowCount) throw new PublicHttpError(409, 'DEMO_COORDINATION_FORBIDDEN', 'Example listings cannot be used for a real handoff.');
         if (!allowedStatuses.includes(workflow.current_status)) {
             throw new PublicHttpError(
                 409,

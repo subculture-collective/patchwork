@@ -1,3 +1,4 @@
+import type { DiscoveryMapAggregates } from '@patchwork/shared';
 import 'leaflet/dist/leaflet.css';
 import { useEffect, useMemo, useRef, useId, useState } from 'react';
 import L from 'leaflet';
@@ -17,6 +18,7 @@ import { resolveMapTileUrl } from '../../config.js';
 import { useLocale } from '../../i18n';
 
 export interface InteractiveMapProps {
+    aggregateCells?: DiscoveryMapAggregates['cells'];
     cards: readonly MapAidCard[];
     resources?: readonly ResourceDirectoryCard[];
     selectedPostId?: string;
@@ -64,6 +66,7 @@ const sameCenter = (
     Math.abs(left.lng - right.lng) < 0.000001;
 
 export const InteractiveMap = ({
+    aggregateCells,
     cards,
     resources = [],
     selectedPostId,
@@ -228,7 +231,13 @@ export const InteractiveMap = ({
         if (!mapInstance.current) return;
         const map = mapInstance.current;
         const layers: L.Layer[] = [];
-        for (const cluster of clusters) {
+        for (const cell of aggregateCells ?? []) {
+            const circle = L.circle([cell.latitude, cell.longitude], { radius: cell.radiusKm * 1000, className: 'mh-map-cluster' }).addTo(map);
+            circle.bindTooltip(String(cell.count), { permanent: true, direction: 'center', className: 'mh-map-circle-label mh-map-cluster-label' });
+            circle.on('click', () => map.fitBounds(circle.getBounds()));
+            layers.push(circle);
+        }
+        for (const cluster of aggregateCells ? [] : clusters) {
             if (cluster.count <= 1) continue;
             const circle = L.circle([cluster.lat, cluster.lng], {
                 radius: cluster.radiusMeters,
@@ -260,7 +269,7 @@ export const InteractiveMap = ({
             });
             layers.push(circle);
         }
-        for (const marker of markers) {
+        for (const marker of aggregateCells ? [] : markers) {
             if (!marker || clusteredPostIds.has(marker.id)) continue;
             const circle = L.circle([marker.lat, marker.lng], {
                 radius: marker.radiusMeters,
@@ -325,7 +334,7 @@ export const InteractiveMap = ({
             layers.push(circle);
         }
         return () => layers.forEach((layer) => layer.remove());
-    }, [
+    }, [aggregateCells,
         cards,
         clusteredPostIds,
         clusters,
@@ -336,7 +345,7 @@ export const InteractiveMap = ({
         selectedPostId,
     ]);
 
-    const hasItems =
+    const hasItems = Boolean(aggregateCells?.length) ||
         markers.length > 0 || clusters.length > 0 || resources.length > 0;
 
     return (

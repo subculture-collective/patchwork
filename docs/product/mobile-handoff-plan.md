@@ -122,3 +122,29 @@ Verification for the navigation/map tranche:
 - Both remotes were fetched again and still point to `5b348af`. The original checkout remains untouched. No public push/deployment, real recipient delivery or human phone handoff occurred; the disposable PostgreSQL container was stopped and removed.
 
 The next implementation step is server-enforced community/demo separation and mutation eligibility, followed by bounded SQL discovery and route extraction. The broader activity layout and selected-map-record URL restoration are still open. Protected candidate qualification and the real-device milestone gates remain open.
+
+## Implementation checkpoint — bounded discovery and testing deployment preparation
+
+2026-09-06: added server-enforced community/demo datasets, demo coordination rejection,
+bounded PostgreSQL request/resource/volunteer filtering and paging, privacy-safe map
+aggregate cells, and support for unlocated legacy requests in Latest. Minimum urgency
+now includes more urgent requests while preserving the exact urgency API parameter.
+Map selection restores from URL independently of loaded pages, including reload and
+Back. Map route and pagination focus are extracted; My activity places offers and
+connections before optional discovery/matching tools.
+
+Verification before candidate build: repository checks pass; API PostgreSQL suite
+passes 430 tests with one real attachment integration pending. All 26 targeted map,
+mobile navigation, history, and production-mode browser checks pass. Full browser
+qualification is running. No high/critical production npm advisories; four moderate
+MinIO-chain findings remain (decode-uri-component/query-string and stream-json).
+The available upgrades change module/API contracts and require explicit compatibility
+validation; no forced major downgrade is applied.
+
+The user authorized live testing deployment. `docker-compose.candidate.yml` defines
+separate containers, database, object store, network and application secrets. NUC's
+default Docker address pools are exhausted; dedicated unused 10.252.20.0/24 and
+10.252.21.0/24 are selected. Existing staging-named containers serve the public site
+and must not be replaced. Candidate hostname: patchwork-test.subcult.tv. Managed PDS
+and Jetstream remain shared external providers; this is not full identity-provider
+isolation. Human phone participants and notification recipient remain pending.

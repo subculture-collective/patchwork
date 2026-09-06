@@ -40,6 +40,52 @@ describePostgres('PostgresProjectionQueryService', () => {
         expect((await service.queryAidPost(new URLSearchParams({ uri }), 'did:plc:viewer')).statusCode).toBe(404);
     });
 
+    it('separates community and demo before pagination, direct lookup, and counts', async () => {
+        const service = new PostgresProjectionQueryService(pool);
+        const uri = `at://did:plc:alice/${recordNsid.aidPost}/a`;
+        await pool.query("UPDATE indexer_aid_post_projections SET record_origin = 'synthetic', seed_version = 'candidate-test-v1' WHERE uri = $1", [uri]);
+        expect(await service.queryFeed(new URLSearchParams({ pageSize: '1' }))).toMatchObject({ body: { total: 2, hasNextPage: true, results: [expect.objectContaining({ recordOrigin: 'visitor-created' })] } });
+        expect(await service.queryFeed(new URLSearchParams({ dataset: 'demo' }))).toMatchObject({ body: { total: 1, results: [{ uri, recordOrigin: 'synthetic' }] } });
+        expect((await service.queryAidPost(new URLSearchParams({ uri }))).statusCode).toBe(404);
+        expect((await service.queryAidPost(new URLSearchParams({ uri, dataset: 'demo' }))).statusCode).toBe(200);
+        expect(await service.queryFeed(new URLSearchParams({ page: '999' }))).toMatchObject({ body: { total: 2, results: [], hasNextPage: false } });
+        expect((await service.queryFeed(new URLSearchParams({ dataset: 'all' }))).statusCode).toBe(400);
+        await pool.query("UPDATE indexer_directory_resource_projections SET record_origin = 'synthetic', seed_version = 'candidate-test-v1' WHERE category = 'food-bank'");
+        expect(await service.queryDirectory(new URLSearchParams())).toMatchObject({ body: { total: 1, results: [{ name: 'Regional Legal Line' }] } });
+        expect(await service.queryDirectory(new URLSearchParams({ dataset: 'demo' }))).toMatchObject({ body: { total: 1, results: [{ name: 'Northside Community Pantry' }] } });
+    });
+
+    it('keeps bounded pages stable across equal timestamps and handles dateline searches', async () => {
+        const service = new PostgresProjectionQueryService(pool);
+        const first = await service.queryFeed(new URLSearchParams({ pageSize: '2' }));
+        const second = await service.queryFeed(new URLSearchParams({ pageSize: '2', page: '2' }));
+        expect(first).toMatchObject({ body: { total: 3, results: [{ title: 'Food support' }, { title: 'Clinic ride' }] } });
+        expect(second).toMatchObject({ body: { total: 3, results: [{ title: 'Old food request' }] } });
+        await pool.query("UPDATE indexer_aid_post_projections SET latitude = 0, longitude = CASE WHEN title = 'Food support' THEN 179.9 ELSE -179.9 END WHERE status = 'open'");
+        const result = await service.queryMap(new URLSearchParams({ latitude: '0', longitude: '179.95', radiusKm: '30', status: 'open' }));
+        expect(result).toMatchObject({ statusCode: 200, body: { total: 2 } });
+        expect(JSON.stringify(result.body)).not.toMatch(/author_did_hash|source_event_id|source_cursor|searchable_text/);
+    });
+
+    it('minimum urgency includes more urgent requests and validates its value', async () => {
+        const service = new PostgresProjectionQueryService(pool);
+        await pool.query("UPDATE indexer_aid_post_projections SET urgency = CASE WHEN title = 'Food support' THEN 'critical' WHEN title = 'Clinic ride' THEN 'high' ELSE 'low' END");
+        expect(await service.queryFeed(new URLSearchParams({ minimumUrgency: 'high', pageSize: '1' }))).toMatchObject({ body: { total: 2, hasNextPage: true } });
+        expect(await service.queryFeed(new URLSearchParams({ urgency: 'high' }))).toMatchObject({ body: { total: 1 } });
+        expect(await service.queryFeed(new URLSearchParams({ minimumUrgency: 'invalid' }))).toMatchObject({ statusCode: 400 });
+    });
+
+    it('includes unlocated requests in Latest, excludes them from nearby, and counts beyond one page', async () => {
+        const service = new PostgresProjectionQueryService(pool);
+        await pool.query("UPDATE indexer_aid_post_projections SET latitude = NULL, longitude = NULL, precision_km = NULL WHERE title = 'Food support'");
+        const latest = await service.queryFeed(new URLSearchParams());
+        expect(latest).toMatchObject({ body: { total: 3, results: expect.arrayContaining([expect.objectContaining({ title: 'Food support' })]) } });
+        if ('results' in latest.body) expect(latest.body.results[0]).not.toHaveProperty('approximateGeo');
+        const nearby = await service.queryMap(new URLSearchParams({ latitude: '41.88', longitude: '-87.63', radiusKm: '20', pageSize: '1' }));
+        expect(nearby).toMatchObject({ body: { total: 2, hasNextPage: true, aggregates: { requestCount: 2, locatedRequestCount: 2, truncated: false } } });
+        if ('aggregates' in nearby.body) expect(nearby.body.aggregates?.cells.reduce((sum, cell) => sum + cell.count, 0)).toBe(2);
+    });
+
     beforeAll(async () => {
         const schema = await pool.query<{
             aid_table: string | null;
@@ -64,7 +110,7 @@ describePostgres('PostgresProjectionQueryService', () => {
 
     beforeEach(async () => {
         await pool.query(
-            `TRUNCATE verification_audit_events,
+            `TRUNCATE user_blocks, verification_audit_events,
                       exact_public_address_requests,
                       verification_appeals,
                       verification_decisions,

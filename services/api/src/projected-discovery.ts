@@ -1,0 +1,97 @@
+import { z, ZodError } from 'zod';
+import type { Pool, QueryResultRow } from 'pg';
+import { computeDiscoveryRank, validateAidFeedQueryInput, validateAidQueryInput, validateDirectoryQueryInput, type ApiQueryAidResponse, type ApiQueryDirectoryResponse, type DiscoveryMapAggregates } from '@patchwork/shared';
+import type { ApiRouteResult } from './query-service.js';
+
+export const discoveryDataset = (params: URLSearchParams) => z.enum(['community', 'demo']).parse(params.get('dataset') ?? 'community');
+const number = (params: URLSearchParams, key: string) => params.has(key) && params.get(key)!.trim() ? Number(params.get(key)) : undefined;
+const queryInput = (params: URLSearchParams) => ({
+    latitude: number(params, 'latitude'), longitude: number(params, 'longitude'), radiusKm: number(params, 'radiusKm'),
+    category: params.get('category') || undefined, status: params.get('status') || undefined,
+    urgency: params.get('urgency') || undefined, minimumUrgency: params.get('minimumUrgency') || undefined, operationalStatus: params.get('operationalStatus') || undefined,
+    freshnessHours: number(params, 'freshnessHours'), searchText: params.get('searchText') || undefined,
+    page: number(params, 'page'), pageSize: number(params, 'pageSize'),
+});
+export interface BoundedPage<T> { rows: T[]; total: number; page: number; pageSize: number; now: string; aggregates?: DiscoveryMapAggregates; freshness: { latestCursor: number | null; projectedAt: string | null; observedAt: string | null; lagSeconds: number | null }; }
+
+/** Filters, ranking, totals and pagination stay in PostgreSQL. Only one page crosses the wire. */
+export async function readProjectionPage<T extends QueryResultRow>(pool: Pool, params: URLSearchParams, kind: 'map' | 'feed' | 'directory', viewerDid?: string, uri?: string): Promise<BoundedPage<T>> {
+    const dataset = discoveryDataset(params);
+    const raw = queryInput(params);
+    const input = kind === 'directory' ? validateDirectoryQueryInput(raw) : kind === 'map' ? validateAidQueryInput(raw) : validateAidFeedQueryInput(raw);
+    const page = input.page ?? 1, pageSize = input.pageSize ?? 20;
+    const values: unknown[] = [];
+    const bind = (value: unknown) => { values.push(value); return `$${values.length}`; };
+    const now = new Date().toISOString();
+    const nowParam = bind(now);
+    const where = [`p.record_origin ${dataset === 'demo' ? '=' : '<>'} 'synthetic'`];
+    if (uri) where.push(`p.uri = ${bind(uri)}`);
+    if (input.category) where.push(`p.category = ${bind(input.category)}`);
+    if (input.status) where.push(`p.${kind === 'directory' ? 'verification_status' : 'status'} = ${bind(input.status)}`);
+    if (kind !== 'directory' && raw.urgency) where.push(`p.urgency = ${bind(raw.urgency)}`);
+    if (kind !== 'directory' && raw.minimumUrgency) {
+        const levels = ['low', 'medium', 'high', 'critical'];
+        where.push(`p.urgency = ANY(${bind(levels.slice(levels.indexOf(raw.minimumUrgency)))}::text[])`);
+    }
+    if (kind === 'directory' && raw.operationalStatus) where.push(`p.operational_status = ${bind(raw.operationalStatus)}`);
+    if (input.searchText) where.push(`strpos(p.searchable_text, ${bind(input.searchText.toLowerCase())}) > 0`);
+    if (input.freshnessHours) where.push(`p.record_updated_at >= ${nowParam}::timestamptz - ${bind(input.freshnessHours)}::double precision * INTERVAL '1 hour'`);
+    if (viewerDid) {
+        const viewer = bind(viewerDid);
+        where.push(`NOT EXISTS (SELECT 1 FROM user_blocks b WHERE b.deleted_at IS NULL AND (b.retention_until IS NULL OR b.retention_until > NOW()) AND ((b.blocker_did = ${viewer} AND b.subject_did = split_part(p.uri, '/', 3)) OR (b.subject_did = ${viewer} AND b.blocker_did = split_part(p.uri, '/', 3))))`);
+    }
+    const located = input.latitude !== undefined && input.longitude !== undefined && input.radiusKm !== undefined;
+    let distance = 'NULL::double precision';
+    if (located) {
+        const lat = bind(input.latitude), lng = bind(input.longitude);
+        where.push('p.latitude IS NOT NULL AND p.longitude IS NOT NULL AND p.precision_km IS NOT NULL');
+        where.push(`p.latitude BETWEEN ${bind(input.latitude! - input.radiusKm! / 111)}::double precision AND ${bind(input.latitude! + input.radiusKm! / 111)}::double precision`);
+        // Haversine, clamped for floating-point noise at antipodes and across the dateline.
+        distance = `6371 * 2 * asin(sqrt(least(1.0, greatest(0.0, power(sin(radians(p.latitude - ${lat}::double precision) / 2), 2) + cos(radians(${lat}::double precision)) * cos(radians(p.latitude)) * power(sin(radians(p.longitude - ${lng}::double precision) / 2), 2)))))`;
+    }
+    const table = kind === 'directory' ? 'indexer_directory_resource_projections' : 'indexer_aid_post_projections';
+    const radius = located ? `WHERE distance_km <= ${bind(input.radiusKm)}::double precision` : '';
+    const score = kind !== 'directory' && located ? `round(((CASE WHEN distance_km <= 2 THEN 1 WHEN distance_km <= 5 THEN .82 WHEN distance_km <= 10 THEN .66 WHEN distance_km <= 25 THEN .48 ELSE .3 END) * .45 + round(power(.5::numeric, greatest(0, extract(epoch FROM (${nowParam}::timestamptz - record_created_at)) / 3600) / 24), 6) * .35 + .1)::numeric, 6) DESC,` : '';
+    const limit = bind(pageSize), offset = bind((page - 1) * pageSize);
+    const result = await pool.query<{ rows: T[]; aggregates: DiscoveryMapAggregates | null; total: string; projected_at: string | null; state: { latest_cursor: string | null; heartbeat_at: string } | null }>(`WITH candidates AS (
+        SELECT p.*, ${distance} AS distance_km FROM ${table} p WHERE ${where.join(' AND ')}
+    ), filtered AS MATERIALIZED (SELECT * FROM candidates ${radius}), paged AS (
+        SELECT * FROM filtered ORDER BY ${score} record_updated_at DESC, uri COLLATE "C" LIMIT ${limit} OFFSET ${offset}
+    ), cells AS (
+        SELECT least(89.95, greatest(-89.95, floor(latitude * 10) / 10 + .05)) AS latitude,
+            least(179.95, greatest(-179.95, floor(longitude * 10) / 10 + .05)) AS longitude,
+            count(*)::integer AS count, max(precision_km) + 8 AS "radiusKm"
+        FROM filtered WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+        GROUP BY 1, 2 ORDER BY 1, 2
+    ) SELECT ${nowParam}::timestamptz AS query_at, (SELECT count(*)::text FROM filtered) AS total,
+        (SELECT max(projected_at) FROM filtered) AS projected_at,
+        ${kind === 'map' ? `jsonb_build_object('requestCount', (SELECT count(*) FROM filtered), 'locatedRequestCount', (SELECT count(*) FROM filtered WHERE latitude IS NOT NULL AND longitude IS NOT NULL), 'truncated', (SELECT count(*) > 500 FROM cells), 'cells', coalesce((SELECT jsonb_agg(to_jsonb(c)) FROM (SELECT * FROM cells LIMIT 500) c), '[]'::jsonb))` : 'NULL::jsonb'} AS aggregates,
+        coalesce((SELECT jsonb_agg(to_jsonb(paged)) FROM paged), '[]'::jsonb) AS rows,
+        (SELECT jsonb_build_object('latest_cursor', latest_cursor::text, 'heartbeat_at', heartbeat_at) FROM indexer_projection_state WHERE singleton = TRUE) AS state`, values);
+    const data = result.rows[0]!;
+    return { rows: data.rows, total: Number(data.total), page, pageSize, now, ...(data.aggregates ? { aggregates: data.aggregates } : {}), freshness: {
+        latestCursor: data.state?.latest_cursor ? Number(data.state.latest_cursor) : null,
+        projectedAt: data.projected_at ? new Date(data.projected_at).toISOString() : null,
+        observedAt: data.state ? new Date(data.state.heartbeat_at).toISOString() : null,
+        lagSeconds: data.state ? Math.max(0, (Date.now() - Date.parse(data.state.heartbeat_at)) / 1000) : null,
+    } };
+}
+const iso = (value: string) => new Date(value).toISOString();
+const common = (row: QueryResultRow) => ({ uri: row.uri as string, authorDid: String(row.uri).split('/')[2]!, ...(row.cid ? { cid: row.cid as string } : {}), createdAt: iso(row.record_created_at), updatedAt: iso(row.record_updated_at), recordOrigin: row.record_origin });
+export async function queryProjected(pool: Pool, params: URLSearchParams, kind: 'map' | 'feed' | 'directory', viewerDid?: string, uri?: string): Promise<ApiRouteResult> {
+    try {
+        const result = await readProjectionPage(pool, params, kind, viewerDid, uri);
+        const results = result.rows.map(row => {
+            const geo = row.latitude !== null && row.longitude !== null && row.precision_km !== null ? { latitude: Number(row.latitude), longitude: Number(row.longitude), precisionKm: Number(row.precision_km) } : undefined;
+            return kind === 'directory' ? { ...common(row), name: row.name, category: row.category, serviceArea: row.service_area, status: row.verification_status, contact: row.contact, ...(geo ? { approximateGeo: geo } : {}), ...(row.open_hours ? { openHours: row.open_hours } : {}), ...(row.eligibility_notes ? { eligibilityNotes: row.eligibility_notes } : {}), operationalStatus: row.operational_status } : {
+                ...common(row), title: row.title, summary: row.description, category: row.category, urgency: row.urgency, status: row.status,
+                ...(geo ? { approximateGeo: geo } : {}), ...(row.distance_km !== null ? { distanceKm: Number(row.distance_km) } : {}),
+                ranking: computeDiscoveryRank({ distanceKm: row.distance_km === null ? Infinity : Number(row.distance_km), createdAt: iso(row.record_created_at), trustScore: .5, nowIso: result.now }),
+            };
+        });
+        return { statusCode: 200, body: { total: result.total, page: result.page, pageSize: result.pageSize, hasNextPage: result.page * result.pageSize < result.total, results, ...(result.aggregates ? { aggregates: result.aggregates } : {}), projectionFreshness: result.freshness } as ApiQueryAidResponse | ApiQueryDirectoryResponse };
+    } catch (error) {
+        if (error instanceof ZodError) return { statusCode: 400, body: { error: { code: 'INVALID_QUERY', message: 'Query parameters failed validation.' } } };
+        throw error;
+    }
+}

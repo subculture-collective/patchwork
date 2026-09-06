@@ -4,6 +4,10 @@
         "skipToContent": "Saltar al contenido principal"
     },
     "nav": {
+        "dataset": "Publicaciones",
+        "dataset_community": "Comunidad",
+        "dataset_demo": "Explorar ejemplos",
+        "demoHelp": "Los ejemplos muestran cómo funciona Patchwork. Usa Comunidad para una solicitud o ayuda real.",
         "mapFilters": "Ubicación y filtros",
         "nearby": "Cerca",
         "ask": "Pedir ayuda",
@@ -249,6 +253,8 @@
         "filtersPersist": "Los filtros persisten en la URL para contexto de triaje compartible."
     },
     "map": {
+        "aggregateHelp": "El mapa resume las {{count}} solicitudes coincidentes. Selecciona una zona y luego Buscar en esta zona para reducir la lista.",
+        "aggregateTruncated": "Acerca el mapa a una zona más pequeña para ver los grupos restantes.",
         "heading": "Triaje de mapa",
         "description": "Agrupaci\u00f3n de \u00e1rea aproximada con radios seguros para la privacidad y acciones directas de traspaso.",
         "areaRequired": "Permite el acceso a la ubicación para cargar resultados cercanos. Si no está disponible, el área de demostración se carga automáticamente.",

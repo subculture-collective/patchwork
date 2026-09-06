@@ -31,6 +31,7 @@ export interface DiscoveryCenter {
 }
 
 export interface DiscoveryFilterState {
+    dataset?: 'community' | 'demo';
     feedTab: FeedTab;
     text?: string;
     category?: AidCategory;
@@ -197,6 +198,7 @@ export function normalizeDiscoveryFilterState(
 
     return {
         feedTab,
+        ...(state.dataset === 'demo' || state.dataset === 'community' ? { dataset: state.dataset } : {}),
         ...(text ? { text } : {}),
         ...(category ? { category } : {}),
         ...(status ? { status } : {}),
@@ -269,6 +271,7 @@ export function serializeDiscoveryFilterState(
     state: DiscoveryFilterState,
 ): string {
     const params = new URLSearchParams();
+    if (state.dataset) params.set('dataset', state.dataset);
 
     if (state.feedTab === 'nearby') {
         params.set('tab', state.feedTab);
@@ -321,6 +324,7 @@ export function parseDiscoveryFilterState(
 
     return normalizeDiscoveryFilterState({
         ...fallback,
+        dataset: params.get('dataset') === 'demo' ? 'demo' : params.get('dataset') === 'community' ? 'community' : fallback.dataset,
         feedTab:
             parsedTab ??
             fallback.feedTab ??

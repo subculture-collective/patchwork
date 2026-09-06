@@ -1,0 +1,390 @@
+# Protected candidate; dedicated subnets because NUC default Docker pools are exhausted.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: patchwork-candidate-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: patchwork
+      POSTGRES_USER: patchwork
+      POSTGRES_PASSWORD: ${PATCHWORK_CANDIDATE_POSTGRES_PASSWORD:?Set PATCHWORK_CANDIDATE_POSTGRES_PASSWORD
+        in .env}
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U patchwork -d patchwork
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+    - patchwork-candidate-postgres-data:/var/lib/postgresql/data
+    networks:
+      candidate-internal: null
+  patchwork-api:
+    image: ${PATCHWORK_API_IMAGE:-patchwork-api:local}
+    container_name: patchwork-candidate-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      patchwork-api-migrations:
+        condition: service_completed_successfully
+      patchwork-indexer-migrations:
+        condition: service_completed_successfully
+      patchwork-spool:
+        condition: service_healthy
+      patchwork-thimble:
+        condition: service_healthy
+      patchwork-objects:
+        condition: service_healthy
+      patchwork-clamav:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PATCHWORK_ENV: candidate
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ATPROTO_SERVICE_DID: ${CANDIDATE_ATPROTO_SERVICE_DID:?Set CANDIDATE_ATPROTO_SERVICE_DID
+        in .env}
+      ATPROTO_PDS_URL: ${ATPROTO_PDS_URL:-https://bsky.social}
+      ATPROTO_ACCOUNT_PDS_URL: ${ATPROTO_ACCOUNT_PDS_URL:?Set private PDS origin}
+      ATPROTO_ACCOUNT_PDS_ADMIN_PASSWORD: ${ATPROTO_ACCOUNT_PDS_ADMIN_PASSWORD:?Set
+        PDS admin password}
+      ATPROTO_OAUTH_CLIENT_ID: ${CANDIDATE_ATPROTO_OAUTH_CLIENT_ID:?Set CANDIDATE_ATPROTO_OAUTH_CLIENT_ID}
+      ATPROTO_OAUTH_REDIRECT_URI: ${CANDIDATE_ATPROTO_OAUTH_REDIRECT_URI:?Set CANDIDATE_ATPROTO_OAUTH_REDIRECT_URI}
+      ATPROTO_SESSION_ENCRYPTION_KEY: ${CANDIDATE_ATPROTO_SESSION_ENCRYPTION_KEY:?Set
+        CANDIDATE_ATPROTO_SESSION_ENCRYPTION_KEY}
+      API_HOST: 0.0.0.0
+      API_PORT: 4000
+      API_PUBLIC_ORIGIN: ${CANDIDATE_PUBLIC_ORIGIN:?Set CANDIDATE_PUBLIC_ORIGIN}
+      API_TRUSTED_PROXIES: ${CANDIDATE_API_TRUSTED_PROXIES:?Set CANDIDATE_API_TRUSTED_PROXIES
+        to your trusted proxy IPs/CIDRs before starting candidate.}
+      API_MAX_PROJECTION_LAG_SECONDS: ${CANDIDATE_API_MAX_PROJECTION_LAG_SECONDS:-300}
+      API_RETENTION_INTERVAL_SECONDS: ${CANDIDATE_API_RETENTION_INTERVAL_SECONDS:-3600}
+      API_DATA_SOURCE: postgres
+      API_DATABASE_URL: postgresql://patchwork:${PATCHWORK_CANDIDATE_POSTGRES_PASSWORD:?Set
+        PATCHWORK_CANDIDATE_POSTGRES_PASSWORD in .env}@patchwork-candidate-postgres:5432/patchwork
+      API_MODERATION_SERVICE_URL: http://patchwork-candidate-thimble:4200
+      MODERATION_SERVICE_TOKEN: ${CANDIDATE_MODERATION_SERVICE_TOKEN:?Set CANDIDATE_MODERATION_SERVICE_TOKEN
+        in .env}
+      API_ATTACHMENT_INTERVAL_SECONDS: ${CANDIDATE_API_ATTACHMENT_INTERVAL_SECONDS:-30}
+      ATTACHMENT_OBJECT_ENDPOINT: http://patchwork-objects:9000
+      ATTACHMENT_OBJECT_ACCESS_KEY: ${CANDIDATE_PATCHWORK_ATTACHMENT_ACCESS_KEY:?Set
+        CANDIDATE_PATCHWORK_ATTACHMENT_ACCESS_KEY in .env}
+      ATTACHMENT_OBJECT_SECRET_KEY: ${CANDIDATE_PATCHWORK_ATTACHMENT_SECRET_KEY:?Set
+        CANDIDATE_PATCHWORK_ATTACHMENT_SECRET_KEY in .env}
+      ATTACHMENT_OBJECT_BUCKET: patchwork-candidate-private-attachments
+      ATTACHMENT_SIGNING_KEY: ${CANDIDATE_PATCHWORK_ATTACHMENT_SIGNING_KEY:?Set CANDIDATE_PATCHWORK_ATTACHMENT_SIGNING_KEY
+        in .env}
+      ATTACHMENT_CLAMD_HOST: patchwork-clamav
+      ATTACHMENT_CLAMD_PORT: 3310
+      API_NOTIFICATION_INTERVAL_SECONDS: ${CANDIDATE_API_NOTIFICATION_INTERVAL_SECONDS:-15}
+      NOTIFICATION_EMAIL_PROVIDER_URL: ${CANDIDATE_NOTIFICATION_EMAIL_PROVIDER_URL:-}
+      NOTIFICATION_EMAIL_PROVIDER_TOKEN: ${CANDIDATE_NOTIFICATION_EMAIL_PROVIDER_TOKEN:-}
+      NOTIFICATION_EMAIL_FROM: ${CANDIDATE_NOTIFICATION_EMAIL_FROM:-}
+      NOTIFICATION_VAPID_SUBJECT: ${CANDIDATE_NOTIFICATION_VAPID_SUBJECT:?Set CANDIDATE_NOTIFICATION_VAPID_SUBJECT
+        in .env}
+      NOTIFICATION_VAPID_PUBLIC_KEY: ${CANDIDATE_NOTIFICATION_VAPID_PUBLIC_KEY:?Set
+        CANDIDATE_NOTIFICATION_VAPID_PUBLIC_KEY in .env}
+      NOTIFICATION_VAPID_PRIVATE_KEY: ${CANDIDATE_NOTIFICATION_VAPID_PRIVATE_KEY:?Set
+        CANDIDATE_NOTIFICATION_VAPID_PRIVATE_KEY in .env}
+      NOTIFICATION_PROVIDER_WEBHOOK_TOKEN: ${CANDIDATE_NOTIFICATION_PROVIDER_WEBHOOK_TOKEN:-}
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget -qO- http://127.0.0.1:4000/health/ready >/dev/null
+      interval: 10s
+      timeout: 3s
+      retries: 18
+    networks:
+      candidate-internal: null
+    ports:
+    - 10.0.0.56:3052:4000
+  patchwork-spool:
+    image: ${PATCHWORK_INDEXER_IMAGE:-patchwork-indexer:local}
+    container_name: patchwork-candidate-spool
+    restart: unless-stopped
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget -qO- http://127.0.0.1:4100/health/ready >/dev/null
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    depends_on:
+      postgres:
+        condition: service_healthy
+      patchwork-indexer-migrations:
+        condition: service_completed_successfully
+      patchwork-api-migrations:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      PATCHWORK_ENV: candidate
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ATPROTO_SERVICE_DID: ${CANDIDATE_ATPROTO_SERVICE_DID:?Set CANDIDATE_ATPROTO_SERVICE_DID
+        in .env}
+      ATPROTO_PDS_URL: ${ATPROTO_PDS_URL:-https://bsky.social}
+      INDEXER_PORT: 4100
+      INDEXER_FIREHOSE_URL: ${INDEXER_FIREHOSE_URL:-https://jetstream.us-east.bsky.network}
+      INDEXER_JETSTREAM_VERSION: ${INDEXER_JETSTREAM_VERSION:-v2}
+      INDEXER_PROJECTION_MODE: ${INDEXER_PROJECTION_MODE:-v2-live}
+      JETSTREAM_API_KEY: ${JETSTREAM_API_KEY:?Set JETSTREAM_API_KEY for Jetstream
+        v2}
+      DATABASE_URL: postgresql://patchwork:${PATCHWORK_CANDIDATE_POSTGRES_PASSWORD:?Set
+        PATCHWORK_CANDIDATE_POSTGRES_PASSWORD in .env}@patchwork-candidate-postgres:5432/patchwork
+    networks:
+      candidate-internal: null
+  patchwork-v2-shadow:
+    image: ${PATCHWORK_INDEXER_IMAGE:-patchwork-indexer:local}
+    container_name: patchwork-candidate-v2-shadow
+    restart: unless-stopped
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget -qO- http://127.0.0.1:4101/health/ready >/dev/null
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    depends_on:
+      postgres:
+        condition: service_healthy
+      patchwork-indexer-migrations:
+        condition: service_completed_successfully
+      patchwork-api-migrations:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      PATCHWORK_ENV: candidate
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ATPROTO_SERVICE_DID: ${CANDIDATE_ATPROTO_SERVICE_DID:?Set CANDIDATE_ATPROTO_SERVICE_DID
+        in .env}
+      ATPROTO_PDS_URL: ${ATPROTO_PDS_URL:-https://bsky.social}
+      INDEXER_PORT: 4101
+      INDEXER_FIREHOSE_URL: ${INDEXER_V2_URL:-https://jetstream.us-east.bsky.network}
+      INDEXER_JETSTREAM_VERSION: v2
+      INDEXER_PROJECTION_MODE: v2-shadow
+      JETSTREAM_API_KEY: ${JETSTREAM_API_KEY:?Set JETSTREAM_API_KEY for v2 replay}
+      DATABASE_URL: postgresql://patchwork:${PATCHWORK_CANDIDATE_POSTGRES_PASSWORD:?Set
+        PATCHWORK_CANDIDATE_POSTGRES_PASSWORD in .env}@patchwork-candidate-postgres:5432/patchwork
+    networks:
+      candidate-internal: null
+    profiles:
+    - maintenance
+  patchwork-v2-backfill:
+    image: ${PATCHWORK_INDEXER_IMAGE:-patchwork-indexer:local}
+    restart: 'no'
+    command:
+    - npm
+    - run
+    - v2:backfill
+    - -w
+    - '@patchwork/indexer'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      patchwork-indexer-migrations:
+        condition: service_completed_successfully
+      patchwork-api-migrations:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      PATCHWORK_ENV: candidate
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ATPROTO_SERVICE_DID: ${CANDIDATE_ATPROTO_SERVICE_DID:?Set CANDIDATE_ATPROTO_SERVICE_DID
+        in .env}
+      ATPROTO_PDS_URL: ${ATPROTO_PDS_URL:-https://bsky.social}
+      INDEXER_FIREHOSE_URL: ${INDEXER_V2_URL:-https://jetstream.us-east.bsky.network}
+      INDEXER_JETSTREAM_VERSION: v2
+      INDEXER_PROJECTION_MODE: v2-shadow
+      JETSTREAM_API_KEY: ${JETSTREAM_API_KEY:?Set JETSTREAM_API_KEY for v2 replay}
+      DATABASE_URL: postgresql://patchwork:${PATCHWORK_CANDIDATE_POSTGRES_PASSWORD:?Set
+        PATCHWORK_CANDIDATE_POSTGRES_PASSWORD in .env}@patchwork-candidate-postgres:5432/patchwork
+    networks:
+      candidate-internal: null
+    profiles:
+    - maintenance
+  patchwork-indexer-migrations:
+    image: ${PATCHWORK_INDEXER_IMAGE:-patchwork-indexer:local}
+    restart: 'no'
+    command:
+    - npm
+    - run
+    - db:migrate
+    - -w
+    - '@patchwork/indexer'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      ATPROTO_SERVICE_DID: ${CANDIDATE_ATPROTO_SERVICE_DID:?Set CANDIDATE_ATPROTO_SERVICE_DID
+        in .env}
+      ATPROTO_PDS_URL: ${ATPROTO_PDS_URL:-https://bsky.social}
+      DATABASE_URL: postgresql://patchwork:${PATCHWORK_CANDIDATE_POSTGRES_PASSWORD:?Set
+        PATCHWORK_CANDIDATE_POSTGRES_PASSWORD in .env}@patchwork-candidate-postgres:5432/patchwork
+    networks:
+      candidate-internal: null
+  patchwork-objects:
+    image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    container_name: patchwork-candidate-objects
+    restart: unless-stopped
+    command:
+    - server
+    - /data
+    environment:
+      MINIO_ROOT_USER: ${CANDIDATE_PATCHWORK_ATTACHMENT_ACCESS_KEY:?Set CANDIDATE_PATCHWORK_ATTACHMENT_ACCESS_KEY
+        in .env}
+      MINIO_ROOT_PASSWORD: ${CANDIDATE_PATCHWORK_ATTACHMENT_SECRET_KEY:?Set CANDIDATE_PATCHWORK_ATTACHMENT_SECRET_KEY
+        in .env}
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null
+      interval: 10s
+      timeout: 5s
+      retries: 18
+    volumes:
+    - patchwork-candidate-object-data:/data
+    networks:
+      candidate-internal: null
+  patchwork-clamav:
+    image: clamav/clamav@sha256:6b7c8e09559250f25b0184516b0a2ae805136e57485260e16c780c9fd6e6aba9
+    container_name: patchwork-candidate-clamav
+    restart: unless-stopped
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - clamdscan --ping 1 >/dev/null
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 360s
+    volumes:
+    - patchwork-candidate-clamav-signatures:/var/lib/clamav
+    networks:
+      candidate-internal: null
+  patchwork-thimble:
+    image: ${PATCHWORK_MODERATION_IMAGE:-patchwork-moderation:local}
+    container_name: patchwork-candidate-thimble
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PATCHWORK_ENV: candidate
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      ATPROTO_SERVICE_DID: ${CANDIDATE_ATPROTO_SERVICE_DID:?Set CANDIDATE_ATPROTO_SERVICE_DID
+        in .env}
+      ATPROTO_PDS_URL: ${ATPROTO_PDS_URL:-https://bsky.social}
+      DATABASE_URL: postgresql://patchwork:${PATCHWORK_CANDIDATE_POSTGRES_PASSWORD:?Set
+        PATCHWORK_CANDIDATE_POSTGRES_PASSWORD in .env}@patchwork-candidate-postgres:5432/patchwork
+      MODERATION_PORT: 4200
+      MODERATION_WORKER_CONCURRENCY: ${MODERATION_WORKER_CONCURRENCY:-2}
+      MODERATION_RETENTION_INTERVAL_SECONDS: ${CANDIDATE_MODERATION_RETENTION_INTERVAL_SECONDS:-3600}
+      MODERATION_SERVICE_TOKEN: ${CANDIDATE_MODERATION_SERVICE_TOKEN:?Set CANDIDATE_MODERATION_SERVICE_TOKEN
+        in .env}
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget -qO- http://127.0.0.1:4200/health/ready >/dev/null
+      interval: 10s
+      timeout: 3s
+      retries: 18
+    depends_on:
+      postgres:
+        condition: service_healthy
+      patchwork-moderation-migrations:
+        condition: service_completed_successfully
+    networks:
+      candidate-internal: null
+  patchwork-moderation-migrations:
+    image: ${PATCHWORK_MODERATION_IMAGE:-patchwork-moderation:local}
+    restart: 'no'
+    command:
+    - npm
+    - run
+    - db:migrate
+    - -w
+    - '@patchwork/moderation-worker'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      ATPROTO_SERVICE_DID: ${CANDIDATE_ATPROTO_SERVICE_DID:?Set CANDIDATE_ATPROTO_SERVICE_DID
+        in .env}
+      ATPROTO_PDS_URL: ${ATPROTO_PDS_URL:-https://bsky.social}
+      DATABASE_URL: postgresql://patchwork:${PATCHWORK_CANDIDATE_POSTGRES_PASSWORD:?Set
+        PATCHWORK_CANDIDATE_POSTGRES_PASSWORD in .env}@patchwork-candidate-postgres:5432/patchwork
+    networks:
+      candidate-internal: null
+  patchwork-api-migrations:
+    image: ${PATCHWORK_API_IMAGE:-patchwork-api:local}
+    restart: 'no'
+    command:
+    - npm
+    - run
+    - db:migrate
+    - -w
+    - '@patchwork/api'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      ATPROTO_SERVICE_DID: ${CANDIDATE_ATPROTO_SERVICE_DID:?Set CANDIDATE_ATPROTO_SERVICE_DID
+        in .env}
+      ATPROTO_PDS_URL: ${ATPROTO_PDS_URL:-https://bsky.social}
+      ATPROTO_ACCOUNT_PDS_URL: ${ATPROTO_ACCOUNT_PDS_URL:-https://pds.subcult.tv}
+      API_DATA_SOURCE: postgres
+      API_DATABASE_URL: postgresql://patchwork:${PATCHWORK_CANDIDATE_POSTGRES_PASSWORD:?Set
+        PATCHWORK_CANDIDATE_POSTGRES_PASSWORD in .env}@patchwork-candidate-postgres:5432/patchwork
+    networks:
+      candidate-internal: null
+  patchwork-web:
+    image: ${PATCHWORK_WEB_IMAGE:-patchwork-web:local}
+    container_name: patchwork-candidate-web
+    restart: unless-stopped
+    depends_on:
+      patchwork-api:
+        condition: service_healthy
+    environment:
+      VITE_MAP_TILE_URL: ${CANDIDATE_VITE_MAP_TILE_URL:?Set CANDIDATE_VITE_MAP_TILE_URL
+        to the versioned tile URL}
+      PATCHWORK_PM_TILES_FILENAME: ${CANDIDATE_PATCHWORK_PM_TILES_FILENAME}
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - test -r /srv/patchwork-map/${CANDIDATE_PATCHWORK_PM_TILES_FILENAME:?Set CANDIDATE_PATCHWORK_PM_TILES_FILENAME}
+        && wget -qO- http://127.0.0.1/ >/dev/null
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    volumes:
+    - type: bind
+      source: ${CANDIDATE_PATCHWORK_PM_TILES_DIRECTORY:?Set CANDIDATE_PATCHWORK_PM_TILES_DIRECTORY
+        to the host tile directory}
+      target: /srv/patchwork-map
+      read_only: true
+      bind:
+        create_host_path: false
+    networks:
+      candidate-web:
+        aliases:
+        - patchwork-candidate-web
+    ports:
+    - 10.0.0.56:3051:80
+volumes:
+  patchwork-candidate-postgres-data: null
+  patchwork-candidate-object-data: null
+  patchwork-candidate-clamav-signatures: null
+networks:
+  candidate-internal:
+    driver: bridge
+    ipam:
+      config:
+      - subnet: 10.252.20.0/24
+  candidate-web:
+    driver: bridge
+    ipam:
+      config:
+      - subnet: 10.252.21.0/24
+name: patchwork-candidate
