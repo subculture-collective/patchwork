@@ -67,6 +67,26 @@ describePostgres('PostgresProjectionQueryService', () => {
         expect(JSON.stringify(result.body)).not.toMatch(/author_did_hash|source_event_id|source_cursor|searchable_text/);
     });
 
+    it('orders varied distances and recencies by the shared public ranking score', async () => {
+        await pool.query(`INSERT INTO indexer_aid_post_projections
+            SELECT (jsonb_populate_record(NULL::indexer_aid_post_projections, to_jsonb(p) || jsonb_build_object(
+                'uri', p.uri || '-rank-' || n,
+                'latitude', 41.88 + (n % 10) * .01,
+                'longitude', -87.63,
+                'record_created_at', NOW() - n * INTERVAL '37 minutes',
+                'record_updated_at', NOW() - n * INTERVAL '1 second'
+            ))).* FROM (SELECT * FROM indexer_aid_post_projections LIMIT 1) p CROSS JOIN generate_series(1, 100) n`);
+        const response = await new PostgresProjectionQueryService(pool).queryMap(new URLSearchParams({ latitude: '41.88', longitude: '-87.63', radiusKm: '50', pageSize: '100' }));
+        expect(response.statusCode).toBe(200);
+        if ('results' in response.body) {
+            const scores = response.body.results.map(record => {
+                if (!('ranking' in record)) throw new Error('Expected request ranking');
+                return record.ranking.finalScore;
+            });
+            expect(scores).toEqual([...scores].sort((a, b) => b - a));
+        }
+    });
+
     it('minimum urgency includes more urgent requests and validates its value', async () => {
         const service = new PostgresProjectionQueryService(pool);
         await pool.query("UPDATE indexer_aid_post_projections SET urgency = CASE WHEN title = 'Food support' THEN 'critical' WHEN title = 'Clinic ride' THEN 'high' ELSE 'low' END");
