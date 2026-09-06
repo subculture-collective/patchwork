@@ -106,8 +106,8 @@ describe('InteractiveMap', () => {
         expect(leafletMock.map).toHaveBeenCalled();
         expect(tileLayer.addTo).toHaveBeenCalled();
         const circleArgs = (leafletMock.circle.mock.calls as unknown as Array<[unknown, { className?: string }]>)[0]?.[1];
-        expect(circleArgs).toMatchObject({ className: 'mh-map-circle is-selected' });
-        (leafletMock.circleOn.mock.calls as unknown as Array<[string, () => void]>)[0]?.[1]?.();
+        expect(circleArgs).toMatchObject({ className: 'mh-map-circle mh-map-coverage is-selected', interactive: false, radius: 1000 });
+        (leafletMock.placeOn.mock.calls as unknown as Array<[string, () => void]>)[0]?.[1]?.();
         expect(onSelectPostId).toHaveBeenCalledWith('card-1');
         await act(async () => root.unmount());
     });
@@ -247,7 +247,7 @@ describe('InteractiveMap', () => {
         });
 
         // Should have cluster class for clustered items
-        const clusterCalls = leafletMock.circle.mock.calls.filter(
+        const clusterCalls = leafletMock.circleMarker.mock.calls.filter(
             (call: unknown[]) => (call[1] as { className?: string })?.className === 'mh-map-cluster',
         );
         expect(clusterCalls.length).toBeGreaterThan(0);
@@ -300,10 +300,8 @@ describe('InteractiveMap', () => {
             );
         });
 
-        (leafletMock.circleOn.mock.calls as unknown as Array<[string, () => void]>)[0]?.[1]?.();
-        expect(onFocusArea).toHaveBeenCalledWith(
-            expect.objectContaining({ radiusMeters: 1000 }),
-        );
+        (leafletMock.placeOn.mock.calls as unknown as Array<[string, () => void]>)[0]?.[1]?.();
+        expect(onFocusArea).not.toHaveBeenCalled();
         expect(leafletMock.map.mock.results[0]?.value.setView).toHaveBeenCalled();
         await act(async () => root.unmount());
     });
@@ -381,7 +379,7 @@ describe('InteractiveMap', () => {
             );
         });
 
-        expect(leafletMock.circleMarker).not.toHaveBeenCalled();
+        expect(leafletMock.circleMarker).toHaveBeenCalledWith([40.7, -74], expect.objectContaining({ radius: 6 }));
         expect(leafletMock.circle).toHaveBeenCalledWith([40.7, -74], expect.objectContaining({ radius: 1000 }));
         await act(async () => root.unmount());
     });

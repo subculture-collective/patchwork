@@ -2966,6 +2966,7 @@ const ResourceRoute = ({
                 <p className='mt-2 text-sm text-mh-textMuted'>
                     {t('resources.description')}
                 </p>
+                {discoveryState.center && <p className='text-sm text-mh-textMuted'>{t('resources.nearestFirst')}</p>}
                 <div className='mt-3 flex flex-wrap gap-2'>
                     <Badge tone={dataOrigin === 'api' ? 'success' : 'info'}>
                         {dataOriginLabel(dataOrigin)}
@@ -3155,6 +3156,7 @@ const ResourceRoute = ({
                                     ) : null}
                                 </div>
                                 <p className='mt-1 text-xs text-mh-textSoft'>
+                                    {card.distanceMeters !== undefined ? `${fmt.number(card.distanceMeters / 1000, { maximumFractionDigits: 1 })} km · ` : ''}
                                     {card.location.areaLabel ??
                                         t('resources.areaPending')}{' '}
                                     ·{' '}

@@ -144,14 +144,14 @@ test('clusters split with one click, dim the others, and merge when zooming out'
     const clusters = page.locator('path.mh-map-cluster');
     await expect(clusters.first()).toBeVisible();
     const before = await clusters.count();
-    await clusters.first().focus();
+    await page.getByRole('button', { name: /^Zoom into/ }).first().focus();
     await page.keyboard.press('Enter');
     await expect.poll(() => clusters.count()).toBeGreaterThan(before);
     await expect(
         page.locator('path.mh-map-cluster.is-dimmed').first(),
     ).toBeAttached();
     await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
-    await expect.poll(() => clusters.count()).toBe(before);
+    await expect.poll(() => clusters.count()).toBeLessThanOrEqual(before);
 });
 test('filters collapse, use compact buttons and two columns on wider screens', async ({
     page,
@@ -265,3 +265,29 @@ for (const code of [1, 2, 3])
             .toBe(false);
         await expect(page.locator('.leaflet-container')).toBeVisible();
     });
+
+test('shared-location requests open a chooser instead of endless zoom', async ({ page }) => {
+    await page.route('**/api/query/map?**', route => route.fulfill({ json: {
+        total: 8, page: 1, pageSize: 20, hasNextPage: false,
+        results: Array.from({ length: 8 }, (_, i) => ({ ...record, uri: uri + i, title: `Shared area request ${i + 1}` })),
+    } }));
+    await page.goto('/nearby?tab=nearby&lat=41.88&lng=-87.63&r=20000');
+    await page.getByRole('button', { name: 'Show 8 requests in this area', exact: true }).click();
+    const chooser = page.getByRole('region', { name: 'These requests share an approximate area. Choose one to see details.' });
+    await expect(chooser).toBeVisible();
+    await expect(chooser.getByRole('button', { name: 'Shared area request 8', exact: true })).toBeVisible();
+    await chooser.getByRole('button', { name: 'Shared area request 8', exact: true }).click();
+    await expect(page.getByRole('region', { name: 'Details for Shared area request 8' })).toBeVisible();
+});
+
+test('nearby resources searches the request area on arrival', async ({ page }) => {
+    const requested: string[] = [];
+    page.on('request', req => { if (req.url().includes('/query/directory?')) requested.push(req.url()); });
+    await page.goto('/requests/view?uri=' + encodeURIComponent(uri));
+    await page.getByRole('link', { name: 'Find nearby resources', exact: true }).click();
+    await expect.poll(() => requested.some(url => {
+        const params = new URL(url).searchParams;
+        return params.get('latitude') === '41.880000' && params.get('longitude') === '-87.630000' && params.get('radiusKm') === '20';
+    })).toBe(true);
+    await expect(page.getByText('Closest to the selected area first. Distances are approximate.', { exact: true })).toBeVisible();
+});

@@ -300,6 +300,8 @@
         "cluster": "Grupo de varias solicitudes",
         "publicPlace": "Lugar público aprobado (exacto)",
         "legendNote": "Los círculos muestran zonas aproximadas, no direcciones privadas. Los números indican cuántas solicitudes hay cerca.",
+        "showAreaRequests": "Ver {{count}} solicitudes en esta zona",
+        "sharedArea": "Estas solicitudes comparten una zona aproximada. Elige una para ver los detalles.",
         "zoomCluster": "Acercar {{count}} solicitudes"
     },
     "exactLocation": {
@@ -438,6 +440,7 @@
         "kilobytes": "KB"
     },
     "resources": {
+        "nearestFirst": "Primero los más cercanos a la zona seleccionada. Las distancias son aproximadas.",
         "heading": "Directorio de recursos",
         "description": "Superponer servicios verificados en el contexto del mapa y lanzar traspasos de admisi\u00f3n r\u00e1pidamente.",
         "directoryFiltersTitle": "Filtros de directorio",

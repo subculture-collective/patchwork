@@ -953,9 +953,9 @@ code {
 /* Map circle markers - approximate aid areas */
 .mh-map-circle {
     fill: var(--mh-accent-2);
-    fill-opacity: 0.35;
+    fill-opacity: 0.12;
     stroke: var(--mh-organic-moss);
-    stroke-width: 2;
+    stroke-width: 1;
     stroke-opacity: 0.8;
     transition: fill var(--mh-transition-standard), stroke var(--mh-transition-standard), fill-opacity var(--mh-transition-standard);
     cursor: pointer;
@@ -972,37 +972,37 @@ code {
     fill: var(--mh-cta);
     fill-opacity: 0.5;
     stroke: var(--mh-border);
-    stroke-width: 3;
+    stroke-width: 1.5;
 }
 
 /* Cluster markers - multi-request areas */
 .mh-map-cluster {
-    fill: var(--mh-accent-3);
-    fill-opacity: 0.4;
+    fill: var(--mh-surface);
+    fill-opacity: 0.96;
     stroke: var(--mh-cta);
-    stroke-width: 2.5;
+    stroke-width: 1;
     stroke-opacity: 0.9;
     transition: fill var(--mh-transition-standard), stroke var(--mh-transition-standard), fill-opacity var(--mh-transition-standard);
     cursor: pointer;
 }
 
 .mh-map-cluster:hover {
-    fill: var(--mh-cta);
-    fill-opacity: 0.55;
+    fill: var(--mh-accent-3);
+    fill-opacity: 1;
     stroke: var(--mh-danger);
 }
 
 .mh-map-cluster.is-selected {
-    fill: var(--mh-cta);
-    fill-opacity: 0.55;
+    fill: var(--mh-accent-3);
+    fill-opacity: 1;
     stroke: var(--mh-border);
-    stroke-width: 3;
+    stroke-width: 1.5;
 }
 
 .mh-map-style-outline .mh-map-circle,
 .mh-map-style-outline .mh-map-cluster {
     fill-opacity: 0.04;
-    stroke-width: 3.5;
+    stroke-width: 1.5;
     stroke-opacity: 1;
 }
 
@@ -1011,7 +1011,7 @@ code {
     fill: #172019;
     fill-opacity: 0.72;
     stroke: #fffdf7;
-    stroke-width: 3;
+    stroke-width: 1.5;
     stroke-opacity: 1;
 }
 
@@ -1019,14 +1019,14 @@ code {
     fill: var(--mh-cta);
     fill-opacity: 1;
     stroke: #fffdf7;
-    stroke-width: 3;
+    stroke-width: 1.5;
     stroke-opacity: 1;
     cursor: pointer;
 }
 
 .mh-map-place.is-selected {
     stroke: var(--mh-border);
-    stroke-width: 4;
+    stroke-width: 2;
 }
 
 .mh-map-place:hover {
@@ -1056,6 +1056,22 @@ code {
     background: #172019;
     color: #fffdf7;
 }
+
+/* Coverage uses actual public radii, without capturing clicks over other markers. */
+.mh-map-coverage {
+    fill: var(--mh-community-primary);
+    fill-opacity: 0.035;
+    stroke: var(--mh-organic-moss);
+    stroke-opacity: 0.35;
+    stroke-width: 1;
+    pointer-events: none;
+}
+.mh-map-resource-area { fill: var(--mh-cta); stroke: var(--mh-cta); }
+.mh-map-coverage.is-dimmed { opacity: 0.18; }
+.mh-map-group { padding: 12px; background: var(--mh-surface); border: 1px solid var(--mh-border-subtle); }
+.mh-map-group ul { display: grid; gap: 8px; margin-top: 12px; max-height: 220px; overflow: auto; }
+.mh-interactive-map .mh-map-cluster-label { background: transparent; border: 0; box-shadow: none; padding: 0; font-size: 12px; }
+.mh-map-style-contrast .mh-map-cluster-label { color: #fffdf7; }
 
 /* Map legend */
 .mh-map-area-confirm {
@@ -1230,3 +1246,7 @@ code {
 .mh-map-cluster, .mh-map-circle { transition: opacity 180ms ease; }
 .mh-map-cluster:focus-visible { outline: 3px solid #176854; outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { .mh-map-cluster, .mh-map-circle { transition: none; } }
+
+.mh-map-request-point { fill: var(--mh-community-primary); fill-opacity: 1; stroke: #fffdf7; stroke-width: 1.5; cursor: pointer; }
+.mh-map-request-point.is-selected { stroke: var(--mh-border); stroke-width: 2; }
+.mh-map-request-point.is-dimmed { opacity: 0.18; }

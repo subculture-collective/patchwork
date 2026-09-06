@@ -197,7 +197,7 @@ export function toApproximateMapMarker(
 
     const precisionMeters = normalizePrecision(card.location.precisionKm);
     const snapped = snapLocation(card.location.lat, card.location.lng, precisionMeters);
-    const displaced = displaceLocation(card.id, snapped, precisionMeters);
+    const displaced = displaceLocation(`${snapped.lat}:${snapped.lng}:${precisionMeters}`, snapped, precisionMeters);
 
     return {
         id: card.id,
@@ -338,15 +338,12 @@ export function clusterDistanceMetersForZoom(
     zoom: number,
     latitude: number,
 ): number {
-    const clusterRadiusPixels =
-        zoom <= 10 ? 96
-        : zoom === 11 ? 52
-        : 44;
+    const clusterRadiusPixels = 40;
     const metersPerPixel =
         (156_543.033_92 *
             Math.max(0.05, Math.cos((latitude * Math.PI) / 180))) /
         2 ** Math.max(0, zoom);
-    return Math.max(250, metersPerPixel * clusterRadiusPixels);
+    return metersPerPixel * clusterRadiusPixels;
 }
 
 export function clusterExpansionZoom(

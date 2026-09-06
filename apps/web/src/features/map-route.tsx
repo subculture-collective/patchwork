@@ -330,6 +330,11 @@ export const MapRoute = ({
                             onSelectPostId={onSelectPost}
                             focusedArea={activeArea}
                             onViewportChange={setViewport}
+                            onFocusArea={(area) => {
+                                setFocusedArea({ ...area, previousCenter: discoveryState.center, previousRadiusMeters: discoveryState.radiusMeters });
+                                onPushDiscovery({ center: area.center, radiusMeters: area.radiusMeters, areaLabel: area.label, feedTab: 'nearby' });
+                                document.getElementById('map-area-requests')?.scrollIntoView({ block: 'start' });
+                            }}
                             onSelectResource={setSelectedResourceUri}
                             onTilesFailed={setTileError}
                         />
@@ -352,7 +357,7 @@ export const MapRoute = ({
                 {filters}
             </details>
 
-            <div>
+            <div id='map-area-requests' className='scroll-mt-24'>
                 <Card title={String(t('map.requestMarkersTitle'))}>
                     {isLoading && mapView.filteredCards.length === 0 ? (
                         <ul className='space-y-3' aria-live='polite'>

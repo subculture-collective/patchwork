@@ -54,7 +54,9 @@ export async function readProjectionPage<T extends QueryResultRow>(pool: Pool, p
     // Keep six-decimal positive scores in floating point, matching the shared
     // rank contract without costly numeric conversions for every candidate.
     const score = kind !== 'directory' && located ? `floor(((CASE WHEN distance_km <= 2 THEN 1::double precision WHEN distance_km <= 5 THEN .82 WHEN distance_km <= 10 THEN .66 WHEN distance_km <= 25 THEN .48 ELSE .3 END) * .45 + floor(power(.5::double precision, greatest(0, extract(epoch FROM (${nowParam}::timestamptz - record_created_at))::double precision / 3600) / 24) * 1000000 + .5) / 1000000 * .35 + .1) * 1000000 + .5) DESC,` : '';
-    const order = `${score} record_updated_at DESC, uri COLLATE "C"`;
+    const order = kind === 'directory' && located
+        ? 'distance_km ASC, record_updated_at DESC, uri COLLATE "C"'
+        : `${score} record_updated_at DESC, uri COLLATE "C"`;
     const limit = bind(pageSize), offset = bind((page - 1) * pageSize);
     const result = await pool.query<{ rows: T[]; aggregates: DiscoveryMapAggregates | null; total: string; projected_at: string | null; state: { latest_cursor: string | null; heartbeat_at: string } | null }>(`WITH candidates AS MATERIALIZED (
         SELECT p.uri, p.latitude, p.longitude, p.precision_km, p.record_created_at, p.record_updated_at, p.projected_at, ${distance} AS distance_km FROM ${table} p WHERE ${where.join(' AND ')}

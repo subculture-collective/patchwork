@@ -197,6 +197,7 @@ export const filterResourceDirectoryCards = (
     const categoryFilters = mapAidCategoryToDirectoryCategories(state.category);
 
     return cards
+        .map(card => query.center ? { ...card, distanceMeters: haversineDistanceMeters(query.center, card.location) } : card)
         .filter(card => {
             if (filters.category && card.category !== filters.category) {
                 return false;

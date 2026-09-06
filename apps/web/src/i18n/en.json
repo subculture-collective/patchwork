@@ -300,6 +300,8 @@
         "cluster": "Multiple requests cluster",
         "publicPlace": "Approved public place (exact)",
         "legendNote": "Circles show approximate areas, not private addresses. Numbers show how many requests are nearby.",
+        "showAreaRequests": "Show {{count}} requests in this area",
+        "sharedArea": "These requests share an approximate area. Choose one to see details.",
         "zoomCluster": "Zoom into {{count}} requests"
     },
     "exactLocation": {
@@ -438,6 +440,7 @@
         "kilobytes": "KB"
     },
     "resources": {
+        "nearestFirst": "Closest to the selected area first. Distances are approximate.",
         "heading": "Resource directory",
         "description": "Overlay verified services on map context and launch intake handoffs quickly.",
         "directoryFiltersTitle": "Directory filters",

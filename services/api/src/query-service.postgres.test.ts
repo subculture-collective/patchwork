@@ -425,6 +425,19 @@ describePostgres('PostgresProjectionQueryService', () => {
         });
     });
 
+    it('paginates nearby resources by distance before recency', async () => {
+        await pool.query(`UPDATE indexer_directory_resource_projections SET
+            latitude = CASE WHEN category = 'food-bank' THEN 41.88 ELSE 41.98 END,
+            longitude = -87.63, precision_km = 1,
+            record_updated_at = CASE WHEN category = 'food-bank' THEN NOW() - INTERVAL '1 day' ELSE NOW() END`);
+        const service = new PostgresProjectionQueryService(pool);
+        const params = new URLSearchParams({ latitude: '41.88', longitude: '-87.63', radiusKm: '20', pageSize: '1' });
+        const first = await service.queryDirectory(params);
+        expect(first).toMatchObject({ statusCode: 200, body: { total: 2, hasNextPage: true, results: [expect.objectContaining({ category: 'food-bank' })] } });
+        params.set('page', '2');
+        expect(await service.queryDirectory(params)).toMatchObject({ statusCode: 200, body: { results: [expect.objectContaining({ category: 'legal-aid' })] } });
+    });
+
     it('queries durable directory projections with filters, geography, and freshness', async () => {
         const service = new PostgresProjectionQueryService(pool);
         const nearby = await service.queryDirectory(

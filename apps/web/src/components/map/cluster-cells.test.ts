@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { clusterCells } from './cluster-cells';
+import { clusterCells, cellExpansionZoom } from './cluster-cells';
 describe('privacy-safe zoom clusters', () => {
     it('splits on zoom in and merges on zoom out without losing counts', () => {
         const cells = Array.from({ length: 80 }, (_, i) => ({
@@ -23,4 +23,16 @@ describe('privacy-safe zoom clusters', () => {
             { ...cells[0], keys: ['41.88:-87.63'] },
         ]);
     });
+});
+
+it('jumps to a real split and stops zooming at a shared public location', () => {
+    const cells = [
+        { latitude: 41.88, longitude: -87.63, count: 8, radiusKm: 5 },
+        { latitude: 41.89, longitude: -87.62, count: 3, radiusKm: 5 },
+    ];
+    const group = clusterCells(cells, 7)[0]!;
+    const next = cellExpansionZoom(cells, group.keys, 7);
+    expect(next).not.toBeNull();
+    expect(clusterCells(cells, next!)).toHaveLength(2);
+    expect(cellExpansionZoom(cells, ['41.88:-87.63'], 9)).toBeNull();
 });

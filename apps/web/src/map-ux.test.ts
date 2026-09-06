@@ -140,7 +140,7 @@ describe('map ux', () => {
         ).toBeGreaterThan(0.001);
     });
 
-    it('uses a stable per-request displacement instead of exposing the area center', () => {
+    it('uses a stable shared-area displacement without inventing separate request locations', () => {
         const location = { lat: 0, lng: 0, precisionKm: 1 };
         const first = toApproximateMapMarker(
             buildCard({ id: 'private-a', location }),
@@ -153,7 +153,7 @@ describe('map ux', () => {
         );
 
         expect(first).toEqual(repeat);
-        expect({ lat: first?.lat, lng: first?.lng }).not.toEqual({
+        expect({ lat: first?.lat, lng: first?.lng }).toEqual({
             lat: different?.lat,
             lng: different?.lng,
         });

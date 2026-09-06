@@ -1,3 +1,4 @@
+import { haversineDistanceMeters } from '../../geo-utils.js';
 import type { DiscoveryMapAggregates } from '@patchwork/shared';
 type Cell = DiscoveryMapAggregates['cells'][number];
 export type CellCluster = Cell & { keys: string[] };
@@ -14,6 +15,7 @@ export function clusterCells(
             count: number;
             radiusKm: number;
             keys: string[];
+            cells: Cell[];
         }
     >();
     const scale = 256 * 2 ** zoom;
@@ -24,18 +26,20 @@ export function clusterCells(
         );
         const y =
             (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * scale;
-        const key = `${Math.floor(x / 72)}:${Math.floor(y / 72)}`;
+        const key = `${Math.floor(x / 44)}:${Math.floor(y / 44)}`;
         const group = groups.get(key) ?? {
             x: 0,
             y: 0,
             count: 0,
             radiusKm: 0,
             keys: [],
+            cells: [],
         };
         group.x += cell.longitude * cell.count;
         group.y += cell.latitude * cell.count;
         group.count += cell.count;
         group.radiusKm = Math.max(group.radiusKm, cell.radiusKm);
+        group.cells.push(cell);
         group.keys.push(`${cell.latitude}:${cell.longitude}`);
         groups.set(key, group);
     }
@@ -43,7 +47,16 @@ export function clusterCells(
         latitude: g.y / g.count,
         longitude: g.x / g.count,
         count: g.count,
-        radiusKm: g.radiusKm,
+        radiusKm: Math.max(...g.cells.map(cell => cell.radiusKm + haversineDistanceMeters({ lat: g.y / g.count, lng: g.x / g.count }, { lat: cell.latitude, lng: cell.longitude }) / 1000)),
         keys: g.keys,
     }));
+}
+
+/** Return the first useful zoom, or null when all requests share one public area. */
+export function cellExpansionZoom(cells: readonly Cell[], keys: readonly string[], zoom: number): number | null {
+    const selected = cells.filter(cell => keys.includes(`${cell.latitude}:${cell.longitude}`));
+    for (let next = Math.floor(zoom) + 1; next <= 18; next++) {
+        if (clusterCells(selected, next).length > 1) return next;
+    }
+    return null;
 }

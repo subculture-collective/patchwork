@@ -82,7 +82,7 @@ export function RequestDetail() {
         mapParams.set('r', String(Math.max(5000, area.precisionKm * 2000)));
     }
     const mapHref = `/nearby?${mapParams}`;
-    const resourceParams = new URLSearchParams();
+    const resourceParams = new URLSearchParams({ tab: 'nearby' });
     if (area) {
         resourceParams.set('lat', String(area.lat));
         resourceParams.set('lng', String(area.lng));
