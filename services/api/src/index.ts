@@ -123,14 +123,10 @@ import { createDiscoveryHandler } from './http/discovery-handler.js';
 import { createGracefulShutdown } from './http/graceful-shutdown.js';
 import { createModerationGateway } from './http/moderation-gateway.js';
 import { createPublicSubmissionSafetyGate } from './public-submission-safety.js';
-import {
-    idempotencyKeyFromRequest,
-    withIdempotencyKey,
-} from './http/idempotent-request.js';
+import { createIdempotentMutation } from './http/idempotent-mutation.js';
 import {
     IdempotencyError,
     PostgresIdempotencyExecutor,
-    type IdempotentResponse,
 } from './http/idempotency-store.js';
 import { securityHeaders } from './http/security-headers.js';
 import {
@@ -416,39 +412,8 @@ const signupInviteHandler =
         })
     :   undefined;
 
-const executeIdempotentMutation = async (
-    request: IncomingMessage,
-    actorDid: string,
-    body: unknown,
-    effect: (
-        commandBody: Record<string, unknown>,
-        idempotencyKey: string,
-    ) => Promise<IdempotentResponse>,
-    field: 'commandId' | 'idempotencyKey' | null = 'commandId',
-): Promise<IdempotentResponse> => {
-    if (!idempotencyExecutor) {
-        throw new PublicHttpError(
-            503,
-            'IDEMPOTENCY_STORE_UNAVAILABLE',
-            'Durable command processing is unavailable.',
-        );
-    }
-    const idempotencyKey = idempotencyKeyFromRequest(request);
-    const commandBody =
-        field ?
-            withIdempotencyKey(body, idempotencyKey, field)
-        :   { ...(body as Record<string, unknown>) };
-    return idempotencyExecutor.execute(
-        {
-            actorDid,
-            method: request.method ?? 'POST',
-            pathname: new URL(request.url ?? '/', 'http://localhost').pathname,
-            idempotencyKey,
-            body: commandBody,
-        },
-        () => effect(commandBody, idempotencyKey),
-    );
-};
+const executeIdempotentMutation = createIdempotentMutation(idempotencyExecutor, 'commandId');
+const executeBodyIdempotentMutation = createIdempotentMutation(idempotencyExecutor);
 
 const createAidPostCommandService =
     atAuthRuntime ?
@@ -556,7 +521,7 @@ const accountOnboardingHandler =
         createAccountOnboardingHandler({
             service: accountOnboardingService,
             authenticate: authenticateSessionRequest,
-            executeIdempotent: executeIdempotentMutation,
+            executeIdempotent: executeBodyIdempotentMutation,
         })
     :   undefined;
 const organizationHandler =
@@ -564,7 +529,7 @@ const organizationHandler =
         createOrganizationHandler({
             service: organizationService,
             authenticate: authenticateApiRequest,
-            executeIdempotent: executeIdempotentMutation,
+            executeIdempotent: executeBodyIdempotentMutation,
         })
     :   undefined;
 const verificationHandler =
@@ -572,7 +537,7 @@ const verificationHandler =
         createVerificationHandler({
             service: verificationCaseService,
             authenticate: authenticateApiRequest,
-            executeIdempotent: executeIdempotentMutation,
+            executeIdempotent: executeBodyIdempotentMutation,
         })
     :   undefined;
 const coordinationHandler =
@@ -580,7 +545,7 @@ const coordinationHandler =
         createCoordinationHandler({
             service: coordinationService,
             authenticate: authenticateApiRequest,
-            executeIdempotent: executeIdempotentMutation,
+            executeIdempotent: executeBodyIdempotentMutation,
         })
     :   undefined;
 const coordinationSchedulingHandler =
@@ -588,7 +553,7 @@ const coordinationSchedulingHandler =
         createCoordinationSchedulingHandler({
             service: coordinationSchedulingService,
             authenticate: authenticateApiRequest,
-            executeIdempotent: executeIdempotentMutation,
+            executeIdempotent: executeBodyIdempotentMutation,
         })
     :   undefined;
 const groupHandler =
@@ -596,7 +561,7 @@ const groupHandler =
         createGroupHandler({
             service: durableGroupService,
             authenticate: authenticateApiRequest,
-            executeIdempotent: executeIdempotentMutation,
+            executeIdempotent: executeBodyIdempotentMutation,
         })
     :   undefined;
 const chatHandler =
@@ -604,7 +569,7 @@ const chatHandler =
         createChatHandler({
             service: durableChatService,
             authenticate: authenticateApiRequest,
-            executeIdempotent: executeIdempotentMutation,
+            executeIdempotent: executeBodyIdempotentMutation,
         })
     :   undefined;
 const exactLocationSignalHandler =
@@ -635,7 +600,7 @@ const maintenanceHandler =
         createMaintenanceHandler({
             service: maintenanceModeService,
             authenticate: authenticateApiRequest,
-            executeIdempotent: executeIdempotentMutation,
+            executeIdempotent: executeBodyIdempotentMutation,
         })
     :   undefined;
 const discoveryHandler = createDiscoveryHandler({
