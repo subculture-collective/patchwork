@@ -359,6 +359,7 @@ export class AccountPrivacyService {
                 `DELETE FROM discovery_events WHERE author_did = $1`,
                 [did],
             );
+            const authoringReceipts = await client.query('DELETE FROM aid_authoring_receipts WHERE owner_did = $1', [did]);
             const workflows = await client.query(
                 `DELETE FROM request_workflows WHERE requester_did = $1`,
                 [did],
@@ -517,6 +518,7 @@ export class AccountPrivacyService {
                     groupMemberships: groupMemberships.rowCount ?? 0,
                     groupInvitations: groupInvitations.rowCount ?? 0,
                     legacyDiscoveryEvents: legacyDiscoveryEvents.rowCount ?? 0,
+                    authoringReceipts: authoringReceipts.rowCount ?? 0,
                     workflows: workflows.rowCount ?? 0,
                     platformRoles: platformRoles.rowCount ?? 0,
                     ownedBlocks: ownedBlocks.rowCount ?? 0,
@@ -1142,6 +1144,7 @@ export class AccountPrivacyService {
              WHERE actor_did = $1 ORDER BY occurred_at, audit_event_id`,
             [did],
         );
+        const authoringReceipts = await client.query('SELECT post_uri, title, source_cid, public_status, source_written_at, deleted_at, retention_until FROM aid_authoring_receipts WHERE owner_did = $1 ORDER BY source_written_at, post_uri', [did]);
         const commandMetadata = await client.query<{
                 method: string;
                 pathname: string;
@@ -1643,6 +1646,11 @@ export class AccountPrivacyService {
                     action: row.action,
                     occurredAt: iso(row.occurred_at),
                     retentionUntil: iso(row.retention_until),
+                })),
+                authoringReceipts: authoringReceipts.rows.map(row => ({
+                    uri: row.post_uri, title: row.title, sourceCid: row.source_cid,
+                    publicStatus: row.public_status, sourceWrittenAt: row.source_written_at.toISOString(),
+                    deletedAt: row.deleted_at?.toISOString() ?? null, retentionUntil: row.retention_until.toISOString(),
                 })),
                 commandMetadata: commandMetadata.rows.map(row => ({
                     method: row.method,

@@ -19,6 +19,9 @@
         "chat": "Chat"
     },
     "labels": {
+        "triaged": "Reviewed",
+        "assigned": "Assigned",
+        "in_progress": "In progress",
         "food": "Food",
         "shelter": "Shelter",
         "medical": "Medical",
@@ -1353,5 +1356,24 @@
         "offerNote": "How can you help?",
         "offerHelp": "Offer help",
         "loadingRequest": "Loading request…"
+    },
+    "myRequests": {
+        "resourceUnavailable": "This resource could not be loaded. Try again or browse nearby resources.",
+        "resourceLoading": "Loading this resource…",
+        "heading": "My requests",
+        "newRequest": "Ask for help",
+        "error": "Your requests could not be refreshed. Try again.",
+        "loading": "Loading your requests…",
+        "empty": "No requests on this page. Ask for help to start a request.",
+        "pending": "Saved to your account. Waiting to appear in nearby results. You can manage it here.",
+        "published": "Public version is up to date.",
+        "view": "View request",
+        "pages": "Request pages",
+        "previous": "Previous",
+        "next": "Next",
+        "page": "Page {{page}}",
+        "allActivity": "Show all activity",
+        "activityPartial": "Some activity could not be refreshed. Available sections are shown; use Refresh to try again.",
+        "refresh": "Refresh"
     }
 }

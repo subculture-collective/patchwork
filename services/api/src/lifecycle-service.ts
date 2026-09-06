@@ -208,7 +208,8 @@ const toValidationError = (
 export class LifecycleService {
     private readonly records = new Map<string, RequestLifecycleRecord>();
 
-    constructor(private readonly repository?: LifecycleRepository) {}
+    constructor(private readonly repository?: LifecycleRepository,
+        private readonly projectionReadback?: (uri: string, cid?: string) => Promise<NonNullable<LifecycleQuerySuccessResponse['projectionReceipt']>>) {}
 
     /**
      * Register a post with initial 'open' status. Called when a post is
@@ -504,26 +505,10 @@ export class LifecycleService {
                 ...(record.publicSyncAttemptedAt
                     ? { publicSyncAttemptedAt: record.publicSyncAttemptedAt }
                     : {}),
-                ...(record.publicSyncState ? {
-                    projectionReceipt: {
-                        sourceUri: record.postUri,
-                        ...(record.publicCid ? { sourceCid: record.publicCid } : {}),
-                        state:
-                            record.publicSyncState === 'synced' ?
-                                'projected'
-                            :   record.publicSyncState,
-                        ...(record.publicSyncedAt ?
-                            {
-                                projectedAt: record.publicSyncedAt,
-                            }
-                        :   {}),
-                        ...(record.publicSyncState === 'pending' ?
-                            { retryAfterSeconds: 30 }
-                        :   {}),
-                        ...(record.publicSyncErrorCode ?
-                            { failureCode: record.publicSyncErrorCode }
-                        :   {}),
-                    },
+                ...(this.projectionReadback ? {
+                    projectionReceipt: record.publicSyncState === 'pending' || record.publicSyncState === 'failed'
+                        ? { sourceUri: record.postUri, state: record.publicSyncState, retryAfterSeconds: 5 }
+                        : await this.projectionReadback(record.postUri, record.publicCid),
                 } : {}),
             },
         };
@@ -1559,6 +1544,7 @@ export class LifecycleService {
 
 export const createLifecycleService = (
     repository?: LifecycleRepository,
+    projectionReadback?: (uri: string, cid?: string) => Promise<NonNullable<LifecycleQuerySuccessResponse['projectionReceipt']>>,
 ): LifecycleService => {
-    return new LifecycleService(repository);
+    return new LifecycleService(repository, projectionReadback);
 };

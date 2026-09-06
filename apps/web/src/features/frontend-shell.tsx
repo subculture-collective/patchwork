@@ -1,3 +1,6 @@
+import type { ResourceDetail } from '../resource-directory-ux';
+import { fetchResourceViaApi } from './api-client';
+import { useVisiblePoll } from './use-visible-poll';
 import { loadPostingDraft, savePostingDraft, clearPostingDraft } from './posting-draft';
 import { ResourceActions } from './resource-actions';
 import {
@@ -244,6 +247,7 @@ const dataOriginLabel = (origin: ApiDataOrigin): string =>
             ? 'Requesting location'
             : 'API unavailable';
 
+const LazyMyRequests = lazy(() => import('./my-requests').then(module => ({ default: module.MyRequests })));
 const LazyProductionChat = lazy(() => import('./production-chat').then(module => ({ default: module.ProductionChat })));
 const LazyProductionGroups = lazy(() => import('./production-groups').then(module => ({ default: module.ProductionGroups })));
 const LazyRequestDetail = lazy(() => import('./request-detail').then(module => ({ default: module.RequestDetail })));
@@ -2935,6 +2939,7 @@ const PostingRoute = ({
                             aria-live='polite'
                         >
                             <p>{projectionNotice}</p>
+                            <a href='/inbox' className='mt-2 inline-block underline'>{t('myRequests.heading')}</a>
                             {projectionFailed ? (
                                 <Button
                                     type='button'
@@ -3601,6 +3606,20 @@ const ResourceRoute = ({
         useState<DirectoryResourceCategory>();
     const [selectedUri, setSelectedUri] = useState<string | undefined>(() => new URLSearchParams(window.location.search).get('resource') ?? undefined);
     const [manageUri, setManageUri] = useState<string>();
+    const [selectedResource, setSelectedResource] = useState<ResourceDetail>();
+    const [detailError, setDetailError] = useState(false);
+    const [detailReload, setDetailReload] = useState(0);
+    useEffect(() => {
+        const controller = new AbortController();
+        setSelectedResource(undefined); setDetailError(false);
+        if (selectedUri) void fetchResourceViaApi(selectedUri, controller.signal).then(result => {
+            if (controller.signal.aborted) return;
+            if (result.ok) setSelectedResource(result.data);
+            else setDetailError(true);
+        });
+        return () => controller.abort();
+    }, [selectedUri, detailReload]);
+
 
     useEffect(() => {
         if (!selectedUri) {
@@ -3642,7 +3661,7 @@ const ResourceRoute = ({
     );
 
     const detailPanel = selectedUri
-        ? openResourceDetailPanel(viewModel.cards, selectedUri)
+        ? openResourceDetailPanel(selectedResource ? [selectedResource] : [], selectedUri)
         : closeResourceDetailPanel();
 
     return (
@@ -3679,6 +3698,50 @@ const ResourceRoute = ({
                     </div>
                 ) : null}
             </header>
+            {selectedUri && !selectedResource && <Panel title={t('resources.resourceDetailTitle')}>
+                <p role={detailError ? 'alert' : 'status'}>{t(detailError ? 'myRequests.resourceUnavailable' : 'myRequests.resourceLoading')}</p>
+                {detailError && <Button onClick={() => setDetailReload(value => value + 1)}>{t('handoff.retry')}</Button>}
+                <Button variant='neutral' onClick={() => setSelectedUri(undefined)}>{t('resources.close')}</Button>
+            </Panel>}
+            {detailPanel.open ? (
+                <Panel title={String(t('resources.resourceDetailTitle'))}>
+                    <p className='text-lg font-bold text-mh-text'>
+                        {detailPanel.title}
+                    </p>
+                    <p className='mt-1 text-sm text-mh-textMuted'>
+                        {detailPanel.categoryLabel} · {detailPanel.openHours}
+                    </p>
+                    <p className='mt-2 text-sm text-mh-textSoft'>
+                        {detailPanel.eligibilityNotes}
+                    </p>
+                    {detailPanel.exactPublicAddress ? (
+                        <div className='mh-alert mt-3 text-sm'>
+                            <p className='font-bold'>
+                                {t('resources.approvedAddress')}
+                            </p>
+                            <p>{detailPanel.exactPublicAddress}</p>
+                            <p className='mt-1 text-xs text-mh-textSoft'>
+                                {t('resources.approvalExpires', {
+                                    date: fmt.longDate(
+                                        detailPanel.exactAddressApprovalExpiresAt ??
+                                            '',
+                                    ),
+                                })}
+                            </p>
+                        </div>
+                    ) : null}
+                    <div className='mt-4 flex flex-wrap gap-2'>
+                        {selectedResource && <ResourceActions resource={selectedResource} />}
+                        <Button
+                            variant='neutral'
+                            className='px-3 py-1 text-xs'
+                            onClick={() => setSelectedUri(undefined)}
+                        >
+                            {t('resources.close')}
+                        </Button>
+                    </div>
+                </Panel>
+            ) : null}
 
             {discoveryState.center ? (
                 <DirectoryResourceManager
@@ -3849,45 +3912,7 @@ const ResourceRoute = ({
                 )}
             </Card>
 
-            {detailPanel.open ? (
-                <Panel title={String(t('resources.resourceDetailTitle'))}>
-                    <p className='text-lg font-bold text-mh-text'>
-                        {detailPanel.title}
-                    </p>
-                    <p className='mt-1 text-sm text-mh-textMuted'>
-                        {detailPanel.categoryLabel} · {detailPanel.openHours}
-                    </p>
-                    <p className='mt-2 text-sm text-mh-textSoft'>
-                        {detailPanel.eligibilityNotes}
-                    </p>
-                    {detailPanel.exactPublicAddress ? (
-                        <div className='mh-alert mt-3 text-sm'>
-                            <p className='font-bold'>
-                                {t('resources.approvedAddress')}
-                            </p>
-                            <p>{detailPanel.exactPublicAddress}</p>
-                            <p className='mt-1 text-xs text-mh-textSoft'>
-                                {t('resources.approvalExpires', {
-                                    date: fmt.longDate(
-                                        detailPanel.exactAddressApprovalExpiresAt ??
-                                            '',
-                                    ),
-                                })}
-                            </p>
-                        </div>
-                    ) : null}
-                    <div className='mt-4 flex flex-wrap gap-2'>
-                        {resourceCards.find(card => card.uri === selectedUri) && <ResourceActions resource={resourceCards.find(card => card.uri === selectedUri)!} />}
-                        <Button
-                            variant='neutral'
-                            className='px-3 py-1 text-xs'
-                            onClick={() => setSelectedUri(undefined)}
-                        >
-                            {t('resources.close')}
-                        </Button>
-                    </div>
-                </Panel>
-            ) : null}
+
         </section>
     );
 };
@@ -7328,44 +7353,42 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
     >({});
     const [unreadOnly, setUnreadOnly] = useState(false);
     const [status, setStatus] = useState(t('inbox.loading'));
+    const requestContext = new URLSearchParams(window.location.search).get('uri');
+    const visibleOffers = requestContext ? offers.filter(offer => offer.requestUri === requestContext) : offers;
+    const visibleConnections = requestContext ? connections.filter(connection => connection.requestUri === requestContext) : connections;
+    const refreshController = useRef<AbortController | undefined>(undefined);
 
     const load = useCallback(async () => {
-        setStatus(t('inbox.loading'));
-        const [coordination, inbox, outcomeHistory, discoverable] =
-            await Promise.all([
-                fetchCoordinationViaApi(),
-                fetchActivityInboxViaApi(unreadOnly),
-                fetchMyOutcomeFeedbackViaApi(),
-                fetchFeedRecordsFromApi(defaultDiscoveryFilterState, 'feed'),
-            ]);
-        const failure = [
-            coordination,
-            inbox,
-            outcomeHistory,
-            discoverable,
-        ].find((result) => !result.ok);
-        if (failure && !failure.ok) {
-            setStatus(`${t('common.error')}: ${t('common.requestFailed')}`);
-            return;
-        }
-        if (
-            coordination.ok &&
-            inbox.ok &&
-            outcomeHistory.ok &&
-            discoverable.ok
-        ) {
+        refreshController.current?.abort();
+        const controller = new AbortController();
+        refreshController.current = controller;
+        const [coordination, inbox, outcomeHistory, discoverable] = await Promise.all([
+            fetchCoordinationViaApi(controller.signal),
+            fetchActivityInboxViaApi(unreadOnly, controller.signal),
+            fetchMyOutcomeFeedbackViaApi(controller.signal),
+            fetchFeedRecordsFromApi(defaultDiscoveryFilterState, 'feed', controller.signal),
+        ]);
+        if (controller.signal.aborted) return false;
+        if (coordination.ok) {
             setOffers(coordination.data.offers);
             setConnections(coordination.data.connections);
-            setItems(inbox.data.items);
-            setFeedback(outcomeHistory.data.feedback);
-            setRequests(discoverable.data);
-            setStatus(t('inbox.unreadCount', { count: inbox.data.unread }));
-        }
+        } else if (coordination.kind === 'authentication') { setOffers([]); setConnections([]); }
+        if (inbox.ok) setItems(inbox.data.items);
+        else if (inbox.kind === 'authentication') setItems([]);
+        if (outcomeHistory.ok) setFeedback(outcomeHistory.data.feedback);
+        else if (outcomeHistory.kind === 'authentication') setFeedback([]);
+        if (discoverable.ok) setRequests(discoverable.data);
+        else if (discoverable.kind === 'authentication') setRequests([]);
+        const failed = [coordination, inbox, outcomeHistory, discoverable].some(result => !result.ok);
+        setStatus(failed ? t('myRequests.activityPartial') : inbox.ok ? t('inbox.unreadCount', { count: inbox.data.unread }) : '');
+        return !failed;
     }, [unreadOnly, t]);
 
     useEffect(() => {
         void load();
+        return () => refreshController.current?.abort();
     }, [load]);
+    useVisiblePoll(load, 15_000);
 
     const finish = async (
         pendingMessage: string,
@@ -7413,7 +7436,10 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                 >
                     {t('inbox.openScheduling')}
                 </a>
+                <Button variant='neutral' onClick={() => void load()}>{t('myRequests.refresh')}</Button>
             </header>
+
+            <Suspense fallback={null}><LazyMyRequests key={did} /></Suspense>
 
             <Panel title={String(t('inbox.discover'))}>
                 {availableRequests.length === 0 ? (
@@ -7514,14 +7540,16 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                 </div>
             ) : null}
 
+            {requestContext && <a href='/inbox' className='underline'>{t('myRequests.allActivity')}</a>}
+            <div id='request-offers' />
             <Panel title={String(t('inbox.offers'))}>
-                {offers.length === 0 ? (
+                {visibleOffers.length === 0 ? (
                     <p className='text-sm text-mh-textMuted'>
                         {t('inbox.noOffers')}
                     </p>
                 ) : (
                     <div className='space-y-3'>
-                        {offers.map((offer) => (
+                        {visibleOffers.map((offer) => (
                             <Card
                                 key={offer.id}
                                 title={t('inbox.offerTitle', {
@@ -7761,13 +7789,13 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
             </Panel>
 
             <Panel title={String(t('inbox.connections'))}>
-                {connections.length === 0 ? (
+                {visibleConnections.length === 0 ? (
                     <p className='text-sm text-mh-textMuted'>
                         {t('inbox.noConnections')}
                     </p>
                 ) : (
                     <div className='space-y-3'>
-                        {connections.map((connection) => {
+                        {visibleConnections.map((connection) => {
                             const submittedFeedback = feedback.find(
                                 (entry) => entry.connectionId === connection.id,
                             );

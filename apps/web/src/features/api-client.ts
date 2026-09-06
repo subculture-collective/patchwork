@@ -10,6 +10,7 @@ import type { NormalizedAidPostingDraft } from '../posting-form';
 import type {
     DirectoryResourceCategory,
     ResourceDirectoryCard,
+    ResourceDetail,
 } from '../resource-directory-ux';
 import {
     type FeedRecordEnvelope,
@@ -2159,9 +2160,14 @@ const mapAidPayloadToRecords = (
     return mapped as FeedRecordEnvelope[];
 };
 
-const mapDirectoryPayloadToCards = (
+const mapDirectoryPayloadToCards = (payload: unknown): ResourceDirectoryCard[] | undefined => {
+    const details = mapDirectoryPayloadToDetails(payload);
+    return details?.every(card => card.location) ? details as ResourceDirectoryCard[] : undefined;
+};
+
+const mapDirectoryPayloadToDetails = (
     payload: unknown,
-): ResourceDirectoryCard[] | undefined => {
+): ResourceDetail[] | undefined => {
     if (!isRecord(payload)) {
         return [];
     }
@@ -2177,16 +2183,14 @@ const mapDirectoryPayloadToCards = (
         return (
             !readString(row, 'uri') ||
             !readString(row, 'name') ||
-            !isRecord(approximateGeo) ||
-            (readNumber(approximateGeo, 'latitude') ??
-                readNumber(approximateGeo, 'lat')) === undefined ||
-            (readNumber(approximateGeo, 'longitude') ??
-                readNumber(approximateGeo, 'lng')) === undefined
+            (approximateGeo !== undefined && (!isRecord(approximateGeo) ||
+            (readNumber(approximateGeo, 'latitude') ?? readNumber(approximateGeo, 'lat')) === undefined ||
+            (readNumber(approximateGeo, 'longitude') ?? readNumber(approximateGeo, 'lng')) === undefined))
         );
     });
     if (hasMalformedRow) return undefined;
 
-    return rows.reduce<ResourceDirectoryCard[]>((cards, row, index) => {
+    return rows.reduce<ResourceDetail[]>((cards, row, index) => {
         if (!isRecord(row)) {
             return cards;
         }
@@ -2211,7 +2215,7 @@ const mapDirectoryPayloadToCards = (
                 readNumber(approximateGeo, 'precisionKm')
             :   undefined;
 
-        if (!uri || !name || lat === undefined || lng === undefined) {
+        if (!uri || !name) {
             return cards;
         }
 
@@ -2262,14 +2266,14 @@ const mapDirectoryPayloadToCards = (
                         | 'sourced-public'
                         | 'visitor-created')
                 :   undefined,
-            location: {
+            ...(lat !== undefined && lng !== undefined ? { location: {
                 lat,
                 lng,
                 precisionMeters: Math.round(
                     enforceMinimumGeoPrecisionKm(precisionKm ?? 1) * 1000,
                 ),
                 areaLabel: readString(row, 'serviceArea'),
-            },
+            } } : {}),
             openHours: readString(row, 'openHours'),
             eligibilityNotes: readString(row, 'eligibilityNotes'),
             contact: {
@@ -3786,3 +3790,35 @@ export const fetchAidPostViaApi = async (uri: string, signal?: AbortSignal): Pro
     if (!records?.[0]) return invalidResponseFailure('Request details were unavailable.');
     return { ok: true, data: records[0] };
 };
+
+export interface OwnedRequestReceipt {
+    uri: string;
+    title: string;
+    status: string;
+    sourceCid: string | null;
+    sourceWrittenAt: string;
+    publication: 'pending' | 'projected';
+}
+export async function fetchAccountRequestsViaApi(page = 1, signal?: AbortSignal): Promise<ApiClientResult<PagedResult<OwnedRequestReceipt>>> {
+    const result = await requestJson('/account/requests', new URLSearchParams({ page: String(page) }), signal);
+    if (!result.ok) return result;
+    const data = result.data;
+    if (!isRecord(data) || !Array.isArray(data.requests) || !Number.isSafeInteger(data.page)
+        || data.pageSize !== 20 || !Number.isSafeInteger(data.total) || typeof data.hasNextPage !== 'boolean'
+        || !data.requests.every((item: unknown) => isRecord(item) && typeof item.uri === 'string'
+            && typeof item.title === 'string' && typeof item.status === 'string'
+            && (item.sourceCid === null || typeof item.sourceCid === 'string') && typeof item.sourceWrittenAt === 'string'
+            && (item.publication === 'pending' || item.publication === 'projected'))) {
+        return invalidResponseFailure('Your requests response was malformed.');
+    }
+    return { ok: true, data: { items: data.requests as OwnedRequestReceipt[], page: data.page as number,
+        pageSize: 20, total: data.total as number, hasNextPage: data.hasNextPage } };
+}
+
+export async function fetchResourceViaApi(uri: string, signal?: AbortSignal): Promise<ApiClientResult<ResourceDetail>> {
+    const result = await requestJson('/query/directory-resource', new URLSearchParams({ uri }), signal);
+    if (!result.ok) return result;
+    const cards = isRecord(result.data) ? mapDirectoryPayloadToDetails(result.data) : [];
+    if (!cards || cards.length !== 1 || cards[0]?.uri !== uri) return invalidResponseFailure('Resource details were unavailable.');
+    return { ok: true, data: cards[0] };
+}

@@ -1,7 +1,7 @@
 import { useLocale } from '../i18n';
-import { currentExactPublicAddress, type ResourceDirectoryCard } from '../resource-directory-ux';
+import { currentExactPublicAddress, type ResourceDetail } from '../resource-directory-ux';
 
-export function resourceContactLinks(resource: ResourceDirectoryCard) {
+export function resourceContactLinks(resource: ResourceDetail) {
     if (resource.recordOrigin === 'synthetic') return {};
     let website: string | undefined;
     try {
@@ -17,7 +17,7 @@ export function resourceContactLinks(resource: ResourceDirectoryCard) {
 }
 
 /** Only current, explicitly approved public addresses can become directions. */
-export function ResourceActions({ resource }: { resource: ResourceDirectoryCard }) {
+export function ResourceActions({ resource }: { resource: ResourceDetail }) {
     const { t } = useLocale();
     if (resource.recordOrigin === 'synthetic') return <p className='text-sm'>{t('handoff.demoResource')}</p>;
     const links = resourceContactLinks(resource);

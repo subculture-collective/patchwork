@@ -273,7 +273,7 @@ test('authenticated verification, appeal, renewal, and exact-address approval re
             await fulfill({ request: exact });
             return;
         }
-        if (pathname === '/query/directory') {
+        if ((pathname === '/query/directory' || pathname === '/query/directory-resource')) {
             const approved = exactAddressRequests.find(
                 item =>
                     item['status'] === 'approved' &&

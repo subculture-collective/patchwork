@@ -170,7 +170,7 @@ describePostgres('authenticated account privacy HTTP boundary', () => {
                       platform_roles, operational_audit_events, abuse_reports,
                       user_blocks, request_handoff_events,
                       request_assignment_events, request_transition_events,
-                      request_workflows, http_idempotency_commands,
+                      request_workflows, http_idempotency_commands, aid_authoring_receipts,
                       account_preference_audit, account_preferences,
                       account_policy_consents, account_deactivations,
                       moderation_audit_records,
@@ -508,6 +508,9 @@ describePostgres('authenticated account privacy HTTP boundary', () => {
     });
 
     it('exports only session-derived subject data without credential material', async () => {
+        await pool.query(`INSERT INTO aid_authoring_receipts (post_uri, owner_did, title, source_cid, public_status)
+            VALUES ($1, $2, 'My pending request', 'pending-cid', 'open'), ($3, $4, 'Other pending request', 'other-cid', 'open')`,
+            [`at://${viewerDid}/app.patchwork.aid.post/pending`, viewerDid, `at://${otherDid}/app.patchwork.aid.post/pending`, otherDid]);
         const running = await startServer(pool);
         const response = await fetch(`${running.origin}/account/export`, {
             headers: { cookie: 'patchwork_session=privacy-session' },
@@ -524,6 +527,7 @@ describePostgres('authenticated account privacy HTTP boundary', () => {
             formatVersion: '1.0',
             subject: { did: viewerDid, handle: 'viewer.test' },
             data: {
+                authoringReceipts: [expect.objectContaining({ title: 'My pending request', sourceCid: 'pending-cid' })],
                 publicAidPosts: [
                     expect.objectContaining({ title: 'My aid post' }),
                 ],
@@ -654,6 +658,7 @@ describePostgres('authenticated account privacy HTTP boundary', () => {
     });
 
     it('deactivates only the authenticated subject and reports retained exceptions', async () => {
+        expect((await pool.query('SELECT COUNT(*) FROM aid_authoring_receipts WHERE owner_did=$1', [viewerDid])).rows[0].count).toBe('1');
         const running = await startServer(pool);
         const response = await fetch(`${running.origin}/account/deactivate`, {
             method: 'POST',
@@ -706,6 +711,9 @@ describePostgres('authenticated account privacy HTTP boundary', () => {
         });
         expect(JSON.stringify(body)).not.toContain(viewerDid);
         expect(JSON.stringify(body)).not.toContain(otherDid);
+
+        expect((await pool.query('SELECT COUNT(*) FROM aid_authoring_receipts WHERE owner_did=$1', [viewerDid])).rows[0].count).toBe('0');
+        expect((await pool.query('SELECT COUNT(*) FROM aid_authoring_receipts WHERE owner_did=$1', [otherDid])).rows[0].count).toBe('1');
 
         const reused = await fetch(`${running.origin}/account/deactivate`, {
             method: 'POST',

@@ -408,8 +408,19 @@ export class PostgresProjectionQueryService {
         return this.queryAid(params, 'feed', viewerDid);
     }
 
-    async queryDirectory(params: URLSearchParams): Promise<ApiRouteResult> {
-        const snapshot = await this.loadDirectorySnapshot();
+    async queryResource(params: URLSearchParams): Promise<ApiRouteResult> {
+        const uri = params.get('uri');
+        if (!uri || !/^at:\/\/did:[^/]+\/app\.patchwork\.directory\.resource\/[^/]+$/.test(uri)) {
+            return { statusCode: 400, body: { error: { code: 'INVALID_QUERY', message: 'A resource URI is required.' } } };
+        }
+        const result = await this.queryDirectory(new URLSearchParams(), uri);
+        if ('error' in result.body) return result;
+        if (!result.body.results.length) return { statusCode: 404, body: { error: { code: 'NOT_FOUND', message: 'This resource is unavailable.' } } };
+        return result;
+    }
+
+    async queryDirectory(params: URLSearchParams, resourceUri?: string): Promise<ApiRouteResult> {
+        const snapshot = await this.loadDirectorySnapshot(resourceUri);
         const service = createQueryServiceFromNormalizedEvents(snapshot.events);
         const result = service.queryDirectory(params);
         if ('error' in result.body) return result;
@@ -423,7 +434,7 @@ export class PostgresProjectionQueryService {
             `SELECT e.resource_uri, e.street_address, e.latitude,
                     e.longitude, e.approval_expires_at
              FROM exact_public_address_requests e
-             WHERE e.status = 'approved'
+             WHERE e.resource_uri = ANY($1::text[]) AND e.status = 'approved'
                AND e.confidential_facility = FALSE
                AND e.approval_expires_at > NOW()
                AND EXISTS (
@@ -447,6 +458,7 @@ export class PostgresProjectionQueryService {
                      AND s.resource_uri = e.resource_uri
                      AND s.status = 'active'
                )`,
+            [(result.body as ApiQueryDirectoryResponse).results.map(row => row.uri)],
         );
         const exactByUri = new Map(
             exactLocations.rows.map(row => [
@@ -725,7 +737,7 @@ export class PostgresProjectionQueryService {
         };
     }
 
-    private async loadDirectorySnapshot(): Promise<{
+    private async loadDirectorySnapshot(resourceUri?: string): Promise<{
         events: NormalizedFirehoseEvent[];
         freshness: ProjectionFreshness;
         origins: Map<
@@ -742,7 +754,9 @@ export class PostgresProjectionQueryService {
                         record_created_at, record_updated_at, source_cursor,
                         projected_at, record_origin
                  FROM indexer_directory_resource_projections
+                 WHERE ($1::text IS NULL OR uri = $1)
                  ORDER BY source_cursor, uri`,
+                [resourceUri ?? null],
             ),
             this.pool.query<ProjectionStateRow>(
                 `SELECT latest_cursor, heartbeat_at

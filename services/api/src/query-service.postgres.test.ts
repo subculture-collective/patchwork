@@ -9,6 +9,21 @@ const describePostgres = databaseUrl ? describe : describe.skip;
 describePostgres('PostgresProjectionQueryService', () => {
     const pool = new Pool({ connectionString: databaseUrl });
 
+    it('looks up a resource directly without search filters or coordinates and applies current address approval', async () => {
+        const service = new PostgresProjectionQueryService(pool);
+        const uri = `at://did:plc:pantry/${recordNsid.directoryResource}/a`;
+        const current = await service.queryResource(new URLSearchParams({ uri, searchText: 'unrelated', page: '999' }));
+        expect(current).toMatchObject({ statusCode: 200, body: { total: 1, results: [expect.objectContaining({ uri,
+            exactPublicAddress: expect.objectContaining({ streetAddress: '100 Public Way, Chicago, IL' }),
+        })] } });
+        const nonSpatial = await service.queryResource(new URLSearchParams({ uri: `at://did:plc:legal/${recordNsid.directoryResource}/b` }));
+        expect(nonSpatial).toMatchObject({ statusCode: 200, body: { total: 1, results: [expect.objectContaining({ name: 'Regional Legal Line', contact: { phone: '+1-555-0100' } })] } });
+        await pool.query("UPDATE exact_public_address_requests SET approval_expires_at = NOW() - INTERVAL '1 day'");
+        expect(JSON.stringify((await service.queryResource(new URLSearchParams({ uri }))).body)).not.toContain('100 Public Way');
+        expect((await service.queryResource(new URLSearchParams({ uri: uri + '-missing' }))).statusCode).toBe(404);
+        expect((await service.queryResource(new URLSearchParams({ uri: 'invalid' }))).statusCode).toBe(400);
+    });
+
     it('returns public request details without private lifecycle state and respects blocks', async () => {
         const service = new PostgresProjectionQueryService(pool);
         const uri = `at://did:plc:alice/${recordNsid.aidPost}/a`;

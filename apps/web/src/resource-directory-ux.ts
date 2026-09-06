@@ -53,6 +53,8 @@ export interface ResourceDirectoryCard {
     recordOrigin?: 'synthetic' | 'sourced-public' | 'visitor-created';
 }
 
+export type ResourceDetail = Omit<ResourceDirectoryCard, 'location'> & { location?: ResourceDirectoryCard['location'] };
+
 export interface ResourceOverlayMarker {
     uri: string;
     id: string;
@@ -76,7 +78,7 @@ export interface ResourceOverlayViewModel {
 }
 
 export const currentExactPublicAddress = (
-    resource: ResourceDirectoryCard,
+    resource: Pick<ResourceDirectoryCard, 'exactPublicAddress'>,
     nowMs = Date.now(),
 ): ResourceDirectoryCard['exactPublicAddress'] | undefined => {
     const exact = resource.exactPublicAddress;
@@ -253,7 +255,7 @@ export const buildResourceOverlayViewModel = (
 };
 
 export const openResourceDetailPanel = (
-    cards: readonly ResourceDirectoryCard[],
+    cards: readonly ResourceDetail[],
     selectedUri: string,
 ): ResourceDetailPanelModel => {
     const selected = cards.find(card => card.uri === selectedUri);

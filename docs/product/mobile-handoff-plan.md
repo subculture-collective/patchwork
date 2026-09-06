@@ -70,3 +70,24 @@ Implemented on `codex/mobile-handoff`, without changing or deploying the origina
 5. Run the two role-reversed uncoached iPhone Safari/Android Chrome handoffs. Participants/accounts and the designated email recipient have been requested. Public launch retains the independent review, recovery, staffing and community-content gates above.
 
 This checkpoint is working implementation progress, not completion of the mobile-handoff milestone or release authorization.
+
+
+## Implementation checkpoint — durable ownership and direct resource lookup
+
+2026-09-05, continuing from `1f7db32`. Both remotes were fetched again; `origin/main` and `github/main` remain `5b348af`. The original checkout's dirty documentation and output remain untouched.
+
+- **F01/F11:** successful AT request commands now persist minimal authoring receipts in the same PostgreSQL transaction as their idempotent acknowledgment. Initial creation also registers its private workflow immediately. Receipts retain URI/owner/title/CID/status/timestamps, without descriptions, coordinates, attachment bytes or credentials. They participate in account export, deactivation and 365-day retention. The migration conservatively recovers recent prior acknowledgments; an actor's intervening successful deletion suppresses ambiguous older recovery because the old replay ledger contains no deletion URI. Existing projections and workflows are also included in account reads.
+- **F11:** authenticated `GET /account/requests` derives ownership from the session and provides stable 20-item pages, including preprojection receipts. The new lazy My requests panel preserves accepted requests across refresh/navigation, exposes owner actions before indexing, and distinguishes pending/public versions. Publication readback compares the actual indexer CID against the latest source receipt; a successful source acknowledgment alone is no longer labelled projected.
+- **F02:** `GET /query/directory-resource?uri=...` loads one resource independently of current result pages, geographic filters or category filters. `/resources?resource=...` now opens that resource near the top of the page with loading/error/retry states. Phone-only resources can open without invented coordinates. Exact-address enrichment is limited to returned resources and retains all current verification, stewardship, confidentiality and expiry gates.
+- **F03/F10:** existing activity sections now refresh independently, retain usable results through unrelated discovery failures, clear affected private data on authentication failure, and poll while visible every 15 seconds. Request-specific links scope offers/connections to their request. The larger focused workspace/navigation redesign remains next.
+
+Verification:
+
+- `npm run check` passes: 1,065 unit/source tests pass, 135 infrastructure-dependent cases skip in that command, and map, exact-location absence and operational scripts pass. The database reruns below cover the database-dependent skips. English/Spanish lifecycle labels additionally pass all 38 localization tests.
+- Fresh disposable PostgreSQL 16: all 27 API, eight indexer and five moderation migrations apply. Full database-enabled suites pass: API 425 passed / one real-attachment-infrastructure test skipped; indexer 64 passed; moderation 71 passed.
+- Nine new receipt regressions exercise ownership, restart/replay, source version mismatch, pending synchronization, rollback on invalid acknowledgment, stable paging, legacy recovery, deletion suppression and retention. Account privacy tests verify receipt export and subject-only deletion.
+- Resource database coverage includes direct lookup outside search filters, phone-only services, invalid/missing URIs and expiration of public-address approval.
+- Full Chromium browser suite with `--retries=0`: **164 passed, two existing credential-dependent skips, no failures** (3.2 minutes). This includes 390px recovery/resource cases and the existing two-account coordination, exact-location and verification journeys. These are local mocked browser checks, not real-phone or live-provider qualification.
+- Initial JS: 197,801 gzip bytes (713,931 raw bytes; gzip level 9), below the 200,000-byte budget. No public deployment, real recipient send, load qualification, restore drill or human phone test was performed.
+
+Remaining sequence now starts with the focused activity/handoff workspace, direct posting location and notification destinations, then full navigation/map UX, dataset separation, SQL paging/aggregation, route extraction and protected candidate qualification. A source-write/DB-commit failure still spans two systems; receipt transactions do not establish an atomic PDS/PostgreSQL commit. Real recipient and phone participants remain unconfirmed.

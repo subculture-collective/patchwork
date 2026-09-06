@@ -1,3 +1,5 @@
+import { AuthoringReceiptService } from './authoring-receipts.js';
+import { createAccountRequestsHandler } from './http/account-requests-handler.js';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -250,7 +252,9 @@ const reportService =
     :   undefined;
 const lifecycleRepository =
     postgresPool ? new PostgresLifecycleRepository(postgresPool) : undefined;
-const lifecycleService = createLifecycleService(lifecycleRepository);
+const authoringReceiptService = postgresPool ? new AuthoringReceiptService(postgresPool) : undefined;
+const lifecycleService = createLifecycleService(lifecycleRepository,
+    authoringReceiptService ? (uri, cid) => authoringReceiptService.projection(uri, cid) : undefined);
 const roleRepository =
     postgresPool ? new PostgresRoleRepository(postgresPool) : undefined;
 const atAuthRuntime =
@@ -543,6 +547,8 @@ const accountPrivacyHandler =
             },
         })
     :   undefined;
+const accountRequestsHandler = authoringReceiptService && authenticateApiRequest
+    ? createAccountRequestsHandler(authoringReceiptService, authenticateApiRequest) : undefined;
 const accountOnboardingHandler =
     authenticateSessionRequest &&
     accountOnboardingService &&
@@ -1745,6 +1751,7 @@ const contractRoutes = [
     '/at/directory-resources',
     '/at/volunteer-profile',
     '/query/aid-post',
+    '/query/directory-resource',
     '/query/map',
     '/query/feed',
     '/query/directory',
@@ -1763,6 +1770,7 @@ const contractRoutes = [
     '/moderation/audit',
     '/account/export',
     '/account/deactivate',
+    '/account/requests',
     '/account/onboarding',
     '/account/consent',
     '/account/preferences',
@@ -1906,6 +1914,7 @@ const readPaths = new Set([
     '/metrics',
     '/contracts',
     '/query/aid-post',
+    '/query/directory-resource',
     '/query/map',
     '/query/feed',
     '/query/directory',
@@ -2067,6 +2076,11 @@ export const createApiServer = () => {
             return;
         }
 
+        if (accountRequestsHandler?.(request, response, requestUrl)) return;
+        if (requestUrl.pathname === '/account/requests') {
+            writeJson(response, 503, { error: { code: 'ACCOUNT_REQUESTS_UNAVAILABLE', message: 'Your requests are temporarily unavailable.' } });
+            return;
+        }
         if (accountOnboardingHandler?.(request, response, requestUrl)) {
             return;
         }

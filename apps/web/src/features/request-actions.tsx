@@ -12,7 +12,7 @@ import {
 
 /** Commands are acknowledged by the durable owner API, never by local card state. */
 export function RequestLifecycleActions({ record, onRefresh }: {
-    record: FeedRecordEnvelope;
+    record: Pick<FeedRecordEnvelope, 'aidPostUri' | 'recipientDid' | 'cid'> & { card: Pick<FeedRecordEnvelope['card'], 'title'> };
     onRefresh: () => void;
 }) {
     const { session } = useAuth();

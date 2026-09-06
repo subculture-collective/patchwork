@@ -19,6 +19,9 @@
         "chat": "Chat"
     },
     "labels": {
+        "triaged": "Revisada",
+        "assigned": "Asignada",
+        "in_progress": "En curso",
         "food": "Comida",
         "shelter": "Refugio",
         "medical": "Atención médica",
@@ -1353,5 +1356,24 @@
         "offerNote": "¿Cómo puedes ayudar?",
         "offerHelp": "Ofrecer ayuda",
         "loadingRequest": "Cargando solicitud…"
+    },
+    "myRequests": {
+        "resourceUnavailable": "No se pudo cargar este recurso. Inténtalo de nuevo o busca recursos cercanos.",
+        "resourceLoading": "Cargando este recurso…",
+        "heading": "Mis solicitudes",
+        "newRequest": "Pedir ayuda",
+        "error": "No se pudieron actualizar tus solicitudes. Inténtalo de nuevo.",
+        "loading": "Cargando tus solicitudes…",
+        "empty": "No hay solicitudes en esta página. Pide ayuda para crear una.",
+        "pending": "Guardada en tu cuenta. Esperando aparecer en los resultados cercanos. Puedes gestionarla aquí.",
+        "published": "La versión pública está actualizada.",
+        "view": "Ver solicitud",
+        "pages": "Páginas de solicitudes",
+        "previous": "Anterior",
+        "next": "Siguiente",
+        "page": "Página {{page}}",
+        "allActivity": "Mostrar toda la actividad",
+        "activityPartial": "No se pudo actualizar parte de la actividad. Se muestran las secciones disponibles; usa Actualizar para reintentar.",
+        "refresh": "Actualizar"
     }
 }

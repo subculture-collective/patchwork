@@ -1,3 +1,4 @@
+import { recordAuthoringReceipt } from '../authoring-receipts.js';
 import { createHash } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import { PublicHttpError } from './error-response.js';
@@ -120,6 +121,7 @@ export class PostgresIdempotencyExecutor {
             }
 
             const response = await effect();
+            await recordAuthoringReceipt(client, command, response);
             await client.query(
                 `UPDATE http_idempotency_commands
                  SET status_code = $5, response_body = $6::jsonb,
