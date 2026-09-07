@@ -140,8 +140,28 @@ test('county boundaries split into ZIPs with one keyboard action and regroup whe
     await page.keyboard.press('Enter');
     await expect(page.locator('path[aria-label^="Show ZIP"]')).toHaveCount(4);
     await expect(page.locator('path.mh-map-cluster')).toHaveCount(0);
+    await expect(page.locator('.mh-postal-count')).toHaveCount(4);
+    await expect(page.getByRole('button', { name: 'Explore Cook County, IL: 240 requests', exact: true })).toHaveAttribute('aria-pressed','true');
+    const emptyCounty = page.locator('path[aria-label$="0 requests"]').first();
+    await emptyCounty.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('path[aria-pressed="true"]')).toHaveCount(1);
     await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Explore Cook County, IL: 240 requests', exact: true })).toBeAttached();
+});
+test('ZIP request panel returns to the previous browsing area', async ({ page }) => {
+    await page.goto('/nearby?lat=41.88&lng=-87.63&r=50000');
+    await page.getByRole('button', { name: 'Explore Cook County, IL: 240 requests', exact: true }).focus();
+    await page.keyboard.press('Enter');
+    await page.getByRole('button', { name: 'Show ZIP 60602: 60 requests', exact: true }).focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('region', { name: 'Requests in ZIP 60602', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Back to ZIP areas', exact: true }).click();
+    await expect(page.locator('.mh-map-detail-sheet')).toHaveCount(0);
+    expect(new URL(page.url()).searchParams.get('zip')).toBeNull();
+    expect(new URL(page.url()).searchParams.get('lat')).toBe('41.88');
+    expect(new URL(page.url()).searchParams.get('r')).toBe('50000');
+    await expect(page.getByRole('button', { name: 'ZIP areas', exact: true })).toHaveAttribute('aria-current', 'step');
 });
 test('filters collapse, use compact buttons and two columns on wider screens', async ({
     page,
@@ -268,7 +288,8 @@ test('requests in one ZIP stay together at street zoom and are selectable from t
     for(let i=0;i<5;i++) await page.getByRole('button',{name:'Zoom in',exact:true}).click();
     await expect(page.locator('path[aria-label^="Show ZIP"]')).toHaveCount(1);
     await expect(page.locator('path.mh-map-marker')).toHaveCount(0);
-    await page.getByRole('button',{ name: /View request: Shared ZIP request 8/ }).click();
+    await expect(page.getByRole('region',{name:'Requests in ZIP 60602',exact:true})).toBeVisible();
+    await page.getByRole('region',{name:'Requests in ZIP 60602',exact:true}).getByRole('button',{name:/Shared ZIP request 8/}).click();
     await expect(page.getByRole('region',{name:'Details for Shared ZIP request 8'})).toBeVisible();
 });
 

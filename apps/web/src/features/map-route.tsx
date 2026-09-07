@@ -1,6 +1,6 @@
 import { discoveryFallback } from './discovery-location';
 import { useMapSelection } from './use-map-selection';
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { DiscoveryMapAggregates } from '@patchwork/shared';
 import type { DiscoveryFilterState, AidStatus } from '../discovery-filters';
 import type { ChatEntrySurface } from '../chat-ux';
@@ -122,6 +122,14 @@ export const MapRoute = ({
             [t],
         ),
     });
+    const zipRecords = feedRecords.filter(record => record.postalCode === discoveryState.postalCode);
+    const [zipListOpen, setZipListOpen] = useState(Boolean(discoveryState.postalCode));
+    const previousZipArea = useRef<Partial<DiscoveryFilterState> | undefined>(undefined);
+    useEffect(() => { setZipListOpen(Boolean(discoveryState.postalCode)); }, [discoveryState.postalCode]);
+    const leaveZip = () => {
+        setZipListOpen(false);
+        onPushDiscovery({ ...previousZipArea.current, postalCode: undefined, areaLabel: previousZipArea.current?.areaLabel });
+    };
     const [viewport, setViewport] = useState<{ center: { lat: number; lng: number }; radiusMeters: number }>();
     const selection = useMapSelection(feedRecords, resourceCards, 'all');
     const selectedRecord = selection.request;
@@ -327,9 +335,12 @@ export const MapRoute = ({
                             selectedPostalCode={discoveryState.postalCode}
                             center={cameraCenter}
                             onViewportChange={setViewport}
+                            onClearPostalCode={leaveZip}
                             onSelectPostalCode={(postalCode) => {
+                                if (!discoveryState.postalCode) previousZipArea.current = { center: discoveryState.center, radiusMeters: discoveryState.radiusMeters, areaLabel: discoveryState.areaLabel };
+                                setZipListOpen(true);
                                 onPushDiscovery({ postalCode, center: undefined, radiusMeters: undefined, areaLabel: `ZIP ${postalCode}` });
-                                document.getElementById('map-area-requests')?.scrollIntoView({ block: 'start' });
+
                             }}
                             onSelectResource={setSelectedResourceUri}
                             onTilesFailed={setTileError}
@@ -339,8 +350,26 @@ export const MapRoute = ({
             </section>
 
             {aggregates && aggregates.requestCount > mapView.filteredCards.length && <p role='status'>{t('map.aggregateHelp', { count: aggregates.requestCount })}{aggregates.truncated ? ` ${t('map.aggregateTruncated')}` : ''}</p>}
-            {discoveryState.postalCode && <p role='status'>Showing requests in ZIP {discoveryState.postalCode}. <Button variant='neutral' onClick={() => onPushDiscovery({ postalCode: undefined, areaLabel: undefined })}>Show all ZIPs</Button></p>}
+            {discoveryState.postalCode && <p role='status'>Showing requests in ZIP {discoveryState.postalCode}. <Button variant='neutral' onClick={leaveZip}>Show all ZIPs</Button></p>}
             {viewport && <Button onClick={() => { onPushDiscovery({ ...viewport, postalCode: undefined, feedTab: 'nearby' }); setViewport(undefined); }}>{t('handoff.searchArea')}</Button>}
+            {discoveryState.postalCode && zipListOpen && !selectedResource && !selectedRecord && !selection.loading && !selection.error && <MapDetailSheet closeLabel='Close ZIP request list' onClose={() => setZipListOpen(false)}>
+                <Panel title={`Requests in ZIP ${discoveryState.postalCode}`}>
+                    <p className='mb-3 text-sm'>All requests in this area share the same ZIP location.</p>
+                    {isLoading ? <p role='status'>Loading requests…</p> : <>
+                        <p role='status' className='mb-3'>{zipRecords.length} of {total} requests</p>
+                        {!zipRecords.length && <p>No requests match the current filters in this ZIP.</p>}
+                        <ul className='space-y-2'>{zipRecords.map(record => <li key={record.aidPostUri}>
+                            <button className='mh-record-card w-full text-left' onClick={() => onSelectPost(record.card.id)}>
+                                <strong className='block'>{record.card.title}</strong>
+                                <span className='block text-sm'>{record.card.category} · {record.card.status}</span>
+                            </button>
+                        </li>)}</ul>
+                    </>}
+                    {errorMessage && <p role='alert'>{errorMessage} <Button onClick={onRetry}>Retry requests</Button></p>}
+                    {hasNextPage && <Button disabled={isLoading} onClick={onLoadMore}>Load more requests</Button>}
+                    <Button variant='neutral' onClick={leaveZip}>Back to ZIP areas</Button>
+                </Panel>
+            </MapDetailSheet>}
             {(selection.loading || selection.error) && <MapDetailSheet closeLabel={t('resources.close')} onClose={selection.close}>
                 <Panel title={t('handoff.requestDetails')}>
                     {selection.loading ? <p role='status'>{t('handoff.loadingRequest')}</p> : <><p role='alert'>{selection.error}</p><Button onClick={selection.retry}>{t('common.retry')}</Button></>}

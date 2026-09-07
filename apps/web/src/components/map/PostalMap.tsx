@@ -14,6 +14,7 @@ interface Props {
     center: { lat: number; lng: number };
     selectedPostalCode?: string;
     onSelectPostalCode: (code: string) => void;
+    onClearPostalCode: () => void;
     onSelectResource: (uri: string) => void;
     onTilesFailed: (message: string) => void;
     onViewportChange: (area: { center: { lat: number; lng: number }; radiusMeters: number }) => void;
@@ -37,6 +38,12 @@ export function PostalMap(props: Props) {
     const mapRef = useRef<L.Map | null>(null);
     const callbacks = useRef(props);
     callbacks.current = props;
+    const [visibleStates, setVisibleStates] = useState<string[]>([]);
+    const [selectedCounty, setSelectedCounty] = useState<{ id: string; name: string }>();
+    const ignoreNextCenter = useRef(false);
+    const browseZoom = useRef(11);
+    const previousPostalCode = useRef(props.selectedPostalCode);
+    const fittedZip = useRef<string | undefined>(undefined);
     const [zoom, setZoom] = useState(props.selectedPostalCode ? 13 : 9);
     const [boundaryError, setBoundaryError] = useState<string>();
     const [retry, setRetry] = useState(0);
@@ -52,8 +59,8 @@ export function PostalMap(props: Props) {
             const id = level === 'state' ? area.stateId : level === 'county' ? area.countyId : area.postalCode;
             areas.set(id, (areas.get(id) ?? 0) + cell.count);
         }
-        return { states: [...states].sort(), areas };
-    }, [props.cells, level]);
+        return { states: [...new Set([...states, ...visibleStates])].sort(), areas };
+    }, [props.cells, level, visibleStates]);
 
     useEffect(() => {
         if (!container.current) return;
@@ -68,19 +75,41 @@ export function PostalMap(props: Props) {
             .addTo(map);
         map.attributionControl.addAttribution('© OpenStreetMap contributors · Boundaries: US Census Bureau, 2020');
         map.on('zoomend', () => setZoom(map.getZoom()));
+        let stateBounds: { id: string; bounds: L.LatLngBounds }[] = [];
+        const abort = new AbortController();
+        const updateStates = () => {
+            const next = stateBounds.filter(state => state.bounds.intersects(map.getBounds())).map(state => state.id).sort();
+            setVisibleStates(previous => previous.join(',') === next.join(',') ? previous : next);
+        };
+        void boundaries('states', abort.signal).then(data => {
+            if (abort.signal.aborted) return;
+            stateBounds = data.features.map(feature => ({ id: feature.properties.id, bounds: L.geoJSON(feature).getBounds() }));
+            updateStates();
+        }).catch(() => {});
         map.on('moveend', () => {
+            updateStates();
             const point = map.getCenter();
             callbacks.current.onViewportChange({ center: { lat: point.lat, lng: point.lng }, radiusMeters: Math.round(map.distance(point, map.getBounds().getNorthEast())) });
         });
         const observer = new ResizeObserver(() => map.invalidateSize());
         observer.observe(container.current);
-        return () => { observer.disconnect(); map.remove(); mapRef.current = null; };
+        return () => { abort.abort(); observer.disconnect(); map.remove(); mapRef.current = null; };
     }, []);
 
     useEffect(() => {
         const map = mapRef.current;
+        if (ignoreNextCenter.current) { ignoreNextCenter.current = false; return; }
         if (map) map.panTo([props.center.lat, props.center.lng]);
     }, [props.center.lat, props.center.lng]);
+
+    useEffect(() => {
+        if (previousPostalCode.current && !props.selectedPostalCode) {
+            fittedZip.current = undefined;
+            mapRef.current?.setZoom(browseZoom.current, { animate: false });
+            browseZoom.current = 11;
+        }
+        previousPostalCode.current = props.selectedPostalCode;
+    }, [props.selectedPostalCode]);
 
     useEffect(() => {
         const map = mapRef.current;
@@ -89,36 +118,53 @@ export function PostalMap(props: Props) {
         const group = L.layerGroup().addTo(map);
         setBoundaryError(undefined);
         setLoading(true);
-        const files = level === 'state' ? ['states'] : counts.states.map(state => `${state}-${level}`);
+        const files = level === 'state' ? ['states'] : counts.states.flatMap(state => level === 'zip' ? [`${state}-county`, `${state}-zip`] : [`${state}-county`]);
         void Promise.all(files.map(file => boundaries(file, abort.signal))).then(collections => {
             if (abort.signal.aborted) return;
-            for (const collection of collections) {
+            for (const [collectionIndex, collection] of collections.entries()) {
+                const isCounty = files[collectionIndex]!.endsWith('-county');
+                const isZip = files[collectionIndex]!.endsWith('-zip');
+                const selectedCountyId = (props.selectedPostalCode ? lookupPostalArea(props.selectedPostalCode)?.countyId : undefined) ?? selectedCounty?.id;
                 L.geoJSON(collection, {
-                    filter: feature => counts.areas.has(feature.properties.id),
+                    filter: feature => !isZip || counts.areas.has(feature.properties.id),
                     style: feature => ({
-                        color: '#734cba', weight: feature?.properties.id === props.selectedPostalCode ? 2 : 1,
-                        fillColor: '#9d7dd3', fillOpacity: feature?.properties.id === props.selectedPostalCode ? .24 : .09,
+                        color: isCounty ? '#536977' : '#734cba', weight: feature?.properties.id === props.selectedPostalCode || (isCounty && feature?.properties.id === selectedCountyId) ? 2 : 1,
+                        fillColor: isCounty ? '#73a8ba' : '#9d7dd3', fillOpacity: isCounty ? (feature?.properties.id === selectedCountyId ? .15 : .025) : feature?.properties.id === props.selectedPostalCode ? .24 : .09,
                         bubblingMouseEvents: false,
                     }),
                     onEachFeature: (feature, layer) => {
-                        const count = counts.areas.get(feature.properties.id)!;
+                        const count = isCounty && level === 'zip' ? props.cells.reduce((sum, cell) => sum + (cell.postalCode && lookupPostalArea(cell.postalCode)?.countyId === feature.properties.id ? cell.count : 0), 0) : counts.areas.get(feature.properties.id) ?? 0;
                         const label = `${feature.properties.name}: ${count} ${count === 1 ? 'request' : 'requests'}`;
                         const text = document.createElement('span');
-                        text.textContent = label;
-                        layer.bindTooltip(text, { permanent: level !== 'zip' || zoom >= 13, direction: 'center', pane: 'postalLabels', className: 'mh-postal-area-label' });
+                        text.textContent = isZip ? String(count) : label;
+                        text.title = label;
+                        layer.bindTooltip(text, { permanent: isZip || (!isCounty && level === 'state'), direction: 'center', pane: 'postalLabels', className: isZip ? 'mh-postal-count' : 'mh-postal-area-label' });
                         const activate = () => {
                             const polygon = layer as L.Polygon;
-                            if (level === 'zip') callbacks.current.onSelectPostalCode(feature.properties.id);
-                            map.fitBounds(polygon.getBounds(), { padding: [32, 32], animate: false, maxZoom: level === 'state' ? 9 : level === 'county' ? 12 : 13 });
-                            const detailZoom = level === 'state' ? 7 : level === 'county' ? 10 : 13;
+                            if (isCounty) {
+                                setSelectedCounty({ id: feature.properties.id, name: feature.properties.name });
+                                if (callbacks.current.selectedPostalCode) { ignoreNextCenter.current = true; callbacks.current.onClearPostalCode(); }
+                            }
+                            if (isZip) {
+                                callbacks.current.onSelectPostalCode(feature.properties.id);
+                                if (window.innerWidth < 768) container.current?.scrollIntoView({ block: 'start' });
+                            }
+                            map.fitBounds(polygon.getBounds(), { padding: [32, 32], animate: false, maxZoom: level === 'state' ? 9 : isCounty ? 12 : 14 });
+                            const detailZoom = level === 'state' ? 7 : isCounty ? 10 : 13;
                             if (map.getZoom() < detailZoom) map.setZoom(detailZoom, { animate: false });
                         };
+                        if (isZip && feature.properties.id === props.selectedPostalCode && fittedZip.current !== props.selectedPostalCode) {
+                            fittedZip.current = props.selectedPostalCode;
+                            if (window.innerWidth < 768) container.current?.scrollIntoView({ block: 'start' });
+                            map.fitBounds((layer as L.Polygon).getBounds(), { padding: [28, 28], maxZoom: 14, animate: false });
+                        }
                         layer.on('click', activate);
                         layer.on('add', () => {
                             const element = (layer as L.Path).getElement();
                             element?.setAttribute('tabindex', '0');
                             element?.setAttribute('role', 'button');
-                            element?.setAttribute('aria-label', `${level === 'zip' ? 'Show' : 'Explore'} ${label}`);
+                            element?.setAttribute('aria-pressed', String(isCounty ? feature.properties.id === selectedCountyId : feature.properties.id === props.selectedPostalCode));
+                            element?.setAttribute('aria-label', `${isZip ? 'Show' : 'Explore'} ${label}`);
                             element?.addEventListener('keydown', event => {
                                 if (['Enter', ' '].includes((event as KeyboardEvent).key)) { event.preventDefault(); activate(); }
                             });
@@ -130,7 +176,7 @@ export function PostalMap(props: Props) {
             if (!abort.signal.aborted) setBoundaryError('Geographic boundaries could not load. You can still use the request list.');
         }).finally(() => { if (!abort.signal.aborted) setLoading(false); });
         return () => { abort.abort(); group.remove(); };
-    }, [counts, level, zoom, props.selectedPostalCode, retry]);
+    }, [counts, level, zoom, props.selectedPostalCode, selectedCounty, retry]);
 
     useEffect(() => {
         const map = mapRef.current;
@@ -172,8 +218,24 @@ export function PostalMap(props: Props) {
         return () => { group.remove(); };
     }, [props.resources, zoom]);
 
+    const selectedZipArea = props.selectedPostalCode ? lookupPostalArea(props.selectedPostalCode) : undefined;
+    const activeCounty = selectedZipArea ? { id: selectedZipArea.countyId, name: `${selectedZipArea.countyName}, ${selectedZipArea.stateName}` } : selectedCounty;
+    const navigateLevel = (target: number) => {
+        fittedZip.current = undefined;
+        browseZoom.current = target;
+        if (props.selectedPostalCode) callbacks.current.onClearPostalCode();
+        if (target < 10) setSelectedCounty(undefined);
+        mapRef.current?.setZoom(target, { animate: false });
+    };
     return <div>
-        <p className='mb-2 text-sm' role='status'>{level === 'zip' ? 'Requests by ZIP area' : level === 'county' ? 'Requests by county' : 'Requests by state'}{loading ? ' · Loading boundaries…' : ''}</p>
+        <nav aria-label='Map detail levels' className='mb-3 flex flex-wrap items-center gap-2 text-sm'>
+            <button className='mh-nav-chip' aria-current={level === 'state' ? 'step' : undefined} onClick={() => navigateLevel(5)}>States</button>
+            <span aria-hidden='true'>›</span><button className='mh-nav-chip' aria-current={level === 'county' ? 'step' : undefined} onClick={() => navigateLevel(8)}>Counties</button>
+            <span aria-hidden='true'>›</span><button className='mh-nav-chip' aria-current={level === 'zip' && !props.selectedPostalCode ? 'step' : undefined} onClick={() => navigateLevel(11)}>ZIP areas</button>
+            {props.selectedPostalCode && <><span aria-hidden='true'>›</span><button className='mh-nav-chip' aria-current='step' onClick={() => callbacks.current.onSelectPostalCode(props.selectedPostalCode!)}>ZIP {props.selectedPostalCode} · View requests</button></>}
+        </nav>
+        {activeCounty && <p className='mb-2 text-sm'><strong>{activeCounty.name}</strong> selected · {props.cells.reduce((sum, cell) => sum + (cell.postalCode && lookupPostalArea(cell.postalCode)?.countyId === activeCounty.id ? cell.count : 0), 0)} requests in the current search</p>}
+        <p className='mb-2 text-sm' role='status'>{props.selectedPostalCode ? `ZIP ${props.selectedPostalCode} detail` : level === 'zip' ? 'Requests by ZIP area' : level === 'county' ? 'Requests by county' : 'Requests by state'}{loading ? ' · Loading boundaries…' : ''}</p>
         {boundaryError && <p role='alert'>{boundaryError} <button className='mh-button' onClick={() => setRetry(value => value + 1)}>Retry boundaries</button></p>}
         <div ref={container} className='mh-interactive-map h-[60vh] min-h-96 w-full' aria-label='Requests by ZIP area and public resource locations' />
         <p className='mt-2 text-xs text-mh-textMuted'>Shaded areas count requests. Pins show public resources at their street addresses. ZIP areas use 2020 Census boundaries; request locations never become more detailed as you zoom.</p>

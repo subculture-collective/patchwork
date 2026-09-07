@@ -1257,3 +1257,7 @@ code {
 .mh-exact-resource-pin:focus { outline: 3px solid #734cba; outline-offset: 1px; }
 .mh-postal-area-label { background: #fffE; color: #35234e; border: 0; box-shadow: none; font-weight: 600; font-size: 11px; padding: 2px 5px; }
 .mh-postal-area-label:before { display: none; }
+
+.leaflet-tooltip.mh-postal-count { background: #fffdf4; color: #4e327d; border: 1px solid #b4a2cc; border-radius: 10px; padding: 1px 5px; font-size: 11px; font-weight: 700; line-height: 16px; box-shadow: 0 1px 2px #0002; pointer-events: none; }
+.leaflet-tooltip.mh-postal-count::before { display: none; }
+.mh-nav-chip[aria-current='step'] { background: #176659; color: white; }
