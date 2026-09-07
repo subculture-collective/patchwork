@@ -8,7 +8,6 @@ import {
 } from './submission-safety-service.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describeWithPostgres = databaseUrl ? describe : describe.skip;
 
 const acceptedRecord = {
     $type: 'app.patchwork.aid.post',
@@ -36,7 +35,7 @@ const submission = (
     idempotencyKey: `safety-${suffix}`,
 });
 
-describeWithPostgres('SubmissionSafetyService', () => {
+describe('SubmissionSafetyService', () => {
     const schema = `submission_safety_${randomUUID().replaceAll('-', '')}`;
     const adminPool = new Pool({ connectionString: databaseUrl });
     const pool = new Pool({

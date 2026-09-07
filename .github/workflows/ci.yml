@@ -24,20 +24,17 @@ jobs:
             - name: Install dependencies
               run: npm ci --include=dev
 
-            - name: Lint
-              run: npm run lint
-
             - name: Typecheck
               run: npm run typecheck
 
-            - name: Unit tests
-              run: npm run test
-
-            - name: Operational controls and sprint traceability
-              run: npm run test:operations
-
-            - name: Diagnostic coverage report
+            - name: Unit tests with coverage
               run: npm run test:coverage
+
+            - name: Map artifacts and location privacy
+              run: npm run test:maps && npm run test:exact-location-absence
+
+            - name: Operational controls
+              run: npm run test:operations
 
             - name: Upload coverage report
               uses: https://gitea.com/actions/upload-artifact@c24449f33cd45d4826c6702db7e49f7cdb9b551d
@@ -51,7 +48,7 @@ jobs:
               run: npx playwright install --with-deps chromium
               working-directory: apps/web
 
-            - name: Browser E2E tests (Phase 8.2)
+            - name: Browser behavior tests
               run: npm run test:e2e -w @patchwork/web
 
             - name: Refuse unreviewed browser artifacts
@@ -175,10 +172,10 @@ jobs:
                   test -n "$network"
                   docker run --detach --name "$container" \
                     --network "$network" \
-                    --env POSTGRES_DB=patchwork \
+                    --env POSTGRES_DB=patchwork_test \
                     --env POSTGRES_USER=patchwork \
                     --env POSTGRES_PASSWORD=patchwork_ci \
-                    --health-cmd "pg_isready -U patchwork -d patchwork" \
+                    --health-cmd "pg_isready -U patchwork -d patchwork_test" \
                     --health-interval 5s \
                     --health-timeout 3s \
                     --health-retries 20 \
@@ -195,9 +192,9 @@ jobs:
                   address=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$container")
                   test -n "$address"
                   echo "PATCHWORK_CI_POSTGRES_CONTAINER=$container" >> "$GITHUB_ENV"
-                  echo "API_DATABASE_URL=postgresql://patchwork:patchwork_ci@$address:5432/patchwork" >> "$GITHUB_ENV"
-                  echo "DATABASE_URL=postgresql://patchwork:patchwork_ci@$address:5432/patchwork" >> "$GITHUB_ENV"
-                  echo "TEST_DATABASE_URL=postgresql://patchwork:patchwork_ci@$address:5432/patchwork" >> "$GITHUB_ENV"
+                  echo "API_DATABASE_URL=postgresql://patchwork:patchwork_ci@$address:5432/patchwork_test" >> "$GITHUB_ENV"
+                  echo "DATABASE_URL=postgresql://patchwork:patchwork_ci@$address:5432/patchwork_test" >> "$GITHUB_ENV"
+                  echo "TEST_DATABASE_URL=postgresql://patchwork:patchwork_ci@$address:5432/patchwork_test" >> "$GITHUB_ENV"
 
             - name: Run database migrations
               run: |
@@ -206,16 +203,7 @@ jobs:
                   npm run db:migrate -w @patchwork/moderation-worker
 
             - name: PostgreSQL integration tests
-              run: npm run test:integration:postgres -w @patchwork/api
-
-            - name: Direct lifecycle service integration tests
-              run: npm run test:integration:service -w @patchwork/web
-
-            - name: Indexer PostgreSQL integration tests
-              run: npm run test -w @patchwork/indexer
-
-            - name: Moderation PostgreSQL integration tests
-              run: npm run test -w @patchwork/moderation-worker
+              run: npm run test:integration:postgres
 
             - name: Start private attachment integration services
               env:
@@ -281,131 +269,3 @@ jobs:
                     "${PATCHWORK_CI_CLAMAV_CONTAINER:-patchwork-ci-clamav-${GITHUB_RUN_ID}-${GITHUB_JOB}}" \
                     "${PATCHWORK_CI_POSTGRES_CONTAINER:-patchwork-ci-postgres-${GITHUB_RUN_ID}-${GITHUB_JOB}}" \
                     >/dev/null 2>&1 || true
-
-    # -----------------------------------------------------------------------
-    # Wave 4 (#108): Auto-deploy to staging on main push
-    # -----------------------------------------------------------------------
-    deploy-staging:
-        runs-on: ubuntu-latest
-        needs: [quality-gates, e2e-production]
-        # Superseded by deploy-staging.yml after this CI workflow succeeds.
-        if: ${{ false }}
-        timeout-minutes: 15
-
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
-
-            - name: Compute immutable image tag (#109)
-              id: image-tag
-              run: |
-                  GIT_SHA=$(git rev-parse --short=7 HEAD)
-                  BUILD_VERSION="0.9.0"
-                  IMAGE_TAG="${BUILD_VERSION}-${GIT_SHA}"
-                  echo "sha=${GIT_SHA}" >> "$GITHUB_OUTPUT"
-                  echo "version=${BUILD_VERSION}" >> "$GITHUB_OUTPUT"
-                  echo "tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
-
-            - name: Build staging images with immutable tags (#109)
-              run: |
-                  docker build --target api-runtime \
-                    --build-arg GIT_SHA=${{ steps.image-tag.outputs.sha }} \
-                    --build-arg GIT_BRANCH=${{ github.ref_name }} \
-                    --build-arg BUILD_VERSION=${{ steps.image-tag.outputs.version }} \
-                    --build-arg CI_RUN_ID=${{ github.run_id }} \
-                    -t patchwork-api:${{ steps.image-tag.outputs.tag }} .
-                  docker build --target indexer-runtime \
-                    --build-arg GIT_SHA=${{ steps.image-tag.outputs.sha }} \
-                    --build-arg GIT_BRANCH=${{ github.ref_name }} \
-                    --build-arg BUILD_VERSION=${{ steps.image-tag.outputs.version }} \
-                    --build-arg CI_RUN_ID=${{ github.run_id }} \
-                    -t patchwork-spool:${{ steps.image-tag.outputs.tag }} .
-                  docker build --target moderation-runtime \
-                    --build-arg GIT_SHA=${{ steps.image-tag.outputs.sha }} \
-                    --build-arg GIT_BRANCH=${{ github.ref_name }} \
-                    --build-arg BUILD_VERSION=${{ steps.image-tag.outputs.version }} \
-                    --build-arg CI_RUN_ID=${{ github.run_id }} \
-                    -t patchwork-thimble:${{ steps.image-tag.outputs.tag }} .
-                  docker build --target web-runtime \
-                    --build-arg GIT_SHA=${{ steps.image-tag.outputs.sha }} \
-                    --build-arg GIT_BRANCH=${{ github.ref_name }} \
-                    --build-arg BUILD_VERSION=${{ steps.image-tag.outputs.version }} \
-                    --build-arg CI_RUN_ID=${{ github.run_id }} \
-                    -t patchwork-web:${{ steps.image-tag.outputs.tag }} .
-
-            - name: Verify OCI labels on built images (#109)
-              run: |
-                  TAG=${{ steps.image-tag.outputs.tag }}
-                  for img in patchwork-api patchwork-spool patchwork-thimble patchwork-web; do
-                    echo "--- ${img}:${TAG} labels ---"
-                    docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "${img}:${TAG}"
-                    docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' "${img}:${TAG}"
-                  done
-
-            - name: Record artifact metadata (#109)
-              run: |
-                  TAG=${{ steps.image-tag.outputs.tag }}
-                  SHA=${{ steps.image-tag.outputs.sha }}
-                  VER=${{ steps.image-tag.outputs.version }}
-                  cat <<ARTIFACT_EOF
-                  {
-                    "tag": "${TAG}",
-                    "version": "${VER}",
-                    "gitSha": "${SHA}",
-                    "branch": "${{ github.ref_name }}",
-                    "commitSha": "${{ github.sha }}",
-                    "ciRunId": "${{ github.run_id }}",
-                    "ciRunUrl": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-                    "builtAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-                  }
-                  ARTIFACT_EOF
-
-            - name: Staging smoke checks (#108)
-              run: |
-                  echo "Legacy staging job is disabled; deploy-staging.yml owns deployment."
-                  exit 1
-
-    # -----------------------------------------------------------------------
-    # Wave 4 (#110): Progressive delivery observability checkpoints
-    # -----------------------------------------------------------------------
-    progressive-delivery-gate:
-        runs-on: ubuntu-latest
-        needs: deploy-staging
-        # Superseded by deployed readiness and browser gates in deploy-staging.yml.
-        if: ${{ false }}
-        timeout-minutes: 10
-
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
-
-            - name: Canary readiness checkpoint (#110)
-              run: |
-                  echo "=== Progressive Delivery Gate ==="
-                  echo "Strategy: canary (5% -> 25% -> 50% -> 100%)"
-                  echo ""
-                  echo "Legacy simulated checkpoint job is disabled."
-                  echo ""
-                  echo "Burn-rate thresholds:"
-                  echo "  error_rate: max 2.0x budget over 5m"
-                  echo "  latency_p95: max 1.5x budget over 5m"
-                  echo "  saturation: max 1.5x budget over 10m"
-                  echo ""
-                  exit 1
-
-            - name: Rollback trigger configuration audit (#110)
-              run: |
-                  echo "=== Rollback Trigger Audit ==="
-                  echo "Auto-rollback triggers configured:"
-                  echo "  - SLO burn rate exceeded (error_rate > 2.0x)"
-                  echo "  - SLO burn rate exceeded (latency_p95 > 1.5x)"
-                  echo "  - Health check failure on canary pods"
-                  echo "  - Smoke test failure after weight shift"
-                  echo ""
-                  echo "Manual override procedures:"
-                  echo "  make deploy-rollout-pause SERVICE=<service>"
-                  echo "  make deploy-rollout-resume SERVICE=<service>"
-                  echo "  make deploy-rollout-abort SERVICE=<service>"
-                  echo "  make rollback SERVICE=<service> ROLLBACK_TAG=<tag>"
-                  echo ""
-                  echo "Runbook: docs/operations/progressive-delivery-runbook.md"

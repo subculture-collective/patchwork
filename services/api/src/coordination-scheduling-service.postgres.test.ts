@@ -5,7 +5,6 @@ import { CoordinationSchedulingService } from './coordination-scheduling-service
 import { AccountPrivacyService } from './account-privacy-service.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describePostgres = databaseUrl ? describe : describe.skip;
 const requester = 'did:plc:schedule-requester';
 const helper = 'did:plc:schedule-helper';
 const outsider = 'did:plc:schedule-outsider';
@@ -13,7 +12,7 @@ const requestUri = `at://${requester}/app.patchwork.aid.post/schedule`;
 const connectionId = '11111111-1111-4111-8111-111111111123';
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 
-describePostgres('CoordinationSchedulingService PostgreSQL boundary', () => {
+describe('CoordinationSchedulingService PostgreSQL boundary', () => {
     const pool = new Pool({ connectionString: databaseUrl });
     const baseline = new Date('2026-07-01T12:00:00.000Z');
 

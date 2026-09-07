@@ -8,11 +8,10 @@ import {
 } from './showcase-seed.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describePostgres = databaseUrl ? describe : describe.skip;
 const visitorUri =
     'at://did:plc:showcase-visitor-sentinel/app.patchwork.aid.post/visitor';
 
-describePostgres('buyer-ready showcase seed', () => {
+describe('buyer-ready showcase seed', () => {
     const pool = new Pool({ connectionString: databaseUrl });
 
     beforeEach(async () => {

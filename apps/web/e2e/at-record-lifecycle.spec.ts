@@ -5,6 +5,7 @@ const helperState = process.env['PATCHWORK_E2E_HELPER_STATE'];
 const exactLatitude = process.env['PATCHWORK_E2E_EXACT_LATITUDE'];
 const exactLongitude = process.env['PATCHWORK_E2E_EXACT_LONGITUDE'];
 const privateMarker = process.env['PATCHWORK_E2E_PRIVATE_MARKER'];
+const postalCode = process.env['PATCHWORK_E2E_POSTAL_CODE'] ?? '10001';
 const liveEnvironmentAvailable = Boolean(
     process.env['PATCHWORK_E2E_BASE_URL'] &&
         requesterState &&
@@ -72,6 +73,7 @@ test.describe('real two-account AT record lifecycle', () => {
         });
         await requester.goto(`/posting?${postingArea.toString()}`);
         await expect(requester.locator('.mh-auth-control').getByText(/^@/)).toBeVisible();
+        await requester.getByLabel('ZIP code where help is needed').fill(postalCode);
         await requester.getByLabel('Title').fill(title);
         await requester
             .getByLabel('Description')
@@ -82,7 +84,7 @@ test.describe('real two-account AT record lifecycle', () => {
         await requester.getByRole('button', { name: 'Publish request' }).click();
         await expect(requester.getByText(/persisted via API\/DB/)).toBeVisible();
 
-        await helper.goto('/feed', { waitUntil: 'networkidle' });
+        await helper.goto(`/nearby?zip=${encodeURIComponent(postalCode)}`, { waitUntil: 'networkidle' });
         await expect
             .poll(async () => {
                 await helper.reload({ waitUntil: 'networkidle' });
@@ -100,7 +102,7 @@ test.describe('real two-account AT record lifecycle', () => {
         await helper.getByRole('button', { name: 'Confirm block author' }).click();
         await expect(helper.getByText('Author blocked.')).toBeVisible();
 
-        await requester.goto('/feed', { waitUntil: 'networkidle' });
+        await requester.goto(`/nearby?zip=${encodeURIComponent(postalCode)}`, { waitUntil: 'networkidle' });
         await expect
             .poll(async () => {
                 await requester.reload({ waitUntil: 'networkidle' });

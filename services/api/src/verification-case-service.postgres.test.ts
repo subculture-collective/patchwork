@@ -3,7 +3,6 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { VerificationCaseService } from './verification-case-service.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describePostgres = databaseUrl ? describe : describe.skip;
 const ownerDid = 'did:plc:verification-owner';
 const stewardDid = 'did:plc:verification-steward';
 const otherDid = 'did:plc:verification-other';
@@ -16,7 +15,7 @@ const confidentialResourceUri =
 const cleanAttachmentId = '22222222-2222-4222-8222-222222222222';
 const quarantinedAttachmentId = '33333333-3333-4333-8333-333333333333';
 
-describePostgres('VerificationCaseService PostgreSQL boundary', () => {
+describe('VerificationCaseService PostgreSQL boundary', () => {
     const pool = new Pool({ connectionString: databaseUrl });
 
     beforeEach(async () => {

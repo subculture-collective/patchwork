@@ -44,33 +44,17 @@ See `docs/operations/staging-secrets.md` for the complete injection and rotation
 contract. Neither manifest supplies identity, datasource, origin, OAuth,
 encryption, moderation-token, or database-secret fallbacks.
 
-Parity is enforced programmatically by `checkStagingParity()` in
-`packages/shared/src/staging.ts`.
+Compose topology is validated by the shared staging-compose tests.
 
-## Intended deployment pipeline
+## Deployment pipeline
 
-```
-push to main
-    |
-    v
-quality-gates job (lint, typecheck, test, security scans)
-    |
-    v
-e2e-production job (contract-path tests against Postgres)
-    |
-    v
-deploy-staging job (build immutable images, verify labels, smoke check)
-    |
-    v
-progressive-delivery-gate job (canary readiness, rollback trigger audit)
-```
+`ci.yml` runs quality gates and PostgreSQL/provider integration. After successful
+CI, `deploy-staging.yml` publishes scanned and signed images, assembles their
+digest manifest, and deploys through the protected staging environment.
+Migrations, readiness, and authenticated browser checks determine release
+success. The delivery and rollback scripts preserve the previous manifest.
 
-The protected CI path models these stages for GHCR/OIDC promotion. Separately,
-the authorized NUC home-staging execution published, signed, deployed, rolled
-back, and forward-promoted exact digests on 2026-07-28. See
-`evidence/phase-7/immutable-delivery.md`. A green local Compose check alone is
-still not deployment evidence, and the protected GitHub path remains
-production hardening.
+A local Compose check validates configuration, not a deployed runtime.
 
 ## Smoke Checks
 
@@ -113,15 +97,11 @@ This is staging evidence only. It does not prove that production has the same
 revision, that a provider delivered email/push, or that an independent reviewer
 approved legal, privacy, accessibility, translation, or security material.
 
-## Promotion Gate
+## Promotion gate
 
-The `evaluatePromotionGate()` function in `packages/shared/src/staging.ts`
-evaluates two conditions:
-
-1. **Parity checks** -- staging topology matches production (service count, env vars)
-2. **Smoke checks** -- all service health endpoints respond successfully
-
-Both must pass for `allowed: true`. See the `PromotionGateResult` type for details.
+The deployment workflow requires successful CI, trusted immutable artifacts,
+migrations, deep readiness, and authenticated browser smoke checks. See the
+[delivery runbook](progressive-delivery-runbook.md).
 
 ## Staging Ownership
 
@@ -134,7 +114,7 @@ secondary responder, a staffed rotation, or production-hours coverage.
 | Environment health | Patrick Fanella |
 | Primary on-call | Patrick Fanella |
 | Escalation | Patrick Fanella |
-| Deployment pipeline | `ci.yml` deploy-staging job |
+| Deployment pipeline | `deploy-staging.yml` workflow |
 
 Patrick Fanella may act as Incident Commander for home-staging incidents and
 is the first escalation point for alerts. Contact routing remains

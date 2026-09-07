@@ -14,9 +14,8 @@ import {
 } from './session-repository.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describeWithPostgres = databaseUrl ? describe : describe.skip;
 
-describeWithPostgres('PostgreSQL OAuth persistence', () => {
+describe('PostgreSQL OAuth persistence', () => {
     const pool = new Pool({ connectionString: databaseUrl });
     const key = randomBytes(32);
 

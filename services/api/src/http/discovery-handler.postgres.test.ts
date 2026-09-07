@@ -10,7 +10,6 @@ import { authenticateRequest } from './authenticated-request.js';
 import { createDiscoveryHandler } from './discovery-handler.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describePostgres = databaseUrl ? describe : describe.skip;
 const viewerDid = 'did:plc:discovery-viewer';
 const blockedDid = 'did:plc:discovery-blocked';
 const visibleDid = 'did:plc:discovery-visible';
@@ -52,7 +51,7 @@ const stopServer = async (server: Server) => {
     await once(server, 'close');
 };
 
-describePostgres('session-aware durable discovery HTTP boundary', () => {
+describe('session-aware durable discovery HTTP boundary', () => {
     const pool = new Pool({ connectionString: databaseUrl });
 
     beforeAll(async () => {
@@ -80,14 +79,14 @@ describePostgres('session-aware durable discovery HTTP boundary', () => {
                 uri, collection, cid, author_did_hash, title, description,
                 category, urgency, status, searchable_text, latitude,
                 longitude, precision_km, record_created_at, record_updated_at,
-                source_cursor, source_event_id
+                source_cursor, source_event_id, postal_code
              ) VALUES
                 ($1, $3, 'cid-blocked', $4, 'Blocked author', 'Hidden for viewer',
                  'food', 'medium', 'open', 'blocked author hidden for viewer',
-                 41.88, -87.63, 3, $6, $6, 1, 'blocked-event'),
+                 41.88, -87.63, 3, $6, $6, 1, 'blocked-event', '60625'),
                 ($2, $3, 'cid-visible', $5, 'Visible author', 'Visible for viewer',
                  'food', 'medium', 'open', 'visible author visible for viewer',
-                 41.88, -87.63, 3, $6, $6, 2, 'visible-event')`,
+                 41.88, -87.63, 3, $6, $6, 2, 'visible-event', '60625')`,
             [
                 `at://${blockedDid}/${recordNsid.aidPost}/blocked`,
                 `at://${visibleDid}/${recordNsid.aidPost}/visible`,
@@ -187,18 +186,16 @@ describePostgres('session-aware durable discovery HTTP boundary', () => {
         expect(JSON.stringify(body)).not.toContain(blockedDid);
     });
 
-    it('supports a cleared map area with fine public cells and still validates partial coordinates', async () => {
+    it('supports all-area ZIP counts and still validates partial coordinates', async () => {
         const running = await startServer(pool);
         try {
             const response = await fetch(`${running.origin}/query/map`);
             expect(response.status).toBe(200);
-            const body = await response.json() as { total: number; aggregates: { locatedRequestCount: number; cells: Array<{ latitude: number; longitude: number; count: number; radiusKm: number }> } };
+            const body = await response.json() as { total: number; aggregates: { locatedRequestCount: number; cells: Array<{ latitude: number; longitude: number; count: number; postalCode: string }> } };
             expect(body.total).toBe(2);
             expect(body.aggregates.locatedRequestCount).toBe(2);
             expect(body.aggregates.cells).toHaveLength(1);
-            expect(body.aggregates.cells[0]).toMatchObject({ count: 2, radiusKm: 4 });
-            expect(body.aggregates.cells[0]?.latitude).toBeCloseTo(41.885);
-            expect(body.aggregates.cells[0]?.longitude).toBeCloseTo(-87.625);
+            expect(body.aggregates.cells[0]).toMatchObject({ count: 2, postalCode: '60625' });
             const directory = await fetch(`${running.origin}/query/directory`);
             expect(directory.status).toBe(200);
             expect(await directory.json()).toMatchObject({ total: 1 });

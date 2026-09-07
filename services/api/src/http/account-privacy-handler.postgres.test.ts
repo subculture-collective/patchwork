@@ -14,7 +14,6 @@ import {
 import { PostgresIdempotencyExecutor } from './idempotency-store.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describePostgres = databaseUrl ? describe : describe.skip;
 const viewerDid = 'did:plc:privacyviewer';
 const otherDid = 'did:plc:privacyother';
 const hash = (value: string) =>
@@ -74,7 +73,7 @@ const stopServer = async (server: Server) => {
     await once(server, 'close');
 };
 
-describePostgres('authenticated account privacy HTTP boundary', () => {
+describe('authenticated account privacy HTTP boundary', () => {
     const pool = new Pool({ connectionString: databaseUrl });
 
     beforeAll(async () => {

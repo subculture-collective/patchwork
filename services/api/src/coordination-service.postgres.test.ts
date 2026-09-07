@@ -5,7 +5,6 @@ import { AccountPrivacyService } from './account-privacy-service.js';
 import { CoordinationService } from './coordination-service.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describePostgres = databaseUrl ? describe : describe.skip;
 const requesterDid = 'did:plc:coordination-requester';
 const helperDid = 'did:plc:coordination-helper';
 const requestUri =
@@ -17,7 +16,7 @@ const profileUri =
 const hash = (value: string) =>
     createHash('sha256').update(value).digest('hex');
 
-describePostgres('CoordinationService PostgreSQL boundary', () => {
+describe('CoordinationService PostgreSQL boundary', () => {
     const pool = new Pool({ connectionString: databaseUrl });
 
     it('rejects real offers involving an example request or volunteer before creating notifications', async () => {

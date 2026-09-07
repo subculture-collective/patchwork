@@ -4,9 +4,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { runModerationMigrations } from './migrate.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describeWithPostgres = databaseUrl ? describe : describe.skip;
 
-describeWithPostgres('moderation database migrations', () => {
+describe('moderation database migrations', () => {
     const schema = `moderation_migrate_${randomUUID().replaceAll('-', '')}`;
     const adminPool = new Pool({ connectionString: databaseUrl });
     const pool = new Pool({

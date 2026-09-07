@@ -131,15 +131,14 @@ test('posting binds private bytes to the created aid-post without exposing stora
     });
 
     await page.goto(
-        '/posting?tab=nearby&r=20000&lat=41.88&lng=-87.63&area=Disposable+test+area',
+        '/posting',
         { waitUntil: 'networkidle' },
     );
     await expect(page.getByText('@poster.test', { exact: true })).toBeVisible();
     await expect(page.getByLabel('Latitude')).toHaveCount(0);
     await expect(page.getByLabel('Longitude')).toHaveCount(0);
     await expect(page.getByLabel('Precision meters')).toHaveCount(0);
-    await expect(page.getByText('Selected area: Disposable test area')).toBeVisible();
-    await expect(page.getByText(/Public at 1 km precision or coarser/)).toBeVisible();
+    await page.getByLabel('ZIP code where help is needed').fill('60625');
     await page.getByLabel('Title').fill('Disposable attachment request');
     await page
         .getByLabel('Description')
@@ -155,9 +154,7 @@ test('posting binds private bytes to the created aid-post without exposing stora
     await page.getByRole('button', { name: 'Publish request' }).click();
 
     expect(aidPostBody).toMatchObject({
-        location: {
-            precisionKm: 1,
-        },
+        location: { countryCode: 'US', postalCode: '60625' },
     });
 
     await expect(

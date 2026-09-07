@@ -15,7 +15,6 @@ import type {
 } from './private-object-store.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describePostgres = databaseUrl ? describe : describe.skip;
 const ownerDid = 'did:plc:attachment-owner';
 const outsiderDid = 'did:plc:attachment-outsider';
 const requestUri =
@@ -80,7 +79,7 @@ class QueueScanner implements MalwareScanner {
     }
 }
 
-describePostgres('durable private attachment pipeline', () => {
+describe('durable private attachment pipeline', () => {
     const pool = new Pool({ connectionString: databaseUrl });
     let objects: MemoryObjectStore;
     let scanner: QueueScanner;

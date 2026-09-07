@@ -9,7 +9,6 @@ import {
 } from './durable-notification-service.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describePostgres = databaseUrl ? describe : describe.skip;
 const ownerDid = 'did:plc:notification-owner';
 const helperDid = 'did:plc:notification-helper';
 const requestUri =
@@ -63,7 +62,7 @@ class FakePushProvider implements PushProvider {
     }
 }
 
-describePostgres('durable notification outbox', () => {
+describe('durable notification outbox', () => {
     const pool = new Pool({ connectionString: databaseUrl });
     let email: FakeEmailProvider;
     let push: FakePushProvider;

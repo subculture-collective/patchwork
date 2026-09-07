@@ -8,8 +8,7 @@ import { AccountPrivacyService } from './account-privacy-service.js';
 import { PublicResourceClaimService } from './public-resource-claim-service.js';
 
 const databaseUrl=process.env.TEST_DATABASE_URL;
-const suite=databaseUrl?describe:describe.skip;
-suite('ZIP discovery and sourced-resource claims',()=>{
+describe('ZIP discovery and sourced-resource claims',()=>{
     const pool=new Pool({connectionString:databaseUrl});
     beforeAll(async()=>{
         await pool.query('TRUNCATE public_resource_claims,public_resource_listings,public_resource_audit_events,showcase_record_metadata,showcase_seed_runs,indexer_aid_post_projections,indexer_directory_resource_projections,organizations CASCADE');

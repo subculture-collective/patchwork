@@ -609,6 +609,7 @@
         "currency": "{{value, currency}}"
     },
     "common": {
+        "retry": "Reintentar",
         "error": "Error",
         "requestFailed": "El servicio no pudo completar esta solicitud. Tus datos pueden seguir siendo válidos; vuelve a intentarlo o revisa el estado del servicio."
     },

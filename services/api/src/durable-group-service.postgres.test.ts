@@ -5,7 +5,6 @@ import { AccountPrivacyService } from './account-privacy-service.js';
 import { DurableGroupService } from './durable-group-service.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describePostgres = databaseUrl ? describe : describe.skip;
 const owner = 'did:plc:group-owner';
 const member = 'did:plc:group-member';
 const third = 'did:plc:group-third';
@@ -13,7 +12,7 @@ const outsider = 'did:plc:group-outsider';
 const requestUri = `at://${owner}/app.patchwork.aid.post/group-request`;
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 
-describePostgres('DurableGroupService PostgreSQL boundary', () => {
+describe('DurableGroupService PostgreSQL boundary', () => {
     const pool = new Pool({ connectionString: databaseUrl });
     const baseline = new Date('2026-08-05T12:00:00.000Z');
 

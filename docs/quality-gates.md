@@ -1,29 +1,85 @@
-# Quality gates
+# Testing and quality gates
 
-The repository quality baseline is organized around the current alpha rather than historical phase-number suites.
+Tests protect public contracts and important user behavior. Prefer the smallest
+layer that can demonstrate a regression, with one clear owner for each rule.
+A file count or aggregate coverage percentage is not a readiness claim.
 
-## Local commands
+## Commands
 
-- `npm run check` — lint, typecheck, the 1,034-test local core suite, map and exact-location checks, and operational traceability checks
-- `npm run test:integration:postgres -w @patchwork/api` — PostgreSQL and HTTP boundaries
-- `npm run test:integration:service -w @patchwork/web` — direct lifecycle service integration
-- `npm run test:e2e -w @patchwork/web` — Chromium browser behavior and accessibility; protected non-mocked staging cases require credentials and are reported separately
-- `npm run test:coverage` — diagnostic V8 coverage
-- `npm run build`
+| Command | Scope | Dependencies |
+| --- | --- | --- |
+| `npm run check` | Typecheck once, unit tests, map/privacy checks, operational scripts | Node, Docker CLI for Compose validation, shell tools |
+| `npm run test:unit` | Pure domain rules, adapters, HTTP boundaries, component behavior | Node; Docker CLI for Compose validation |
+| `npm run test:integration` | Fresh migrations, every PostgreSQL suite | Docker; creates and removes its own loopback-only database |
+| `npm run test:integration:postgres` | All `services/**/*.postgres.test.ts` suites, serially | `TEST_DATABASE_URL` pointing to a disposable database ending in `_test` or `_qa` |
+| `npm run test:e2e -w @patchwork/web` | Browser journeys against a locally built web client | Playwright Chromium |
+| `npm run test:integration:attachments -w @patchwork/api` | Real private object storage and malware scanner | Disposable PostgreSQL, MinIO, ClamAV; `TEST_ATTACHMENT_*` settings |
+| `npm run test:coverage` | Fast tests plus diagnostic V8 coverage, including untested source | Same as unit tests |
+| `npm run build` | Workspace production builds | Node |
 
-The core suite retains moderation, privacy, authorization, lifecycle, AT, discovery, and safety behavior. Expansion-prototype suites were removed on 2026-07-10; their source remains typechecked but is not a release gate.
+Install Chromium with `npx playwright install chromium` from `apps/web`, or set
+`PATCHWORK_E2E_CHROMIUM_EXECUTABLE` to an installed Chromium binary.
 
-## CI behavior
+Focused examples:
 
-Workflow: `.github/workflows/ci.yml`
+```sh
+npm run test:unit -- packages/shared/src/authorization.test.ts
+npm test -w @patchwork/web -- src/discovery-filters.test.ts
+npm run test:integration:postgres -w @patchwork/api
+npm run test:e2e -w @patchwork/web -- unified-discovery.spec.ts
+```
 
-The quality job runs lint, typecheck, core tests, diagnostic coverage, Chromium E2E, dependency audit, secret scanning, builds, and container scans. The PostgreSQL job applies migrations and runs mandatory PostgreSQL/HTTP plus direct-service integration tests.
+The fast suite excludes database and external-provider tests by filename; it
+does not report them as silently skipped successes. PostgreSQL and attachment
+commands fail when required configuration is absent. Database suites truncate
+tables and must only use disposable data. The automatic integration command
+ignores development database URLs and creates its own container.
 
-If any distinct layer fails, the workflow fails. Historical Phase 7/8 commands were removed because they duplicated files already in the old aggregate suite.
+## Coverage responsibilities
 
-## Logging privacy and retention assumptions
+| Boundary | What must remain protected | Primary tests |
+| --- | --- | --- |
+| Identity and authorization | Session expiry, OAuth failures, role/ownership checks, consent, CSRF, rate limiting, idempotency | API auth, records, HTTP tests; shared authorization contracts |
+| Public data and geography | ZIP-only publication, leading zeros, legacy decoding, count conservation, exact public-resource eligibility, private-location absence | AT lexicon/client tests, postal discovery PostgreSQL tests, `check-exact-location-absence.mjs` |
+| Private coordination | Durable lifecycle transitions, participant isolation, retries, deletion, private location consent/signaling | API PostgreSQL suites, lifecycle service tests, request/chat/exact-location browser journeys |
+| Resource claims and account privacy | Independent approval, pending claims grant no edits, verification, revocation, source retention, export/deactivation | Organization and account-privacy PostgreSQL suites; organization browser journey |
+| Ingestion and moderation | Replay/checkpoints, projection correctness, deletion reconciliation, queue persistence, retention | Indexer and moderation PostgreSQL suites plus protocol/unit tests |
+| Browser experience | ZIP drill-down and request lists, resource search, location denial/recovery, history, publishing, accessibility, keyboard/mobile navigation | Web E2E suites |
+| Release and recovery | Immutable release inputs, rollback state, trusted artifacts, backup replication, map checksums | Executable deployment refusals and shell tests; release workflow gates |
 
-- Sensitive identifiers are redacted from public diagnostics and audit payloads.
-- Exact geographic coordinates are not emitted in public map records.
-- Private operational rows carry retention metadata; enforcement jobs remain continuation work.
-- In-memory moderation/ingestion diagnostic logs retain the documented short-window assumption until durable stores replace them.
+Do not repeat a database persistence rule with an exact mocked SQL-call sequence.
+Keep HTTP tests for authentication, validation, and error mapping, and database
+tests for persistence, transactions, and concurrency. Browser tests should
+exercise a user journey; avoid repeating every schema permutation in the UI.
+Use representative responsive boundaries and separate keyboard/focus checks.
+
+Prefer deterministic clocks and fixtures, accessible selectors, and assertions
+on observable results. Avoid tests whose only purpose is checking a title
+constant, document filename, source substring, internal class name, or exact
+implementation call order. Translation-key validation discovers source files
+automatically so new routes cannot silently introduce missing keys.
+
+When removing code, remove tests for that code and verify that production
+entrypoints, CLI commands, migrations, and public package exports do not depend
+on it. Keep migration history, versioned protocol readers, required geography
+bundles, and seed provenance.
+
+## CI and external verification
+
+CI runs typechecks, fast tests with coverage once, operational/map/privacy
+checks, browser tests, builds, and dependency/container scans. Its database job
+runs the same automatically discovered PostgreSQL suites after migrations,
+then real attachment-provider integration tests.
+
+Most browser tests mock API transport to isolate web behavior. They do not
+prove a live OAuth provider, actual AT publication, mail/push delivery, or a
+production deployment. The authenticated staging lifecycle suites require
+explicit test credentials and remain separate release qualifications. Their
+disposable request ZIP defaults to `10001`; set `PATCHWORK_E2E_POSTAL_CODE`
+to use another supported test ZIP. Report
+those skips as limitations, not successful live verification.
+
+Generated coverage, screenshots, traces, and run output stay in ignored
+`coverage/`, `output/`, `.playwright-cli/`, and Playwright artifact directories.
+The artifact privacy check runs before CI uploads. Keep historical run results
+with CI/releases rather than adding completion documents or test-count ledgers.

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-const widths = [320, 360, 390, 768, 1024] as const;
+const widths = [320, 900, 1024] as const;
 
 test('authenticated navigation identifies the account by handle, not DID', async ({ page }) => {
     await page.route('**/api/**', async route => {

@@ -4,9 +4,8 @@ import { recordNsid } from '@patchwork/shared';
 import { PostgresProjectionQueryService } from './query-service.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describePostgres = databaseUrl ? describe : describe.skip;
 
-describePostgres('PostgresProjectionQueryService', () => {
+describe('PostgresProjectionQueryService', () => {
     const pool = new Pool({ connectionString: databaseUrl });
 
     it('looks up a resource directly without search filters or coordinates and applies current address approval', async () => {

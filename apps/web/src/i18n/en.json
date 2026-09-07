@@ -609,6 +609,7 @@
         "currency": "{{value, currency}}"
     },
     "common": {
+        "retry": "Retry",
         "error": "Error",
         "requestFailed": "The service could not complete this request. Your entries may still be valid; retry or check service status."
     },

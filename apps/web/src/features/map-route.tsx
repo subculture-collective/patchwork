@@ -82,7 +82,7 @@ interface MapRouteProps {
     onOpenChat: (record: FeedRecordEnvelope, surface: ChatEntrySurface) => void;
 }
 
-const LazyInteractiveMap = lazy(() =>
+const LazyPostalMap = lazy(() =>
     import('../components/map/PostalMap.js').then((module) => ({
         default: module.PostalMap,
     })),
@@ -329,7 +329,7 @@ export const MapRoute = ({
                     <Suspense
                         fallback={<div className='mh-skeleton h-96 w-full' />}
                     >
-                        <LazyInteractiveMap
+                        <LazyPostalMap
                             cells={aggregates?.cells ?? []}
                             resources={resourceCards}
                             selectedPostalCode={discoveryState.postalCode}

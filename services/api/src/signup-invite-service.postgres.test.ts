@@ -5,9 +5,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { SignupInviteService } from './signup-invite-service.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describeWithPostgres = databaseUrl ? describe : describe.skip;
 
-describeWithPostgres('SignupInviteService PostgreSQL state', () => {
+describe('SignupInviteService PostgreSQL state', () => {
     const schema = `signup_invites_${randomUUID().replaceAll('-', '')}`;
     const adminPool = new Pool({ connectionString: databaseUrl });
     const pool = new Pool({

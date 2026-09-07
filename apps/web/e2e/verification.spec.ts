@@ -398,7 +398,7 @@ test('authenticated verification, appeal, renewal, and exact-address approval re
         '/resources?tab=nearby&r=20000&lat=41.88&lng=-87.63&area=Disposable+test+area',
     );
     await page.getByRole('button', { name: 'Open details' }).click();
-    await expect(page.getByText('123 Public Pantry Way')).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Resource detail', exact: true }).getByText('123 Public Pantry Way', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('private evidence detail')).toHaveCount(0);
 
     for (const command of commandBodies) {

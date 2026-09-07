@@ -1,33 +1,20 @@
-dist/
-coverage/
-.DS_Store
-.env.local
-.env.*.local
-
-# Local runtime secrets
-.env
-
-# Package manager caches
-npm-debug.log*
-.DS_Store
-dist/
-coverage/
-*.log
-
-# Dependencies
+# Dependencies and build output
 node_modules/
-
-# Environment files
-.env.local
-.env.*.local
-
-# Vite artifacts
+dist/
+coverage/
+*.tsbuildinfo
 apps/web/.vite/
 
-# TypeScript incremental build info
-*.tsbuildinfo
+# Local configuration and logs
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
 
-# Playwright E2E artifacts
+# Generated test and browser artifacts
+output/
+.playwright-cli/
 playwright-report/
 test-results/
 .playwright/

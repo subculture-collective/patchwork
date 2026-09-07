@@ -423,7 +423,7 @@ Use this template within 48 hours (P1) or 1 week (P2) of incident resolution.
 
 Game days are controlled exercises that simulate production incidents to
 validate runbooks, tooling, and team readiness. See
-[game-day-log.md](game-day-log.md) for the exercise log template.
+the incident or exercise record attached to the relevant release for the exercise log template.
 
 ### Scenario 1: Service Outage -- API Down
 

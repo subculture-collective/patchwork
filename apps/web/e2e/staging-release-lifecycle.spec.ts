@@ -15,6 +15,7 @@ const helperState = process.env['PATCHWORK_E2E_HELPER_STATE'];
 const maintainerState = process.env['PATCHWORK_E2E_MAINTAINER_STATE'];
 const latitude = process.env['PATCHWORK_E2E_DISCOVERY_LATITUDE'];
 const longitude = process.env['PATCHWORK_E2E_DISCOVERY_LONGITUDE'];
+const postalCode = process.env['PATCHWORK_E2E_POSTAL_CODE'] ?? '10001';
 const canRun = Boolean(
     enabled &&
         process.env['PATCHWORK_E2E_BASE_URL'] &&
@@ -105,16 +106,15 @@ test.describe('staging release lifecycle (non-mocked)', () => {
                 method: 'POST',
                 body: {
                     $type: 'app.patchwork.aid.post',
-                    version: '1.0.0',
+                    version: '2.0.0',
                     title: `Disposable release request ${marker}`,
                     description: 'Staging lifecycle fixture; delete after verification.',
                     category: 'food',
                     urgency: 'medium',
                     status: 'open',
                     location: {
-                        latitude: Number(latitude),
-                        longitude: Number(longitude),
-                        precisionKm: 1,
+                        countryCode: 'US',
+                        postalCode,
                     },
                     createdAt: new Date().toISOString(),
                 },
@@ -128,7 +128,7 @@ test.describe('staging release lifecycle (non-mocked)', () => {
             await expect.poll(async () => {
                 const result = await request(
                     helperPage,
-                    `/query/feed?latitude=${encodeURIComponent(latitude!)}&longitude=${encodeURIComponent(longitude!)}&radiusKm=100&page=1&pageSize=100`,
+                    `/query/feed?postalCode=${encodeURIComponent(postalCode)}&page=1&pageSize=100`,
                 );
                 if (result.status !== 200) return false;
                 const results = object(result.body)['results'];

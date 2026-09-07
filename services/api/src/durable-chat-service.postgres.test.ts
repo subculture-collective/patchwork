@@ -5,7 +5,6 @@ import { DurableChatService } from './durable-chat-service.js';
 import { DurableGroupService } from './durable-group-service.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describePostgres = databaseUrl ? describe : describe.skip;
 const requester = 'did:plc:chat-requester';
 const helper = 'did:plc:chat-helper';
 const outsider = 'did:plc:chat-outsider';
@@ -13,7 +12,7 @@ const requestUri = `at://${requester}/app.patchwork.aid.post/chat`;
 const connectionId = '51111111-1111-4111-8111-111111111111';
 const baseline = new Date('2026-08-05T12:00:00.000Z');
 
-describePostgres('DurableChatService PostgreSQL boundary', () => {
+describe('DurableChatService PostgreSQL boundary', () => {
     const pool = new Pool({ connectionString: databaseUrl });
 
     beforeEach(async () => {

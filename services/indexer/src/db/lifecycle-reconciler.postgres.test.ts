@@ -9,9 +9,8 @@ import { PostgresLifecycleEventReconciler } from './lifecycle-reconciler.js';
 import { PostgresProjectionStore } from './projection-store.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describePostgres = databaseUrl ? describe : describe.skip;
 
-describePostgres('stream-driven lifecycle reconciliation', () => {
+describe('stream-driven lifecycle reconciliation', () => {
     const pool = new Pool({ connectionString: databaseUrl });
     const lifecycle = new PostgresLifecycleRepository(pool);
     const rawCreate = buildPhase3FixtureFirehoseEvents()[0] as Record<

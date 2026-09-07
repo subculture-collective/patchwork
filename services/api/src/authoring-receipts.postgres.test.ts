@@ -11,7 +11,7 @@ import { PublicHttpError } from './http/error-response.js';
 import { PostgresRetentionService } from './db/retention-service.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-(databaseUrl ? describe : describe.skip)('durable authoring receipts', () => {
+describe('durable authoring receipts', () => {
     const pool = new Pool({ connectionString: databaseUrl });
     const service = new AuthoringReceiptService(pool);
     const executor = new PostgresIdempotencyExecutor(pool);

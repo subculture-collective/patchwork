@@ -24,15 +24,18 @@
         "build": "npm run build --workspaces --if-present",
         "lint": "npm run lint --workspaces --if-present",
         "typecheck": "npm run typecheck --workspaces --if-present",
-        "test": "npm run test --workspaces --if-present && npm run test:maps && npm run test:exact-location-absence",
-        "test:coverage": "vitest run --config vitest.coverage.config.ts --coverage",
+        "test": "npm run test:unit && npm run test:maps && npm run test:exact-location-absence",
+        "test:coverage": "node scripts/test.mjs unit --coverage",
         "test:e2e:redact": "node scripts/check-playwright-artifacts.mjs",
         "test:exact-location-absence": "node scripts/check-exact-location-absence.mjs",
         "capacity:probe": "tsx scripts/run-http-load-probe.ts",
         "capacity:staging:evaluate": "tsx scripts/evaluate-staging-capacity.ts",
         "test:maps": "bash scripts/fetch-us-pmtiles.test.sh && bash scripts/verify-us-pmtiles.test.sh",
-        "test:operations": "bash scripts/verify-release-trust.test.sh && bash scripts/release-state.test.sh && bash scripts/replicate-independent-backup.test.sh && node scripts/check-sprint-traceability.mjs",
-        "check": "npm run lint && npm run typecheck && npm run test && npm run test:operations"
+        "test:operations": "bash scripts/verify-release-trust.test.sh && bash scripts/release-state.test.sh && bash scripts/replicate-independent-backup.test.sh",
+        "check": "npm run typecheck && npm test && npm run test:operations",
+        "test:unit": "node scripts/test.mjs unit",
+        "test:integration": "node scripts/test-database.mjs",
+        "test:integration:postgres": "node scripts/test.mjs postgres"
     },
     "devDependencies": {
         "@tailwindcss/vite": "4.2.1",

@@ -28,6 +28,9 @@ test('map deep links load outside the result page and restore selection through 
     expect(new URL(page.url()).searchParams.has('uri')).toBe(false);
     await page.goBack();
     await expect(detail).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(detail).toHaveCount(0);
+    expect(new URL(page.url()).searchParams.has('uri')).toBe(false);
 });
 
 test('integrated discovery removes the examples switch and normalizes legacy dataset links', async ({ page }) => {
