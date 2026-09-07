@@ -10,7 +10,7 @@ The posting form does not ask for GPS or a street address. Exact request address
 
 The map shows states below zoom 7, counties at zoom 7–9, and ZIP areas at zoom 10 and above. Clicking a larger boundary advances to the next level. Requests in the same ZIP remain together at street zoom; selecting a ZIP filters the request list. No request offsets or fuzzy circles are used. URLs preserve ZIP identity without per-request coordinates.
 
-Resources are separate, uncounted pins at eligible public street addresses. Visible pins scale from 5 to 18 pixels with zoom inside a 32-pixel interactive target. Resources sharing an exact address open a resource list at that location. The map loads every page of the resource result set. Directory distance filtering and sorting use eligible exact addresses before pagination. Nearby resource links automatically search from the request ZIP representative point; those distances are from the ZIP area.
+Resources are separate, uncounted pins at eligible public street addresses. Visible pins scale from 5 to 18 pixels with zoom inside an interactive target that also scales with zoom (16–26 pixels). Resources sharing an exact address open a resource list at that location. The map loads every page of the resource result set. Directory distance filtering and sorting use eligible exact addresses before pagination. Nearby resource links automatically search from the request ZIP representative point; those distances are from the ZIP area.
 
 ## Geography provenance and reproduction
 

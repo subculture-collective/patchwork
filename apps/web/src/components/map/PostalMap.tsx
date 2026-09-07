@@ -146,12 +146,13 @@ export function PostalMap(props: Props) {
             places.set(key, place);
         }
         const size = Math.max(5, Math.min(18, 5 + (zoom - 5) * 1.1));
+        const hitSize = Math.min(32, Math.max(16, size + 8));
         for (const place of places.values()) {
             const dot = document.createElement('span');
             dot.className = 'mh-exact-resource-pin-dot';
             dot.style.width = `${size}px`; dot.style.height = `${size}px`;
             const marker = L.marker([place.lat, place.lng], {
-                icon: L.divIcon({ html: dot, className: 'mh-exact-resource-pin', iconSize: [32, 32], iconAnchor: [16, 16] }),
+                icon: L.divIcon({ html: dot, className: 'mh-exact-resource-pin', iconSize: [hitSize, hitSize], iconAnchor: [hitSize / 2, hitSize / 2] }),
                 keyboard: true, title: place.resources.map(resource => resource.name).join('; '),
                 riseOnHover: true,
             }).addTo(group);
