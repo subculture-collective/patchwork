@@ -380,55 +380,24 @@ export class PostgresProjectionQueryService {
         const result = await queryProjected(this.pool, params, 'directory', undefined, resourceUri);
         if ('error' in result.body) return result;
         const exactLocations = await this.pool.query<{
-            resource_uri: string;
-            street_address: string;
-            latitude: number;
-            longitude: number;
-            approval_expires_at: Date | string;
-        }>(
-            `SELECT e.resource_uri, e.street_address, e.latitude,
-                    e.longitude, e.approval_expires_at
-             FROM exact_public_address_requests e
-             WHERE e.resource_uri = ANY($1::text[]) AND e.status = 'approved'
-               AND e.confidential_facility = FALSE
-               AND e.approval_expires_at > NOW()
-               AND EXISTS (
-                   SELECT 1 FROM verification_applications v
-                   WHERE v.subject_type = 'organization'
-                     AND v.organization_id = e.organization_id
-                     AND v.subject_ref = e.organization_id::text
-                     AND v.status = 'approved' AND v.expires_at > NOW()
-               )
-               AND EXISTS (
-                   SELECT 1 FROM verification_applications v
-                   WHERE v.subject_type = 'resource'
-                     AND v.organization_id = e.organization_id
-                     AND v.subject_ref = e.resource_uri
-                     AND v.status = 'approved' AND v.expires_at > NOW()
-               )
-               AND EXISTS (
-                   SELECT 1
-                   FROM organization_resource_stewardships s
-                   WHERE s.organization_id = e.organization_id
-                     AND s.resource_uri = e.resource_uri
-                     AND s.status = 'active'
-               )`,
-            [(result.body as ApiQueryDirectoryResponse).results.map(row => row.uri)],
-        );
-        const exactByUri = new Map(
-            exactLocations.rows.map(row => [
-                row.resource_uri,
-                {
-                    kind: 'exact-public-resource' as const,
-                    streetAddress: row.street_address,
-                    latitude: Number(row.latitude),
-                    longitude: Number(row.longitude),
-                    approvalExpiresAt: new Date(
-                        row.approval_expires_at,
-                    ).toISOString(),
-                },
-            ]),
-        );
+            resource_uri: string; street_address: string; latitude: number; longitude: number;
+            valid_until: string; basis: 'reviewed' | 'public-source'; source_url: string | null;
+        }>(`SELECT DISTINCT ON(resource_uri) * FROM eligible_public_resource_addresses
+            WHERE resource_uri=ANY($1::text[]) ORDER BY resource_uri, basis DESC, valid_until DESC`,
+            [(result.body as ApiQueryDirectoryResponse).results.map(row => row.uri)]);
+        const listings = await this.pool.query(`SELECT resource_uri, source_name, source_url, source_retrieved_at,
+            claimed_by_organization_id FROM public_resource_listings WHERE resource_uri=ANY($1::text[])`,
+            [(result.body as ApiQueryDirectoryResponse).results.map(row => row.uri)]);
+        const listingByUri = new Map(listings.rows.map(row => [row.resource_uri, {
+            sourceName: row.source_name, sourceUrl: row.source_url, sourceRetrievedAt: new Date(row.source_retrieved_at).toISOString(),
+            claimStatus: row.claimed_by_organization_id ? 'claimed' : 'unclaimed',
+        }]));
+        const exactByUri = new Map(exactLocations.rows.map(row => [row.resource_uri, {
+            streetAddress: row.street_address, latitude: Number(row.latitude), longitude: Number(row.longitude),
+            ...(row.basis === 'public-source'
+                ? { kind: 'sourced-public-resource' as const, sourceUrl: row.source_url, sourceExpiresAt: new Date(row.valid_until).toISOString() }
+                : { kind: 'exact-public-resource' as const, approvalExpiresAt: new Date(row.valid_until).toISOString() }),
+        }]));
         const body = result.body as ApiQueryDirectoryResponse;
         return {
             ...result,
@@ -436,6 +405,7 @@ export class PostgresProjectionQueryService {
                 ...body,
                 results: body.results.map(row => ({
                     ...row,
+                    ...(listingByUri.has(row.uri) ? { publicListing: listingByUri.get(row.uri) } : {}),
                     ...(exactByUri.has(row.uri) ?
                         { exactPublicAddress: exactByUri.get(row.uri) }
                     :   {}),

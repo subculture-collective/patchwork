@@ -7,6 +7,9 @@ import { readJsonBody } from './json-body.js';
 import { writeJsonResponse, writePublicError } from './error-response.js';
 
 const routes = new Map<string, readonly string[]>([
+    ['/organizations/resource-claims', ['GET', 'POST']],
+    ['/organizations/resource-claims/decision', ['PUT']],
+    ['/organizations/public-resource', ['PUT']],
     ['/organizations', ['GET', 'POST']],
     ['/organizations/profile', ['GET']],
     ['/organizations/mine', ['GET']],
@@ -88,7 +91,9 @@ export const createOrganizationHandler = (
             const actorDid = authenticated.principal.did;
             if (request.method === 'GET') {
                 const body =
-                    requestUrl.pathname === '/organizations/mine' ?
+                    requestUrl.pathname === '/organizations/resource-claims' ?
+                        await dependencies.service.listResourceClaims(actorDid)
+                    : requestUrl.pathname === '/organizations/mine' ?
                         await dependencies.service.listMine(actorDid)
                     : requestUrl.pathname === '/organization-invitations' ?
                         await dependencies.service.listInvitations(actorDid)
@@ -118,7 +123,10 @@ export const createOrganizationHandler = (
                 body,
                 async commandBody => {
                     const output =
-                        requestUrl.pathname === '/organizations' ?
+                        requestUrl.pathname === '/organizations/resource-claims' ? await dependencies.service.submitResourceClaim(actorDid,commandBody)
+                        : requestUrl.pathname === '/organizations/resource-claims/decision' ? await dependencies.service.decideResourceClaim(actorDid,commandBody)
+                        : requestUrl.pathname === '/organizations/public-resource' ? await dependencies.service.editPublicResource(actorDid,commandBody)
+                        : requestUrl.pathname === '/organizations' ?
                             await dependencies.service.create(
                                 actorDid,
                                 commandBody,

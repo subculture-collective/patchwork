@@ -1,5 +1,6 @@
 import {
     aidPostSchema,
+    lookupPostalArea,
     type AidPostRecord,
 } from '@patchwork/at-lexicons';
 import { PUBLIC_MIN_PRECISION_KM } from '@patchwork/shared';
@@ -29,6 +30,7 @@ export interface PostingTimeWindow {
 }
 
 export interface PostingLocation {
+    postalCode?: string;
     lat: number;
     lng: number;
     precisionMeters: number;
@@ -129,6 +131,11 @@ const normalizeLocation = (
         return undefined;
     }
 
+    if (location.postalCode !== undefined) {
+        const area = lookupPostalArea(location.postalCode);
+        if (!area) return undefined;
+        return { postalCode: area.postalCode, lat: area.latitude, lng: area.longitude, precisionMeters: 1000, areaLabel: `ZIP ${area.postalCode}` };
+    }
     if (!Number.isFinite(location.lat) || !Number.isFinite(location.lng)) {
         return undefined;
     }
@@ -326,13 +333,13 @@ export function buildAidPostCreatePayload(
 
     const recordCandidate = {
         $type: aidPostRecordNsid,
-        version: '1.0.0',
+        version: normalizedDraft.location.postalCode ? '2.0.0' : '1.0.0',
         title: normalizedDraft.title,
         description: normalizedDraft.description,
         category: normalizedDraft.category,
         urgency: urgencyToLexicon(normalizedDraft.urgency),
         status: 'open',
-        location: {
+        location: normalizedDraft.location.postalCode ? { countryCode: 'US', postalCode: normalizedDraft.location.postalCode } : {
             latitude: normalizedDraft.location.lat,
             longitude: normalizedDraft.location.lng,
             precisionKm: Number((normalizedDraft.location.precisionMeters / 1000).toFixed(3)),
@@ -365,11 +372,12 @@ export function buildAidPostEditPayload(params: {
 
     const recordCandidate = {
         ...params.existingRecord,
+        version: normalizedDraft.location.postalCode ? '2.0.0' : '1.0.0',
         title: normalizedDraft.title,
         description: normalizedDraft.description,
         category: normalizedDraft.category,
         urgency: urgencyToLexicon(normalizedDraft.urgency),
-        location: {
+        location: normalizedDraft.location.postalCode ? { countryCode: 'US', postalCode: normalizedDraft.location.postalCode } : {
             latitude: normalizedDraft.location.lat,
             longitude: normalizedDraft.location.lng,
             precisionKm: Number((normalizedDraft.location.precisionMeters / 1000).toFixed(3)),
@@ -403,6 +411,7 @@ export function toPostingDraftFromRecord(
         urgency: urgencyFromLexicon(record.urgency),
         accessibilityTags: [...(metadata?.accessibilityTags ?? [])],
         location: {
+            postalCode: record.location.postalCode,
             lat: record.location.latitude,
             lng: record.location.longitude,
             precisionMeters: Math.round(record.location.precisionKm * 1000),

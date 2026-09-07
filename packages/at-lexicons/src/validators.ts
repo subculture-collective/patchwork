@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { lookupPostalArea, postalLocationSchema } from './postal-geography.js';
 
 export const recordNsid = {
     aidPost: 'app.patchwork.aid.post',
@@ -29,25 +30,47 @@ const aidCategoryValues = [
 
 const aidUrgencyValues = ['low', 'medium', 'high', 'critical'] as const;
 
+const legacyAidLocationSchema = z.object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+    precisionKm: z.number().min(1).max(50),
+    areaLabel: z.string().min(1).max(120).optional(),
+    postalCode: postalLocationSchema.shape.postalCode.optional(),
+    countryCode: z.literal('US').optional(),
+}).strict();
+
+// Coordinates on a ZIP record are derived public geography metadata. Re-parsing
+// always overwrites them, so callers cannot inject a more precise location.
+const aidLocationSchema = z.union([postalLocationSchema, legacyAidLocationSchema])
+    .transform(value => {
+        if (value.postalCode) {
+            const area = lookupPostalArea(value.postalCode)!;
+            return { latitude: area.latitude, longitude: area.longitude,
+                precisionKm: 1, areaLabel: `ZIP ${area.postalCode}`,
+                postalCode: area.postalCode, countryCode: 'US' as const };
+        }
+        return value as z.infer<typeof legacyAidLocationSchema>;
+    });
+
 export const aidPostSchema = z.object({
     $type: z.literal(recordNsid.aidPost),
-    version: z.literal('1.0.0'),
+    version: z.enum(['1.0.0', '2.0.0']),
     title: z.string().min(1).max(140),
     description: z.string().min(1).max(5000),
     category: z.enum(aidCategoryValues),
     urgency: z.enum(aidUrgencyValues),
     status: z.enum(['open', 'in-progress', 'resolved', 'closed']),
-    location: z
-        .object({
-            latitude: z.number().min(-90).max(90),
-            longitude: z.number().min(-180).max(180),
-            precisionKm: z.number().min(1).max(50),
-            areaLabel: z.string().min(1).max(120).optional(),
-        })
-        .strict(),
+    location: aidLocationSchema,
     createdAt: isoDateTimeSchema,
     updatedAt: isoDateTimeSchema.optional(),
-}).strict();
+}).strict().superRefine((value, context) => {
+    if (value.version === '2.0.0' && !value.location.postalCode) {
+        context.addIssue({ code: 'custom', path: ['location', 'postalCode'], message: 'A five-digit ZIP is required.' });
+    }
+    if (value.version === '1.0.0' && value.location.postalCode) {
+        context.addIssue({ code: 'custom', path: ['version'], message: 'ZIP locations require record version 2.0.0.' });
+    }
+});
 
 const volunteerServiceAreaSchema = z
     .object({
@@ -232,7 +255,7 @@ interface AtLocation {
 }
 
 type AtAidPostRecord = Omit<AidPostRecord, 'location'> & {
-    location: AtLocation;
+    location: AtLocation | { countryCode: 'US'; postalCode: string };
 };
 
 type AtDirectoryResourceRecord = Omit<DirectoryResourceRecord, 'location'> & {
@@ -302,7 +325,9 @@ export const encodeAidPostForAt = (
     record: AidPostRecord,
 ): AtAidPostRecord => ({
     ...record,
-    location: encodeLocation(record.location),
+    location: record.location.postalCode
+        ? { countryCode: 'US', postalCode: record.location.postalCode }
+        : encodeLocation(record.location),
 });
 
 export const decodeAidPostFromAt = (input: unknown): AidPostRecord => {
@@ -422,7 +447,7 @@ export type RecordByNsid = {
 };
 
 export const recordValidators: {
-    [K in RecordNsid]: z.ZodType<RecordByNsid[K]>;
+    [K in RecordNsid]: z.ZodType<RecordByNsid[K], z.ZodTypeDef, unknown>;
 } = {
     [recordNsid.aidPost]: aidPostSchema,
     [recordNsid.volunteerProfile]: volunteerProfileSchema,
@@ -444,3 +469,5 @@ export const safeValidateRecordPayload = <N extends RecordNsid>(
 ) => {
     return recordValidators[nsid].safeParse(payload);
 };
+
+export * from './postal-geography.js';

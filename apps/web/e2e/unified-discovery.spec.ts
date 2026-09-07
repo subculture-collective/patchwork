@@ -1,6 +1,8 @@
+import { lookupPostalArea } from '@patchwork/at-lexicons';
 import { test, expect } from '@playwright/test';
 const uri = 'at://did:plc:neighbor/app.patchwork.aid.post/groceries';
 const record = {
+    postalCode: '60602',
     uri,
     authorDid: 'did:plc:neighbor',
     title: 'Groceries for a neighbor',
@@ -13,12 +15,7 @@ const record = {
     updatedAt: '2026-09-06T13:00:00Z',
     recordOrigin: 'visitor-created',
 };
-const cells = Array.from({ length: 80 }, (_, i) => ({
-    latitude: 41.88,
-    longitude: -88 + i * 0.015,
-    count: 3,
-    radiusKm: 5,
-}));
+const cells = ['60602','60625','60654','60605'].map(postalCode => ({ postalCode, latitude: lookupPostalArea(postalCode)!.latitude, longitude: lookupPostalArea(postalCode)!.longitude, count: 60, radiusKm: 1 }));
 test.beforeEach(async ({ page }) => {
     page.on('pageerror', (error) => {
         throw error;
@@ -137,21 +134,14 @@ test('clearing the area retains the same map and loads all-area results', async 
         page.getByText('Groceries for a neighbor', { exact: true }),
     ).toBeVisible();
 });
-test('clusters split with one click, dim the others, and merge when zooming out', async ({
-    page,
-}) => {
+test('county boundaries split into ZIPs with one keyboard action and regroup when zooming out', async ({ page }) => {
     await page.goto('/nearby?lat=41.88&lng=-87.63&r=50000');
-    const clusters = page.locator('path.mh-map-cluster');
-    await expect(clusters.first()).toBeVisible();
-    const before = await clusters.count();
-    await page.getByRole('button', { name: /^Zoom into/ }).first().focus();
+    await page.getByRole('button', { name: 'Explore Cook County, IL: 240 requests', exact: true }).focus();
     await page.keyboard.press('Enter');
-    await expect.poll(() => clusters.count()).toBeGreaterThan(before);
-    await expect(
-        page.locator('path.mh-map-cluster.is-dimmed').first(),
-    ).toBeAttached();
+    await expect(page.locator('path[aria-label^="Show ZIP"]')).toHaveCount(4);
+    await expect(page.locator('path.mh-map-cluster')).toHaveCount(0);
     await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
-    await expect.poll(() => clusters.count()).toBeLessThanOrEqual(before);
+    await expect(page.getByRole('button', { name: 'Explore Cook County, IL: 240 requests', exact: true })).toBeAttached();
 });
 test('filters collapse, use compact buttons and two columns on wider screens', async ({
     page,
@@ -181,7 +171,7 @@ test('request details provide context, area, dates and an actionable next step',
     await page.goto('/requests/view?uri=' + encodeURIComponent(uri));
     for (const name of [
         'What is needed',
-        'Approximate area',
+        'ZIP area',
         'Request updates',
         'How to help',
     ])
@@ -190,7 +180,7 @@ test('request details provide context, area, dates and an actionable next step',
         ).toBeVisible();
     await expect(
         page.getByRole('link', { name: 'View area on map' }),
-    ).toHaveAttribute('href', /lat=41.88/);
+    ).toHaveAttribute('href', /zip=60602/);
     await expect(
         page.getByRole('link', { name: 'Find nearby resources' }),
     ).toBeVisible();
@@ -266,18 +256,20 @@ for (const code of [1, 2, 3])
         await expect(page.locator('.leaflet-container')).toBeVisible();
     });
 
-test('shared-location requests open a chooser instead of endless zoom', async ({ page }) => {
+test('requests in one ZIP stay together at street zoom and are selectable from the list', async ({ page }) => {
     await page.route('**/api/query/map?**', route => route.fulfill({ json: {
         total: 8, page: 1, pageSize: 20, hasNextPage: false,
-        results: Array.from({ length: 8 }, (_, i) => ({ ...record, uri: uri + i, title: `Shared area request ${i + 1}` })),
+        results: Array.from({ length: 8 }, (_, i) => ({ ...record, uri: uri + i, title: `Shared ZIP request ${i + 1}` })),
+        aggregates: { requestCount: 8, locatedRequestCount: 8, truncated: false, cells: [{ ...cells[0], count: 8 }] },
     } }));
-    await page.goto('/nearby?tab=nearby&lat=41.88&lng=-87.63&r=20000');
-    await page.getByRole('button', { name: 'Show 8 requests in this area', exact: true }).click();
-    const chooser = page.getByRole('region', { name: 'These requests share an approximate area. Choose one to see details.' });
-    await expect(chooser).toBeVisible();
-    await expect(chooser.getByRole('button', { name: 'Shared area request 8', exact: true })).toBeVisible();
-    await chooser.getByRole('button', { name: 'Shared area request 8', exact: true }).click();
-    await expect(page.getByRole('region', { name: 'Details for Shared area request 8' })).toBeVisible();
+    await page.goto('/nearby?zip=60602');
+    const polygon=page.getByRole('button',{ name: 'Show ZIP 60602: 8 requests', exact:true });
+    await expect(polygon).toBeAttached();
+    for(let i=0;i<5;i++) await page.getByRole('button',{name:'Zoom in',exact:true}).click();
+    await expect(page.locator('path[aria-label^="Show ZIP"]')).toHaveCount(1);
+    await expect(page.locator('path.mh-map-marker')).toHaveCount(0);
+    await page.getByRole('button',{ name: /View request: Shared ZIP request 8/ }).click();
+    await expect(page.getByRole('region',{name:'Details for Shared ZIP request 8'})).toBeVisible();
 });
 
 test('nearby resources searches the request area on arrival', async ({ page }) => {
@@ -287,7 +279,7 @@ test('nearby resources searches the request area on arrival', async ({ page }) =
     await page.getByRole('link', { name: 'Find nearby resources', exact: true }).click();
     await expect.poll(() => requested.some(url => {
         const params = new URL(url).searchParams;
-        return params.get('latitude') === '41.880000' && params.get('longitude') === '-87.630000' && params.get('radiusKm') === '20';
+        return params.get('latitude') === lookupPostalArea('60602')!.latitude.toFixed(6) && params.get('longitude') === lookupPostalArea('60602')!.longitude.toFixed(6) && params.get('radiusKm') === '20';
     })).toBe(true);
     await expect(page.getByText('Closest to the selected area first. Distances are approximate.', { exact: true })).toBeVisible();
 });

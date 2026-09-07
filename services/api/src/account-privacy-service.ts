@@ -164,6 +164,8 @@ export class AccountPrivacyService {
                     removedOrganizations += removed.rowCount ?? 0;
                 }
             }
+            await client.query("DELETE FROM public_resource_claims WHERE applicant_did=$1 AND status<>'approved'",[did]);
+            await client.query("UPDATE public_resource_claims SET evidence='Evidence removed at account request.' WHERE applicant_did=$1",[did]);
             const organizationStewardships = await client.query(
                 `UPDATE organization_resource_stewardships
                  SET status = 'revoked', updated_at = $2
@@ -195,6 +197,7 @@ export class AccountPrivacyService {
                  WHERE member_did = $1`,
                 [did],
             );
+            await client.query("UPDATE public_resource_audit_events SET actor_did=NULL,details='{\"redactedForDeactivation\":true}'::jsonb WHERE actor_did=$1",[did]);
             const organizationAudit = await client.query(
                 `UPDATE organization_audit_events
                  SET actor_did = NULL,
@@ -717,6 +720,9 @@ export class AccountPrivacyService {
              FROM volunteer_private_profiles WHERE did = $1`,
             [did],
         );
+        const publicResourceAudit = await client.query('SELECT audit_id,resource_uri,action,details,occurred_at FROM public_resource_audit_events WHERE actor_did=$1 ORDER BY occurred_at',[did]);
+        const publicResourceClaims = await client.query(`SELECT claim_id,resource_uri,organization_id,evidence,status,
+            submitted_at,decided_at,decision_reason FROM public_resource_claims WHERE applicant_did=$1 ORDER BY submitted_at`,[did]);
         const organizationMemberships = await client.query<{
             organization_id: string;
             slug: string;
@@ -1325,6 +1331,8 @@ export class AccountPrivacyService {
                         }
                     :   null,
                 organizations: {
+                    resourceClaims: publicResourceClaims.rows,
+                    resourceClaimAudit: publicResourceAudit.rows,
                     memberships: organizationMemberships.rows.map(row => ({
                         organizationId: row.organization_id,
                         slug: row.slug,

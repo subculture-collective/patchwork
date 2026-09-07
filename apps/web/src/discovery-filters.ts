@@ -1,3 +1,4 @@
+import { lookupPostalArea } from '@patchwork/at-lexicons';
 import {
     MAXIMUM_DISCOVERY_RADIUS_METERS,
     MINIMUM_DISCOVERY_RADIUS_METERS,
@@ -31,6 +32,7 @@ export interface DiscoveryCenter {
 }
 
 export interface DiscoveryFilterState {
+    postalCode?: string;
     dataset?: 'all' | 'community' | 'demo';
     feedTab: FeedTab;
     text?: string;
@@ -45,6 +47,7 @@ export interface DiscoveryFilterState {
 }
 
 export interface SharedAidDiscoveryQuery {
+    postalCode?: string;
     text?: string;
     category?: AidCategory;
     status?: AidStatus;
@@ -191,13 +194,15 @@ export function normalizeDiscoveryFilterState(
     const category = normalizeCategory(state.category);
     const status = normalizeStatus(state.status);
     const minUrgency = normalizeUrgency(state.minUrgency);
-    const center = normalizeCenter(state.center);
+    const postalArea = state.postalCode ? lookupPostalArea(state.postalCode) : undefined;
+    const center = postalArea ? { lat: postalArea.latitude, lng: postalArea.longitude } : normalizeCenter(state.center);
     const areaLabel = normalizeText(state.areaLabel);
     const radiusMeters = normalizeRadius(state.radiusMeters);
     const since = normalizeSince(state.since);
 
     return {
         feedTab,
+        ...(state.postalCode && /^\d{5}$/.test(state.postalCode) ? { postalCode: state.postalCode } : {}),
         // Legacy dataset links now open the same integrated discovery view.
         ...(text ? { text } : {}),
         ...(category ? { category } : {}),
@@ -242,6 +247,7 @@ export function toMapDiscoveryQuery(
     state: DiscoveryFilterState,
 ): SharedAidDiscoveryQuery {
     return {
+        postalCode: state.postalCode,
         text: state.text,
         category: state.category,
         status: state.status,
@@ -257,6 +263,7 @@ export function toFeedDiscoveryQuery(
 ): SharedAidDiscoveryQuery {
     const includeNearby = state.feedTab === 'nearby';
     return {
+        postalCode: state.postalCode,
         text: state.text,
         category: state.category,
         status: state.status,
@@ -277,6 +284,7 @@ export function serializeDiscoveryFilterState(
         params.set('tab', state.feedTab);
     }
 
+    if (state.postalCode) params.set('zip', state.postalCode);
     if (state.text) {
         params.set('q', state.text);
     }
@@ -292,7 +300,7 @@ export function serializeDiscoveryFilterState(
     if (state.radiusMeters) {
         params.set('r', String(state.radiusMeters));
     }
-    if (state.center) {
+    if (state.center && !state.postalCode) {
         params.set('lat', String(state.center.lat));
         params.set('lng', String(state.center.lng));
     }
@@ -329,6 +337,7 @@ export function parseDiscoveryFilterState(
             parsedTab ??
             fallback.feedTab ??
             defaultDiscoveryFilterState.feedTab,
+        postalCode: params.get('zip') ?? fallback.postalCode,
         text: params.get('q') ?? fallback.text,
         category: parsedCategory ?? fallback.category,
         status: parsedStatus ?? fallback.status,

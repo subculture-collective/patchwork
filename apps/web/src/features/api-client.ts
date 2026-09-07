@@ -241,7 +241,8 @@ const buildAidQueryParams = (
         pageSize: String(DEFAULT_DISCOVERY_PAGE_SIZE),
         dataset: 'all',
     });
-    if (center) {
+    if (state.postalCode) params.set('postalCode', state.postalCode);
+    if (center && !state.postalCode) {
         params.set('latitude', center.lat.toFixed(6));
         params.set('longitude', center.lng.toFixed(6));
         params.set('radiusKm', String(radiusKm));
@@ -741,7 +742,7 @@ export const createAtAidPostViaApi = async (
     signal?: AbortSignal,
     idempotencyKey?: string,
 ): Promise<ApiClientResult<AtAidPostResult>> => {
-    const result = await requestJsonPost('/at/aid-posts', record, signal, idempotencyKey);
+    const result = await requestJsonPost('/at/aid-posts', record.location.postalCode ? { ...record, location: { countryCode: 'US', postalCode: record.location.postalCode } } : record, signal, idempotencyKey);
     return result.ok ? parseAtAidPostResult(result.data) : result;
 };
 
@@ -2130,6 +2131,7 @@ const mapAidPayloadToRecords = (
 
             return {
                 aidPostUri: uri,
+                postalCode: readString(row, 'postalCode'),
                 recipientDid: authorDid,
                 ...(cid ? { cid } : {}),
                 ...(recordOrigin === 'synthetic' ||
@@ -2242,11 +2244,13 @@ const mapDirectoryPayloadToDetails = (
             :   undefined;
         const exactApprovalExpiresAt =
             exactPublicAddress ?
-                readString(exactPublicAddress, 'approvalExpiresAt')
+                (readString(exactPublicAddress, 'approvalExpiresAt') ?? readString(exactPublicAddress, 'sourceExpiresAt'))
             :   undefined;
 
         cards.push({
             uri,
+            ...(isRecord(row.publicListing) && typeof row.publicListing.sourceUrl === 'string' && typeof row.publicListing.sourceName === 'string' && typeof row.publicListing.sourceRetrievedAt === 'string' && ['claimed','unclaimed'].includes(String(row.publicListing.claimStatus))
+                ? { publicListing: row.publicListing as unknown as NonNullable<ResourceDirectoryCard['publicListing']> } : {}),
             authorDid: readString(row, 'authorDid'),
             cid: readString(row, 'cid'),
             id: parseRecordIdFromUri(uri, `remote-${index}`),
@@ -2270,9 +2274,9 @@ const mapDirectoryPayloadToDetails = (
                         | 'sourced-public'
                         | 'visitor-created')
                 :   undefined,
-            ...(lat !== undefined && lng !== undefined ? { location: {
-                lat,
-                lng,
+            ...((exactLatitude ?? lat) !== undefined && (exactLongitude ?? lng) !== undefined ? { location: {
+                lat: (exactLatitude ?? lat)!,
+                lng: (exactLongitude ?? lng)!,
                 precisionMeters: Math.round(
                     enforceMinimumGeoPrecisionKm(precisionKm ?? 1) * 1000,
                 ),
@@ -2290,11 +2294,11 @@ const mapDirectoryPayloadToDetails = (
             exactApprovalExpiresAt ?
                 {
                     exactPublicAddress: {
-                        kind: 'exact-public-resource' as const,
+                        kind: exactPublicAddress?.kind === 'sourced-public-resource' ? 'sourced-public-resource' as const : 'exact-public-resource' as const,
                         streetAddress: exactStreetAddress,
                         latitude: exactLatitude,
                         longitude: exactLongitude,
-                        approvalExpiresAt: exactApprovalExpiresAt,
+                        ...(exactPublicAddress?.kind === 'sourced-public-resource' ? { sourceExpiresAt: exactApprovalExpiresAt, sourceUrl: readString(exactPublicAddress, 'sourceUrl') } : { approvalExpiresAt: exactApprovalExpiresAt }),
                     },
                 }
             :   {}),
@@ -2305,7 +2309,7 @@ const mapDirectoryPayloadToDetails = (
 };
 
 const mapAggregates = (value: unknown): DiscoveryMapAggregates | undefined => {
-    if (!isRecord(value) || !Array.isArray(value.cells) || value.cells.length > 500 || typeof value.truncated !== 'boolean') return undefined;
+    if (!isRecord(value) || !Array.isArray(value.cells) || value.cells.length > 34000 || typeof value.truncated !== 'boolean') return undefined;
     const requestCount = readNumber(value, 'requestCount'), locatedRequestCount = readNumber(value, 'locatedRequestCount');
     if (requestCount === undefined || locatedRequestCount === undefined || !Number.isInteger(requestCount) || !Number.isInteger(locatedRequestCount) || requestCount < 0 || locatedRequestCount < 0 || locatedRequestCount > requestCount) return undefined;
     const cells: DiscoveryMapAggregates['cells'] = [];
@@ -2313,7 +2317,7 @@ const mapAggregates = (value: unknown): DiscoveryMapAggregates | undefined => {
         if (!isRecord(item)) return undefined;
         const latitude = readNumber(item, 'latitude'), longitude = readNumber(item, 'longitude'), count = readNumber(item, 'count'), radiusKm = readNumber(item, 'radiusKm');
         if (latitude === undefined || longitude === undefined || count === undefined || radiusKm === undefined || Math.abs(latitude) > 90 || Math.abs(longitude) > 180 || !Number.isInteger(count) || count < 1 || radiusKm < 1) return undefined;
-        cells.push({ latitude, longitude, count, radiusKm });
+        cells.push({ latitude, longitude, count, radiusKm, ...(readString(item, 'postalCode') ? { postalCode: readString(item, 'postalCode') } : {}) });
     }
     return { requestCount, locatedRequestCount, truncated: value.truncated, cells };
 };
@@ -2400,6 +2404,22 @@ export const fetchDirectoryCardPageFromApi = async (
     const envelope = pageEnvelope(result.data, mapDirectoryPayloadToCards(result.data));
     return envelope ? { ok: true, data: envelope }
         : invalidResponseFailure('Directory response was malformed.');
+};
+
+/** Map pins include every page in the current search, independent of directory pagination. */
+export const fetchMapResourcePageFromApi = async (state: DiscoveryFilterState, signal?: AbortSignal): Promise<ApiClientResult<PagedResult<ResourceDirectoryCard>>> => {
+    const first = await fetchDirectoryCardPageFromApi(state, 1, signal);
+    if (!first.ok) return first;
+    const items = [...first.data.items];
+    const pages = Math.ceil(first.data.total / first.data.pageSize);
+    for (let page = 2; page <= pages; page++) {
+        const next = await fetchDirectoryCardPageFromApi(state, page, signal);
+        if (!next.ok) return next;
+        if (next.data.total !== first.data.total) return invalidResponseFailure('The resource list changed while loading. Search this area again.');
+        items.push(...next.data.items);
+    }
+    const unique = [...new Map(items.map(item=>[item.uri,item])).values()];
+    return { ok: true, data: { ...first.data, items: unique, hasNextPage: false } };
 };
 
 export const fetchDirectoryCardsFromApi = async (
@@ -3633,20 +3653,13 @@ export const createAidPostViaApi = async (
     const now = input.now ?? new Date().toISOString();
     const record = aidPostSchema.parse({
         $type: 'app.patchwork.aid.post',
-        version: '1.0.0',
+        version: '2.0.0',
         title: input.draft.title,
         description: input.draft.description,
         category: input.draft.category,
         urgency: toLexiconUrgency(input.draft.urgency),
         status: 'open',
-        location: {
-            latitude: Number(input.draft.location.lat.toFixed(2)),
-            longitude: Number(input.draft.location.lng.toFixed(2)),
-            precisionKm: Math.max(
-                1,
-                Number((input.draft.location.precisionMeters / 1000).toFixed(3)),
-            ),
-        },
+        location: { countryCode: 'US', postalCode: input.draft.location.postalCode },
         createdAt: now,
         updatedAt: now,
     });
@@ -3665,6 +3678,7 @@ export const createAidPostViaApi = async (
     return {
         ok: true,
         data: {
+            postalCode: record.location.postalCode,
             aidPostUri: result.data.uri,
             recipientDid,
             cid: result.data.cid,
@@ -3846,3 +3860,8 @@ export async function fetchResourceViaApi(uri: string, signal?: AbortSignal, dat
     if (!cards || cards.length !== 1 || cards[0]?.uri !== uri) return invalidResponseFailure('Resource details were unavailable.');
     return { ok: true, data: cards[0] };
 }
+
+export const submitPublicResourceClaimViaApi = (input: { resourceUri: string; organizationId: string; evidence: string }) => requestJsonPost('/organizations/resource-claims',input);
+export const listPublicResourceClaimsViaApi = () => requestJson('/organizations/resource-claims',new URLSearchParams());
+export const decidePublicResourceClaimViaApi = (input: { claimId: string; action: 'approve'|'deny'|'revoke'; reason: string }) => requestJsonPut('/organizations/resource-claims/decision',input);
+export const editPublicResourceViaApi = (input: { resourceUri: string; name: string; openHours: string; eligibilityNotes: string; contact: { url: string; phone?: string } }) => requestJsonPut('/organizations/public-resource',input);

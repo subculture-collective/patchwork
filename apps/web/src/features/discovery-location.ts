@@ -47,7 +47,7 @@ export function useDiscoveryLocationController(
                 code === 1 ? 'denied' : code === 3 ? 'timeout' : 'unavailable',
             );
             // An unsuccessful refresh never overwrites an existing selected area.
-            if (!stateRef.current.center) patchRef.current(discoveryFallback);
+            if (!stateRef.current.center && !stateRef.current.postalCode) patchRef.current(discoveryFallback);
         };
         if (!navigator.geolocation) {
             fail(2);
@@ -70,6 +70,7 @@ export function useDiscoveryLocationController(
                 setStatus('granted');
                 patchRef.current({
                     center,
+                    postalCode: undefined,
                     areaLabel: nearYou,
                     radiusMeters: 20000,
                     feedTab: 'nearby',
@@ -82,7 +83,7 @@ export function useDiscoveryLocationController(
     useEffect(() => {
         if (!enabled || initialized.current) return;
         initialized.current = true;
-        if (!stateRef.current.center) request();
+        if (!stateRef.current.center && !stateRef.current.postalCode) request();
     }, [enabled, request]);
     useEffect(
         () => () => {

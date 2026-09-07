@@ -1,3 +1,4 @@
+import { lookupPostalArea } from '@patchwork/at-lexicons';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useAuth } from '../auth/AuthProvider';
 import { useLocale } from '../i18n';
@@ -74,15 +75,13 @@ export function RequestDetail() {
             }
         }
     };
-    const area = record?.card.location;
+    const postalArea = record?.postalCode ? lookupPostalArea(record.postalCode) : undefined;
+    const area = postalArea ? { lat: postalArea.latitude, lng: postalArea.longitude, precisionKm: 1 } : undefined;
     const mapParams = new URLSearchParams({ uri });
-    if (area) {
-        mapParams.set('lat', String(area.lat));
-        mapParams.set('lng', String(area.lng));
-        mapParams.set('r', String(Math.max(5000, area.precisionKm * 2000)));
-    }
+    if (record?.postalCode) mapParams.set('zip', record.postalCode);
     const mapHref = `/nearby?${mapParams}`;
     const resourceParams = new URLSearchParams({ tab: 'nearby' });
+    if (record?.postalCode) resourceParams.set('area', `ZIP ${record.postalCode} · distances from the ZIP area`);
     if (area) {
         resourceParams.set('lat', String(area.lat));
         resourceParams.set('lng', String(area.lng));
@@ -168,13 +167,9 @@ export function RequestDetail() {
                                     {record.card.description}
                                 </p>
                             </Panel>
-                            <Panel title={t('requestPage.area')}>
+                            <Panel title='ZIP area'>
                                 <p>
-                                    {area
-                                        ? t('requestPage.approximate', {
-                                              distance: area.precisionKm,
-                                          })
-                                        : t('requestPage.noArea')}
+                                    {postalArea ? `ZIP ${postalArea.postalCode} · ${postalArea.stateName}` : 'The author has not supplied a ZIP code.'}
                                 </p>
                                 <p className='mt-2 text-sm text-mh-textMuted'>
                                     {t('requestPage.locationPrivacy')}

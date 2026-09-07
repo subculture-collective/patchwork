@@ -69,7 +69,7 @@ describe('P2.1 lexicon schemas', () => {
         expect(Object.keys(lexiconDocs).sort()).toEqual(
             Object.values(recordNsid).sort(),
         );
-        expect(LEXICON_SET_VERSION).toBe('1.1.0');
+        expect(LEXICON_SET_VERSION).toBe('2.0.0');
 
         for (const nsid of Object.values(recordNsid)) {
             const lexicon = lexiconDocs[nsid];

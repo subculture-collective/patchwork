@@ -100,7 +100,7 @@ describePostgres('PostgresProjectionQueryService', () => {
 
     it('includes unlocated requests in Latest, excludes them from nearby, and counts beyond one page', async () => {
         const service = new PostgresProjectionQueryService(pool);
-        await pool.query("UPDATE indexer_aid_post_projections SET latitude = NULL, longitude = NULL, precision_km = NULL WHERE title = 'Food support'");
+        await pool.query("UPDATE indexer_aid_post_projections SET postal_code = NULL, latitude = NULL, longitude = NULL, precision_km = NULL WHERE title = 'Food support'");
         const latest = await service.queryFeed(new URLSearchParams());
         expect(latest).toMatchObject({ body: { total: 3, results: expect.arrayContaining([expect.objectContaining({ title: 'Food support' })]) } });
         if ('results' in latest.body) expect(latest.body.results[0]).not.toHaveProperty('approximateGeo');
@@ -169,17 +169,17 @@ describePostgres('PostgresProjectionQueryService', () => {
                 uri, collection, cid, revision, author_did_hash, title,
                 description, category, urgency, status, searchable_text,
                 latitude, longitude, precision_km, record_created_at,
-                record_updated_at, source_cursor, source_event_id, projected_at
+                record_updated_at, source_cursor, source_event_id, projected_at, postal_code
              ) VALUES
                 ($1, $2, 'cid-a', 'rev-a', $3, 'Food support', 'Groceries needed',
                  'food', 'high', 'open', 'food support groceries needed',
-                 41.88, -87.63, 3, $4, $4, 100, 'event-a', $4),
+                 41.88, -87.63, 3, $4, $4, 100, 'event-a', $4, '60602'),
                 ($5, $2, 'cid-b', 'rev-b', $6, 'Clinic ride', 'Ride needed',
                  'medical', 'critical', 'open', 'clinic ride needed',
-                 41.89, -87.64, 3, $4, $4, 101, 'event-b', $4),
+                 41.89, -87.64, 3, $4, $4, 101, 'event-b', $4, '60654'),
                 ($7, $2, 'cid-c', 'rev-c', $8, 'Old food request', 'Already closed',
                  'food', 'low', 'closed', 'old food request already closed',
-                 41.87, -87.62, 3, $4, $4, 102, 'event-c', $4)`,
+                 41.87, -87.62, 3, $4, $4, 102, 'event-c', $4, '60605')`,
             [
                 `at://did:plc:alice/${recordNsid.aidPost}/a`,
                 recordNsid.aidPost,

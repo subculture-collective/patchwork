@@ -1181,6 +1181,7 @@ describe('api client', () => {
                 urgency: 5,
                 accessibilityTags: ['mobility-aid'],
                 location: {
+                    postalCode: '60625',
                     lat: 1.301,
                     lng: 103.802,
                     precisionMeters: 500,
@@ -1212,11 +1213,8 @@ describe('api client', () => {
         const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
         expect(body['category']).toBe('transport');
         expect(body['urgency']).toBe('critical');
-        expect(body['location']).toEqual({
-            latitude: 1.3,
-            longitude: 103.8,
-            precisionKm: 1,
-        });
+        expect(body['version']).toBe('2.0.0');
+        expect(body['location']).toEqual({ countryCode: 'US', postalCode: '60625' });
     });
 
     it('creates an authenticated AT aid post with browser credentials', async () => {

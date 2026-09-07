@@ -1,3 +1,6 @@
+import { fetchMapResourcePageFromApi } from './api-client';
+import { PublicResourceClaimManagement } from './public-resource-claims';
+import { lookupPostalArea } from '@patchwork/at-lexicons';
 import { DiscoveryLocationContext, useDiscoveryLocation, useDiscoveryLocationController } from './discovery-location';
 import type { DiscoveryMapAggregates } from '@patchwork/shared';
 import { canonicalRouteUrl, resolveRouteAlias } from './navigation';
@@ -218,7 +221,6 @@ import {
     type AccountPreferences,
     type UserSettings,
     geoSharingPrecisions,
-    PUBLIC_MIN_PRECISION_KM,
     privacyExposurePreview,
     privacyLevels,
 } from '@patchwork/shared';
@@ -242,7 +244,6 @@ const dataOriginLabel = (origin: ApiDataOrigin): string =>
             : 'API unavailable';
 
 const LazyMapRoute = lazy(() => import('./map-route').then(module => ({ default: module.MapRoute })));
-const LazyPostingLocation = lazy(() => import('./posting-location').then(module => ({ default: module.PostingLocation })));
 const LazyMyRequests = lazy(() => import('./my-requests').then(module => ({ default: module.MyRequests })));
 const LazyProductionChat = lazy(() => import('./production-chat').then(module => ({ default: module.ProductionChat })));
 const LazyProductionGroups = lazy(() => import('./production-groups').then(module => ({ default: module.ProductionGroups })));
@@ -357,15 +358,6 @@ const urgencyPreferenceOptions: readonly VolunteerOnboardingDraft['preferredUrge
 
 const nowIso = (): string => new Date().toISOString();
 
-
-const demoAreaPresets = {
-    chicagoland: {
-        center: { lat: 41.85, lng: -87.93 },
-        areaLabel: 'Chicagoland',
-        radiusMeters: 65000,
-        feedTab: 'nearby' as const,
-    },
-} as const;
 
 const defaultShellDiscoveryState = applyDiscoveryFilterPatch(
     defaultDiscoveryFilterState,
@@ -1795,14 +1787,13 @@ interface PostingRouteProps {
 }
 
 const PostingRoute = ({
-    location,
-    onLocationChange,
     onCreateRecord,
     onNavigate,
     onCreateViaApi,
 }: PostingRouteProps) => {
     const { t } = useLocale();
     const [savedDraft] = useState(() => { try { return loadPostingDraft(window.sessionStorage); } catch { return undefined; } });
+    const [postalCode, setPostalCode] = useState(savedDraft?.postalCode ?? '');
     const [title, setTitle] = useState(savedDraft?.title ?? '');
     const [description, setDescription] = useState(() => {
         const name = new URLSearchParams(window.location.search).get('resourceName');
@@ -1824,8 +1815,8 @@ const PostingRoute = ({
     const [projectionPostUri, setProjectionPostUri] = useState<string>();
     const submissionRef = useRef<{ signature: string; rkey: string; now: string; record?: FeedRecordEnvelope; uploaded: number } | undefined>(undefined);
     useEffect(() => {
-        try { savePostingDraft(window.sessionStorage, { title, description, category, urgency, tagsText, startAt, endAt }); } catch { /* Optional browser storage. */ }
-    }, [title, description, category, urgency, tagsText, startAt, endAt]);
+        try { savePostingDraft(window.sessionStorage, { title, description, category, urgency, tagsText, startAt, endAt, postalCode }); } catch { /* Optional browser storage. */ }
+    }, [title, description, category, urgency, tagsText, startAt, endAt, postalCode]);
     const projectionTimerRef = useRef<number | undefined>(undefined);
 
     useEffect(
@@ -1866,7 +1857,8 @@ const PostingRoute = ({
 
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        if (!location) { setApiError(t('posting.areaRequired')); return; }
+        const postalArea = lookupPostalArea(postalCode);
+        if (!postalArea) { setApiError('Enter a supported five-digit ZIP code for where help is needed.'); return; }
         setApiError(undefined);
         setProjectionNotice(undefined);
         setProjectionFailed(false);
@@ -1878,10 +1870,10 @@ const PostingRoute = ({
             urgency,
             accessibilityTags: parseCommaList(tagsText),
             location: {
-                lat: location.center.lat,
-                lng: location.center.lng,
-                precisionMeters: location.center.lat === demoAreaPresets.chicagoland.center.lat && location.center.lng === demoAreaPresets.chicagoland.center.lng
-                    ? 50_000 : PUBLIC_MIN_PRECISION_KM * 1000,
+                postalCode,
+                lat: postalArea.latitude,
+                lng: postalArea.longitude,
+                precisionMeters: 1000,
             },
             timeWindow:
                 startAt.length > 0 && endAt.length > 0
@@ -2108,15 +2100,11 @@ const PostingRoute = ({
                     </div>
 
                     <div className='border-2 border-mh-borderSoft p-3'>
-                        <h3 className='font-bold'>{t('posting.approximateArea')}</h3>
-                        <p className='mt-2 text-sm text-mh-textMuted'>
-                            {location ? t('posting.selectedArea', { area: location.areaLabel }) : t('handoff.chooseAreaHere')}
-                        </p>
-                        <p className='mt-1 text-sm text-mh-textMuted'>
-                            {t('posting.publicPrecisionSummary')}
-                        </p>
-                        <Suspense fallback={null}><LazyPostingLocation hasLocation={Boolean(location)} onSelect={onLocationChange} /></Suspense>
-                        <a className='mt-3 inline-block underline' href='/map'>{t('posting.changeArea')}</a>
+                        <label className='block font-bold' htmlFor='request-postal-code'>ZIP code where help is needed</label>
+                        <input id='request-postal-code' name='postalCode' type='text' inputMode='numeric' autoComplete='postal-code' pattern='[0-9]{5}' minLength={5} maxLength={5} required
+                            className='mh-input mt-2 w-full' value={postalCode} onChange={event => setPostalCode(event.target.value)} aria-describedby='request-postal-help' />
+                        <p id='request-postal-help' className='mt-2 text-sm text-mh-textMuted'>Only this five-digit ZIP is public. Exchange a street address privately when arranging help. No device location is required.</p>
+                        {lookupPostalArea(postalCode) && <p className='mt-1 text-sm'>ZIP {postalCode} · {lookupPostalArea(postalCode)!.stateName}</p>}
                     </div>
 
                     <div className='border-2 border-mh-border bg-mh-surfaceElev p-4'>
@@ -5469,6 +5457,7 @@ const OrganizationsRoute = ({ did }: { did: string }) => {
                 </p>
             </header>
 
+            <PublicResourceClaimManagement />
             <Panel title={String(t('organizations.find'))}>
                 <form
                     className='flex flex-wrap gap-2'
@@ -9420,7 +9409,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         setIsDirectoryLoading(true);
         setDirectoryErrorMessage(undefined);
 
-        void fetchDirectoryCardPageFromApi(discoveryState, directoryPage, controller.signal)
+        void (currentRoute === '/map' ? fetchMapResourcePageFromApi(discoveryState, controller.signal) : fetchDirectoryCardPageFromApi(discoveryState, directoryPage, controller.signal))
             .then((result) => {
                 if (controller.signal.aborted) {
                     return;
@@ -9428,7 +9417,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
 
                 if (result.ok) {
                     setResourceCards((current) =>
-                        directoryPage === 1
+                        currentRoute === '/map' || directoryPage === 1
                             ? appendDedupedPage([], result.data.items, (card) => card.uri)
                             : appendDedupedPage(current, result.data.items, (card) => card.uri),
                     );

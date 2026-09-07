@@ -1,3 +1,4 @@
+import { PublicResourceClaim } from './public-resource-claims';
 import { useLocale } from '../i18n';
 import { currentExactPublicAddress, type ResourceDetail } from '../resource-directory-ux';
 
@@ -21,11 +22,13 @@ export function ResourceActions({ resource }: { resource: ResourceDetail }) {
     const { t } = useLocale();
     if (resource.recordOrigin === 'synthetic') return <p className='text-sm'>{t('handoff.demoResource')}</p>;
     const links = resourceContactLinks(resource);
+    const address = currentExactPublicAddress(resource);
     const query = new URLSearchParams(window.location.search);
     query.set('resource', resource.uri);
     query.set('resourceName', resource.name);
     const linkClass = 'mh-button inline-flex px-3 py-2 text-sm';
     return <div className='space-y-2'>
+        {address && <p className='font-bold'>{address.streetAddress}</p>}
         <p className='text-sm'>{t('handoff.resourceContactHint')}</p>
         <div className='flex flex-wrap gap-2'>
             {links.website && <a className={linkClass} href={links.website} target='_blank' rel='noopener noreferrer'>{t('handoff.visitWebsite')}</a>}
@@ -33,6 +36,7 @@ export function ResourceActions({ resource }: { resource: ResourceDetail }) {
             {links.directions && <a className={linkClass} href={links.directions} target='_blank' rel='noopener noreferrer'>{t('handoff.directions')}</a>}
             <a className={linkClass} href={`/posting?${query.toString()}`}>{t('handoff.askCommunity')}</a>
         </div>
+        <PublicResourceClaim resource={resource} />
         {!links.website && !links.telephone && <p className='text-sm'>{t('handoff.contactUnavailable')}</p>}
         {!links.directions && <p className='text-xs'>{t('handoff.approximateResource')}</p>}
     </div>;

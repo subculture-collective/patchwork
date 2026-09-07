@@ -140,7 +140,7 @@ test('a resource deep link loads outside the current result page and retries wit
 });
 
 
-for (const allowed of [true, false]) test(`posting obtains an approximate area in place with location ${allowed ? 'allowed' : 'denied'}`, async ({ page }) => {
+for (const allowed of [true, false]) test(`posting requires a ZIP without requesting device location when permission is ${allowed ? 'allowed' : 'denied'}`, async ({ page }) => {
     await page.addInitScript(granted => {
         Object.defineProperty(navigator, 'geolocation', { configurable: true, value: {
             getCurrentPosition: (success: (value: unknown) => void, failure: () => void) => granted
@@ -163,22 +163,16 @@ for (const allowed of [true, false]) test(`posting obtains an approximate area i
     await page.getByRole('textbox', { name: 'Title', exact: true }).fill('A ride to the pantry');
     await page.getByRole('textbox', { name: 'Description', exact: true }).fill('I need a ride to pick up groceries tomorrow.');
     const publish = page.getByRole('button', { name: 'Publish request', exact: true });
-    if (!allowed) {
-        await expect(page.getByRole('alert')).toContainText('Location access is unavailable');
-        await expect(publish).toBeDisabled();
-        await page.getByRole('button', { name: 'Use Cook & DuPage for this request', exact: true }).click();
-    }
+    await page.getByRole('textbox', { name: 'ZIP code where help is needed', exact: true }).fill('60625');
     await expect(publish).toBeEnabled();
     expect(new URL(page.url()).pathname).toBe('/posting');
-    const query = new URL(page.url()).searchParams;
-    expect(query.get('lat')).toBe(allowed ? '41.88' : '41.85');
-    expect(query.get('lng')).toBe(allowed ? '-87.63' : '-87.93');
+    expect(new URL(page.url()).searchParams.has('lat')).toBe(false);
     const saved = await page.evaluate(() => sessionStorage.getItem('patchwork:posting-text:v1'));
     expect(saved).toContain('A ride to the pantry');
     expect(saved).not.toMatch(/latitude|longitude|precision|center|41\.88|87\.63/);
     await publish.click();
     await expect.poll(() => submitted).toBeTruthy();
-    expect(submitted?.location).toEqual({ latitude: allowed ? 41.88 : 41.85, longitude: allowed ? -87.63 : -87.93, precisionKm: allowed ? 1 : 50 });
+    expect(submitted?.location).toEqual({ countryCode: 'US', postalCode: '60625' });
 });
 
 

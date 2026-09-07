@@ -83,8 +83,8 @@ interface MapRouteProps {
 }
 
 const LazyInteractiveMap = lazy(() =>
-    import('../components/map/InteractiveMap.js').then((module) => ({
-        default: module.InteractiveMap,
+    import('../components/map/PostalMap.js').then((module) => ({
+        default: module.PostalMap,
     })),
 );
 
@@ -126,7 +126,6 @@ export const MapRoute = ({
     const selection = useMapSelection(feedRecords, resourceCards, 'all');
     const selectedRecord = selection.request;
     const selectedResource = selection.resource;
-    const selectedPostId = selectedRecord?.card.id;
     const onSelectPost = selection.selectRequest;
     const setSelectedResourceUri = selection.selectResource;
     const [cameraCenter, setCameraCenter] = useState(discoveryState.center ?? discoveryFallback.center);
@@ -184,6 +183,7 @@ export const MapRoute = ({
                   }
                 : {
                       center: undefined,
+                      postalCode: undefined,
                       areaLabel: undefined,
                       radiusMeters: undefined,
                   };
@@ -199,7 +199,7 @@ export const MapRoute = ({
             <header className='space-y-2'>
                 <h1 className='text-2xl font-bold'>{t('map.heading')}</h1>
                 <p className='mt-2 text-sm text-mh-textMuted'>
-                    {t('map.description')}
+                    Requests stay within ZIP areas. Explore a boundary to see requests, or choose a pin for a public resource.
                 </p>
                 <div className='mt-3 flex flex-wrap gap-2'>
                     {dataOrigin !== 'api' && <Badge tone='info'>{originLabel}</Badge>}
@@ -322,17 +322,13 @@ export const MapRoute = ({
                         fallback={<div className='mh-skeleton h-96 w-full' />}
                     >
                         <LazyInteractiveMap
-                            cards={mapView.filteredCards}
-                            resources={mapResourceView.cards}
-                            aggregateCells={aggregates && aggregates.requestCount > mapView.filteredCards.length ? aggregates.cells : undefined}
-                            selectedPostId={selectedPostId}
+                            cells={aggregates?.cells ?? []}
+                            resources={resourceCards}
+                            selectedPostalCode={discoveryState.postalCode}
                             center={cameraCenter}
-                            onSelectPostId={onSelectPost}
-                            focusedArea={activeArea}
                             onViewportChange={setViewport}
-                            onFocusArea={(area) => {
-                                setFocusedArea({ ...area, previousCenter: discoveryState.center, previousRadiusMeters: discoveryState.radiusMeters });
-                                onPushDiscovery({ center: area.center, radiusMeters: area.radiusMeters, areaLabel: area.label, feedTab: 'nearby' });
+                            onSelectPostalCode={(postalCode) => {
+                                onPushDiscovery({ postalCode, center: undefined, radiusMeters: undefined, areaLabel: `ZIP ${postalCode}` });
                                 document.getElementById('map-area-requests')?.scrollIntoView({ block: 'start' });
                             }}
                             onSelectResource={setSelectedResourceUri}
@@ -343,7 +339,8 @@ export const MapRoute = ({
             </section>
 
             {aggregates && aggregates.requestCount > mapView.filteredCards.length && <p role='status'>{t('map.aggregateHelp', { count: aggregates.requestCount })}{aggregates.truncated ? ` ${t('map.aggregateTruncated')}` : ''}</p>}
-            {viewport && <Button onClick={() => { onPushDiscovery({ ...viewport, feedTab: 'nearby' }); setViewport(undefined); }}>{t('handoff.searchArea')}</Button>}
+            {discoveryState.postalCode && <p role='status'>Showing requests in ZIP {discoveryState.postalCode}. <Button variant='neutral' onClick={() => onPushDiscovery({ postalCode: undefined, areaLabel: undefined })}>Show all ZIPs</Button></p>}
+            {viewport && <Button onClick={() => { onPushDiscovery({ ...viewport, postalCode: undefined, feedTab: 'nearby' }); setViewport(undefined); }}>{t('handoff.searchArea')}</Button>}
             {(selection.loading || selection.error) && <MapDetailSheet closeLabel={t('resources.close')} onClose={selection.close}>
                 <Panel title={t('handoff.requestDetails')}>
                     {selection.loading ? <p role='status'>{t('handoff.loadingRequest')}</p> : <><p role='alert'>{selection.error}</p><Button onClick={selection.retry}>{t('common.retry')}</Button></>}

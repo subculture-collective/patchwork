@@ -3,6 +3,7 @@ import { Pool } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
     buildPhase3FixtureFirehoseEvents,
+    normalizeFirehoseEvent,
     recordNsid,
     type NormalizedFirehoseEvent,
 } from '@patchwork/shared';
@@ -135,6 +136,27 @@ describePostgres('PostgresProjectionStore', () => {
 
     afterAll(async () => {
         await pool.end();
+    });
+
+    it('ingests a ZIP-only AT record without losing leading zeros or creating individual coordinates', async () => {
+        const event = normalizeFirehoseEvent({
+            seq: 500, receivedAt: '2026-09-06T12:00:00.000Z', action: 'create',
+            uri: 'at://did:plc:postal/app.patchwork.aid.post/leading-zero',
+            collection: recordNsid.aidPost, authorDid: 'did:plc:postal',
+            record: { $type: recordNsid.aidPost, version: '2.0.0', title: 'Help with groceries',
+                description: 'A grocery pickup is needed.', category: 'food', urgency: 'medium', status: 'open',
+                location: { countryCode: 'US', postalCode: '00601' }, createdAt: '2026-09-06T12:00:00.000Z' },
+        });
+        expect(event.success).toBe(true);
+        if (!event.success) throw new Error('ZIP record normalization failed.');
+        await new PostgresProjectionStore(pool).apply(event.event);
+        const stored = await pool.query('SELECT postal_code,latitude,longitude FROM indexer_aid_post_projections WHERE uri=$1',[event.event.uri]);
+        expect(stored.rows[0].postal_code).toBe('00601');
+        expect(event.event.payload?.kind).toBe('aid-post');
+        if (event.event.payload?.kind === 'aid-post') {
+            expect(stored.rows[0].latitude).toBe(event.event.payload.approximateGeo.latitude);
+            expect(stored.rows[0].longitude).toBe(event.event.payload.approximateGeo.longitude);
+        }
     });
 
     it('persists a normalized aid-post projection with privacy-safe identity and geography', async () => {

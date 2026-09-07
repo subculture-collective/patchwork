@@ -42,12 +42,15 @@ export interface ResourceDirectoryCard {
         url?: string;
         phone?: string;
     };
+    publicListing?: { sourceName: string; sourceUrl: string; sourceRetrievedAt: string; claimStatus: 'claimed' | 'unclaimed' };
     exactPublicAddress?: {
-        kind: 'exact-public-resource';
+        kind: 'exact-public-resource' | 'sourced-public-resource';
         streetAddress: string;
         latitude: number;
         longitude: number;
-        approvalExpiresAt: string;
+        approvalExpiresAt?: string;
+        sourceExpiresAt?: string;
+        sourceUrl?: string;
     };
     distanceMeters?: number;
     recordOrigin?: 'synthetic' | 'sourced-public' | 'visitor-created';
@@ -82,7 +85,7 @@ export const currentExactPublicAddress = (
     nowMs = Date.now(),
 ): ResourceDirectoryCard['exactPublicAddress'] | undefined => {
     const exact = resource.exactPublicAddress;
-    const expiresAt = exact ? Date.parse(exact.approvalExpiresAt) : NaN;
+    const expiresAt = exact ? Date.parse((exact.kind === 'sourced-public-resource' ? exact.sourceExpiresAt : exact.approvalExpiresAt) ?? '') : NaN;
     return exact && Number.isFinite(expiresAt) && expiresAt > nowMs
         ? exact
         : undefined;

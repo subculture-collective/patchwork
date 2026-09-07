@@ -1250,3 +1250,10 @@ code {
 .mh-map-request-point { fill: var(--mh-community-primary); fill-opacity: 1; stroke: #fffdf7; stroke-width: 1.5; cursor: pointer; }
 .mh-map-request-point.is-selected { stroke: var(--mh-border); stroke-width: 2; }
 .mh-map-request-point.is-dimmed { opacity: 0.18; }
+
+/* Public places stay anchored to their address; only the visible pin scales. */
+.mh-exact-resource-pin { display: flex; align-items: center; justify-content: center; background: transparent; border: 0; }
+.mh-exact-resource-pin-dot { display: block; background: #176659; border: 1px solid white; border-radius: 3px; box-shadow: 0 1px 3px #0006; }
+.mh-exact-resource-pin:focus { outline: 3px solid #734cba; outline-offset: 1px; }
+.mh-postal-area-label { background: #fffE; color: #35234e; border: 0; box-shadow: none; font-weight: 600; font-size: 11px; padding: 2px 5px; }
+.mh-postal-area-label:before { display: none; }
