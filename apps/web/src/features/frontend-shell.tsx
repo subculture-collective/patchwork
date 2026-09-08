@@ -56,7 +56,6 @@ import {
     closeResourceDetailPanel,
     openResourceDetailPanel,
     resolveResourceDirectoryUiState,
-    type DirectoryResourceCategory,
     type ResourceDirectoryCard,
 } from '../resource-directory-ux';
 import {
@@ -330,15 +329,6 @@ const secondaryRoutes = appRoutes.filter(
         !accountRoutes.includes(route) &&
         !route.startsWith('/legal/') && route !== '/requests/view' && route !== '/map' && route !== '/',
 );
-const resourceCategoryOptions: readonly DirectoryResourceCategory[] = [
-    'food-bank',
-    'shelter',
-    'clinic',
-    'legal-aid',
-    'hotline',
-    'other',
-];
-
 const volunteerCapabilityOptions: readonly VolunteerOnboardingDraft['capabilities'][number][] =
     [
         'transport',
@@ -2664,9 +2654,6 @@ const ResourceRoute = ({
         ),
     });
     const activeCategory = discoveryState.resourceCategory;
-    const setActiveCategory = (
-        category: DirectoryResourceCategory | undefined,
-    ) => onPatchDiscovery({ resourceCategory: category });
     const [selectedUri, setSelectedUri] = useState<string | undefined>(
         () =>
             new URLSearchParams(window.location.search).get('resource') ??
@@ -2717,7 +2704,7 @@ const ResourceRoute = ({
         () =>
             buildResourceOverlayViewModel(
                 resourceCards,
-                { ...discoveryState, category: undefined },
+                { ...discoveryState, category: undefined, text: import.meta.env.VITE_DATA_MODE === 'fixture' ? discoveryState.text : undefined },
                 {
                     category: activeCategory,
                 },
@@ -2850,40 +2837,6 @@ const ResourceRoute = ({
                 onPatch={onPatchDiscovery}
             />
 
-            <Card title={String(t('resources.directoryFiltersTitle'))}>
-                <div className='flex flex-wrap gap-2'>
-                    <Button
-                        aria-pressed={!activeCategory}
-                        variant={activeCategory ? 'neutral' : 'primary'}
-                        className='px-3 py-1 text-xs'
-                        onClick={() => setActiveCategory(undefined)}
-                    >
-                        {t('resources.allCategories')}
-                    </Button>
-                    {resourceCategoryOptions.map(category => (
-                        <Button
-                            key={category}
-                            aria-pressed={activeCategory === category}
-                            variant={
-                                activeCategory === category
-                                    ? 'secondary'
-                                    : 'neutral'
-                            }
-                            className='px-3 py-1 text-xs'
-                            onClick={() =>
-                                setActiveCategory(
-                                    activeCategory === category
-                                        ? undefined
-                                        : category,
-                                )
-                            }
-                        >
-                            {formatLocalizedLabel(t, category)}
-                        </Button>
-                    ))}
-                </div>
-            </Card>
-
             <Card title={String(t('resources.overlayCardsTitle'))}>
                 <p className='mb-3 text-sm text-mh-textMuted'>
                     {uiState.status === 'ready'
@@ -2919,9 +2872,9 @@ const ResourceRoute = ({
                         <Button
                             variant='neutral'
                             className='px-3 py-1 text-xs'
-                            onClick={() => setActiveCategory(undefined)}
+                            onClick={() => onPatchDiscovery({ resourceCategory: undefined, resourceService: undefined, text: undefined })}
                         >
-                            {t('resources.clearDirectoryCategory')}
+                            {t('discovery.resetFilters')}
                         </Button>
                     </div>
                 ) : (

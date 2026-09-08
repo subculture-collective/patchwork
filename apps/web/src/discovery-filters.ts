@@ -1,3 +1,4 @@
+import { resourceServices, type ResourceService } from '@patchwork/shared';
 import { lookupPostalArea } from '@patchwork/at-lexicons';
 import {
     MAXIMUM_DISCOVERY_RADIUS_METERS,
@@ -41,6 +42,7 @@ export const directoryCategories = [
 ] as const;
 
 export interface DiscoveryFilterState {
+    resourceService?: ResourceService;
     resourceCategory?: (typeof directoryCategories)[number];
     postalCode?: string;
     dataset?: 'all' | 'community' | 'demo';
@@ -212,6 +214,7 @@ export function normalizeDiscoveryFilterState(
 
     return {
         feedTab,
+        ...(state.resourceService && resourceServices.includes(state.resourceService) ? { resourceService: state.resourceService } : {}),
         ...(state.resourceCategory &&
         directoryCategories.includes(state.resourceCategory)
             ? { resourceCategory: state.resourceCategory }
@@ -298,6 +301,7 @@ export function serializeDiscoveryFilterState(
     }
 
     if (state.postalCode) params.set('zip', state.postalCode);
+    if (state.resourceService) params.set('service', state.resourceService);
     if (state.resourceCategory)
         params.set('resourceType', state.resourceCategory);
     if (state.text) {
@@ -353,6 +357,7 @@ export function parseDiscoveryFilterState(
             fallback.feedTab ??
             defaultDiscoveryFilterState.feedTab,
         postalCode: params.get('zip') ?? fallback.postalCode,
+        resourceService: (params.get('service') ?? fallback.resourceService) as ResourceService | undefined,
         resourceCategory: (params.get('resourceType') ??
             fallback.resourceCategory) as DiscoveryFilterState['resourceCategory'],
         text: params.get('q') ?? fallback.text,

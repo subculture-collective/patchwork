@@ -1,10 +1,12 @@
 import { z } from 'zod';
+import { resourceServices } from '../../../../packages/shared/src/resource-services.js';
 import { directoryResourceSchema } from '@patchwork/at-lexicons';
 import snapshot from './seed-data/chicago-metro-public-resources.json' with { type: 'json' };
 import { postalLocationSchema } from '../../../../packages/at-lexicons/src/postal-geography.js';
 
 const publicResourceSchema = z.object({
     id: z.string().min(1),
+    services: z.array(z.enum(resourceServices)).min(1).optional(),
     name: z.string().min(1).max(120),
     category: directoryResourceSchema.shape.category,
     sourceId: z.string().min(1),

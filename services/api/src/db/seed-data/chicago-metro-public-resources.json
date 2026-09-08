@@ -52,6 +52,83 @@
       "apiUrl": "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=530+Bedford+Rd%2C+Morris%2C+IL+60450&benchmark=Public_AR_Current&format=json",
       "retrievedAt": "2026-09-08",
       "sha256": "b7b134552a6d0b945a20b8c3e437b9b1d82f9449ca866951dbee697ec5804747"
+    },
+    "psls": {
+      "name": "Prairie State Legal Services — official public service information",
+      "url": "https://www.pslegal.org/our-offices",
+      "apiUrl": "https://www.pslegal.org/our-offices",
+      "retrievedAt": "2026-09-08",
+      "sha256": "84fbe5a60422b63c4f3423cac9a51176f3a12dfc30427c05189d488fbdc1f269"
+    },
+    "dupagepads-access": {
+      "name": "DuPagePads — official public service information",
+      "url": "https://volunteer.dupagepads.org/agency/detail/?agency_id=112871",
+      "apiUrl": "https://volunteer.dupagepads.org/agency/detail/?agency_id=112871",
+      "retrievedAt": "2026-09-08",
+      "sha256": "f87479eaab1df22e6892b247314f5207c21d19eae2e23bd76c0c81fe284aca0d"
+    },
+    "wayside-elgin": {
+      "name": "Elgin Wayside Center — official public service information",
+      "url": "https://www.waysidecross.org/contact-us/",
+      "apiUrl": "https://www.waysidecross.org/contact-us/",
+      "retrievedAt": "2026-09-08",
+      "sha256": "85f3f808ea54cf89893de29d91e87a7db965adae9599c52d669d5bcbc9977ecd"
+    },
+    "wayside-aurora-programs": {
+      "name": "Wayside Cross — official public service information",
+      "url": "https://www.waysidecross.org/contact-us/",
+      "apiUrl": "https://gisportal.hrsa.gov/server/rest/services/HealthCareFacilities/PrimaryHealthCareFacilities_FS/MapServer/0/query",
+      "retrievedAt": "2026-09-08",
+      "sha256": "85f3f808ea54cf89893de29d91e87a7db965adae9599c52d669d5bcbc9977ecd"
+    },
+    "prc-wheaton-clothing": {
+      "name": "People’s Resource Center — official public service information",
+      "url": "https://www.peoplesrc.org/clothes-closet-2/",
+      "apiUrl": "https://www.peoplesrc.org/clothes-closet-2/",
+      "retrievedAt": "2026-09-08",
+      "sha256": "bd5c8d9926cf68432f2231d6c7c3c8bcc56e3b84453aa98e2889c7b016dd6fff"
+    },
+    "wcccc-joliet": {
+      "name": "Will County Center for Community Concerns — official public service information",
+      "url": "https://wcccc.net/",
+      "apiUrl": "https://wcccc.net/",
+      "retrievedAt": "2026-09-08",
+      "sha256": "60a1d4959ea13a36787b8b99962197256be53323421eb5bb506ea5e02e96e5dc"
+    },
+    "access-living-chicago": {
+      "name": "Access Living — official public service information",
+      "url": "https://www.accessliving.org/contact/",
+      "apiUrl": "https://www.accessliving.org/contact/",
+      "retrievedAt": "2026-09-08",
+      "sha256": "9cf32d604a4df1acb970112366e853d6086ee344700c64557bfc1ab3243546d2"
+    },
+    "chicago-tool-library": {
+      "name": "Chicago Tool Library — official public service information",
+      "url": "https://www.chicagotoollibrary.org/",
+      "apiUrl": "https://www.chicagotoollibrary.org/",
+      "retrievedAt": "2026-09-08",
+      "sha256": "c0d2dea3ce2298abbe7ef1b210b19246dc4138f3aa5a59fcc4683cae44d6ba75"
+    },
+    "sharing-connections": {
+      "name": "Sharing Connections — official public service information",
+      "url": "https://www.sharingconnections.org/about",
+      "apiUrl": "https://www.sharingconnections.org/about",
+      "retrievedAt": "2026-09-08",
+      "sha256": "8d277f872793f6dc27a328983369083d353149496ec8771cab4954ce41f8a4d2"
+    },
+    "coaction-valparaiso": {
+      "name": "CoAction — official public service information",
+      "url": "https://coaction.care/places/valparaiso-field-office/",
+      "apiUrl": "https://coaction.care/places/valparaiso-field-office/",
+      "retrievedAt": "2026-09-08",
+      "sha256": "48422d76432f7b034ce44f90eede80597a637737ddb6ac8c1f69b63279ce6759"
+    },
+    "shalom-kenosha": {
+      "name": "Shalom Center — official public service information",
+      "url": "https://www.shalomcenter.org/",
+      "apiUrl": "https://www.shalomcenter.org/",
+      "retrievedAt": "2026-09-08",
+      "sha256": "7227b729feeb8c7f9deeb38b727fb465c196b3d7c663d8e1c89fd7f2a9404cb4"
     }
   },
   "resources": [
@@ -10997,6 +11074,346 @@
       "usualHours": "Call for current pantry hours.",
       "claimStatus": "unclaimed",
       "publicAccess": "On-site food pantry for Grundy County residents in need, available twice each month. Call about intake requirements before visiting."
+    },
+    {
+      "id": "psls--joliet",
+      "name": "Prairie State Legal Services — Joliet",
+      "category": "legal-aid",
+      "streetAddress": "14A W Cass Street, 3rd Floor",
+      "city": "Joliet",
+      "state": "IL",
+      "postalCode": "60432",
+      "countyId": "17197",
+      "phone": "815-727-5123",
+      "website": "https://www.pslegal.org/our-offices",
+      "sourceId": "psls",
+      "services": [
+        "legal"
+      ],
+      "publicAccess": "Civil legal assistance for eligible callers in Will County. Call for initial telephone counseling, screening and referral; legal representation is subject to eligibility and case acceptance. Office hours are not a guarantee of walk-in service.",
+      "usualHours": "Contact the provider for current service hours and intake availability.",
+      "claimStatus": "unclaimed",
+      "coordinateBasis": "census-address-range",
+      "latitude": 41.527754515959,
+      "longitude": -88.081917525611
+    },
+    {
+      "id": "psls--kankakee",
+      "name": "Prairie State Legal Services — Kankakee",
+      "category": "legal-aid",
+      "streetAddress": "187 S Schuyler Avenue, Suite 350",
+      "city": "Kankakee",
+      "state": "IL",
+      "postalCode": "60901",
+      "countyId": "17091",
+      "phone": "815-935-2750",
+      "website": "https://www.pslegal.org/our-offices",
+      "sourceId": "psls",
+      "services": [
+        "legal"
+      ],
+      "publicAccess": "Civil legal assistance for eligible callers in Kankakee and Iroquois counties. Call for initial telephone counseling, screening and referral; legal representation is subject to eligibility and case acceptance. Office hours are not a guarantee of walk-in service.",
+      "usualHours": "Contact the provider for current service hours and intake availability.",
+      "claimStatus": "unclaimed",
+      "coordinateBasis": "census-address-range",
+      "latitude": 41.119206362972,
+      "longitude": -87.864198254604
+    },
+    {
+      "id": "psls--ottawa",
+      "name": "Prairie State Legal Services — Ottawa",
+      "category": "legal-aid",
+      "streetAddress": "1021 Clinton Street",
+      "city": "Ottawa",
+      "state": "IL",
+      "postalCode": "61350",
+      "countyId": "17099",
+      "phone": "815-434-5903",
+      "website": "https://www.pslegal.org/our-offices",
+      "sourceId": "psls",
+      "services": [
+        "legal"
+      ],
+      "publicAccess": "Civil legal assistance for eligible callers in Bureau, Grundy, LaSalle and Putnam counties. Call for initial telephone counseling, screening and referral; legal representation is subject to eligibility and case acceptance. Office hours are not a guarantee of walk-in service.",
+      "usualHours": "Contact the provider for current service hours and intake availability.",
+      "claimStatus": "unclaimed",
+      "coordinateBasis": "census-address-range",
+      "latitude": 41.350207975406,
+      "longitude": -88.844209556528
+    },
+    {
+      "id": "psls--waukegan",
+      "name": "Prairie State Legal Services — Waukegan",
+      "category": "legal-aid",
+      "streetAddress": "325 W Washington Street, Suite 100",
+      "city": "Waukegan",
+      "state": "IL",
+      "postalCode": "60085",
+      "countyId": "17097",
+      "phone": "847-662-6925",
+      "website": "https://www.pslegal.org/our-offices",
+      "sourceId": "psls",
+      "services": [
+        "legal"
+      ],
+      "publicAccess": "Civil legal assistance for eligible callers in Lake County. Call for initial telephone counseling, screening and referral; legal representation is subject to eligibility and case acceptance. Office hours are not a guarantee of walk-in service.",
+      "usualHours": "Contact the provider for current service hours and intake availability.",
+      "claimStatus": "unclaimed",
+      "coordinateBasis": "census-address-range",
+      "latitude": 42.35950826349,
+      "longitude": -87.832974117672
+    },
+    {
+      "id": "psls--west-suburban",
+      "name": "Prairie State Legal Services — West Chicago",
+      "category": "legal-aid",
+      "streetAddress": "31W001 E North Avenue, Suite 200",
+      "city": "West Chicago",
+      "state": "IL",
+      "postalCode": "60185",
+      "countyId": "17043",
+      "phone": "630-690-2130",
+      "website": "https://www.pslegal.org/our-offices",
+      "sourceId": "psls",
+      "services": [
+        "legal"
+      ],
+      "publicAccess": "Civil legal assistance for eligible callers in DeKalb, DuPage, Kane and Kendall counties. Call for initial telephone counseling, screening and referral; legal representation is subject to eligibility and case acceptance. Office hours are not a guarantee of walk-in service.",
+      "usualHours": "Contact the provider for current service hours and intake availability.",
+      "claimStatus": "unclaimed",
+      "coordinateBasis": "census-address-range",
+      "latitude": 41.918356928453,
+      "longitude": -88.228259798249
+    },
+    {
+      "id": "dupagepads-access",
+      "name": "DuPagePads — Client Access Center",
+      "category": "shelter",
+      "streetAddress": "703 W Liberty Drive",
+      "city": "Wheaton",
+      "state": "IL",
+      "postalCode": "60187",
+      "countyId": "17043",
+      "phone": "630-682-3846",
+      "website": "https://volunteer.dupagepads.org/agency/detail/?agency_id=112871",
+      "sourceId": "dupagepads-access",
+      "services": [
+        "housing",
+        "hygiene",
+        "food"
+      ],
+      "publicAccess": "Daytime access center for people experiencing homelessness in DuPage County. Coordinated intake, street outreach, showers, laundry, meals and mailing-address support. Contact the center about current intake and service availability.",
+      "usualHours": "Contact the provider for current service hours and intake availability.",
+      "claimStatus": "unclaimed",
+      "coordinateBasis": "census-address-range",
+      "latitude": 41.864137120944,
+      "longitude": -88.116418371105
+    },
+    {
+      "id": "wayside-elgin",
+      "name": "Elgin Wayside Center",
+      "category": "shelter",
+      "streetAddress": "1732 Berkley Street",
+      "city": "Elgin",
+      "state": "IL",
+      "postalCode": "60123",
+      "countyId": "17089",
+      "phone": "847-695-4405",
+      "website": "https://www.waysidecross.org/contact-us/",
+      "sourceId": "wayside-elgin",
+      "services": [
+        "housing"
+      ],
+      "publicAccess": "Day-center and shelter support for people experiencing homelessness or limited resources. Contact the Elgin center for intake, available programs and eligibility.",
+      "usualHours": "Contact the provider for current service hours and intake availability.",
+      "claimStatus": "unclaimed",
+      "coordinateBasis": "census-address-range",
+      "latitude": 42.022700716096,
+      "longitude": -88.31959492803
+    },
+    {
+      "id": "wayside-aurora-programs",
+      "name": "Wayside Cross — Recovery, Youth and Reentry Programs",
+      "category": "other",
+      "streetAddress": "215 E New York Street",
+      "city": "Aurora",
+      "state": "IL",
+      "postalCode": "60505",
+      "countyId": "17089",
+      "phone": "630-892-4239",
+      "website": "https://www.waysidecross.org/contact-us/",
+      "sourceId": "wayside-aurora-programs",
+      "services": [
+        "housing",
+        "employment",
+        "youth",
+        "reentry"
+      ],
+      "publicAccess": "Public main campus for faith-based recovery and transitional housing, residential work training, youth after-school programs and reentry support. Call and ask for the relevant ministry to confirm intake and participation requirements. This listing covers programs separate from the clinic at this address.",
+      "usualHours": "Contact the provider for current service hours and intake availability.",
+      "claimStatus": "unclaimed",
+      "coordinateBasis": "publisher-address",
+      "latitude": 41.75721263100007,
+      "longitude": -88.31076408199993
+    },
+    {
+      "id": "prc-wheaton-clothing",
+      "name": "People’s Resource Center — Wheaton Clothes Closet",
+      "category": "other",
+      "streetAddress": "201 S Naperville Road",
+      "city": "Wheaton",
+      "state": "IL",
+      "postalCode": "60187",
+      "countyId": "17043",
+      "phone": "630-682-5402",
+      "website": "https://www.peoplesrc.org/clothes-closet-2/",
+      "sourceId": "prc-wheaton-clothing",
+      "services": [
+        "clothing"
+      ],
+      "publicAccess": "Clothing for PRC clients residing in DuPage County. Appointment required; no walk-ins. Call 630-682-5402 and press 0. Eligible families may shop once per month using the program’s clothing-point allowance.",
+      "usualHours": "Contact the provider for current service hours and intake availability.",
+      "claimStatus": "unclaimed",
+      "coordinateBasis": "census-address-range",
+      "latitude": 41.864293914845,
+      "longitude": -88.102937116056
+    },
+    {
+      "id": "wcccc-joliet",
+      "name": "Will County Center for Community Concerns",
+      "category": "other",
+      "streetAddress": "2455 Glenwood Avenue",
+      "city": "Joliet",
+      "state": "IL",
+      "postalCode": "60435",
+      "countyId": "17197",
+      "phone": "815-722-0722",
+      "website": "https://wcccc.net/",
+      "sourceId": "wcccc-joliet",
+      "services": [
+        "benefits",
+        "housing",
+        "employment"
+      ],
+      "publicAccess": "Utility assistance (LIHEAP), rental assistance, housing counseling and employment support. Income, residency and program requirements apply. Call about current funding, documentation and intake; daily application capacity is limited.",
+      "usualHours": "Contact the provider for current service hours and intake availability.",
+      "claimStatus": "unclaimed",
+      "coordinateBasis": "census-address-range",
+      "latitude": 41.529521362689,
+      "longitude": -88.142334003761
+    },
+    {
+      "id": "access-living-chicago",
+      "name": "Access Living",
+      "category": "other",
+      "streetAddress": "115 W Chicago Avenue",
+      "city": "Chicago",
+      "state": "IL",
+      "postalCode": "60654",
+      "countyId": "17031",
+      "phone": "312-640-2100",
+      "website": "https://www.accessliving.org/contact/",
+      "sourceId": "access-living-chicago",
+      "services": [
+        "disability",
+        "transport",
+        "housing"
+      ],
+      "publicAccess": "Information and support for disabled people, including accessible housing, transportation, assistive technology and independent-living services. Call or use the contact form to discuss program eligibility and arrange service. Phone and online inquiries are monitored during business hours; this is not a crisis center.",
+      "usualHours": "Contact the provider for current service hours and intake availability.",
+      "claimStatus": "unclaimed",
+      "coordinateBasis": "census-address-range",
+      "latitude": 41.896559368626,
+      "longitude": -87.632227154611
+    },
+    {
+      "id": "chicago-tool-library",
+      "name": "Chicago Tool Library",
+      "category": "other",
+      "streetAddress": "4015 W Carroll Avenue, Suite 101",
+      "city": "Chicago",
+      "state": "IL",
+      "postalCode": "60624",
+      "countyId": "17031",
+      "phone": "773-242-0923",
+      "website": "https://www.chicagotoollibrary.org/",
+      "sourceId": "chicago-tool-library",
+      "services": [
+        "community"
+      ],
+      "publicAccess": "Borrow tools and household equipment through library membership. Check current membership terms, borrowing rules, inventory and pickup hours on the provider website before visiting.",
+      "usualHours": "Contact the provider for current service hours and intake availability.",
+      "claimStatus": "unclaimed",
+      "coordinateBasis": "census-address-range",
+      "latitude": 41.886764436002,
+      "longitude": -87.726246084866
+    },
+    {
+      "id": "sharing-connections",
+      "name": "Sharing Connections",
+      "category": "other",
+      "streetAddress": "5111 Chase Avenue",
+      "city": "Downers Grove",
+      "state": "IL",
+      "postalCode": "60515",
+      "countyId": "17043",
+      "phone": "630-971-0565",
+      "website": "https://www.sharingconnections.org/about",
+      "sourceId": "sharing-connections",
+      "services": [
+        "clothing"
+      ],
+      "publicAccess": "Furniture, household items and clothing assistance for families in need. Call the Guest (client) Program at extension 224 or 230 to confirm referral, eligibility and pickup arrangements before visiting. Availability depends on donated inventory.",
+      "usualHours": "Contact the provider for current service hours and intake availability.",
+      "claimStatus": "unclaimed",
+      "coordinateBasis": "census-address-range",
+      "latitude": 41.793527635398,
+      "longitude": -88.040441861254
+    },
+    {
+      "id": "coaction-valparaiso",
+      "name": "CoAction — Valparaiso Housing Office",
+      "category": "other",
+      "streetAddress": "2001 Calumet Avenue",
+      "city": "Valparaiso",
+      "state": "IN",
+      "postalCode": "46383",
+      "countyId": "18127",
+      "phone": "219-548-2800",
+      "website": "https://coaction.care/places/valparaiso-field-office/",
+      "sourceId": "coaction-valparaiso",
+      "services": [
+        "housing"
+      ],
+      "publicAccess": "Public housing program office. Call to discuss housing assistance, current program eligibility and intake arrangements before visiting. Program openings and rental availability must be confirmed with CoAction.",
+      "usualHours": "Contact the provider for current service hours and intake availability.",
+      "claimStatus": "unclaimed",
+      "coordinateBasis": "census-address-range",
+      "latitude": 41.486814642114,
+      "longitude": -87.050130376413
+    },
+    {
+      "id": "shalom-kenosha",
+      "name": "Shalom Center",
+      "category": "shelter",
+      "streetAddress": "4314 39th Avenue",
+      "city": "Kenosha",
+      "state": "WI",
+      "postalCode": "53144",
+      "countyId": "55059",
+      "phone": "262-658-1713",
+      "website": "https://www.shalomcenter.org/",
+      "sourceId": "shalom-kenosha",
+      "services": [
+        "housing",
+        "food"
+      ],
+      "publicAccess": "Shelter programs, food pantry, nightly meals and HOPE HUB community support. Call for shelter intake and current availability. The pantry asks visitors to bring identification and recent mail; schedules differ by program.",
+      "usualHours": "Contact the provider for current service hours and intake availability.",
+      "claimStatus": "unclaimed",
+      "coordinateBasis": "census-address-range",
+      "latitude": 42.597393741501,
+      "longitude": -87.855821943943
     }
   ]
 }

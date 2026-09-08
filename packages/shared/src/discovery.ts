@@ -1,3 +1,4 @@
+import { resourceServices, categoryServices } from './resource-services.js';
 import { z } from 'zod';
 import { type AidPostRecord } from '@patchwork/at-lexicons';
 import {
@@ -51,6 +52,7 @@ export interface AidFeedQueryInput extends Omit<AidQueryInput, 'latitude' | 'lon
 }
 
 export interface DirectoryQueryInput extends PaginationInput {
+    service?: import('./resource-services.js').ResourceService;
     category?: string;
     status?: 'unverified' | 'community-verified' | 'partner-verified';
     operationalStatus?: 'open' | 'limited' | 'closed' | 'unknown';
@@ -285,6 +287,7 @@ export class DiscoveryIndexStore {
         const candidates = this.collectDirectoryCandidates(input);
 
         const filtered = candidates.filter(record => {
+            if (input.service && categoryServices[record.category] !== input.service) return false;
             if (
                 input.latitude !== undefined &&
                 input.longitude !== undefined &&
@@ -320,7 +323,7 @@ export class DiscoveryIndexStore {
 
             if (
                 input.searchText &&
-                !record.searchableText.includes(input.searchText.toLowerCase())
+                !input.searchText.toLowerCase().split(/\s+/).filter(Boolean).every(word => record.searchableText.includes(word))
             ) {
                 return false;
             }
@@ -763,6 +766,7 @@ const aidFeedQuerySchema = z.object({
 
 const directoryQuerySchema = z
     .object({
+        service: z.enum(resourceServices).optional(),
         category: z.string().min(1).max(64).optional(),
         status: z
             .enum(['unverified', 'community-verified', 'partner-verified'])

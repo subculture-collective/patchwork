@@ -465,7 +465,12 @@
         "manageListing": "Manage listing",
         "manageListingFor": "Manage listing for {{name}}",
         "approvedAddress": "Moderator-approved public address",
-        "approvalExpires": "Approval expires {{date}}. This is a public resource address, not a person's location."
+        "approvalExpires": "Approval expires {{date}}. This is a public resource address, not a person's location.",
+        "searchLabel": "Service, organization, or keyword",
+        "searchPlaceholder": "Rent assistance, showers, legal help…",
+        "serviceLabel": "What do you need?",
+        "allServices": "All services",
+        "searchHelp": "Services may have eligibility or appointment requirements. Check the listing before visiting."
     },
     "volunteer": {
         "heading": "Volunteer onboarding",
@@ -1458,5 +1463,20 @@
         "retry": "Retry boundaries",
         "mapLabel": "Requests by ZIP area and public resource locations",
         "legend": "Shaded areas count requests. Pins mark public resource addresses. Request locations stay at ZIP level. Boundaries: 2020 US Census."
+    },
+    "resourceServices": {
+        "food": "Food & meals",
+        "housing": "Housing & shelter",
+        "health": "Health care",
+        "legal": "Legal & tenant help",
+        "clothing": "Clothing & household essentials",
+        "hygiene": "Showers & laundry",
+        "benefits": "Benefits & bills",
+        "transport": "Transportation help",
+        "disability": "Disability support",
+        "employment": "Jobs & training",
+        "youth": "Youth & family support",
+        "reentry": "Reentry support",
+        "community": "Libraries & shared tools"
     }
 }

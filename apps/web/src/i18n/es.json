@@ -465,7 +465,12 @@
         "manageListing": "Administrar ficha",
         "manageListingFor": "Administrar ficha de {{name}}",
         "approvedAddress": "Dirección pública aprobada por moderación",
-        "approvalExpires": "La aprobación vence {{date}}. Esta es la dirección de un recurso público, no la ubicación de una persona."
+        "approvalExpires": "La aprobación vence {{date}}. Esta es la dirección de un recurso público, no la ubicación de una persona.",
+        "searchLabel": "Servicio, organización o palabra clave",
+        "searchPlaceholder": "Ayuda con alquiler, duchas, asistencia legal…",
+        "serviceLabel": "¿Qué necesitas?",
+        "allServices": "Todos los servicios",
+        "searchHelp": "Los servicios pueden tener requisitos de elegibilidad o cita. Revisa la información antes de ir."
     },
     "volunteer": {
         "heading": "Incorporación de voluntarios",
@@ -1458,5 +1463,20 @@
         "retry": "Reintentar límites",
         "mapLabel": "Solicitudes por zona postal y ubicaciones de recursos públicos",
         "legend": "Las zonas sombreadas cuentan solicitudes. Los marcadores indican direcciones de recursos públicos. Las solicitudes solo muestran el código postal. Límites: Censo de EE. UU. de 2020."
+    },
+    "resourceServices": {
+        "food": "Alimentos y comidas",
+        "housing": "Vivienda y refugio",
+        "health": "Atención médica",
+        "legal": "Ayuda legal y para inquilinos",
+        "clothing": "Ropa y artículos esenciales",
+        "hygiene": "Duchas y lavandería",
+        "benefits": "Beneficios y facturas",
+        "transport": "Ayuda con transporte",
+        "disability": "Apoyo para discapacidades",
+        "employment": "Empleo y capacitación",
+        "youth": "Apoyo para jóvenes y familias",
+        "reentry": "Apoyo para la reinserción",
+        "community": "Bibliotecas y herramientas compartidas"
     }
 }

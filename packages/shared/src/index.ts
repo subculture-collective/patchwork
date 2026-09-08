@@ -30,3 +30,5 @@ export * from './matching.js';
 export * from './mobile.js';
 export * from './account-onboarding.js';
 export * from './organizations.js';
+
+export * from './resource-services.js';

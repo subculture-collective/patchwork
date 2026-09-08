@@ -55,7 +55,7 @@ export async function importPublicResources(pool: Pool, options: {
                 VALUES($1,'app.patchwork.directory.resource',$2,$3,$4,$5,'unverified',$6,$7,$8,$9,1,$10,$11,'unknown',NOW(),NOW(),0,$1,'sourced-public',$12)`,
                 [uri,hash(did),resource.name,`${resource.city}, ${resource.state} ${resource.postalCode}`,resource.category,
                     JSON.stringify({url:resource.website,...(resource.phone?{phone:resource.phone}:{})}),
-                    `${resource.name} ${resource.category} ${resource.city} ${resource.state} ${resource.postalCode} ${resource.publicAccess}`.toLowerCase(),
+                    `${resource.name} ${resource.category} ${(resource.services ?? []).join(' ')} ${resource.streetAddress} ${resource.city} ${resource.state} ${resource.postalCode} ${resource.publicAccess}`.toLowerCase(),
                     resource.latitude,resource.longitude,resource.usualHours,resource.publicAccess,PUBLIC_RESOURCE_VERSION]);
             await client.query(`INSERT INTO public_resource_listings(resource_uri,source_name,source_url,source_retrieved_at,source_snapshot,source_expires_at,street_address,postal_code,latitude,longitude,public_access)
                 VALUES($1,$2,$3,$4,$5,$4::timestamptz+INTERVAL '90 days',$6,$7,$8,$9,$10)`,

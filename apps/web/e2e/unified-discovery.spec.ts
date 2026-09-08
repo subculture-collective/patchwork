@@ -368,9 +368,9 @@ test('resource categories query the whole directory and restore through Back', a
         });
     });
     await page.goto('/resources?lat=41.88&lng=-87.63&r=20000');
-    const legal = page.getByRole('button', { name: 'Legal aid', exact: true });
-    await legal.click();
-    await expect(legal).toHaveAttribute('aria-pressed', 'true');
+    const legal = page.getByLabel('Resource type', { exact: true });
+    await legal.selectOption('legal-aid');
+    await expect(legal).toHaveValue('legal-aid');
     await expect
         .poll(() => queries.at(-1)?.searchParams.get('category'))
         .toBe('legal-aid');
@@ -380,15 +380,33 @@ test('resource categories query the whole directory and restore through Back', a
     await expect(
         page.getByRole('button', { name: 'Resolved', exact: true }),
     ).toHaveCount(0);
-    await page
-        .getByRole('button', { name: 'All categories', exact: true })
-        .click();
+    await legal.selectOption('');
     await expect
         .poll(() => queries.at(-1)?.searchParams.has('category'))
         .toBe(false);
     await page.goBack();
-    await expect(legal).toHaveAttribute('aria-pressed', 'true');
+    await expect(legal).toHaveValue('legal-aid');
     await expect
         .poll(() => queries.at(-1)?.searchParams.get('category'))
         .toBe('legal-aid');
+});
+
+
+test('resource services compose with keywords and ZIP and reset without losing place', async ({ page }) => {
+    const queries: URL[] = [];
+    await page.route('**/api/query/directory?**', route => {
+        queries.push(new URL(route.request().url()));
+        return route.fulfill({ json: { total: 0, page: 1, pageSize: 20, hasNextPage: false, results: [] } });
+    });
+    await page.goto('/resources?zip=60187');
+    await page.getByLabel('What do you need?', { exact: true }).selectOption('hygiene');
+    await page.getByLabel('Service, organization, or keyword', { exact: true }).fill('laundry showers');
+    await expect.poll(() => queries.at(-1)?.searchParams.get('service')).toBe('hygiene');
+    await expect.poll(() => queries.at(-1)?.searchParams.get('searchText')).toBe('laundry showers');
+    expect(new URL(page.url()).searchParams.get('zip')).toBe('60187');
+    await page.reload();
+    await expect(page.getByLabel('What do you need?', { exact: true })).toHaveValue('hygiene');
+    await page.getByRole('button', { name: 'Reset filters', exact: true }).first().click();
+    await expect.poll(() => queries.at(-1)?.searchParams.has('service')).toBe(false);
+    expect(new URL(page.url()).searchParams.get('zip')).toBe('60187');
 });

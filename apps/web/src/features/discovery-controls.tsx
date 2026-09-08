@@ -1,3 +1,5 @@
+import { resourceServices, resourceServiceLabels } from '@patchwork/shared';
+import { directoryCategories } from '../discovery-filters';
 import { useEffect, useState } from 'react';
 import { lookupPostalArea } from '@patchwork/at-lexicons';
 import type { DiscoveryFilterState } from '../discovery-filters';
@@ -63,12 +65,14 @@ export function DiscoveryControls({
             <div className='mh-search-row'>
                 <div className='mh-search-field'>
                     <label htmlFor={`${idPrefix}-search`}>
-                        {t('discovery.searchText')}
+                        {resourceMode ? t('resources.searchLabel') : t('discovery.searchText')}
                     </label>
                     <Input
                         id={`${idPrefix}-search`}
                         value={search}
-                        placeholder={t('discovery.searchPlaceholder')}
+                        type={resourceMode ? 'search' : 'text'}
+                        maxLength={120}
+                        placeholder={t(resourceMode ? 'resources.searchPlaceholder' : 'discovery.searchPlaceholder')}
                         onChange={(event) => applySearch(event.target.value)}
                     />
                 </div>
@@ -119,6 +123,33 @@ export function DiscoveryControls({
                     </div>
                 </form>
             </div>
+            {resourceMode && (
+                <div className='grid gap-3 sm:grid-cols-2'>
+                    <div>
+                        <label htmlFor={`${idPrefix}-service`}>{t('resources.serviceLabel')}</label>
+                        <select id={`${idPrefix}-service`} className='mh-input w-full px-3 py-2 text-base'
+                            value={state.resourceService ?? ''}
+                            onChange={event => onPatch({ resourceService: (event.target.value || undefined) as DiscoveryFilterState['resourceService'] })}>
+                            <option value=''>{t('resources.allServices')}</option>
+                            {resourceServices.map(service => <option key={service} value={service}>{t(`resourceServices.${service}`, { defaultValue: resourceServiceLabels[service] })}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label htmlFor={`${idPrefix}-type`}>{t('resources.directoryFiltersTitle')}</label>
+                        <select id={`${idPrefix}-type`} className='mh-input w-full px-3 py-2 text-base'
+                            value={state.resourceCategory ?? ''}
+                            onChange={event => onPatch({ resourceCategory: (event.target.value || undefined) as DiscoveryFilterState['resourceCategory'] })}>
+                            <option value=''>{t('resources.allCategories')}</option>
+                            {directoryCategories.map(category => <option key={category} value={category}>{t(`labels.${category}`)}</option>)}
+                        </select>
+                    </div>
+                    <p className='text-sm text-mh-textMuted'>{t('resources.searchHelp')}</p>
+                    {(state.text || state.resourceService || state.resourceCategory) && <button className='mh-text-button justify-self-start'
+                        onClick={() => { setSearch(''); onPatch({ text: undefined, resourceService: undefined, resourceCategory: undefined }); }}>
+                        {t('discovery.resetFilters')}
+                    </button>}
+                </div>
+            )}
             {zipError && (
                 <p role='alert' id={`${idPrefix}-zip-error`}>
                     {t('experience.zipError')}

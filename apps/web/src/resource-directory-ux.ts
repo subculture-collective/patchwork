@@ -144,7 +144,7 @@ const resourceMatchesText = (
         .join(' ')
         .toLowerCase();
 
-    return haystack.includes(text.toLowerCase());
+    return text.toLowerCase().split(/\s+/).filter(Boolean).every(word => haystack.includes(word));
 };
 
 const toOverlayMarker = (

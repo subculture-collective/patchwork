@@ -35,6 +35,17 @@ describe('ZIP discovery and sourced-resource claims',()=>{
         const names=(result.body as {results:{name:string}[]}).results.map(row=>row.name);
         expect(names[0]).toContain('Albany Park');
     });
+    it('filters overlapping services and unordered words before pagination', async () => {
+        const result = await queryProjected(pool, new URLSearchParams({service:'hygiene', searchText:'laundry showers', pageSize:'1'}), 'directory');
+        expect(result.statusCode).toBe(200);
+        expect(result.body).toMatchObject({total:1, results:[{name:'DuPagePads — Client Access Center'}]});
+        const legal = await queryProjected(pool, new URLSearchParams({service:'legal', pageSize:'1'}), 'directory');
+        expect(legal.body).toMatchObject({total:5, hasNextPage:true});
+        const invalid = await queryProjected(pool, new URLSearchParams({service:'not-a-service'}), 'directory');
+        expect(invalid.statusCode).toBe(400);
+        const libraries = await queryProjected(pool, new URLSearchParams({service:'community'}), 'directory');
+        expect((libraries.body as {total:number}).total).toBeGreaterThan(80);
+    });
     it('requires independent verified ownership, preserves source evidence, and revokes edits',async()=>{
         const owner=`did:plc:postal-owner-${randomUUID()}`,reviewer='did:plc:postal-reviewer';
         const created=await new OrganizationService(pool).create(owner,{name:'Test Resource Operator',description:'Local test operator.'}) as {organization:{id:string}};

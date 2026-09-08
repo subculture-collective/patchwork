@@ -294,6 +294,7 @@ const buildDirectoryQueryParams = (
         params.set('radiusKm', String(radiusKm));
     }
 
+    if (state.resourceService) params.set('service', state.resourceService);
     if (state.resourceCategory) params.set('category', state.resourceCategory);
     if (state.text) {
         params.set('searchText', state.text);
@@ -2413,7 +2414,7 @@ export const fetchMapResourcePageFromApi = async (
     signal?: AbortSignal,
 ): Promise<ApiClientResult<PagedResult<ResourceDirectoryCard>>> => {
     const first = await fetchDirectoryCardPageFromApi(
-        { ...state, resourceCategory: undefined },
+        { ...state, resourceCategory: undefined, resourceService: undefined },
         1,
         signal,
     );
@@ -2422,7 +2423,7 @@ export const fetchMapResourcePageFromApi = async (
     const pages = Math.ceil(first.data.total / first.data.pageSize);
     for (let page = 2; page <= pages; page++) {
         const next = await fetchDirectoryCardPageFromApi(
-            { ...state, resourceCategory: undefined },
+            { ...state, resourceCategory: undefined, resourceService: undefined },
             page,
             signal,
         );
