@@ -233,7 +233,7 @@ export const directoryResourceSchema = z.object({
         .optional(),
     openHours: z.string().min(1).max(200).optional(),
     eligibilityNotes: z.string().min(1).max(500).optional(),
-    operationalStatus: z.enum(['open', 'limited', 'closed']).optional(),
+    operationalStatus: z.enum(['open', 'limited', 'closed', 'unknown']).optional(),
     createdAt: isoDateTimeSchema,
     updatedAt: isoDateTimeSchema.optional(),
 }).strict();

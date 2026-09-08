@@ -454,6 +454,7 @@ export function PostalMap(props: Props) {
         const map = mapRef.current;
         if (!map) return;
         const group = L.layerGroup().addTo(map);
+        const markers: L.Marker[] = [];
         const places = new Map<
             string,
             { lat: number; lng: number; resources: ResourceDirectoryCard[] }
@@ -471,7 +472,8 @@ export function PostalMap(props: Props) {
             places.set(key, place);
         }
         const size = Math.max(5, Math.min(18, 5 + (zoom - 5) * 1.1));
-        const hitSize = Math.min(32, Math.max(16, size + 8));
+        // Keep small visual pins while preserving a usable pointer target.
+        const hitSize = Math.max(24, size + 8);
         for (const place of places.values()) {
             const dot = document.createElement('span');
             dot.className = 'mh-exact-resource-pin-dot';
@@ -490,6 +492,7 @@ export function PostalMap(props: Props) {
                     .join('; '),
                 riseOnHover: true,
             }).addTo(group);
+            markers.push(marker);
             if (place.resources.length === 1)
                 marker.on('click', () =>
                     callbacks.current.onSelectResource(place.resources[0]!.uri),
@@ -507,7 +510,26 @@ export function PostalMap(props: Props) {
                 marker.bindPopup(list);
             }
         }
+        // A pin clipped by the map edge has no usable target. Reveal it when
+        // panning brings its full target into view, without moving its address.
+        const updateMarkerVisibility = () => {
+            const viewport = map.getSize();
+            const inset = hitSize / 2 + 2;
+            for (const marker of markers) {
+                const node = marker.getElement();
+                if (!node) continue;
+                const point = map.latLngToContainerPoint(marker.getLatLng());
+                const visible = point.x >= inset && point.y >= inset &&
+                    point.x <= viewport.x - inset && point.y <= viewport.y - inset;
+                node.style.visibility = visible ? 'visible' : 'hidden';
+                node.tabIndex = visible ? 0 : -1;
+                node.setAttribute('aria-hidden', String(!visible));
+            }
+        };
+        updateMarkerVisibility();
+        map.on('moveend resize', updateMarkerVisibility);
         return () => {
+            map.off('moveend resize', updateMarkerVisibility);
             group.remove();
         };
     }, [props.resources, zoom]);

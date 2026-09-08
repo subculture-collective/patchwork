@@ -2065,7 +2065,7 @@ const parseDirectoryVerificationStatus = (
 const parseDirectoryOperationalStatus = (
     value: string | undefined,
 ): ResourceDirectoryCard['operationalStatus'] => {
-    return value === 'open' || value === 'limited' || value === 'closed'
+    return value === 'open' || value === 'limited' || value === 'closed' || value === 'unknown'
         ? value
         : undefined;
 };

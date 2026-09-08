@@ -8,7 +8,7 @@
         "build": "npm run typecheck",
         "start": "tsx src/index.ts",
         "db:migrate": "tsx src/db/migrate.ts",
-        "db:seed": "tsx src/db/seed.ts",
+        "db:seed": "tsx src/db/public-resource-seed.ts",
         "db:seed:showcase": "tsx src/db/showcase-seed.ts",
         "db:seed:append": "tsx src/db/seed.ts --append",
         "db:seed:phase3": "tsx src/db/seed.ts --phase3-only",
@@ -16,7 +16,8 @@
         "typecheck": "tsc -p tsconfig.json --noEmit",
         "test": "node ../../scripts/test.mjs unit services/api/src",
         "test:integration:postgres": "node ../../scripts/test.mjs postgres services/api/src",
-        "test:integration:attachments": "node ../../scripts/test.mjs attachments"
+        "test:integration:attachments": "node ../../scripts/test.mjs attachments",
+        "db:seed:resources": "tsx src/db/public-resource-seed.ts"
     },
     "dependencies": {
         "@atproto/oauth-client-node": "0.4.8",

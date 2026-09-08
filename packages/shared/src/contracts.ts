@@ -99,7 +99,7 @@ export interface ProjectionFreshness {
 export interface ApiQueryDirectoryRequest {
     category?: string;
     status?: 'unverified' | 'community-verified' | 'partner-verified';
-    operationalStatus?: 'open' | 'limited' | 'closed';
+    operationalStatus?: 'open' | 'limited' | 'closed' | 'unknown';
     latitude?: number;
     longitude?: number;
     radiusKm?: number;
@@ -128,7 +128,7 @@ export interface DirectoryRecordSummary {
     };
     openHours?: string;
     eligibilityNotes?: string;
-    operationalStatus: 'open' | 'limited' | 'closed';
+    operationalStatus: 'open' | 'limited' | 'closed' | 'unknown';
     createdAt: string;
     updatedAt: string;
     recordOrigin?: 'synthetic' | 'sourced-public' | 'visitor-created';

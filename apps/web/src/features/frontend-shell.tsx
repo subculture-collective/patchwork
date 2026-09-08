@@ -2054,7 +2054,7 @@ const defaultDirectoryDraft = (center: {
     precisionKm: '1',
     openHours: '',
     eligibilityNotes: '',
-    operationalStatus: 'open',
+    operationalStatus: 'unknown',
 });
 
 interface DirectoryResourceManagerProps {
@@ -2886,7 +2886,9 @@ const ResourceRoute = ({
 
             <Card title={String(t('resources.overlayCardsTitle'))}>
                 <p className='mb-3 text-sm text-mh-textMuted'>
-                    {uiState.message}
+                    {uiState.status === 'ready'
+                        ? t('discovery.loadedCount', { loaded: viewModel.cards.length, total })
+                        : uiState.message}
                 </p>
                 <div aria-live='polite' className='sr-only'>
                     {uiState.ariaLiveMessage}

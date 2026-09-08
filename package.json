@@ -19,7 +19,7 @@
         "db:up": "docker compose -f docker-compose.postgres.yml up -d postgres",
         "db:down": "docker compose -f docker-compose.postgres.yml down",
         "db:migrate": "npm run db:migrate -w @patchwork/api",
-        "db:seed": "npm run db:seed -w @patchwork/api",
+        "db:seed": "npm run db:seed -w @patchwork/api --",
         "db:seed:showcase": "npm run db:seed:showcase -w @patchwork/api",
         "build": "npm run build --workspaces --if-present",
         "lint": "npm run lint --workspaces --if-present",
@@ -35,7 +35,8 @@
         "check": "npm run typecheck && npm test && npm run test:operations",
         "test:unit": "node scripts/test.mjs unit",
         "test:integration": "node scripts/test-database.mjs",
-        "test:integration:postgres": "node scripts/test.mjs postgres"
+        "test:integration:postgres": "node scripts/test.mjs postgres",
+        "db:seed:resources": "npm run db:seed:resources -w @patchwork/api --"
     },
     "devDependencies": {
         "@tailwindcss/vite": "4.2.1",

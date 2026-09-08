@@ -8,9 +8,9 @@ import {
 } from 'react';
 import type { DiscoveryFilterState } from '../discovery-filters';
 export const discoveryFallback = {
-    center: { lat: 41.85, lng: -87.93 },
-    areaLabel: 'Chicagoland',
-    radiusMeters: 65000,
+    center: { lat: 41.7, lng: -88.2 },
+    areaLabel: 'Chicago metro area',
+    radiusMeters: 180000,
     feedTab: 'nearby' as const,
 };
 type Status =

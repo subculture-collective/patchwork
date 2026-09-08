@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { Pool } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { replacePostalDiscoverySeed } from './db/postal-discovery-seed.js';
+import { importPublicResources } from './db/public-resource-seed.js';
+import { publicResourceSeed } from './db/public-resource-catalog.js';
 import { queryProjected } from './projected-discovery.js';
 import { OrganizationService } from './organization-service.js';
 import { AccountPrivacyService } from './account-privacy-service.js';
@@ -12,24 +13,20 @@ describe('ZIP discovery and sourced-resource claims',()=>{
     const pool=new Pool({connectionString:databaseUrl});
     beforeAll(async()=>{
         await pool.query('TRUNCATE public_resource_claims,public_resource_listings,public_resource_audit_events,showcase_record_metadata,showcase_seed_runs,indexer_aid_post_projections,indexer_directory_resource_projections,organizations CASCADE');
-        await replacePostalDiscoverySeed(pool,true);
+        await importPublicResources(pool,{apply:true});
     });
     afterAll(async()=>pool.end());
-    it('seeds 512 ZIP-only request areas and 81 unclaimed public resources',async()=>{
+    it('imports real resources without creating requests or claiming ownership',async()=>{
         const requests=await pool.query('SELECT count(*)::integer AS total,count(postal_code)::integer AS located FROM indexer_aid_post_projections');
-        expect(requests.rows[0]).toEqual({total:512,located:512});
+        expect(requests.rows[0]).toEqual({total:0,located:0});
         const resources=await pool.query('SELECT count(*)::integer AS total,count(claimed_by_organization_id)::integer AS claimed FROM public_resource_listings');
-        expect(resources.rows[0]).toEqual({total:81,claimed:0});
+        expect(resources.rows[0]).toEqual({total:publicResourceSeed.length,claimed:0});
         expect((await pool.query("SELECT count(*)::integer AS count FROM indexer_directory_resource_projections WHERE record_origin='synthetic'")).rows[0].count).toBe(0);
     });
-    it('conserves request counts and filters by exact ZIP identity',async()=>{
+    it('returns an empty request map without inventing activity',async()=>{
         const result=await queryProjected(pool,new URLSearchParams(),'map');
         expect(result.statusCode).toBe(200);
-        const body=result.body as {total:number;aggregates:{cells:{count:number;postalCode:string}[]}};
-        expect(body.aggregates.cells.reduce((sum,cell)=>sum+cell.count,0)).toBe(512);
-        const code=body.aggregates.cells[0]!.postalCode;
-        const selected=await queryProjected(pool,new URLSearchParams({postalCode:code,pageSize:'100'}),'map');
-        expect((selected.body as {results:{postalCode:string}[]}).results.every(row=>row.postalCode===code)).toBe(true);
+        expect(result.body).toMatchObject({total:0,results:[],aggregates:{cells:[]}});
     });
     it('orders resources by eligible exact coordinates before pagination',async()=>{
         const params=new URLSearchParams({latitude:'41.97558',longitude:'-87.71361',radiusKm:'100',pageSize:'5'});
@@ -72,8 +69,8 @@ describe('ZIP discovery and sourced-resource claims',()=>{
         const uri='at://did:plc:visitor/app.patchwork.aid.post/preserve';
         await pool.query(`INSERT INTO indexer_aid_post_projections(uri,collection,author_did_hash,title,description,category,urgency,status,searchable_text,record_created_at,record_updated_at,source_cursor,source_event_id)
             VALUES($1,'app.patchwork.aid.post',repeat('a',64),'Visitor','Visitor request','other','low','open','visitor',NOW(),NOW(),1,'visitor')`,[uri]);
-        await replacePostalDiscoverySeed(pool,true);
-        expect((await pool.query('SELECT count(*)::integer AS total FROM indexer_aid_post_projections')).rows[0].total).toBe(513);
-        expect((await pool.query('SELECT count(*)::integer AS total FROM public_resource_listings')).rows[0].total).toBe(81);
+        await importPublicResources(pool,{apply:true});
+        expect((await pool.query('SELECT count(*)::integer AS total FROM indexer_aid_post_projections')).rows[0].total).toBe(1);
+        expect((await pool.query('SELECT count(*)::integer AS total FROM public_resource_listings')).rows[0].total).toBe(publicResourceSeed.length);
     });
 });

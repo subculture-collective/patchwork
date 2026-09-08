@@ -53,7 +53,7 @@ export interface AidFeedQueryInput extends Omit<AidQueryInput, 'latitude' | 'lon
 export interface DirectoryQueryInput extends PaginationInput {
     category?: string;
     status?: 'unverified' | 'community-verified' | 'partner-verified';
-    operationalStatus?: 'open' | 'limited' | 'closed';
+    operationalStatus?: 'open' | 'limited' | 'closed' | 'unknown';
     latitude?: number;
     longitude?: number;
     radiusKm?: number;
@@ -110,7 +110,7 @@ export interface DirectoryCard {
     };
     openHours?: string;
     eligibilityNotes?: string;
-    operationalStatus: 'open' | 'limited' | 'closed';
+    operationalStatus: 'open' | 'limited' | 'closed' | 'unknown';
     createdAt: string;
     updatedAt: string;
     recordOrigin?: 'synthetic' | 'sourced-public' | 'visitor-created';
@@ -767,7 +767,7 @@ const directoryQuerySchema = z
         status: z
             .enum(['unverified', 'community-verified', 'partner-verified'])
             .optional(),
-        operationalStatus: z.enum(['open', 'limited', 'closed']).optional(),
+        operationalStatus: z.enum(['open', 'limited', 'closed', 'unknown']).optional(),
         latitude: z.number().min(-90).max(90).optional(),
         longitude: z.number().min(-180).max(180).optional(),
         radiusKm: z.number().positive().max(250).optional(),

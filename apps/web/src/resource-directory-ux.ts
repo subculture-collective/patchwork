@@ -27,7 +27,7 @@ export interface ResourceDirectoryCard {
         | 'unverified'
         | 'community-verified'
         | 'partner-verified';
-    operationalStatus?: 'open' | 'limited' | 'closed';
+    operationalStatus?: 'open' | 'limited' | 'closed' | 'unknown';
     createdAt?: string;
     updatedAt?: string;
     location: {

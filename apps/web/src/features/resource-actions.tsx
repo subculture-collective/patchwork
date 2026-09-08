@@ -29,6 +29,7 @@ export function ResourceActions({ resource }: { resource: ResourceDetail }) {
     const linkClass = 'mh-button inline-flex px-3 py-2 text-sm';
     return <div className='space-y-2'>
         {address && <p className='font-bold'>{address.streetAddress}</p>}
+        {resource.operationalStatus === 'unknown' && <p className='text-sm'>{t('labels.unknown')}</p>}
         <p className='text-sm'>{t('handoff.resourceContactHint')}</p>
         <div className='flex flex-wrap gap-2'>
             {links.website && <a className={linkClass} href={links.website} target='_blank' rel='noopener noreferrer'>{t('handoff.visitWebsite')}</a>}

@@ -509,7 +509,17 @@ export const MapRoute = ({
                             ))}
                         </ul>
                     ) : mapView.filteredCards.length === 0 ? (
-                        <p>{t('map.noRequests')}</p>
+                        <div className='space-y-3'>
+                            <p>{t('map.noRequests')}</p>
+                            <div className='flex flex-wrap gap-2'>
+                                <a className='mh-button inline-flex px-3 py-2 text-sm' href={`/resources${window.location.search}`}>
+                                    {t('nav.resources')}
+                                </a>
+                                <a className='mh-button inline-flex px-3 py-2 text-sm' href={`/posting${window.location.search}`}>
+                                    {t('nav.ask')}
+                                </a>
+                            </div>
+                        </div>
                     ) : (
                         <ul className='space-y-3'>
                             {mapView.filteredCards.map((card, index) => (

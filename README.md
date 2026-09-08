@@ -34,7 +34,7 @@ Requires Node.js **22.15 or newer**, npm, and Docker or PostgreSQL 16.
    npm run db:migrate -w @patchwork/moderation-worker
    ```
    Set `API_DATABASE_URL` for the API and `DATABASE_URL` for the other services.
-4. Optionally run `npm run db:seed` on the development database.
+4. Preview real Chicago metro resources with `npm run db:seed:resources`; add `-- --apply` to import them. This creates no demo requests or accounts.
 5. Start the needed services in separate terminals:
    ```sh
    npm run dev:api

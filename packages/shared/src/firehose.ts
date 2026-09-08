@@ -75,7 +75,7 @@ export interface NormalizedDirectoryResource {
     approximateGeo?: ApproximateGeoPoint;
     openHours?: string;
     eligibilityNotes?: string;
-    operationalStatus: 'open' | 'limited' | 'closed';
+    operationalStatus: 'open' | 'limited' | 'closed' | 'unknown';
     createdAt: string;
     updatedAt: string;
     searchableText: string;
@@ -309,7 +309,7 @@ const normalizeRecordPayload = (
                 :   undefined,
             openHours: directoryRecord.openHours,
             eligibilityNotes: directoryRecord.eligibilityNotes,
-            operationalStatus: directoryRecord.operationalStatus ?? 'open',
+            operationalStatus: directoryRecord.operationalStatus ?? 'unknown',
             createdAt: directoryRecord.createdAt,
             updatedAt: directoryRecord.updatedAt ?? directoryRecord.createdAt,
             searchableText: normalizeSearchableText(
@@ -320,7 +320,7 @@ const normalizeRecordPayload = (
                 directoryRecord.openHours ?? '',
                 directoryRecord.eligibilityNotes ?? '',
                 directoryRecord.location?.areaLabel ?? '',
-                directoryRecord.operationalStatus ?? 'open',
+                directoryRecord.operationalStatus ?? 'unknown',
             ),
             trustScore,
         };

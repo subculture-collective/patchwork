@@ -13,6 +13,7 @@ export const directoryResourceCategories = [
 ] as const;
 
 export const directoryOperationalStatuses = [
+    'unknown',
     'open',
     'limited',
     'closed',
@@ -125,5 +126,5 @@ export const draftFromDirectoryResource = (
     precisionKm: record.location?.precisionKm.toString() ?? '1',
     openHours: record.openHours ?? '',
     eligibilityNotes: record.eligibilityNotes ?? '',
-    operationalStatus: record.operationalStatus ?? 'open',
+    operationalStatus: record.operationalStatus ?? 'unknown',
 });
