@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build public government offices from official snapshots and matched Census geocodes.
 
-Usage: python3 -B scripts/build-government-resources.py SSA.csv GEOCODES --retrieved-at YYYY-MM-DD --ssa-published-at YYYY-MM-DD [--va VA.json]
+Usage: python3 -B scripts/build-government-resources.py SSA.csv GEOCODES --retrieved-at YYYY-MM-DD --ssa-published-at YYYY-MM-DD [--va VA.json] [--pha PHA.json --pha-published-at YYYY-MM-DD]
 This command writes a normalized catalog, never the database.
 """
 import argparse
@@ -23,7 +23,7 @@ SSA_PAGE = 'https://www.ssa.gov/data/FO-RS-Address-Open-Close-Time-App-Devs.html
 SSA_CSV = 'https://www.ssa.gov/data/FO-Address-Open-Close-Times.csv'
 
 
-def build(ssa_path, geocodes, retrieved, ssa_published, va_path=None):
+def build(ssa_path, geocodes, retrieved, ssa_published, va_path=None, pha_path=None, pha_published=None):
     postal = json.loads((ROOT/'packages/at-lexicons/src/postal-index.json').read_text())
     shapes = {f['properties']['id']: f['geometry']
               for file in (ROOT/'apps/web/public/geography/census2020').glob('*-zip.json')
@@ -124,6 +124,65 @@ def build(ssa_path, geocodes, retrieved, ssa_published, va_path=None):
             phone = clean(row.get('phone', {}).get('main'))
             if len(re.sub(r'\D', '', phone)) >= 10: resource['phone'] = phone
             accept(resource)
+    if pha_path:
+        if not pha_published:
+            raise ValueError('PHA publication date is required separately from retrieval')
+        pha_rows = json.loads(pha_path.read_text())
+        pha_page = 'https://www.hud.gov/contactus/public-housing-contacts'
+        sources['hud-public-housing-authorities'] = dict(name='HUD — Public Housing Authority offices',
+            url=pha_page, apiUrl='https://services.arcgis.com/VTyQ9soqVukalItT/arcgis/rest/services/Public_Housing_Authorities/FeatureServer/0',
+            retrievedAt=retrieved, publishedAt=pha_published, sha256=hashlib.sha256(pha_path.read_bytes()).hexdigest())
+        # Different program names at the same provider desk should not create duplicate pins.
+        def desk_key(resource):
+            phone = re.sub(r'\D', '', resource.get('phone', ''))[-10:]
+            street = re.sub(r'[^a-z0-9]', '', resource['streetAddress'].lower())
+            return (phone, resource['postalCode'], street) if len(phone) == 10 else None
+        desks = {desk_key(r) for r in existing + resources} - {None}
+        programs = {'Low-Rent': 'public housing', 'Section 8': 'Section 8 Housing Choice Voucher rental assistance',
+                    'Combined': 'public housing and Section 8 Housing Choice Voucher rental assistance'}
+        for raw in pha_rows:
+            row = raw['attributes']
+            # ZIP+4 and larger centroids are unsuitable for an exact-address resource pin.
+            if row.get('LVL2KX') != 'R':
+                skipped['pha_non_rooftop_coordinates'] += 1
+                continue
+            street, zip_code = clean(row.get('STD_ADDR')), clean(row.get('STD_ZIP5'))
+            state, city = clean(row.get('STD_ST')), clean(row.get('STD_CITY'))
+            if not re.search(r'\d', street) or re.search(r'\bP\.?\s*O\.?\s*BOX\b', street, re.I):
+                skipped['pha_non_street_address'] += 1
+                continue
+            if zip_code not in postal or state not in community.national.STATES:
+                skipped['pha_unsupported_geography'] += 1
+                continue
+            program = programs.get(row.get('HA_PROGRAM_TYPE'))
+            if not program:
+                skipped['pha_unknown_program'] += 1
+                continue
+            lat, lng = row.get('LAT'), row.get('LON')
+            if not isinstance(lat, (int, float)) or not isinstance(lng, (int, float)):
+                skipped['pha_missing_coordinates'] += 1
+                continue
+            name = clean(row.get('FORMAL_PARTICIPANT_NAME'))
+            if name.isupper(): name = name.title()
+            code = clean(row.get('PARTICIPANT_CODE')).lower()
+            if not code or not name or not city:
+                skipped['pha_missing_identity'] += 1
+                continue
+            resource = dict(id='hud-pha-'+code, sourceId='hud-public-housing-authorities', name=name,
+                category='other', services=['housing', 'benefits'], streetAddress=street, city=city, state=state,
+                postalCode=zip_code, countyId=postal[zip_code][2], latitude=lat, longitude=lng,
+                coordinateBasis='publisher-address', website=pha_page, claimStatus='unclaimed',
+                usualHours='Call the housing agency for current office hours and appointment requirements.',
+                publicAccess='Public Housing Agency (PHA) office listed by HUD for '+program+'. Contact the agency about applications, eligibility, service area, waiting lists and appointments before visiting. A listing does not mean applications are open or housing is currently available.')
+            phone = clean(row.get('HA_PHN_NUM'))
+            if len(re.sub(r'\D', '', phone)) >= 10: resource['phone'] = phone
+            desk = desk_key(resource)
+            if desk and desk in desks:
+                skipped['pha_duplicate_provider_desk'] += 1
+                continue
+            before = len(resources)
+            accept(resource)
+            if len(resources) > before and desk: desks.add(desk)
     resources.sort(key=lambda r:r['id'])
     return dict(scope=dict(name='United States — public government service offices', countyIds=sorted({r['countyId'] for r in resources}), sourceUrl=SSA_PAGE), sources=sources, resources=resources), skipped
 
@@ -135,7 +194,9 @@ if __name__ == '__main__':
     parser.add_argument('--retrieved-at', type=date.fromisoformat, required=True)
     parser.add_argument('--ssa-published-at', type=date.fromisoformat, required=True)
     parser.add_argument('--va', type=Path)
+    parser.add_argument('--pha', type=Path)
+    parser.add_argument('--pha-published-at', type=date.fromisoformat)
     args = parser.parse_args()
-    catalog, skipped = build(args.ssa, args.geocodes, args.retrieved_at.isoformat(), args.ssa_published_at.isoformat(), args.va)
+    catalog, skipped = build(args.ssa, args.geocodes, args.retrieved_at.isoformat(), args.ssa_published_at.isoformat(), args.va, args.pha, args.pha_published_at.isoformat() if args.pha_published_at else None)
     (DATA/'national-government-resources.json').write_text(json.dumps(catalog, ensure_ascii=False, indent=2)+'\n')
     print(json.dumps(dict(resources=len(catalog['resources']), sources=dict(Counter(r['sourceId'] for r in catalog['resources'])), states=len({r['state'] for r in catalog['resources']}), skipped=dict(skipped)), indent=2))

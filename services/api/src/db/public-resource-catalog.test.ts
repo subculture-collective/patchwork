@@ -35,6 +35,10 @@ describe('sourced public resource seed', () => {
         expect(socialSecurity.length).toBeGreaterThan(1000);
         expect(socialSecurity.every(resource => resource.services?.includes('benefits') && resource.services?.includes('disability')
             && resource.coordinateBasis === 'census-address-range' && /SSI/.test(resource.publicAccess))).toBe(true);
+        const publicHousing = publicResourceSeed.filter(resource => resource.sourceId === 'hud-public-housing-authorities');
+        expect(publicHousing.length).toBeGreaterThan(3000);
+        expect(publicHousing.every(resource => resource.services?.includes('housing') && resource.services?.includes('benefits')
+            && resource.coordinateBasis === 'publisher-address' && /waiting lists/.test(resource.publicAccess))).toBe(true);
         const veterans = publicResourceSeed.filter(resource => resource.sourceId === 'va-public-offices');
         expect(veterans.length).toBeGreaterThan(400);
         expect(veterans.every(resource => new URL(resource.website).hostname.endsWith('va.gov')
