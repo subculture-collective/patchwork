@@ -25,6 +25,12 @@ describe('sourced public resource seed', () => {
         expect(national.length).toBeGreaterThan(10000);
         expect(national.every(resource => resource.id.startsWith('hrsa-site-') && resource.services?.includes('health'))).toBe(true);
         expect(national.every(resource => new URL(resource.website).hostname.includes('.'))).toBe(true);
+        const food = publicResourceSeed.filter(resource => resource.sourceId.startsWith('vivery-network-'));
+        const housing = publicResourceSeed.filter(resource => resource.sourceId === 'hud-current');
+        expect(food.length).toBeGreaterThan(10000);
+        expect(food.every(resource => resource.services?.includes('food') && resource.coordinateBasis === 'publisher-address')).toBe(true);
+        expect(housing.length).toBeGreaterThan(400);
+        expect(housing.every(resource => resource.services?.includes('housing') && resource.coordinateBasis === 'census-address-range')).toBe(true);
     });
 
     it('keeps the source closure and omits that branch from the active seed', () => {

@@ -303,7 +303,8 @@
         "legendNote": "Circles show approximate areas, not private addresses. Numbers show how many requests are nearby.",
         "showAreaRequests": "Show {{count}} requests in this area",
         "sharedArea": "These requests share an approximate area. Choose one to see details.",
-        "zoomCluster": "Zoom into {{count}} requests"
+        "zoomCluster": "Zoom into {{count}} requests",
+        "resourceLimit": "Showing {{shown}} of {{total}} resources in this search. Zoom in and choose “Search this area,” or enter a ZIP to narrow the map."
     },
     "exactLocation": {
         "initial": "Both participants must start within two minutes.",

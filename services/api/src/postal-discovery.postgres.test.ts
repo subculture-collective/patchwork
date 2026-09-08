@@ -38,15 +38,26 @@ describe('ZIP discovery and sourced-resource claims',()=>{
         const params=new URLSearchParams({latitude:'41.97558',longitude:'-87.71361',radiusKm:'100',pageSize:'5'});
         const result=await queryProjected(pool,params,'directory');
         expect(result.statusCode).toBe(200);
-        const names=(result.body as {results:{name:string}[]}).results.map(row=>row.name);
-        expect(names[0]).toContain('Albany Park');
+        const distance = (latitude:number, longitude:number) => {
+            const radians = Math.PI / 180;
+            const a = Math.sin((latitude-41.97558)*radians/2)**2
+                + Math.cos(41.97558*radians)*Math.cos(latitude*radians)*Math.sin((longitude+87.71361)*radians/2)**2;
+            return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        };
+        const expected = publicResourceSeed.map(row => distance(row.latitude,row.longitude)).sort((a,b)=>a-b).slice(0,5);
+        const rows = (result.body as {results:{uri:string}[]}).results;
+        expect(rows).toHaveLength(5);
+        rows.forEach((row,index) => {
+            const resource = publicResourceSeed.find(seed => row.uri.endsWith('/'+seed.id))!;
+            expect(distance(resource.latitude,resource.longitude)).toBeCloseTo(expected[index]!,4);
+        });
     });
     it('filters overlapping services and unordered words before pagination', async () => {
         const result = await queryProjected(pool, new URLSearchParams({service:'hygiene', searchText:'laundry showers', pageSize:'1'}), 'directory');
         expect(result.statusCode).toBe(200);
         expect(result.body).toMatchObject({total:1, results:[{name:'DuPagePads — Client Access Center'}]});
         const legal = await queryProjected(pool, new URLSearchParams({service:'legal', pageSize:'1'}), 'directory');
-        expect(legal.body).toMatchObject({total:5, hasNextPage:true});
+        expect(legal.body).toMatchObject({total:publicResourceSeed.filter(resource => resource.services?.includes('legal')).length, hasNextPage:true});
         const invalid = await queryProjected(pool, new URLSearchParams({service:'not-a-service'}), 'directory');
         expect(invalid.statusCode).toBe(400);
         const libraries = await queryProjected(pool, new URLSearchParams({service:'community'}), 'directory');

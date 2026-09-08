@@ -2408,31 +2408,17 @@ export const fetchDirectoryCardPageFromApi = async (
         : invalidResponseFailure('Directory response was malformed.');
 };
 
-/** Map pins include every page in the current search, independent of directory pagination. */
+/** One bounded page per selected area; never download the nationwide directory for pins. */
 export const fetchMapResourcePageFromApi = async (
     state: DiscoveryFilterState,
     signal?: AbortSignal,
 ): Promise<ApiClientResult<PagedResult<ResourceDirectoryCard>>> => {
-    const first = await fetchDirectoryCardPageFromApi(
-        { ...state, resourceCategory: undefined, resourceService: undefined },
-        1,
-        signal,
-    );
-    if (!first.ok) return first;
-    const items = [...first.data.items];
-    const pages = Math.ceil(first.data.total / first.data.pageSize);
-    for (let page = 2; page <= pages; page++) {
-        const next = await fetchDirectoryCardPageFromApi(
-            { ...state, resourceCategory: undefined, resourceService: undefined },
-            page,
-            signal,
-        );
-        if (!next.ok) return next;
-        if (next.data.total !== first.data.total) return invalidResponseFailure('The resource list changed while loading. Search this area again.');
-        items.push(...next.data.items);
-    }
-    const unique = [...new Map(items.map(item=>[item.uri,item])).values()];
-    return { ok: true, data: { ...first.data, items: unique, hasNextPage: false } };
+    const params = buildDirectoryQueryParams({ ...state, resourceCategory: undefined, resourceService: undefined }, 1);
+    params.set('pageSize', '100');
+    const result = await requestJson('/query/directory', params, signal);
+    if (!result.ok) return result;
+    const envelope = pageEnvelope(result.data, mapDirectoryPayloadToCards(result.data));
+    return envelope ? { ok: true, data: envelope } : invalidResponseFailure('Directory response was malformed.');
 };
 
 export const fetchDirectoryCardsFromApi = async (

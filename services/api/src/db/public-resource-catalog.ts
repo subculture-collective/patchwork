@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { resourceServices } from '../../../../packages/shared/src/resource-services.js';
 import { directoryResourceSchema } from '@patchwork/at-lexicons';
+import communitySnapshot from './seed-data/national-community-resources.json' with { type: 'json' };
 import nationalSnapshot from './seed-data/national-public-resources.json' with { type: 'json' };
 import snapshot from './seed-data/chicago-metro-public-resources.json' with { type: 'json' };
 import { postalLocationSchema } from '../../../../packages/at-lexicons/src/postal-geography.js';
@@ -28,7 +29,7 @@ const publicResourceSchema = z.object({
 
 const sourceSchema = z.object({
     name: z.string().min(1),
-    url: z.string().url(),
+    url: z.string().url().refine(url => new URL(url).protocol === 'https:'),
     apiUrl: z.string().url(),
     retrievedAt: z.string().date(),
     sha256: z.string().regex(/^[a-f0-9]{64}$/),
@@ -66,9 +67,9 @@ export function parsePublicResourceCatalog(input: unknown) {
 
 export const publicResourceCatalog = parsePublicResourceCatalog({
     scope: { name: 'United States public resource directory', sourceUrl: nationalSnapshot.scope.sourceUrl,
-        countyIds: [...new Set([...snapshot.scope.countyIds, ...nationalSnapshot.scope.countyIds])].sort() },
-    sources: { ...snapshot.sources, ...nationalSnapshot.sources },
-    resources: [...snapshot.resources, ...nationalSnapshot.resources],
+        countyIds: [...new Set([...snapshot.scope.countyIds, ...nationalSnapshot.scope.countyIds, ...communitySnapshot.scope.countyIds])].sort() },
+    sources: { ...snapshot.sources, ...nationalSnapshot.sources, ...communitySnapshot.sources },
+    resources: [...snapshot.resources, ...nationalSnapshot.resources, ...communitySnapshot.resources],
 });
 export const publicResourceSeed = publicResourceCatalog.resources.filter(
     resource => resource.operationalStatus !== 'closed',

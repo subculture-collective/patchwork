@@ -330,6 +330,11 @@ export const MapRoute = ({
                 >
                     {t('experience.skipMap')}
                 </a>
+                {(resourceTotal ?? 0) > resourceCards.length && (
+                    <p role='status' className='mb-3 text-sm text-mh-textMuted'>
+                        {t('map.resourceLimit', { shown: resourceCards.length, total: resourceTotal })}
+                    </p>
+                )}
                 {viewport && (
                     <Button
                         className='mh-search-area'

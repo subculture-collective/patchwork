@@ -303,7 +303,8 @@
         "legendNote": "Los círculos muestran zonas aproximadas, no direcciones privadas. Los números indican cuántas solicitudes hay cerca.",
         "showAreaRequests": "Ver {{count}} solicitudes en esta zona",
         "sharedArea": "Estas solicitudes comparten una zona aproximada. Elige una para ver los detalles.",
-        "zoomCluster": "Acercar {{count}} solicitudes"
+        "zoomCluster": "Acercar {{count}} solicitudes",
+        "resourceLimit": "Se muestran {{shown}} de {{total}} recursos. Acerca el mapa y elige «Buscar en esta zona», o introduce un código postal."
     },
     "exactLocation": {
         "initial": "Ambas personas deben iniciar en un plazo de dos minutos.",

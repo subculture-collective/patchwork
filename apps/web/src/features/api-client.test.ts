@@ -1,3 +1,4 @@
+import { fetchMapResourcePageFromApi } from './api-client';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     type AidPostCreateApiInput,
@@ -689,6 +690,16 @@ describe('api client', () => {
             kind: 'validation',
             retryable: false,
         });
+    });
+
+    it('bounds map downloads even when the directory has nationwide results', async () => {
+        const fetchMock = vi.fn(async () => createJsonResponse({total:30000,page:1,pageSize:100,hasNextPage:true,results:[]}));
+        globalThis.fetch = fetchMock as unknown as typeof fetch;
+        const result = await fetchMapResourcePageFromApi(baseDiscoveryState);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(result).toMatchObject({ok:true,data:{total:30000,hasNextPage:true}});
+        const url = String((fetchMock.mock.calls as unknown as Array<[unknown]>)[0]?.[0]);
+        expect(url).toContain('pageSize=100');
     });
 
     it('maps durable directory projection responses into resource cards', async () => {
