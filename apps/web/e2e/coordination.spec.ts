@@ -317,13 +317,11 @@ test('two accounts offer, accept, hand off, and record an outcome without fixtur
         });
         try {
             await page
-                .getByRole('heading', { name: 'Coordination inbox' })
+                .getByRole('heading', { name: 'My activity' })
                 .waitFor({ timeout: 5_000 });
         } catch {
             await page.reload();
-            await page
-                .getByRole('heading', { name: 'Coordination inbox' })
-                .waitFor();
+            await page.getByRole('heading', { name: 'My activity' }).waitFor();
         }
     };
     const refreshWorkspace = async (page: Page) => {
@@ -335,9 +333,7 @@ test('two accounts offer, accept, hand off, and record an outcome without fixtur
             ),
             page.getByLabel('Show unread only').click(),
         ]);
-        await page
-            .getByRole('heading', { name: 'Coordination inbox' })
-            .waitFor();
+        await page.getByRole('heading', { name: 'My activity' }).waitFor();
     };
 
     await openInbox(helperPage);
@@ -345,6 +341,23 @@ test('two accounts offer, accept, hand off, and record an outcome without fixtur
         .getByRole('button', { name: /Offer help for Groceries for Tuesday/ })
         .click();
     const offerDialog = helperPage.getByRole('dialog');
+    await expect(
+        offerDialog
+      .getByLabel('Optional coordination note'),
+    ).toBeFocused();
+    await helperPage.keyboard.press('Shift+Tab');
+    await expect(
+        offerDialog.getByRole('button', { name: 'Offer help', exact: true }),
+    ).toBeFocused();
+    await helperPage.keyboard.press('Escape');
+    await expect(offerDialog).toHaveCount(0);
+    await expect(
+        helperPage
+      .getByRole('button', { name: /Offer help for Groceries for Tuesday/ }),
+    ).toBeFocused();
+    await helperPage
+        .getByRole('button', { name: /Offer help for Groceries for Tuesday/ })
+        .click();
     await offerDialog
         .getByLabel('Optional coordination note')
         .fill('I can deliver Tuesday afternoon.');

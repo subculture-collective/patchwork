@@ -762,9 +762,9 @@ describe('AT authentication flow', () => {
         );
 
         expect(html).toContain('href="/signup?returnTo=%2Ffeed"');
-        expect(html).toContain('Create an account on Subcult’s PDS');
+        expect(html).toContain('Create an account');
         expect(html).toContain(
-            'Get your own portable AT Protocol handle, hosted on our community PDS.',
+            'No Bluesky account? You can create a community-hosted account.',
         );
         expect(html).not.toContain('secret');
         expect(html).not.toContain('token');

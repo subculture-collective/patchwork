@@ -91,7 +91,9 @@ test('showcase origin is visible and stale retained results are disclosed', asyn
     await page.goto('/feed');
     await expect(page.getByText('Fictional listing')).toBeVisible();
     await page.locator('.mh-filter-disclosure summary').click();
-    await page.getByLabel('Search text').fill('grocery');
+    await page
+        .getByRole('textbox', { name: 'Search', exact: true })
+        .fill('grocery');
     await expect(page.getByRole('alert')).toContainText(
         'Showing previously loaded results; they may be stale.',
     );
@@ -132,12 +134,12 @@ test('public home advertises only implemented demonstration capabilities', async
     );
     await expect(
         page.getByRole('heading', {
-            name: 'Find help. Offer help. Strengthen your neighborhood.',
+            name: 'A little help, close to home.',
         }),
     ).toBeVisible();
     await expect(
         page.getByText(
-            'Public discovery uses approximate areas, never exact addresses.',
+            'Requests show only a five-digit ZIP code. Street addresses are shared privately when arranging help. Public resources can show their published address.',
         ),
     ).toBeVisible();
     await expect(page.getByText('127', { exact: true })).toHaveCount(0);

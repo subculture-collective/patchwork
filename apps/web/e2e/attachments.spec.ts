@@ -139,10 +139,14 @@ test('posting binds private bytes to the created aid-post without exposing stora
     await expect(page.getByLabel('Longitude')).toHaveCount(0);
     await expect(page.getByLabel('Precision meters')).toHaveCount(0);
     await page.getByLabel('ZIP code where help is needed').fill('60625');
-    await page.getByLabel('Title').fill('Disposable attachment request');
     await page
-        .getByLabel('Description')
-        .fill('Exercises the private attachment boundary in a disposable test.');
+        .getByLabel('What do you need?', { exact: true })
+        .fill('Disposable attachment request');
+    await page
+        .getByLabel('How can a neighbor help?', { exact: true })
+        .fill(
+            'Exercises the private attachment boundary in a disposable test.',
+        );
     await page.getByLabel('Private attachments (optional)').setInputFiles({
         name: 'handoff.png',
         mimeType: 'image/png',

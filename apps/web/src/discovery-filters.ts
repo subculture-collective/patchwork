@@ -31,7 +31,17 @@ export interface DiscoveryCenter {
     lng: number;
 }
 
+export const directoryCategories = [
+    'food-bank',
+    'shelter',
+    'clinic',
+    'legal-aid',
+    'hotline',
+    'other',
+] as const;
+
 export interface DiscoveryFilterState {
+    resourceCategory?: (typeof directoryCategories)[number];
     postalCode?: string;
     dataset?: 'all' | 'community' | 'demo';
     feedTab: FeedTab;
@@ -202,6 +212,10 @@ export function normalizeDiscoveryFilterState(
 
     return {
         feedTab,
+        ...(state.resourceCategory &&
+        directoryCategories.includes(state.resourceCategory)
+            ? { resourceCategory: state.resourceCategory }
+            : {}),
         ...(state.postalCode && /^\d{5}$/.test(state.postalCode) ? { postalCode: state.postalCode } : {}),
         // Legacy dataset links now open the same integrated discovery view.
         ...(text ? { text } : {}),
@@ -279,12 +293,13 @@ export function serializeDiscoveryFilterState(
 ): string {
     const params = new URLSearchParams();
 
-
     if (state.feedTab === 'nearby') {
         params.set('tab', state.feedTab);
     }
 
     if (state.postalCode) params.set('zip', state.postalCode);
+    if (state.resourceCategory)
+        params.set('resourceType', state.resourceCategory);
     if (state.text) {
         params.set('q', state.text);
     }
@@ -338,6 +353,8 @@ export function parseDiscoveryFilterState(
             fallback.feedTab ??
             defaultDiscoveryFilterState.feedTab,
         postalCode: params.get('zip') ?? fallback.postalCode,
+        resourceCategory: (params.get('resourceType') ??
+            fallback.resourceCategory) as DiscoveryFilterState['resourceCategory'],
         text: params.get('q') ?? fallback.text,
         category: parsedCategory ?? fallback.category,
         status: parsedStatus ?? fallback.status,

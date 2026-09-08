@@ -20,10 +20,19 @@ export const MapDetailSheet = ({ children, closeLabel, onClose }: {
             if (previousFocus instanceof Element && previousFocus.isConnected && 'focus' in previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus({ preventScroll: true });
         };
     }, []);
-    return createPortal(<div className='mh-map-detail-sheet'>
-        <div className='mh-map-detail-close'>
-            <button ref={closeButton} type='button' className='mh-nav-chip' onClick={onClose}>{closeLabel}</button>
-        </div>
-        {children}
-    </div>, document.body);
+    return createPortal(
+        <div
+            className='mh-map-detail-sheet'
+            role='region'
+            aria-label={closeLabel}
+        >
+            <div className='mh-map-detail-close'>
+                <button ref={closeButton} type='button' className='mh-nav-chip' onClick={onClose}>
+                    {closeLabel}
+                </button>
+            </div>
+            {children}
+        </div>,
+        document.body,
+    );
 };

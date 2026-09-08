@@ -1,11 +1,11 @@
 :root {
-    --mh-bg: #f2efe7;
+    --mh-bg: #f6f5ef;
     --mh-surface: #fffdf7;
-    --mh-surface-elev: #e8e2d4;
-    --mh-panel: #d9d1c0;
+    --mh-surface-elev: #eeeee5;
+    --mh-panel: #fffdf7;
     --mh-text: #172019;
     --mh-text-muted: #4f5a51;
-    --mh-text-soft: #6b746c;
+    --mh-text-soft: #57635a;
     --mh-accent: #12664f;
     --mh-accent-2: #9ec5ad;
     --mh-accent-3: #f2c14e;
@@ -15,9 +15,9 @@
     --mh-link-visited: #624b77;
     --mh-success: #287c52;
     --mh-danger: #b93b2c;
-    --mh-border: #172019;
+    --mh-border: #89968b;
     --mh-border-subtle: #d4cec1;
-    --mh-border-soft: #aaa99f;
+    --mh-border-soft: #c7cec5;
     --mh-focus: #0b62d6;
     --mh-focus-offset: #fffdf7;
 
@@ -38,8 +38,8 @@
     --mh-space-6: 24px;
     --mh-space-8: 32px;
 
-    --mh-shadow-hard: 4px 4px 0 rgb(23 32 25 / 16%);
-    --mh-shadow-hard-hover: 7px 7px 0 rgb(23 32 25 / 18%);
+    --mh-shadow-hard: 0 2px 8px rgb(23 32 25 / 5%);
+    --mh-shadow-hard-hover: 0 3px 12px rgb(23 32 25 / 9%);
     --mh-transition-standard: 150ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -49,7 +49,7 @@
 
 .mh-card {
     border: 1.5px solid var(--mh-border);
-    border-radius: 2px 18px 2px 18px;
+    border-radius: 10px;
     background: var(--mh-surface);
     box-shadow: var(--mh-shadow-hard);
     color: var(--mh-text);
@@ -57,7 +57,7 @@
 
 .mh-panel-shell {
     border: 1.5px solid var(--mh-border);
-    border-radius: 2px 20px 2px 20px;
+    border-radius: 10px;
     background: var(--mh-panel);
     box-shadow: var(--mh-shadow-hard);
 }
@@ -66,7 +66,7 @@
     border-bottom: 1px solid var(--mh-border-soft);
     border-top-left-radius: 0;
     border-top-right-radius: 18px;
-    background: var(--mh-accent-3);
+    background: transparent;
     color: var(--mh-text);
 }
 
@@ -124,8 +124,8 @@
     min-height: 44px;
     cursor: pointer;
     border: 1px solid var(--mh-border);
-    border-radius: 3px 12px 3px 12px;
-    box-shadow: 2px 2px 0 rgb(23 32 25 / 22%);
+    border-radius: 10px;
+    box-shadow: none;
     transition:
         box-shadow var(--mh-transition-standard),
         background-color var(--mh-transition-standard),
@@ -145,12 +145,12 @@
 }
 
 .mh-button--secondary {
-    background: var(--mh-danger);
-    color: #fffdf7;
+    background: var(--mh-accent-2);
+    color: var(--mh-text);
 }
 
 .mh-button--secondary:hover {
-    background: #922f24;
+    background: #87b79a;
 }
 
 .mh-button--neutral {
@@ -163,7 +163,7 @@
 }
 
 .mh-badge--default {
-    background: var(--mh-accent-3);
+    background: transparent;
     color: var(--mh-text);
 }
 
@@ -216,7 +216,7 @@
 .mh-input {
     min-height: 44px;
     border: 1px solid var(--mh-border-soft);
-    border-radius: 2px 12px 2px 12px;
+    border-radius: 10px;
     background: var(--mh-surface);
     color: var(--mh-text);
     transition:
@@ -345,7 +345,7 @@
 
 .mh-stat-tile {
     border: 1px solid var(--mh-border);
-    border-radius: 2px 12px 2px 12px;
+    border-radius: 10px;
     background: #fffdf7;
     padding: var(--mh-space-3);
     box-shadow: 2px 2px 0 rgb(23 32 25 / 14%);
@@ -353,7 +353,7 @@
 
 .mh-record-card {
     border: 1px solid var(--mh-border-soft);
-    border-radius: 2px 12px 2px 12px;
+    border-radius: 10px;
     background: var(--mh-surface-elev);
     padding: var(--mh-space-3);
     transition:

@@ -1,0 +1,245 @@
+import { useEffect, useState } from 'react';
+import { lookupPostalArea } from '@patchwork/at-lexicons';
+import type { DiscoveryFilterState } from '../discovery-filters';
+import { buildDiscoveryFilterChipModel } from '../discovery-primitives';
+import { useLocale } from '../i18n';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
+import { useDiscoveryLocation } from './discovery-location';
+
+/** Search and place are primary; less frequent refinements are disclosed. */
+export function DiscoveryControls({
+    idPrefix,
+    state,
+    onPatch,
+    resourceMode = false,
+}: {
+    idPrefix: string;
+    state: DiscoveryFilterState;
+    onPatch: (patch: Partial<DiscoveryFilterState>) => void;
+    resourceMode?: boolean;
+}) {
+    const { t } = useLocale();
+    const location = useDiscoveryLocation();
+    const chips = buildDiscoveryFilterChipModel(state);
+    const [search, setSearch] = useState(state.text ?? '');
+    const [zip, setZip] = useState(state.postalCode ?? '');
+    const [zipError, setZipError] = useState(false);
+    // Preserve a trailing space while typing; external navigation/reset still wins.
+    useEffect(() => {
+        setSearch((current) =>
+            current.trim() === (state.text ?? '') ?
+                current
+            :   (state.text ?? ''),
+        );
+    }, [state.text]);
+    useEffect(() => {
+        setZip(state.postalCode ?? '');
+        setZipError(false);
+    }, [state.postalCode]);
+    const applySearch = (value: string) => {
+        setSearch(value);
+        onPatch({ text: value.trim() || undefined });
+    };
+    const filtersActive = Boolean(
+        state.category || state.status || state.minUrgency || state.since,
+    );
+    const clearPlace = () => {
+        location.cancel();
+        setZip('');
+        onPatch({
+            postalCode: undefined,
+            center: undefined,
+            radiusMeters: undefined,
+            areaLabel: undefined,
+            feedTab: 'latest',
+        });
+    };
+    return (
+        <section
+            className='mh-discovery-controls'
+            aria-label={t('discovery.title')}
+        >
+            <div className='mh-search-row'>
+                <div className='mh-search-field'>
+                    <label htmlFor={`${idPrefix}-search`}>
+                        {t('discovery.searchText')}
+                    </label>
+                    <Input
+                        id={`${idPrefix}-search`}
+                        value={search}
+                        placeholder={t('discovery.searchPlaceholder')}
+                        onChange={(event) => applySearch(event.target.value)}
+                    />
+                </div>
+                <form
+                    className='mh-place-search'
+                    onSubmit={(event) => {
+                        event.preventDefault();
+                        const area = lookupPostalArea(zip);
+                        if (!area) {
+                            setZipError(true);
+                            return;
+                        }
+                        location.cancel();
+                        setZipError(false);
+                        onPatch({
+                            postalCode: zip,
+                            center: undefined,
+                            radiusMeters: undefined,
+                            areaLabel: `ZIP ${zip}`,
+                            feedTab: 'nearby',
+                        });
+                    }}
+                >
+                    <label htmlFor={`${idPrefix}-zip`}>
+                        {t('experience.zipLabel')}
+                    </label>
+                    <div>
+                        <Input
+                            id={`${idPrefix}-zip`}
+                            inputMode='numeric'
+                            autoComplete='postal-code'
+                            maxLength={5}
+                            pattern='[0-9]{5}'
+                            required
+                            value={zip}
+                            onChange={(event) => {
+                                setZip(event.target.value);
+                                setZipError(false);
+                            }}
+                            aria-invalid={zipError || undefined}
+                            aria-describedby={
+                                zipError ? `${idPrefix}-zip-error` : undefined
+                            }
+                        />
+                        <Button type='submit' variant='neutral'>
+                            {t('experience.findArea')}
+                        </Button>
+                    </div>
+                </form>
+            </div>
+            {zipError && (
+                <p role='alert' id={`${idPrefix}-zip-error`}>
+                    {t('experience.zipError')}
+                </p>
+            )}
+            <div className='mh-search-context'>
+                <button
+                    className='mh-text-button'
+                    disabled={location.status === 'requesting'}
+                    onClick={location.request}
+                >
+                    {t('discovery.updateLocation')}
+                </button>
+                <p
+                    role='status'
+                    className={state.postalCode ? 'sr-only' : undefined}
+                >
+                    {location.status === 'requesting' ?
+                        t('discovery.locationRequesting')
+                    : state.postalCode ?
+                        `ZIP ${state.postalCode}`
+                    :   (state.areaLabel ??
+                        t(
+                            state.center ?
+                                'discovery.areaUnknown'
+                            :   'discovery.allAreas',
+                        ))
+                    }
+                </p>
+                {(state.center || state.postalCode) && (
+                    <button className='mh-text-button' onClick={clearPlace}>
+                        {t('map.clearArea')}
+                    </button>
+                )}
+            </div>
+            {['denied', 'timeout', 'unavailable'].includes(location.status) && (
+                <p className='text-sm text-mh-textMuted' role='status'>
+                    {t(
+                        location.status === 'denied' ?
+                            'discovery.locationDenied'
+                        : location.status === 'timeout' ?
+                            'discovery.locationTimedOut'
+                        :   'discovery.locationNotFound',
+                    )}
+                </p>
+            )}
+            {!resourceMode && (
+                <details className='mh-filter-disclosure'>
+                    <summary>
+                        {t('nav.mapFilters')}
+                        {filtersActive ?
+                            ` · ${t('experience.filtersActive')}`
+                        :   ''}
+                    </summary>
+                    <div className='mh-filter-grid'>
+                        {(
+                            [
+                                [
+                                    'discovery.category',
+                                    chips.categories,
+                                    'category',
+                                ],
+                                ['discovery.status', chips.statuses, 'status'],
+                                [
+                                    'discovery.minimumUrgency',
+                                    chips.urgency,
+                                    'minUrgency',
+                                ],
+                            ] as const
+                        ).map(([label, items, field]) => (
+                            <fieldset key={field}>
+                                <legend>{t(label)}</legend>
+                                <div className='flex flex-wrap gap-2'>
+                                    {items.map((item) => (
+                                        <Button
+                                            key={item.id}
+                                            aria-pressed={item.active}
+                                            variant={
+                                                item.active ? 'primary' : (
+                                                    'neutral'
+                                                )
+                                            }
+                                            onClick={() =>
+                                                onPatch({
+                                                    [field]:
+                                                        item.active ? undefined
+                                                        :   item.value,
+                                                })
+                                            }
+                                        >
+                                            {typeof item.value === 'number' ?
+                                                t('map.urgencyLabel', {
+                                                    level: `${item.value}+`,
+                                                })
+                                            :   t(`labels.${item.value}`, {
+                                                    defaultValue: item.label,
+                                                })
+                                            }
+                                        </Button>
+                                    ))}
+                                </div>
+                            </fieldset>
+                        ))}
+                        <Button
+                            variant='neutral'
+                            onClick={() => {
+                                setSearch('');
+                                onPatch({
+                                    text: undefined,
+                                    category: undefined,
+                                    status: undefined,
+                                    minUrgency: undefined,
+                                    since: undefined,
+                                });
+                            }}
+                        >
+                            {t('discovery.resetFilters')}
+                        </Button>
+                    </div>
+                </details>
+            )}
+        </section>
+    );
+}

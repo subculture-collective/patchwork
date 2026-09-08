@@ -22,7 +22,7 @@ const toSeverityTone = (
     status: AidStatus,
 ): 'neutral' | 'info' | 'success' | 'danger' => {
     if (status === 'open') {
-        return 'danger';
+        return 'neutral';
     }
     if (status === 'in-progress') {
         return 'info';
@@ -112,6 +112,9 @@ export const MapRoute = ({
     onOpenChat,
 }: MapRouteProps) => {
     const { t, fmt } = useLocale();
+    const [mobileView, setMobileView] = useState<'map' | 'list'>(
+        discoveryState.postalCode ? 'list' : 'map',
+    );
     const paginationFocus = usePaginationFocus({
         itemCount: feedRecords.length,
         isLoading,
@@ -122,22 +125,42 @@ export const MapRoute = ({
             [t],
         ),
     });
-    const zipRecords = feedRecords.filter(record => record.postalCode === discoveryState.postalCode);
-    const [zipListOpen, setZipListOpen] = useState(Boolean(discoveryState.postalCode));
-    const previousZipArea = useRef<Partial<DiscoveryFilterState> | undefined>(undefined);
-    useEffect(() => { setZipListOpen(Boolean(discoveryState.postalCode)); }, [discoveryState.postalCode]);
+    const previousZipArea = useRef<Partial<DiscoveryFilterState> | undefined>(
+        undefined,
+    );
+    useEffect(() => {
+        if (discoveryState.postalCode) setMobileView('list');
+    }, [discoveryState.postalCode]);
     const leaveZip = () => {
-        setZipListOpen(false);
-        onPushDiscovery({ ...previousZipArea.current, postalCode: undefined, areaLabel: previousZipArea.current?.areaLabel });
+        setMobileView('map');
+        onPushDiscovery({
+            ...previousZipArea.current,
+            postalCode: undefined,
+            areaLabel: previousZipArea.current?.areaLabel,
+        });
     };
-    const [viewport, setViewport] = useState<{ center: { lat: number; lng: number }; radiusMeters: number }>();
+    const [viewport, setViewport] = useState<{
+        center: { lat: number; lng: number };
+        radiusMeters: number;
+    }>();
+    useEffect(() => {
+        setViewport(undefined);
+    }, [
+        discoveryState.center?.lat,
+        discoveryState.center?.lng,
+        discoveryState.postalCode,
+    ]);
     const selection = useMapSelection(feedRecords, resourceCards, 'all');
     const selectedRecord = selection.request;
     const selectedResource = selection.resource;
     const onSelectPost = selection.selectRequest;
     const setSelectedResourceUri = selection.selectResource;
-    const [cameraCenter, setCameraCenter] = useState(discoveryState.center ?? discoveryFallback.center);
-    useEffect(() => { if (discoveryState.center) setCameraCenter(discoveryState.center); }, [discoveryState.center]);
+    const [cameraCenter, setCameraCenter] = useState(
+        discoveryState.center ?? discoveryFallback.center,
+    );
+    useEffect(() => {
+        if (discoveryState.center) setCameraCenter(discoveryState.center);
+    }, [discoveryState.center]);
     const [tileError, setTileError] = useState<string>();
     const [focusedArea, setFocusedArea] = useState<{
         center: { lat: number; lng: number };
@@ -200,26 +223,26 @@ export const MapRoute = ({
         onPushDiscovery(patch);
     };
 
-    const drawer = selectedRecord ? openMapDetailDrawer([toMapAidCard(selectedRecord)], selectedRecord.card.id) : closeMapDetailDrawer();
+    const drawer = selectedRecord
+        ? openMapDetailDrawer(
+              [toMapAidCard(selectedRecord)],
+              selectedRecord.card.id,
+          )
+        : closeMapDetailDrawer();
 
     return (
-        <section className='mh-discovery-route space-y-4'>
-            <header className='space-y-2'>
-                <h1 className='text-2xl font-bold'>{t('map.heading')}</h1>
+        <section
+            className={`mh-discovery-route mh-nearby-workspace is-${mobileView}`}
+        >
+            <header className='mh-nearby-header'>
+                <h1 className='mh-route-title'>{t('map.heading')}</h1>
                 <p className='mt-2 text-sm text-mh-textMuted'>
-                    Requests stay within ZIP areas. Explore a boundary to see requests, or choose a pin for a public resource.
+                    {t('experience.nearbyDescription')}
                 </p>
                 <div className='mt-3 flex flex-wrap gap-2'>
-                    {dataOrigin !== 'api' && <Badge tone='info'>{originLabel}</Badge>}
-                    <p ref={paginationFocus.loadedCountRef} tabIndex={-1} className='text-sm text-mh-textMuted' role='status'>
-                        {t('discovery.loadedCount', { loaded: feedRecords.length, total })}
-                    </p>
-                    <span className='sr-only' role='status' aria-live='polite'>{paginationFocus.announcement}</span>
-                    {hasNextPage ? (
-                        <Button ref={paginationFocus.loadMoreRef} type='button' variant='neutral' className='px-3 py-1 text-xs' onClick={() => paginationFocus.loadMore(onLoadMore)} disabled={isLoading}>
-                            {t('discovery.loadMore')}
-                        </Button>
-                    ) : null}
+                    {dataOrigin !== 'api' && (
+                        <Badge tone='info'>{originLabel}</Badge>
+                    )}
                 </div>
                 {errorMessage || resourceErrorMessage ? (
                     <div
@@ -269,7 +292,62 @@ export const MapRoute = ({
                 ) : null}
             </header>
 
-            <section className='rounded-none border-2 border-mh-borderSoft bg-mh-surfaceElev p-3'>
+            <div className='mh-nearby-controls'>{filters}</div>
+            <div
+                className='mh-nearby-view-switch'
+                role='group'
+                aria-label={t('experience.discoveryView')}
+            >
+                <Button
+                    aria-pressed={mobileView === 'map'}
+                    variant={mobileView === 'map' ? 'primary' : 'neutral'}
+                    onClick={() => setMobileView('map')}
+                >
+                    {t('experience.mapView')}
+                </Button>
+                <Button
+                    aria-pressed={mobileView === 'list'}
+                    variant={mobileView === 'list' ? 'primary' : 'neutral'}
+                    onClick={() => setMobileView('list')}
+                >
+                    {t('experience.listView', { count: total })}
+                </Button>
+            </div>
+            <section
+                className='mh-nearby-map'
+                aria-label={t('experience.mapView')}
+            >
+                <a
+                    className='mh-map-skip mh-link'
+                    href='#map-area-requests'
+                    onClick={() => {
+                        setMobileView('list');
+                        requestAnimationFrame(() =>
+                            document
+                                .getElementById('map-area-requests')
+                                ?.focus(),
+                        );
+                    }}
+                >
+                    {t('experience.skipMap')}
+                </a>
+                {viewport && (
+                    <Button
+                        className='mh-search-area'
+                        onClick={() => {
+                            onPushDiscovery({
+                                ...viewport,
+                                postalCode: undefined,
+                                areaLabel: t('map.selectedArea'),
+                                feedTab: 'nearby',
+                            });
+                            setViewport(undefined);
+                        }}
+                    >
+                        {t('handoff.searchArea')}
+                    </Button>
+                )}
+
                 {tileError ? (
                     <div
                         role='alert'
@@ -292,10 +370,12 @@ export const MapRoute = ({
                             ·{' '}
                             {t('map.areaSummary', {
                                 requests: fmt.number(
-                                    aggregates?.requestCount ?? mapView.filteredCards.length,
+                                    aggregates?.requestCount ??
+                                        mapView.filteredCards.length,
                                 ),
                                 places: fmt.number(
-                                    resourceTotal ?? mapResourceView.cards.length,
+                                    resourceTotal ??
+                                        mapResourceView.cards.length,
                                 ),
                                 distance: fmt.number(
                                     activeArea.radiusMeters / 1000,
@@ -315,17 +395,9 @@ export const MapRoute = ({
                                 {t('map.returnArea')}
                             </Button>
                         ) : null}
-                        <Button
-                            type='button'
-                            variant='neutral'
-                            className='px-3 py-1 text-xs'
-                            onClick={() => leaveFocusedArea('clear')}
-                        >
-                            {t('map.clearArea')}
-                        </Button>
                     </div>
                 ) : null}
-                {(
+                {
                     <Suspense
                         fallback={<div className='mh-skeleton h-96 w-full' />}
                     >
@@ -336,55 +408,92 @@ export const MapRoute = ({
                             center={cameraCenter}
                             onViewportChange={setViewport}
                             onClearPostalCode={leaveZip}
-                            onSelectPostalCode={(postalCode) => {
-                                if (!discoveryState.postalCode) previousZipArea.current = { center: discoveryState.center, radiusMeters: discoveryState.radiusMeters, areaLabel: discoveryState.areaLabel };
-                                setZipListOpen(true);
-                                onPushDiscovery({ postalCode, center: undefined, radiusMeters: undefined, areaLabel: `ZIP ${postalCode}` });
-
+                            onSelectPostalCode={postalCode => {
+                                setViewport(undefined);
+                                if (!discoveryState.postalCode)
+                                    previousZipArea.current = {
+                                        center: discoveryState.center,
+                                        radiusMeters:
+                                            discoveryState.radiusMeters,
+                                        areaLabel: discoveryState.areaLabel,
+                                    };
+                                setMobileView('list');
+                                onPushDiscovery({
+                                    postalCode,
+                                    center: undefined,
+                                    radiusMeters: undefined,
+                                    areaLabel: `ZIP ${postalCode}`,
+                                });
                             }}
                             onSelectResource={setSelectedResourceUri}
                             onTilesFailed={setTileError}
                         />
                     </Suspense>
-                )}
+                }
             </section>
 
-            {aggregates && aggregates.requestCount > mapView.filteredCards.length && <p role='status'>{t('map.aggregateHelp', { count: aggregates.requestCount })}{aggregates.truncated ? ` ${t('map.aggregateTruncated')}` : ''}</p>}
-            {discoveryState.postalCode && <p role='status'>Showing requests in ZIP {discoveryState.postalCode}. <Button variant='neutral' onClick={leaveZip}>Show all ZIPs</Button></p>}
-            {viewport && <Button onClick={() => { onPushDiscovery({ ...viewport, postalCode: undefined, feedTab: 'nearby' }); setViewport(undefined); }}>{t('handoff.searchArea')}</Button>}
-            {discoveryState.postalCode && zipListOpen && !selectedResource && !selectedRecord && !selection.loading && !selection.error && <MapDetailSheet closeLabel='Close ZIP request list' onClose={() => setZipListOpen(false)}>
-                <Panel title={`Requests in ZIP ${discoveryState.postalCode}`}>
-                    <p className='mb-3 text-sm'>All requests in this area share the same ZIP location.</p>
-                    {isLoading ? <p role='status'>Loading requests…</p> : <>
-                        <p role='status' className='mb-3'>{zipRecords.length} of {total} requests</p>
-                        {!zipRecords.length && <p>No requests match the current filters in this ZIP.</p>}
-                        <ul className='space-y-2'>{zipRecords.map(record => <li key={record.aidPostUri}>
-                            <button className='mh-record-card w-full text-left' onClick={() => onSelectPost(record.card.id)}>
-                                <strong className='block'>{record.card.title}</strong>
-                                <span className='block text-sm'>{record.card.category} · {record.card.status}</span>
-                            </button>
-                        </li>)}</ul>
-                    </>}
-                    {errorMessage && <p role='alert'>{errorMessage} <Button onClick={onRetry}>Retry requests</Button></p>}
-                    {hasNextPage && <Button disabled={isLoading} onClick={onLoadMore}>Load more requests</Button>}
-                    <Button variant='neutral' onClick={leaveZip}>Back to ZIP areas</Button>
-                </Panel>
-            </MapDetailSheet>}
-            {(selection.loading || selection.error) && <MapDetailSheet closeLabel={t('resources.close')} onClose={selection.close}>
-                <Panel title={t('handoff.requestDetails')}>
-                    {selection.loading ? <p role='status'>{t('handoff.loadingRequest')}</p> : <><p role='alert'>{selection.error}</p><Button onClick={selection.retry}>{t('common.retry')}</Button></>}
-                </Panel>
-            </MapDetailSheet>}
-            {selectedResource && <MapDetailSheet closeLabel={t('resources.close')} onClose={selection.close}><Panel title={selectedResource.name}>
-                <ResourceActions resource={selectedResource} />
-            </Panel></MapDetailSheet>}
-            <details className='mh-filter-disclosure rounded-xl border border-mh-borderSoft bg-mh-surface p-2'>
-                <summary className='cursor-pointer py-2 font-bold'>{t('nav.mapFilters')}{discoveryState.areaLabel ? ` · ${discoveryState.areaLabel}` : ''}</summary>
-                {filters}
-            </details>
-
-            <div id='map-area-requests' className='scroll-mt-24'>
-                <Card title={String(t('map.requestMarkersTitle'))}>
+            {(selection.loading || selection.error) && (
+                <MapDetailSheet
+                    closeLabel={t('resources.close')}
+                    onClose={selection.close}
+                >
+                    <Panel title={t('handoff.requestDetails')}>
+                        {selection.loading ? (
+                            <p role='status'>{t('handoff.loadingRequest')}</p>
+                        ) : (
+                            <>
+                                <p role='alert'>{selection.error}</p>
+                                <Button onClick={selection.retry}>
+                                    {t('common.retry')}
+                                </Button>
+                            </>
+                        )}
+                    </Panel>
+                </MapDetailSheet>
+            )}
+            {selectedResource && (
+                <MapDetailSheet
+                    closeLabel={t('resources.close')}
+                    onClose={selection.close}
+                >
+                    <Panel title={selectedResource.name}>
+                        <ResourceActions resource={selectedResource} />
+                    </Panel>
+                </MapDetailSheet>
+            )}
+            <div
+                id='map-area-requests'
+                tabIndex={-1}
+                className='mh-nearby-results scroll-mt-24'
+            >
+                <Card
+                    title={
+                        discoveryState.postalCode
+                            ? t('experience.zipRequests', {
+                                  zip: discoveryState.postalCode,
+                              })
+                            : String(t('map.requestMarkersTitle'))
+                    }
+                >
+                    {discoveryState.postalCode && (
+                        <Button variant='neutral' onClick={leaveZip}>
+                            {t('experience.backToAreas')}
+                        </Button>
+                    )}
+                    <p
+                        ref={paginationFocus.loadedCountRef}
+                        tabIndex={-1}
+                        className='text-sm text-mh-textMuted'
+                        role='status'
+                    >
+                        {t('discovery.loadedCount', {
+                            loaded: feedRecords.length,
+                            total,
+                        })}
+                    </p>
+                    <span className='sr-only' role='status' aria-live='polite'>
+                        {paginationFocus.announcement}
+                    </span>
                     {isLoading && mapView.filteredCards.length === 0 ? (
                         <ul className='space-y-3' aria-live='polite'>
                             {Array.from({ length: 3 }).map((_, index) => (
@@ -431,15 +540,24 @@ export const MapRoute = ({
                                     <p className='mt-2 text-xs text-mh-textSoft'>
                                         {card.summary}
                                     </p>
-                                    {feedRecords.find(record => record.card.id === card.id)?.recordOrigin === 'synthetic' && <Badge tone='neutral'>{t('feed.synthetic')}</Badge>}
+                                    {feedRecords.find(
+                                        record => record.card.id === card.id,
+                                    )?.recordOrigin === 'synthetic' && (
+                                        <Badge tone='neutral'>
+                                            {t('feed.synthetic')}
+                                        </Badge>
+                                    )}
                                     <div className='mt-3'>
                                         <Button
                                             variant='neutral'
                                             className='px-3 py-1 text-xs'
-                                            aria-label={t('map.openTriageDrawerFor', {
-                                                title: card.title,
-                                                id: card.id,
-                                            })}
+                                            aria-label={t(
+                                                'map.openTriageDrawerFor',
+                                                {
+                                                    title: card.title,
+                                                    id: card.id,
+                                                },
+                                            )}
                                             onClick={() =>
                                                 onSelectPost(card.id)
                                             }
@@ -447,79 +565,132 @@ export const MapRoute = ({
                                             {t('map.openTriageDrawer')}
                                         </Button>
                                     </div>
-                                    {(() => { const record = feedRecords.find(item => item.card.id === card.id); return record && renderRequestActions?.(record, index + 1, mapView.filteredCards.length); })()}
+                                    {(() => {
+                                        const record = feedRecords.find(
+                                            item => item.card.id === card.id,
+                                        );
+                                        return (
+                                            record &&
+                                            renderRequestActions?.(
+                                                record,
+                                                index + 1,
+                                                mapView.filteredCards.length,
+                                            )
+                                        );
+                                    })()}
                                 </li>
                             ))}
                         </ul>
                     )}
+                    {hasNextPage ? (
+                        <Button
+                            ref={paginationFocus.loadMoreRef}
+                            type='button'
+                            variant='neutral'
+                            className='px-3 py-1 text-xs'
+                            onClick={() => paginationFocus.loadMore(onLoadMore)}
+                            disabled={isLoading}
+                        >
+                            {t('discovery.loadMore')}
+                        </Button>
+                    ) : null}
+                    <div className='mh-results-note'>
+                        {' '}
+                        {aggregates &&
+                            aggregates.requestCount >
+                                mapView.filteredCards.length && (
+                                <p role='status'>
+                                    {t('map.aggregateHelp', {
+                                        count: aggregates.requestCount,
+                                    })}
+                                    {aggregates.truncated
+                                        ? ` ${t('map.aggregateTruncated')}`
+                                        : ''}
+                                </p>
+                            )}
+                    </div>{' '}
                 </Card>
             </div>
 
             {drawer.open && selectedRecord ? (
-                <MapDetailSheet closeLabel={t('map.closeDrawer')} onClose={selection.close}>
-                <Panel
-                    title={String(t('map.mapDetailDrawerTitle'))}
-                    aria-label={String(
-                        t('map.detailsFor', {
-                            title: drawer.title ?? t('map.selectedRequest'),
-                        }),
-                    )}
+                <MapDetailSheet
+                    closeLabel={t('map.closeDrawer')}
+                    onClose={selection.close}
                 >
-                    <p className='text-lg font-bold text-mh-text'>
-                        {drawer.title}
-                    </p>
-                    <p className='mt-1 text-sm text-mh-textMuted'>
-                        {drawer.summary}
-                    </p>
-                    <div className='mt-3 flex flex-wrap gap-2'>
-                        {drawer.status ? (
-                            <Badge tone={toSeverityTone(drawer.status)}>
-                                {drawer.status}
-                            </Badge>
-                        ) : null}
-                        {selectedRecord.recordOrigin === 'synthetic' && <Badge tone='info'>{t('feed.synthetic')}</Badge>}
-                    </div>
-                    <a className='mh-button inline-flex px-3 py-2' href={`/requests/view?uri=${encodeURIComponent(selectedRecord.aidPostUri)}`}>{t('handoff.requestDetails')}</a>
-                    {!fixtureMode && <RequestLifecycleActions record={selectedRecord} onRefresh={onRetry} />}
-                    <div className='mt-4 flex flex-wrap gap-2'>
-                        {drawer.actions
-                            .filter(
-                                () =>
-                                    fixtureMode,
-                            )
-                            .map((action) => (
-                                <Button
-                                    key={action.action}
-                                    variant={
-                                        action.action === 'contact_helper'
-                                            ? 'primary'
-                                            : 'neutral'
-                                    }
-                                    className='px-3 py-1 text-xs'
-                                    aria-label={action.ariaLabel}
-                                    onClick={() => {
-                                        if (
+                    <Panel
+                        title={String(t('map.mapDetailDrawerTitle'))}
+                        aria-label={String(
+                            t('map.detailsFor', {
+                                title: drawer.title ?? t('map.selectedRequest'),
+                            }),
+                        )}
+                    >
+                        <p className='text-lg font-bold text-mh-text'>
+                            {drawer.title}
+                        </p>
+                        <p className='mt-1 text-sm text-mh-textMuted'>
+                            {drawer.summary}
+                        </p>
+                        <div className='mt-3 flex flex-wrap gap-2'>
+                            {drawer.status ? (
+                                <Badge tone={toSeverityTone(drawer.status)}>
+                                    {drawer.status}
+                                </Badge>
+                            ) : null}
+                            {selectedRecord.recordOrigin === 'synthetic' && (
+                                <Badge tone='info'>{t('feed.synthetic')}</Badge>
+                            )}
+                        </div>
+                        <a
+                            className='mh-button inline-flex px-3 py-2'
+                            href={`/requests/view?uri=${encodeURIComponent(selectedRecord.aidPostUri)}`}
+                        >
+                            {t('handoff.requestDetails')}
+                        </a>
+                        {!fixtureMode && (
+                            <RequestLifecycleActions
+                                record={selectedRecord}
+                                onRefresh={onRetry}
+                            />
+                        )}
+                        <div className='mt-4 flex flex-wrap gap-2'>
+                            {drawer.actions
+                                .filter(() => fixtureMode)
+                                .map(action => (
+                                    <Button
+                                        key={action.action}
+                                        variant={
                                             action.action === 'contact_helper'
-                                        ) {
-                                            onOpenChat(selectedRecord, 'map');
-                                            return;
+                                                ? 'primary'
+                                                : 'neutral'
                                         }
+                                        className='px-3 py-1 text-xs'
+                                        aria-label={action.ariaLabel}
+                                        onClick={() => {
+                                            if (
+                                                action.action ===
+                                                'contact_helper'
+                                            ) {
+                                                onOpenChat(
+                                                    selectedRecord,
+                                                    'map',
+                                                );
+                                                return;
+                                            }
 
-                                        onTriageAction(
-                                            selectedRecord.card.id,
-                                            action.action,
-                                        );
-                                    }}
-                                >
-                                    {action.label}
-                                </Button>
-                            ))}
-
-                    </div>
-                </Panel>
+                                            onTriageAction(
+                                                selectedRecord.card.id,
+                                                action.action,
+                                            );
+                                        }}
+                                    >
+                                        {action.label}
+                                    </Button>
+                                ))}
+                        </div>
+                    </Panel>
                 </MapDetailSheet>
             ) : null}
         </section>
     );
 };
-

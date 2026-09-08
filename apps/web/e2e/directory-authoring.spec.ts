@@ -112,6 +112,7 @@ test('authenticated stewards publish, edit, and delete a directory resource', as
     await page.goto(
         '/resources?tab=nearby&r=20000&lat=41.88&lng=-87.63&area=Disposable+test+area',
     );
+    await page.getByText('Add or manage a resource', { exact: true }).click();
     await page.getByRole('button', { name: 'Add a resource' }).click();
     await page.getByLabel('Resource name').fill('Northside Community Pantry');
     await page.getByLabel('Public service area').fill('Near North Side');

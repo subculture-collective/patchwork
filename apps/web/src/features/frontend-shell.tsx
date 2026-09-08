@@ -1,7 +1,13 @@
+import { Modal } from '../components/Modal';
+import { MapDetailSheet } from './map-detail-sheet';
+import { DiscoveryControls as DiscoveryFiltersPanel } from './discovery-controls';
 import { fetchMapResourcePageFromApi } from './api-client';
 import { PublicResourceClaimManagement } from './public-resource-claims';
 import { lookupPostalArea } from '@patchwork/at-lexicons';
-import { DiscoveryLocationContext, useDiscoveryLocation, useDiscoveryLocationController } from './discovery-location';
+import {
+    DiscoveryLocationContext,
+    useDiscoveryLocationController,
+} from './discovery-location';
 import type { DiscoveryMapAggregates } from '@patchwork/shared';
 import { canonicalRouteUrl, resolveRouteAlias } from './navigation';
 import { RequestContextLink } from './request-context-link';
@@ -31,7 +37,6 @@ import {
     type AidStatus,
     type DiscoveryFilterState,
 } from '../discovery-filters';
-import { buildDiscoveryFilterChipModel } from '../discovery-primitives';
 import {
     applyFeedLifecycleAction,
     buildFeedViewModel,
@@ -285,17 +290,17 @@ interface FrontendShellProps {
 const routeLabelKeys: Readonly<Record<AppRoute, string>> = {
     '/': 'route.home',
     '/requests/view': 'handoff.requestDetails',
-    '/map': 'route.map',
-    '/feed': 'route.feed',
+    '/map': 'nav.nearby',
+    '/feed': 'nav.nearby',
     '/resources': 'route.resources',
     '/volunteer': 'route.volunteer',
     '/organizations': 'route.organizations',
     '/verification': 'route.verification',
-    '/posting': 'route.posting',
+    '/posting': 'nav.ask',
     '/chat': 'route.chat',
     '/settings': 'route.settings',
     '/moderation': 'route.moderation',
-    '/inbox': 'route.inbox',
+    '/inbox': 'nav.myActivity',
     '/notifications': 'route.notifications',
     '/scheduling': 'route.scheduling',
     '/feedback': 'route.feedback',
@@ -358,7 +363,6 @@ const urgencyPreferenceOptions: readonly VolunteerOnboardingDraft['preferredUrge
 
 const nowIso = (): string => new Date().toISOString();
 
-
 const defaultShellDiscoveryState = applyDiscoveryFilterPatch(
     defaultDiscoveryFilterState,
     {
@@ -417,160 +421,6 @@ const readPaginationPageFromUrl = (): number => {
     const page = Number.parseInt(new URLSearchParams(window.location.search).get('page') ?? '1', 10);
     return Number.isInteger(page) && page > 0 ? page : 1;
 };
-
-interface DiscoveryFiltersPanelProps {
-    idPrefix: string;
-    state: DiscoveryFilterState;
-    onPatch: (patch: Partial<DiscoveryFilterState>) => void;
-}
-
-const DiscoveryFiltersPanel = ({
-    idPrefix,
-    state,
-    onPatch,
-}: DiscoveryFiltersPanelProps) => {
-    const { t } = useLocale();
-    const location = useDiscoveryLocation();
-    const chipModel = useMemo(() => buildDiscoveryFilterChipModel(state), [state]);
-    return (
-        <div className='mh-discovery-filters'><Panel title={String(t('discovery.title'))}>
-            <div className='mb-3 flex flex-wrap items-center justify-between gap-2 text-sm' role='status'>
-                <span>{location.status === 'requesting' ? t('discovery.locationRequesting')
-                    : !state.center ? t('discovery.allAreas')
-                    : location.status === 'denied' ? t('discovery.locationDenied')
-                    : location.status === 'timeout' ? t('discovery.locationTimedOut')
-                    : location.status === 'unavailable' ? t('discovery.locationNotFound')
-                    : state.areaLabel === t('discovery.nearYou') ? t('discovery.locationActive') : t('discovery.selectedAreaActive')}</span>
-                <Button variant='neutral' disabled={location.status === 'requesting'} onClick={location.request}>{t('discovery.updateLocation')}</Button>
-            </div>
-            <label
-                htmlFor={`${idPrefix}-search`}
-                className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
-            >
-                {t('discovery.searchText')}
-            </label>
-            <Input
-                id={`${idPrefix}-search`}
-                name={`${idPrefix}-search`}
-                autoComplete='off'
-                placeholder={String(t('discovery.searchPlaceholder'))}
-                value={state.text ?? ''}
-                onChange={(event) => {
-                    const nextValue = event.target.value.trim();
-                    onPatch({
-                        text: nextValue.length > 0 ? nextValue : undefined,
-                    });
-                }}
-            />
-
-            <div className='mh-filter-grid mt-3 grid gap-3'>
-                <div>
-                    <p className='mb-2 text-xs font-bold uppercase tracking-[0.12em] text-mh-textMuted'>
-                        {t('discovery.category')}
-                    </p>
-                    <div className='flex flex-wrap gap-2'>
-                        {chipModel.categories.map((category) => (
-                            <Button
-                                key={category.id}
-                                variant={
-                                    category.active ? 'secondary' : 'neutral'
-                                }
-                                className='px-3 py-1 text-xs'
-                                onClick={() => {
-                                    onPatch({
-                                        category: category.active
-                                            ? undefined
-                                            : category.value,
-                                    });
-                                }}
-                            >
-                                {category.label}
-                            </Button>
-                        ))}
-                    </div>
-                </div>
-
-                <div>
-                    <p className='mb-2 text-xs font-bold uppercase tracking-[0.12em] text-mh-textMuted'>
-                        {t('discovery.status')}
-                    </p>
-                    <div className='flex flex-wrap gap-2'>
-                        {chipModel.statuses.map((status) => (
-                            <Button
-                                key={status.id}
-                                variant={
-                                    status.active ? 'secondary' : 'neutral'
-                                }
-                                className='px-3 py-1 text-xs'
-                                onClick={() => {
-                                    onPatch({
-                                        status: status.active
-                                            ? undefined
-                                            : status.value,
-                                    });
-                                }}
-                            >
-                                {status.label}
-                            </Button>
-                        ))}
-                    </div>
-                </div>
-
-                <div>
-                    <p className='mb-2 text-xs font-bold uppercase tracking-[0.12em] text-mh-textMuted'>
-                        {t('discovery.minimumUrgency')}
-                    </p>
-                    <div className='flex flex-wrap gap-2'>
-                        {chipModel.urgency.map((level) => (
-                            <Button
-                                key={level.id}
-                                variant={level.active ? 'secondary' : 'neutral'}
-                                className='px-3 py-1 text-xs'
-                                onClick={() => {
-                                    onPatch({
-                                        minUrgency: level.active
-                                            ? undefined
-                                            : level.value,
-                                    });
-                                }}
-                            >
-                                {level.label}
-                            </Button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className='flex flex-wrap items-center justify-between gap-3 border-t-2 border-mh-borderSoft pt-4'>
-                    <Button
-                        variant='neutral'
-                        className='px-3 py-1 text-xs'
-                        onClick={() => {
-                            onPatch({
-                                feedTab: state.center ? 'nearby' : 'latest',
-                                text: undefined,
-                                category: undefined,
-                                status: undefined,
-                                minUrgency: undefined,
-                                since: undefined,
-                            });
-                        }}
-                    >
-                        {t('discovery.resetFilters')}
-                    </Button>
-                    <p className='text-xs text-mh-textSoft'>
-                        {t('discovery.filtersPersist')}
-                    </p>
-                </div>
-            </div>
-        </Panel></div>
-    );
-};
-
-interface DashboardRouteProps {
-    onNavigate: (route: AppRoute) => void;
-    discoveryState: DiscoveryFilterState;
-    onPatchDiscovery: (patch: Partial<DiscoveryFilterState>) => void;
-}
 
 const LegalPolicyRoute = ({
     route,
@@ -647,275 +497,86 @@ const LegalPolicyRoute = ({
     );
 };
 
+interface DashboardRouteProps {
+    onNavigate: (route: AppRoute) => void;
+    discoveryState: DiscoveryFilterState;
+    onPatchDiscovery: (patch: Partial<DiscoveryFilterState>) => void;
+}
+
 const DashboardRoute = ({
     onNavigate,
-    discoveryState,
     onPatchDiscovery,
 }: DashboardRouteProps) => {
     const { t } = useLocale();
     return (
-        <>
-            <header className='mh-landing-hero'>
-                <div className='mh-landing-hero__copy'>
-                    <p className='mh-kicker'>{t('dashboard.eyebrow')}</p>
-                    <h1 className='mh-landing-title'>
-                        {t('dashboard.heading')}
-                    </h1>
-                    <p className='mh-landing-deck'>
-                        {t('dashboard.description')}
-                    </p>
-                    <div className='mt-7 flex flex-wrap gap-3'>
-                        <Button
-                            onClick={() => {
-                                onPatchDiscovery(buildNearbyPatch());
-                                onNavigate('/map');
-                            }}
-                        >
-                            {t('dashboard.browseNeeds')}
-                        </Button>
-                        <Button
-                            variant='secondary'
-                            onClick={() => onNavigate('/posting')}
-                        >
-                            {t('dashboard.askForHelp')}
-                        </Button>
-                        <Button
-                            variant='neutral'
-                            onClick={() => onNavigate('/resources')}
-                        >
-                            {t('dashboard.findResources')}
-                        </Button>
-                    </div>
-                    <p className='mh-landing-note'>
-                        <span aria-hidden='true' />{' '}
-                        {t('dashboard.locationPromise')}
-                    </p>
-                </div>
-
-                <aside
-                    className='mh-how-card'
-                    aria-labelledby='how-patchwork-works'
-                >
-                    <div className='mh-how-card__patches' aria-hidden='true'>
-                        <span />
-                        <span />
-                        <span />
-                        <span />
-                    </div>
-                    <p className='mh-kicker'>{t('dashboard.howEyebrow')}</p>
-                    <h2 id='how-patchwork-works' className='mh-how-card__title'>
-                        {t('dashboard.howTitle')}
-                    </h2>
-                    <ol className='mt-5 grid gap-4'>
-                        {(['discover', 'connect', 'coordinate'] as const).map(
-                            (step, index) => (
-                                <li key={step} className='mh-how-step'>
-                                    <span
-                                        className='mh-how-step__number'
-                                        aria-hidden='true'
-                                    >
-                                        {index + 1}
-                                    </span>
-                                    <div>
-                                        <h3 className='font-bold text-mh-text'>
-                                            {t(`dashboard.${step}Title`)}
-                                        </h3>
-                                        <p className='mt-1 text-sm text-mh-textMuted'>
-                                            {t(`dashboard.${step}Description`)}
-                                        </p>
-                                    </div>
-                                </li>
-                            ),
-                        )}
-                    </ol>
-                </aside>
+        <div className='mh-home'>
+            <header className='mh-home-intro'>
+                <p className='mh-kicker'>{t('dashboard.eyebrow')}</p>
+                <h1>{t('dashboard.heading')}</h1>
+                <p className='mh-home-deck'>{t('dashboard.description')}</p>
             </header>
-
             <section
-                className='mh-landing-section'
-                aria-labelledby='start-heading'
+                className='mh-home-paths'
+                aria-label={t('dashboard.startTitle')}
             >
-                <div className='mh-landing-section__header'>
-                    <div>
-                        <p className='mh-kicker'>
-                            {t('dashboard.startEyebrow')}
-                        </p>
-                        <h2
-                            id='start-heading'
-                            className='mh-landing-section__title'
-                        >
-                            {t('dashboard.startTitle')}
-                        </h2>
-                    </div>
-                    <p>{t('dashboard.startDescription')}</p>
-                </div>
-
-                <div className='grid gap-4 md:grid-cols-3'>
-                    <button
-                        type='button'
-                        className='mh-path-card mh-path-card--needs'
-                        onClick={() => {
-                            onPatchDiscovery(buildNearbyPatch());
-                            onNavigate('/feed');
-                        }}
-                    >
-                        <span
-                            className='mh-path-card__index'
-                            aria-hidden='true'
-                        >
-                            {t('dashboard.needsIndex')}
-                        </span>
-                        <span className='mh-path-card__title'>
-                            {t('dashboard.needsTitle')}
-                        </span>
-                        <span className='mh-path-card__description'>
-                            {t('dashboard.needsDescription')}
-                        </span>
-                        <span className='mh-path-card__link'>
-                            {t('dashboard.needsAction')}{' '}
-                            <span aria-hidden='true'>→</span>
-                        </span>
-                    </button>
-                    <button
-                        type='button'
-                        className='mh-path-card mh-path-card--offer'
-                        onClick={() => onNavigate('/volunteer')}
-                    >
-                        <span
-                            className='mh-path-card__index'
-                            aria-hidden='true'
-                        >
-                            {t('dashboard.offerIndex')}
-                        </span>
-                        <span className='mh-path-card__title'>
-                            {t('dashboard.offerTitle')}
-                        </span>
-                        <span className='mh-path-card__description'>
-                            {t('dashboard.offerDescription')}
-                        </span>
-                        <span className='mh-path-card__link'>
-                            {t('dashboard.offerAction')}{' '}
-                            <span aria-hidden='true'>→</span>
-                        </span>
-                    </button>
-                    <button
-                        type='button'
-                        className='mh-path-card mh-path-card--resources'
-                        onClick={() => onNavigate('/resources')}
-                    >
-                        <span
-                            className='mh-path-card__index'
-                            aria-hidden='true'
-                        >
-                            {t('dashboard.resourcesIndex')}
-                        </span>
-                        <span className='mh-path-card__title'>
-                            {t('dashboard.resourcesTitle')}
-                        </span>
-                        <span className='mh-path-card__description'>
-                            {t('dashboard.resourcesDescription')}
-                        </span>
-                        <span className='mh-path-card__link'>
-                            {t('dashboard.resourcesAction')}{' '}
-                            <span aria-hidden='true'>→</span>
-                        </span>
-                    </button>
-                </div>
+                <button
+                    className='mh-home-path'
+                    onClick={() => onNavigate('/posting')}
+                >
+                    <span className='mh-kicker'>
+                        {t('dashboard.needsTitle')}
+                    </span>
+                    <strong>{t('dashboard.askForHelp')}</strong>
+                    <span>{t('dashboard.needsDescription')}</span>
+                </button>
+                <button
+                    className='mh-home-path'
+                    onClick={() => {
+                        onPatchDiscovery(buildNearbyPatch());
+                        onNavigate('/map');
+                    }}
+                >
+                    <span className='mh-kicker'>
+                        {t('dashboard.offerTitle')}
+                    </span>
+                    <strong>{t('dashboard.browseNeeds')}</strong>
+                    <span>{t('dashboard.offerDescription')}</span>
+                </button>
+                <button
+                    className='mh-home-path'
+                    onClick={() => onNavigate('/resources')}
+                >
+                    <span className='mh-kicker'>
+                        {t('dashboard.resourcesTitle')}
+                    </span>
+                    <strong>{t('dashboard.findResources')}</strong>
+                    <span>{t('dashboard.resourcesDescription')}</span>
+                </button>
             </section>
-
             <section
-                className='mh-nearby-band'
-                aria-labelledby='nearby-heading'
+                className='mh-home-how'
+                aria-labelledby='how-patchwork-works'
             >
-                <div>
-                    <p className='mh-kicker'>{t('dashboard.nearbyEyebrow')}</p>
-                    <h2 id='nearby-heading' className='mh-nearby-band__title'>
-                        {t('dashboard.nearbyTitle')}
-                    </h2>
-                    <p className='mt-2 max-w-xl text-sm text-mh-textMuted sm:text-base'>
-                        {t('dashboard.nearbyDescription')}
-                    </p>
-                </div>
-                <div className='mh-nearby-band__search'>
-                    <label htmlFor='search-requests' className='sr-only'>
-                        {t('dashboard.searchRequests')}
-                    </label>
-                    <Input
-                        id='search-requests'
-                        name='searchRequests'
-                        autoComplete='off'
-                        placeholder={String(t('discovery.searchPlaceholder'))}
-                        value={discoveryState.text ?? ''}
-                        onChange={(event) => {
-                            const nextValue = event.target.value.trim();
-                            onPatchDiscovery({
-                                text:
-                                    nextValue.length > 0
-                                        ? nextValue
-                                        : undefined,
-                            });
-                        }}
-                    />
-                    <Button
-                        onClick={() => {
-                            onPatchDiscovery(buildNearbyPatch());
-                            onNavigate('/map');
-                        }}
-                    >
-                        {t('dashboard.exploreMap')}
-                    </Button>
-                </div>
+                <h2 id='how-patchwork-works'>{t('dashboard.howTitle')}</h2>
+                <ol>
+                    {(['discover', 'connect', 'coordinate'] as const).map(
+                        step => (
+                            <li key={step}>
+                                <h3>{t(`dashboard.${step}Title`)}</h3>
+                                <p>{t(`dashboard.${step}Description`)}</p>
+                            </li>
+                        ),
+                    )}
+                </ol>
             </section>
-
-            <section
-                className='mh-trust-section'
-                aria-labelledby='trust-heading'
-            >
-                <div className='mh-trust-section__intro'>
-                    <p className='mh-kicker'>{t('dashboard.trustEyebrow')}</p>
-                    <h2
-                        id='trust-heading'
-                        className='mh-landing-section__title'
-                    >
-                        {t('dashboard.trustTitle')}
-                    </h2>
-                    <p>{t('dashboard.trustDescription')}</p>
-                </div>
-                <ul className='mh-trust-list'>
-                    <li>
-                        <strong>{t('dashboard.approximateTitle')}</strong>
-                        <span>{t('dashboard.approximateDescription')}</span>
-                    </li>
-                    <li>
-                        <strong>{t('dashboard.privateTitle')}</strong>
-                        <span>{t('dashboard.privateDescription')}</span>
-                    </li>
-                    <li>
-                        <strong>{t('dashboard.controlTitle')}</strong>
-                        <span>{t('dashboard.controlDescription')}</span>
-                    </li>
-                </ul>
-            </section>
-
-            <aside className='mh-safety-note' aria-labelledby='safety-heading'>
-                <div>
-                    <p className='mh-kicker'>{t('dashboard.safetyEyebrow')}</p>
-                    <h2
-                        id='safety-heading'
-                        className='font-heading text-xl font-bold'
-                    >
-                        {t('dashboard.notEmergency')}
-                    </h2>
-                </div>
-                <p>
-                    {t('dashboard.safetyDescription')}{' '}
-                    <TextLink href='/legal/community-guidelines'>
-                        {t('dashboard.communityGuidelines')}
-                    </TextLink>
-                    {t('dashboard.safetySuffix')}
-                </p>
+            <aside className='mh-home-privacy'>
+                <h2>{t('dashboard.trustTitle')}</h2>
+                <p>{t('dashboard.locationPromise')}</p>
+                <TextLink href='/legal/privacy'>
+                    {t('legal.privacyNav')}
+                </TextLink>
             </aside>
-        </>
+        </div>
     );
 };
 
@@ -1792,15 +1453,34 @@ const PostingRoute = ({
     onCreateViaApi,
 }: PostingRouteProps) => {
     const { t } = useLocale();
-    const [savedDraft] = useState(() => { try { return loadPostingDraft(window.sessionStorage); } catch { return undefined; } });
+    const [savedDraft] = useState(() => {
+        try {
+            return loadPostingDraft(window.sessionStorage);
+        } catch {
+            return undefined;
+        }
+    });
     const [postalCode, setPostalCode] = useState(savedDraft?.postalCode ?? '');
     const [title, setTitle] = useState(savedDraft?.title ?? '');
     const [description, setDescription] = useState(() => {
-        const name = new URLSearchParams(window.location.search).get('resourceName');
-        return savedDraft?.description ?? (name ? t('handoff.resourceRequestContext', { name: name.slice(0, 200) }) : '');
+        const name = new URLSearchParams(window.location.search).get(
+            'resourceName',
+        );
+        return (
+            savedDraft?.description ??
+            (name
+                ? t('handoff.resourceRequestContext', {
+                      name: name.slice(0, 200),
+                  })
+                : '')
+        );
     });
-    const [category, setCategory] = useState<AidPostingCategory>(savedDraft?.category ?? 'food');
-    const [urgency, setUrgency] = useState<1 | 2 | 3 | 4 | 5>(savedDraft?.urgency ?? 4);
+    const [category, setCategory] = useState<AidPostingCategory>(
+        savedDraft?.category ?? 'food',
+    );
+    const [urgency, setUrgency] = useState<1 | 2 | 3 | 4 | 5>(
+        savedDraft?.urgency ?? 2,
+    );
     const [tagsText, setTagsText] = useState(savedDraft?.tagsText ?? '');
     const [startAt, setStartAt] = useState(savedDraft?.startAt ?? '');
     const [endAt, setEndAt] = useState(savedDraft?.endAt ?? '');
@@ -1813,10 +1493,41 @@ const PostingRoute = ({
     const [projectionNotice, setProjectionNotice] = useState<string>();
     const [projectionFailed, setProjectionFailed] = useState(false);
     const [projectionPostUri, setProjectionPostUri] = useState<string>();
-    const submissionRef = useRef<{ signature: string; rkey: string; now: string; record?: FeedRecordEnvelope; uploaded: number } | undefined>(undefined);
+    const submissionRef = useRef<
+        | {
+              signature: string;
+              rkey: string;
+              now: string;
+              record?: FeedRecordEnvelope;
+              uploaded: number;
+          }
+        | undefined
+    >(undefined);
     useEffect(() => {
-        try { savePostingDraft(window.sessionStorage, { title, description, category, urgency, tagsText, startAt, endAt, postalCode }); } catch { /* Optional browser storage. */ }
-    }, [title, description, category, urgency, tagsText, startAt, endAt, postalCode]);
+        try {
+            savePostingDraft(window.sessionStorage, {
+                title,
+                description,
+                category,
+                urgency,
+                tagsText,
+                startAt,
+                endAt,
+                postalCode,
+            });
+        } catch {
+            /* Optional browser storage. */
+        }
+    }, [
+        title,
+        description,
+        category,
+        urgency,
+        tagsText,
+        startAt,
+        endAt,
+        postalCode,
+    ]);
     const projectionTimerRef = useRef<number | undefined>(undefined);
 
     useEffect(
@@ -1834,7 +1545,9 @@ const PostingRoute = ({
             projectionTimerRef.current = undefined;
         }
         const lifecycle = await queryAidPostLifecycleViaApi(postUri);
-        const receipt = lifecycle.ok ? lifecycle.data.projectionReceipt : undefined;
+        const receipt = lifecycle.ok
+            ? lifecycle.data.projectionReceipt
+            : undefined;
         if (receipt?.state === 'projected') {
             setProjectionNotice(t('handoff.projectionConfirmed'));
             setProjectionFailed(false);
@@ -1848,7 +1561,10 @@ const PostingRoute = ({
         setProjectionNotice(t('handoff.projectionPending'));
         setProjectionFailed(attempts >= 4);
         if (attempts < 4) {
-            const seconds = Math.max(1, Math.min(receipt?.retryAfterSeconds ?? 5, 30));
+            const seconds = Math.max(
+                1,
+                Math.min(receipt?.retryAfterSeconds ?? 5, 30),
+            );
             projectionTimerRef.current = window.setTimeout(() => {
                 void pollProjection(postUri, attempts + 1);
             }, seconds * 1000);
@@ -1858,7 +1574,12 @@ const PostingRoute = ({
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const postalArea = lookupPostalArea(postalCode);
-        if (!postalArea) { setApiError('Enter a supported five-digit ZIP code for where help is needed.'); return; }
+        if (!postalArea) {
+            setApiError(
+                'Enter a supported five-digit ZIP code for where help is needed.',
+            );
+            return;
+        }
         setApiError(undefined);
         setProjectionNotice(undefined);
         setProjectionFailed(false);
@@ -1882,7 +1603,7 @@ const PostingRoute = ({
                           endAt: new Date(endAt).toISOString(),
                       }
                     : undefined,
-            attachments: attachmentFiles.map((file) => ({
+            attachments: attachmentFiles.map(file => ({
                 filename: file.name,
                 mimeType: file.type,
                 sizeBytes: file.size,
@@ -1900,18 +1621,25 @@ const PostingRoute = ({
 
         const signature = JSON.stringify(validation.normalizedDraft);
         if (submissionRef.current?.signature !== signature) {
-            submissionRef.current = { signature, rkey: crypto.randomUUID(), now: nowIso(), uploaded: 0 };
+            submissionRef.current = {
+                signature,
+                rkey: crypto.randomUUID(),
+                now: nowIso(),
+                uploaded: 0,
+            };
         }
         const submission = submissionRef.current;
         const localId = submission.rkey;
         setIsSubmitting(true);
 
         try {
-            const createResult = submission.record ? { ok: true as const, data: submission.record } : await onCreateViaApi({
-                draft: validation.normalizedDraft,
-                rkey: localId,
-                now: submission.now,
-            });
+            const createResult = submission.record
+                ? { ok: true as const, data: submission.record }
+                : await onCreateViaApi({
+                      draft: validation.normalizedDraft,
+                      rkey: localId,
+                      now: submission.now,
+                  });
 
             if (!createResult.ok) {
                 setSuccessMessage(undefined);
@@ -1920,7 +1648,11 @@ const PostingRoute = ({
             }
 
             submission.record = createResult.data;
-            try { clearPostingDraft(window.sessionStorage); } catch { /* Optional browser storage. */ }
+            try {
+                clearPostingDraft(window.sessionStorage);
+            } catch {
+                /* Optional browser storage. */
+            }
             onCreateRecord(createResult.data);
             setProjectionPostUri(createResult.data.aidPostUri);
             void pollProjection(createResult.data.aidPostUri);
@@ -1956,9 +1688,7 @@ const PostingRoute = ({
                     ? `${uploaded} private attachment(s) uploaded and queued for malware scanning.`
                     : undefined,
             );
-            setSuccessMessage(
-                t('posting.publicationPending', { id: localId }),
-            );
+            setSuccessMessage(t('posting.publicationPending', { id: localId }));
         } catch {
             setApiError(t('handoff.saveFailed'));
         } finally {
@@ -1967,7 +1697,7 @@ const PostingRoute = ({
     };
 
     return (
-        <section className='space-y-6'>
+        <section className='mh-posting-route space-y-6'>
             <header className='mh-route-header'>
                 <h1 className='mh-route-title'>{t('posting.heading')}</h1>
                 <p className='mt-2 text-sm text-mh-textMuted'>
@@ -1992,7 +1722,7 @@ const PostingRoute = ({
                             minLength={1}
                             maxLength={140}
                             value={title}
-                            onChange={(event) => setTitle(event.target.value)}
+                            onChange={event => setTitle(event.target.value)}
                         />
                     </div>
 
@@ -2012,7 +1742,7 @@ const PostingRoute = ({
                             maxLength={5000}
                             className='mh-input min-h-35 w-full px-3 py-2 text-base'
                             value={description}
-                            onChange={(event) =>
+                            onChange={event =>
                                 setDescription(event.target.value)
                             }
                         />
@@ -2032,14 +1762,14 @@ const PostingRoute = ({
                                 autoComplete='off'
                                 className='mh-input w-full px-3 py-2 text-base'
                                 value={category}
-                                onChange={(event) =>
+                                onChange={event =>
                                     setCategory(
                                         event.target
                                             .value as AidPostingCategory,
                                     )
                                 }
                             >
-                                {aidCategories.map((option) => (
+                                {aidCategories.map(option => (
                                     <option key={option} value={option}>
                                         {formatLocalizedLabel(t, option)}
                                     </option>
@@ -2054,33 +1784,34 @@ const PostingRoute = ({
                             >
                                 {t('posting.urgencyLabel')}
                             </label>
-                            <Input
+                            <select
                                 id='posting-urgency'
                                 name='urgency'
-                                autoComplete='off'
-                                type='number'
-                                min={1}
-                                max={5}
+                                className='mh-input w-full px-3 py-2 text-base'
                                 value={urgency}
-                                onChange={(event) => {
-                                    const nextUrgency = Number.parseInt(
-                                        event.target.value,
-                                        10,
-                                    );
-                                    if (Number.isNaN(nextUrgency)) {
-                                        return;
-                                    }
+                                aria-describedby='posting-urgency-help'
+                                onChange={event =>
                                     setUrgency(
-                                        Math.min(
-                                            5,
-                                            Math.max(1, nextUrgency),
-                                        ) as 1 | 2 | 3 | 4 | 5,
-                                    );
-                                }}
-                            />
+                                        Number(event.target.value) as
+                                            1 | 2 | 3 | 4 | 5,
+                                    )
+                                }
+                            >
+                                {([1, 2, 3, 4, 5] as const).map(value => (
+                                    <option key={value} value={value}>
+                                        {t(`experience.urgency${value}`)}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 
+                    <p
+                        id='posting-urgency-help'
+                        className='text-sm text-mh-textMuted'
+                    >
+                        {t('experience.urgencyHelp')}
+                    </p>
                     <div>
                         <label
                             htmlFor='posting-tags'
@@ -2093,18 +1824,48 @@ const PostingRoute = ({
                             name='accessibilityTags'
                             autoComplete='off'
                             value={tagsText}
-                            onChange={(event) =>
-                                setTagsText(event.target.value)
-                            }
+                            onChange={event => setTagsText(event.target.value)}
                         />
                     </div>
 
                     <div className='border-2 border-mh-borderSoft p-3'>
-                        <label className='block font-bold' htmlFor='request-postal-code'>ZIP code where help is needed</label>
-                        <input id='request-postal-code' name='postalCode' type='text' inputMode='numeric' autoComplete='postal-code' pattern='[0-9]{5}' minLength={5} maxLength={5} required
-                            className='mh-input mt-2 w-full' value={postalCode} onChange={event => setPostalCode(event.target.value)} aria-describedby='request-postal-help' />
-                        <p id='request-postal-help' className='mt-2 text-sm text-mh-textMuted'>Only this five-digit ZIP is public. Exchange a street address privately when arranging help. No device location is required.</p>
-                        {lookupPostalArea(postalCode) && <p className='mt-1 text-sm'>ZIP {postalCode} · {lookupPostalArea(postalCode)!.stateName}</p>}
+                        <label
+                            className='block font-bold'
+                            htmlFor='request-postal-code'
+                        >
+                            ZIP code where help is needed
+                        </label>
+                        <input
+                            id='request-postal-code'
+                            name='postalCode'
+                            type='text'
+                            inputMode='numeric'
+                            autoComplete='postal-code'
+                            pattern='[0-9]{5}'
+                            minLength={5}
+                            maxLength={5}
+                            required
+                            className='mh-input mt-2 w-full'
+                            value={postalCode}
+                            onChange={event =>
+                                setPostalCode(event.target.value)
+                            }
+                            aria-describedby='request-postal-help'
+                        />
+                        <p
+                            id='request-postal-help'
+                            className='mt-2 text-sm text-mh-textMuted'
+                        >
+                            Only this five-digit ZIP is public. Exchange a
+                            street address privately when arranging help. No
+                            device location is required.
+                        </p>
+                        {lookupPostalArea(postalCode) && (
+                            <p className='mt-1 text-sm'>
+                                ZIP {postalCode} ·{' '}
+                                {lookupPostalArea(postalCode)!.stateName}
+                            </p>
+                        )}
                     </div>
 
                     <div className='border-2 border-mh-border bg-mh-surfaceElev p-4'>
@@ -2132,7 +1893,7 @@ const PostingRoute = ({
                                 autoComplete='off'
                                 type='datetime-local'
                                 value={startAt}
-                                onChange={(event) =>
+                                onChange={event =>
                                     setStartAt(event.target.value)
                                 }
                             />
@@ -2150,9 +1911,7 @@ const PostingRoute = ({
                                 autoComplete='off'
                                 type='datetime-local'
                                 value={endAt}
-                                onChange={(event) =>
-                                    setEndAt(event.target.value)
-                                }
+                                onChange={event => setEndAt(event.target.value)}
                             />
                         </div>
                     </div>
@@ -2169,7 +1928,7 @@ const PostingRoute = ({
                             type='file'
                             multiple
                             accept='image/jpeg,image/png,image/gif,image/webp,application/pdf'
-                            onChange={(event) =>
+                            onChange={event =>
                                 setAttachmentFiles(
                                     Array.from(event.target.files ?? []),
                                 )
@@ -2180,7 +1939,7 @@ const PostingRoute = ({
                         </p>
                         {attachmentFiles.length ? (
                             <ul className='mt-2 text-xs'>
-                                {attachmentFiles.map((file) => (
+                                {attachmentFiles.map(file => (
                                     <li key={`${file.name}-${file.size}`}>
                                         {file.name} ·{' '}
                                         {Math.ceil(file.size / 1024)}{' '}
@@ -2198,7 +1957,7 @@ const PostingRoute = ({
 
                     {errors.length > 0 ? (
                         <div className='space-y-1'>
-                            {errors.map((issue) => (
+                            {errors.map(issue => (
                                 <p
                                     key={`${issue.field}-${issue.message}`}
                                     className='mh-alert text-xs font-bold'
@@ -2217,18 +1976,30 @@ const PostingRoute = ({
 
                     {projectionNotice ? (
                         <div
-                            className={projectionFailed ? 'mh-alert text-xs font-bold' : 'rounded-none border-2 border-mh-border bg-mh-surfaceElev px-3 py-2 text-xs font-bold'}
+                            className={
+                                projectionFailed
+                                    ? 'mh-alert text-xs font-bold'
+                                    : 'rounded-none border-2 border-mh-border bg-mh-surfaceElev px-3 py-2 text-xs font-bold'
+                            }
                             role={projectionFailed ? 'alert' : 'status'}
                             aria-live='polite'
                         >
                             <p>{projectionNotice}</p>
-                            <a href='/inbox' className='mt-2 inline-block underline'>{t('myRequests.heading')}</a>
+                            <a
+                                href='/inbox'
+                                className='mt-2 inline-block underline'
+                            >
+                                {t('myRequests.heading')}
+                            </a>
                             {projectionFailed ? (
                                 <Button
                                     type='button'
                                     variant='neutral'
                                     className='mt-2 px-3 py-1 text-xs'
-                                    onClick={() => projectionPostUri && void pollProjection(projectionPostUri)}
+                                    onClick={() =>
+                                        projectionPostUri &&
+                                        void pollProjection(projectionPostUri)
+                                    }
                                 >
                                     {t('discovery.retryProjection')}
                                 </Button>
@@ -2243,7 +2014,14 @@ const PostingRoute = ({
                     ) : null}
 
                     <div className='flex flex-wrap gap-2'>
-                        <Button type='submit' disabled={!location || isSubmitting || Boolean(successMessage && !apiError)}>
+                        <Button
+                            type='submit'
+                            disabled={
+                                !location ||
+                                isSubmitting ||
+                                Boolean(successMessage && !apiError)
+                            }
+                        >
                             {isSubmitting
                                 ? t('posting.publishing')
                                 : t('posting.publishRequest')}
@@ -2885,24 +2663,40 @@ const ResourceRoute = ({
             [t],
         ),
     });
-    const [activeCategory, setActiveCategory] =
-        useState<DirectoryResourceCategory>();
-    const [selectedUri, setSelectedUri] = useState<string | undefined>(() => new URLSearchParams(window.location.search).get('resource') ?? undefined);
+    const activeCategory = discoveryState.resourceCategory;
+    const setActiveCategory = (
+        category: DirectoryResourceCategory | undefined,
+    ) => onPatchDiscovery({ resourceCategory: category });
+    const [selectedUri, setSelectedUri] = useState<string | undefined>(
+        () =>
+            new URLSearchParams(window.location.search).get('resource') ??
+            undefined,
+    );
     const [manageUri, setManageUri] = useState<string>();
+    const managementDisclosure = useRef<HTMLDetailsElement>(null);
+    useEffect(() => {
+        if (manageUri && managementDisclosure.current)
+            managementDisclosure.current.open = true;
+    }, [manageUri]);
     const [selectedResource, setSelectedResource] = useState<ResourceDetail>();
     const [detailError, setDetailError] = useState(false);
     const [detailReload, setDetailReload] = useState(0);
     useEffect(() => {
         const controller = new AbortController();
-        setSelectedResource(undefined); setDetailError(false);
-        if (selectedUri) void fetchResourceViaApi(selectedUri, controller.signal, 'all').then(result => {
-            if (controller.signal.aborted) return;
-            if (result.ok) setSelectedResource(result.data);
-            else setDetailError(true);
-        });
+        setSelectedResource(undefined);
+        setDetailError(false);
+        if (selectedUri)
+            void fetchResourceViaApi(
+                selectedUri,
+                controller.signal,
+                'all',
+            ).then(result => {
+                if (controller.signal.aborted) return;
+                if (result.ok) setSelectedResource(result.data);
+                else setDetailError(true);
+            });
         return () => controller.abort();
     }, [selectedUri, detailReload, discoveryState.dataset]);
-
 
     useEffect(() => {
         if (!selectedUri) {
@@ -2921,9 +2715,13 @@ const ResourceRoute = ({
 
     const viewModel = useMemo(
         () =>
-            buildResourceOverlayViewModel(resourceCards, discoveryState, {
-                category: activeCategory,
-            }),
+            buildResourceOverlayViewModel(
+                resourceCards,
+                { ...discoveryState, category: undefined },
+                {
+                    category: activeCategory,
+                },
+            ),
         [activeCategory, discoveryState, resourceCards],
     );
 
@@ -2944,21 +2742,28 @@ const ResourceRoute = ({
     );
 
     const detailPanel = selectedUri
-        ? openResourceDetailPanel(selectedResource ? [selectedResource] : [], selectedUri)
+        ? openResourceDetailPanel(
+              selectedResource ? [selectedResource] : [],
+              selectedUri,
+          )
         : closeResourceDetailPanel();
 
     return (
-        <section className='space-y-6'>
+        <section className='mh-resource-route space-y-6'>
             <header className='mh-route-header'>
                 <h1 className='mh-route-title'>{t('resources.heading')}</h1>
                 <p className='mt-2 text-sm text-mh-textMuted'>
                     {t('resources.description')}
                 </p>
-                {discoveryState.center && <p className='text-sm text-mh-textMuted'>{t('resources.nearestFirst')}</p>}
+                {discoveryState.center && (
+                    <p className='text-sm text-mh-textMuted'>
+                        {t('resources.nearestFirst')}
+                    </p>
+                )}
                 <div className='mt-3 flex flex-wrap gap-2'>
-                    <Badge tone={dataOrigin === 'api' ? 'success' : 'info'}>
-                        {dataOriginLabel(dataOrigin)}
-                    </Badge>
+                    {dataOrigin !== 'api' && (
+                        <Badge tone='info'>{dataOriginLabel(dataOrigin)}</Badge>
+                    )}
                 </div>
                 {errorMessage ? (
                     <div
@@ -2982,89 +2787,83 @@ const ResourceRoute = ({
                     </div>
                 ) : null}
             </header>
-            {selectedUri && !selectedResource && <Panel title={t('resources.resourceDetailTitle')}>
-                <p role={detailError ? 'alert' : 'status'}>{t(detailError ? 'myRequests.resourceUnavailable' : 'myRequests.resourceLoading')}</p>
-                {detailError && <Button onClick={() => setDetailReload(value => value + 1)}>{t('handoff.retry')}</Button>}
-                <Button variant='neutral' onClick={() => setSelectedUri(undefined)}>{t('resources.close')}</Button>
-            </Panel>}
-            {detailPanel.open ? (
-                <Panel title={String(t('resources.resourceDetailTitle'))}>
-                    <p className='text-lg font-bold text-mh-text'>
-                        {detailPanel.title}
-                    </p>
-                    <p className='mt-1 text-sm text-mh-textMuted'>
-                        {detailPanel.categoryLabel} · {detailPanel.openHours}
-                    </p>
-                    <p className='mt-2 text-sm text-mh-textSoft'>
-                        {detailPanel.eligibilityNotes}
-                    </p>
-                    {detailPanel.exactPublicAddress ? (
-                        <div className='mh-alert mt-3 text-sm'>
-                            <p className='font-bold'>
-                                {t('resources.approvedAddress')}
-                            </p>
-                            <p>{detailPanel.exactPublicAddress}</p>
-                            <p className='mt-1 text-xs text-mh-textSoft'>
-                                {t('resources.approvalExpires', {
-                                    date: fmt.longDate(
-                                        detailPanel.exactAddressApprovalExpiresAt ??
-                                            '',
-                                    ),
-                                })}
-                            </p>
-                        </div>
-                    ) : null}
-                    <div className='mt-4 flex flex-wrap gap-2'>
-                        {selectedResource && <ResourceActions resource={selectedResource} />}
+            {selectedUri && !selectedResource && (
+                <MapDetailSheet
+                    closeLabel={t('resources.close')}
+                    onClose={() => setSelectedUri(undefined)}
+                >
+                    <Panel title={t('resources.resourceDetailTitle')}>
+                        <p role={detailError ? 'alert' : 'status'}>
+                            {t(
+                                detailError
+                                    ? 'myRequests.resourceUnavailable'
+                                    : 'myRequests.resourceLoading',
+                            )}
+                        </p>
+                        {detailError && (
+                            <Button
+                                onClick={() =>
+                                    setDetailReload(value => value + 1)
+                                }
+                            >
+                                {t('handoff.retry')}
+                            </Button>
+                        )}
                         <Button
                             variant='neutral'
-                            className='px-3 py-1 text-xs'
                             onClick={() => setSelectedUri(undefined)}
                         >
                             {t('resources.close')}
                         </Button>
-                    </div>
-                </Panel>
-            ) : null}
-
-            {discoveryState.center ? (
-                <DirectoryResourceManager
-                    currentUserDid={currentUserDid}
-                    center={discoveryState.center}
-                    onChanged={onRetry}
-                    editUri={manageUri}
-                    onEditHandled={() => setManageUri(undefined)}
-                />
+                    </Panel>
+                </MapDetailSheet>
+            )}
+            {detailPanel.open ? (
+                <MapDetailSheet
+                    closeLabel={t('resources.close')}
+                    onClose={() => setSelectedUri(undefined)}
+                >
+                    <Panel title={String(t('resources.resourceDetailTitle'))}>
+                        <p className='text-lg font-bold text-mh-text'>
+                            {detailPanel.title}
+                        </p>
+                        <p className='mt-1 text-sm text-mh-textMuted'>
+                            {detailPanel.categoryLabel} ·{' '}
+                            {detailPanel.openHours}
+                        </p>
+                        <p className='mt-2 text-sm text-mh-textSoft'>
+                            {detailPanel.eligibilityNotes}
+                        </p>
+                        <div className='mt-4 flex flex-wrap gap-2'>
+                            {selectedResource && (
+                                <ResourceActions resource={selectedResource} />
+                            )}
+                        </div>
+                    </Panel>
+                </MapDetailSheet>
             ) : null}
 
             <DiscoveryFiltersPanel
                 idPrefix='resources'
+                resourceMode
                 state={discoveryState}
                 onPatch={onPatchDiscovery}
             />
 
-            <p ref={paginationFocus.loadedCountRef} tabIndex={-1} className='text-sm text-mh-textMuted' role='status'>
-                {t('discovery.loadedCount', { loaded: resourceCards.length, total })}
-            </p>
-            <span className='sr-only' role='status' aria-live='polite'>{paginationFocus.announcement}</span>
-            {hasNextPage ? (
-                <Button ref={paginationFocus.loadMoreRef} type='button' variant='neutral' onClick={() => paginationFocus.loadMore(onLoadMore)} disabled={isLoading}>
-                    {t('discovery.loadMore')}
-                </Button>
-            ) : null}
-
             <Card title={String(t('resources.directoryFiltersTitle'))}>
                 <div className='flex flex-wrap gap-2'>
                     <Button
-                        variant={activeCategory ? 'neutral' : 'secondary'}
+                        aria-pressed={!activeCategory}
+                        variant={activeCategory ? 'neutral' : 'primary'}
                         className='px-3 py-1 text-xs'
                         onClick={() => setActiveCategory(undefined)}
                     >
                         {t('resources.allCategories')}
                     </Button>
-                    {resourceCategoryOptions.map((category) => (
+                    {resourceCategoryOptions.map(category => (
                         <Button
                             key={category}
+                            aria-pressed={activeCategory === category}
                             variant={
                                 activeCategory === category
                                     ? 'secondary'
@@ -3072,8 +2871,10 @@ const ResourceRoute = ({
                             }
                             className='px-3 py-1 text-xs'
                             onClick={() =>
-                                setActiveCategory((current) =>
-                                    current === category ? undefined : category,
+                                setActiveCategory(
+                                    activeCategory === category
+                                        ? undefined
+                                        : category,
                                 )
                             }
                         >
@@ -3091,7 +2892,7 @@ const ResourceRoute = ({
                     {uiState.ariaLiveMessage}
                 </div>
 
-                {isLoading ? (
+                {isLoading && viewModel.cards.length === 0 ? (
                     <ul className='space-y-3' aria-live='polite'>
                         {Array.from({ length: 3 }).map((_, index) => (
                             <li
@@ -3123,7 +2924,7 @@ const ResourceRoute = ({
                     </div>
                 ) : (
                     <ul className='space-y-3'>
-                        {viewModel.cards.map((card) => (
+                        {viewModel.cards.map(card => (
                             <li key={card.uri} className='mh-record-card'>
                                 <div className='flex flex-wrap items-start justify-between gap-2'>
                                     <p className='text-sm font-bold text-mh-text'>
@@ -3144,7 +2945,9 @@ const ResourceRoute = ({
                                     ) : null}
                                 </div>
                                 <p className='mt-1 text-xs text-mh-textSoft'>
-                                    {card.distanceMeters !== undefined ? `${fmt.number(card.distanceMeters / 1000, { maximumFractionDigits: 1 })} km · ` : ''}
+                                    {card.distanceMeters !== undefined
+                                        ? `${fmt.number(card.distanceMeters / 1000, { maximumFractionDigits: 1 })} km · `
+                                        : ''}
                                     {card.location.areaLabel ??
                                         t('resources.areaPending')}{' '}
                                     ·{' '}
@@ -3193,7 +2996,47 @@ const ResourceRoute = ({
                 )}
             </Card>
 
+            <p
+                ref={paginationFocus.loadedCountRef}
+                tabIndex={-1}
+                className='text-sm text-mh-textMuted'
+                role='status'
+            >
+                {t('discovery.loadedCount', {
+                    loaded: resourceCards.length,
+                    total,
+                })}
+            </p>
+            <span className='sr-only' role='status' aria-live='polite'>
+                {paginationFocus.announcement}
+            </span>
+            {hasNextPage ? (
+                <Button
+                    ref={paginationFocus.loadMoreRef}
+                    type='button'
+                    variant='neutral'
+                    onClick={() => paginationFocus.loadMore(onLoadMore)}
+                    disabled={isLoading}
+                >
+                    {t('discovery.loadMore')}
+                </Button>
+            ) : null}
 
+            {discoveryState.center ? (
+                <details
+                    className='mh-management-disclosure'
+                    ref={managementDisclosure}
+                >
+                    <summary>{t('experience.manageResources')}</summary>
+                    <DirectoryResourceManager
+                        currentUserDid={currentUserDid}
+                        center={discoveryState.center}
+                        onChanged={onRetry}
+                        editUri={manageUri}
+                        onEditHandled={() => setManageUri(undefined)}
+                    />
+                </details>
+            ) : null}
         </section>
     );
 };
@@ -6643,51 +6486,93 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
     const mutationKeys = useRef(new Map<string, string>());
     const mutationRunning = useRef(false);
     const [mutationBusy, setMutationBusy] = useState(false);
-    const mutate = async (operation: string, effect: (key: string) => Promise<{ ok: boolean; error?: string }>) => {
-        if (mutationRunning.current) return { ok: false, error: t('handoff.saving') };
-        mutationRunning.current = true; setMutationBusy(true);
+    const mutate = async (
+        operation: string,
+        effect: (key: string) => Promise<{ ok: boolean; error?: string }>,
+    ) => {
+        if (mutationRunning.current)
+            return { ok: false, error: t('handoff.saving') };
+        mutationRunning.current = true;
+        setMutationBusy(true);
         const key = mutationKeys.current.get(operation) ?? crypto.randomUUID();
         mutationKeys.current.set(operation, key);
         try {
             const result = await effect(key);
             if (result.ok) mutationKeys.current.delete(operation);
             return result;
-        } finally { mutationRunning.current = false; setMutationBusy(false); }
+        } finally {
+            mutationRunning.current = false;
+            setMutationBusy(false);
+        }
     };
-    const decideOffer = (input: Parameters<typeof decideCoordinationOfferViaApi>[0]) =>
-        mutate(`offer:${input.offerId}:${input.decision}`, key => decideCoordinationOfferViaApi(input, undefined, key));
-    const changeConnection = (input: Parameters<typeof transitionCoordinationConnectionViaApi>[0]) =>
-        mutate(`connection:${input.connectionId}:${input.action}`, key => transitionCoordinationConnectionViaApi(input, undefined, key));
+    const decideOffer = (
+        input: Parameters<typeof decideCoordinationOfferViaApi>[0],
+    ) =>
+        mutate(`offer:${input.offerId}:${input.decision}`, key =>
+            decideCoordinationOfferViaApi(input, undefined, key),
+        );
+    const changeConnection = (
+        input: Parameters<typeof transitionCoordinationConnectionViaApi>[0],
+    ) =>
+        mutate(`connection:${input.connectionId}:${input.action}`, key =>
+            transitionCoordinationConnectionViaApi(input, undefined, key),
+        );
 
-    const requestContext = new URLSearchParams(window.location.search).get('uri');
-    const visibleOffers = requestContext ? offers.filter(offer => offer.requestUri === requestContext) : offers;
-    const connectionContext = new URLSearchParams(window.location.search).get('connection');
-    const visibleConnections = connections.filter(connection => (!requestContext || connection.requestUri === requestContext) && (!connectionContext || connection.id === connectionContext));
+    const requestContext = new URLSearchParams(window.location.search).get(
+        'uri',
+    );
+    const visibleOffers = requestContext
+        ? offers.filter(offer => offer.requestUri === requestContext)
+        : offers;
+    const connectionContext = new URLSearchParams(window.location.search).get(
+        'connection',
+    );
+    const visibleConnections = connections.filter(
+        connection =>
+            (!requestContext || connection.requestUri === requestContext) &&
+            (!connectionContext || connection.id === connectionContext),
+    );
     const refreshController = useRef<AbortController | undefined>(undefined);
 
     const load = useCallback(async () => {
         refreshController.current?.abort();
         const controller = new AbortController();
         refreshController.current = controller;
-        const [coordination, inbox, outcomeHistory, discoverable] = await Promise.all([
-            fetchCoordinationViaApi(controller.signal),
-            fetchActivityInboxViaApi(unreadOnly, controller.signal),
-            fetchMyOutcomeFeedbackViaApi(controller.signal),
-            fetchFeedRecordsFromApi(defaultDiscoveryFilterState, 'feed', controller.signal),
-        ]);
+        const [coordination, inbox, outcomeHistory, discoverable] =
+            await Promise.all([
+                fetchCoordinationViaApi(controller.signal),
+                fetchActivityInboxViaApi(unreadOnly, controller.signal),
+                fetchMyOutcomeFeedbackViaApi(controller.signal),
+                fetchFeedRecordsFromApi(
+                    defaultDiscoveryFilterState,
+                    'feed',
+                    controller.signal,
+                ),
+            ]);
         if (controller.signal.aborted) return false;
         if (coordination.ok) {
             setOffers(coordination.data.offers);
             setConnections(coordination.data.connections);
-        } else if (coordination.kind === 'authentication') { setOffers([]); setConnections([]); }
+        } else if (coordination.kind === 'authentication') {
+            setOffers([]);
+            setConnections([]);
+        }
         if (inbox.ok) setItems(inbox.data.items);
         else if (inbox.kind === 'authentication') setItems([]);
         if (outcomeHistory.ok) setFeedback(outcomeHistory.data.feedback);
         else if (outcomeHistory.kind === 'authentication') setFeedback([]);
         if (discoverable.ok) setRequests(discoverable.data);
         else if (discoverable.kind === 'authentication') setRequests([]);
-        const failed = [coordination, inbox, outcomeHistory, discoverable].some(result => !result.ok);
-        setStatus(failed ? t('myRequests.activityPartial') : inbox.ok ? t('inbox.unreadCount', { count: inbox.data.unread }) : '');
+        const failed = [coordination, inbox, outcomeHistory, discoverable].some(
+            result => !result.ok,
+        );
+        setStatus(
+            failed
+                ? t('myRequests.activityPartial')
+                : inbox.ok
+                  ? t('inbox.unreadCount', { count: inbox.data.unread })
+                  : '',
+        );
         return !failed;
     }, [unreadOnly, t]);
 
@@ -6713,14 +6598,14 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
     };
 
     const ownedRequests = requests.filter(
-        (request) => request.recipientDid === did,
+        request => request.recipientDid === did,
     );
     const availableRequests = requests.filter(
-        (request) => request.recipientDid !== did,
+        request => request.recipientDid !== did,
     );
     const offerRequest = offerRequestUri
         ? availableRequests.find(
-              (request) => request.aidPostUri === offerRequestUri,
+              request => request.aidPostUri === offerRequestUri,
           )
         : undefined;
 
@@ -6737,27 +6622,37 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                 >
                     {status}
                 </p>
-                <a
-                    className='mt-3 inline-block font-bold underline'
-                    href='/scheduling'
+                <nav
+                    className='mh-activity-nav'
+                    aria-label={t('experience.activitySections')}
                 >
-                    {t('inbox.openScheduling')}
-                </a>
-                <Button variant='neutral' onClick={() => void load()}>{t('myRequests.refresh')}</Button>
+                    <a href='#my-requests'>{t('myRequests.heading')}</a>
+                    <a href='#request-offers'>{t('inbox.offers')}</a>
+                    <a href='#my-connections'>{t('inbox.connections')}</a>
+                    <a href='/chat'>{t('chat.heading')}</a>
+                </nav>
+                <Button variant='neutral' onClick={() => void load()}>
+                    {t('myRequests.refresh')}
+                </Button>
             </header>
 
-            <Suspense fallback={null}><LazyMyRequests key={did} /></Suspense>
+            <div id='my-requests' className='scroll-mt-24'>
+                <Suspense fallback={null}>
+                    <LazyMyRequests key={did} />
+                </Suspense>
+            </div>
 
             {offerRequest ? (
-                <div
-                    role='dialog'
-                    aria-modal='true'
-                    aria-labelledby='offer-help-title'
-                    className='fixed inset-0 z-50 grid place-items-center bg-black/60 p-4'
+                <Modal
+                    labelledBy='offer-help-title'
+                    onClose={() => setOfferRequestUri(undefined)}
                 >
                     <section className='mh-card w-full max-w-xl space-y-4 p-5'>
                         <div>
-                            <h2 id='offer-help-title' className='font-heading text-xl font-bold'>
+                            <h2
+                                id='offer-help-title'
+                                className='font-heading text-xl font-bold'
+                            >
                                 {t('inbox.offerHelpFor', {
                                     title: offerRequest.card.title,
                                 })}
@@ -6769,11 +6664,12 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                         <label className='block text-sm font-bold'>
                             {t('inbox.note')}
                             <textarea
-                                autoFocus
                                 className='mh-input mt-1 min-h-24 w-full px-3 py-2'
                                 maxLength={1000}
                                 value={offerNote}
-                                onChange={(event) => setOfferNote(event.target.value)}
+                                onChange={event =>
+                                    setOfferNote(event.target.value)
+                                }
                             />
                         </label>
                         <div className='flex flex-wrap justify-end gap-2'>
@@ -6800,10 +6696,14 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                             </Button>
                         </div>
                     </section>
-                </div>
+                </Modal>
             ) : null}
 
-            {(requestContext || connectionContext) && <a href='/inbox' className='underline'>{t('myRequests.allActivity')}</a>}
+            {(requestContext || connectionContext) && (
+                <a href='/inbox' className='underline'>
+                    {t('myRequests.allActivity')}
+                </a>
+            )}
             <div id='request-offers' />
             <Panel title={String(t('inbox.offers'))}>
                 {visibleOffers.length === 0 ? (
@@ -6812,7 +6712,7 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                     </p>
                 ) : (
                     <div className='space-y-3'>
-                        {visibleOffers.map((offer) => (
+                        {visibleOffers.map(offer => (
                             <Card
                                 key={offer.id}
                                 title={t('inbox.offerTitle', {
@@ -6870,14 +6770,12 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                                             t(
                                                                 'inbox.acceptingOffer',
                                                             ),
-                                                            decideOffer(
-                                                                {
-                                                                    offerId:
-                                                                        offer.id,
-                                                                    decision:
-                                                                        'accept',
-                                                                },
-                                                            ),
+                                                            decideOffer({
+                                                                offerId:
+                                                                    offer.id,
+                                                                decision:
+                                                                    'accept',
+                                                            }),
                                                         )
                                                     }
                                                 >
@@ -6891,14 +6789,12 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                                             t(
                                                                 'inbox.decliningOffer',
                                                             ),
-                                                            decideOffer(
-                                                                {
-                                                                    offerId:
-                                                                        offer.id,
-                                                                    decision:
-                                                                        'decline',
-                                                                },
-                                                            ),
+                                                            decideOffer({
+                                                                offerId:
+                                                                    offer.id,
+                                                                decision:
+                                                                    'decline',
+                                                            }),
                                                         )
                                                     }
                                                 >
@@ -6914,14 +6810,10 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                                         t(
                                                             'inbox.cancellingOffer',
                                                         ),
-                                                        decideOffer(
-                                                            {
-                                                                offerId:
-                                                                    offer.id,
-                                                                decision:
-                                                                    'cancel',
-                                                            },
-                                                        ),
+                                                        decideOffer({
+                                                            offerId: offer.id,
+                                                            decision: 'cancel',
+                                                        }),
                                                     )
                                                 }
                                             >
@@ -6936,6 +6828,7 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                 )}
             </Panel>
 
+            <div id='my-connections' className='scroll-mt-24' />
             <Panel title={String(t('inbox.connections'))}>
                 {visibleConnections.length === 0 ? (
                     <p className='text-sm text-mh-textMuted'>
@@ -6943,9 +6836,9 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                     </p>
                 ) : (
                     <div className='space-y-3'>
-                        {visibleConnections.map((connection) => {
+                        {visibleConnections.map(connection => {
                             const submittedFeedback = feedback.find(
-                                (entry) => entry.connectionId === connection.id,
+                                entry => entry.connectionId === connection.id,
                             );
                             const alreadySubmitted = Boolean(submittedFeedback);
                             const draft = outcomes[connection.id] ?? {
@@ -6964,7 +6857,9 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                         ),
                                     })}
                                 >
-                                    <RequestContextLink uri={connection.requestUri} />
+                                    <RequestContextLink
+                                        uri={connection.requestUri}
+                                    />
                                     <p className='break-all text-xs'>
                                         {t('inbox.connected', {
                                             did: connection.counterpartDid,
@@ -6973,9 +6868,24 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                     {connection.status === 'active' ? (
                                         <>
                                             <div className='my-3 flex flex-wrap gap-3'>
-                                                <a className='mh-button px-3 py-2' href={`/chat?connection=${encodeURIComponent(connection.id)}`}>{t('handoff.openMessages')}</a>
-                                                <a className='mh-button px-3 py-2' href={`/scheduling?connection=${encodeURIComponent(connection.id)}`}>{t('inbox.openScheduling')}</a>
-                                                <a className='underline' href={`/requests/view?uri=${encodeURIComponent(connection.requestUri)}`}>{t('myRequests.view')}</a>
+                                                <a
+                                                    className='mh-button px-3 py-2'
+                                                    href={`/chat?connection=${encodeURIComponent(connection.id)}`}
+                                                >
+                                                    {t('handoff.openMessages')}
+                                                </a>
+                                                <a
+                                                    className='mh-button px-3 py-2'
+                                                    href={`/scheduling?connection=${encodeURIComponent(connection.id)}`}
+                                                >
+                                                    {t('inbox.openScheduling')}
+                                                </a>
+                                                <a
+                                                    className='underline'
+                                                    href={`/requests/view?uri=${encodeURIComponent(connection.requestUri)}`}
+                                                >
+                                                    {t('myRequests.view')}
+                                                </a>
                                             </div>
                                             <ExactLocationExchange
                                                 connectionId={connection.id}
@@ -6988,13 +6898,11 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                                             t(
                                                                 'inbox.completing',
                                                             ),
-                                                            changeConnection(
-                                                                {
-                                                                    connectionId:
-                                                                        connection.id,
-                                                                    action: 'complete',
-                                                                },
-                                                            ),
+                                                            changeConnection({
+                                                                connectionId:
+                                                                    connection.id,
+                                                                action: 'complete',
+                                                            }),
                                                         )
                                                     }
                                                 >
@@ -7008,13 +6916,11 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                                             t(
                                                                 'inbox.cancellingConnection',
                                                             ),
-                                                            changeConnection(
-                                                                {
-                                                                    connectionId:
-                                                                        connection.id,
-                                                                    action: 'cancel',
-                                                                },
-                                                            ),
+                                                            changeConnection({
+                                                                connectionId:
+                                                                    connection.id,
+                                                                action: 'cancel',
+                                                            }),
                                                         )
                                                     }
                                                 >
@@ -7026,7 +6932,7 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                       !alreadySubmitted ? (
                                         <form
                                             className='mt-3 space-y-3 border-t border-mh-borderSoft pt-3'
-                                            onSubmit={(event) => {
+                                            onSubmit={event => {
                                                 event.preventDefault();
                                                 void finish(
                                                     t('inbox.savingOutcome'),
@@ -7059,9 +6965,9 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                                     <select
                                                         className='mh-input mt-1 w-full px-3 py-2'
                                                         value={draft.outcome}
-                                                        onChange={(event) =>
+                                                        onChange={event =>
                                                             setOutcomes(
-                                                                (current) => ({
+                                                                current => ({
                                                                     ...current,
                                                                     [connection.id]:
                                                                         {
@@ -7076,7 +6982,7 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                                         }
                                                     >
                                                         {outcomeOptions.map(
-                                                            (value) => (
+                                                            value => (
                                                                 <option
                                                                     key={value}
                                                                     value={
@@ -7099,9 +7005,9 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                                         min={1}
                                                         max={5}
                                                         value={draft.rating}
-                                                        onChange={(event) =>
+                                                        onChange={event =>
                                                             setOutcomes(
-                                                                (current) => ({
+                                                                current => ({
                                                                     ...current,
                                                                     [connection.id]:
                                                                         {
@@ -7124,9 +7030,9 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                                     className='mh-input mt-1 min-h-20 w-full px-3 py-2'
                                                     maxLength={2000}
                                                     value={draft.comment}
-                                                    onChange={(event) =>
+                                                    onChange={event =>
                                                         setOutcomes(
-                                                            (current) => ({
+                                                            current => ({
                                                                 ...current,
                                                                 [connection.id]:
                                                                     {
@@ -7147,9 +7053,9 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                                     checked={
                                                         draft.safetyConcern
                                                     }
-                                                    onChange={(event) =>
+                                                    onChange={event =>
                                                         setOutcomes(
-                                                            (current) => ({
+                                                            current => ({
                                                                 ...current,
                                                                 [connection.id]:
                                                                     {
@@ -7190,9 +7096,7 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                     <input
                         type='checkbox'
                         checked={unreadOnly}
-                        onChange={(event) =>
-                            setUnreadOnly(event.target.checked)
-                        }
+                        onChange={event => setUnreadOnly(event.target.checked)}
                     />{' '}
                     {t('inbox.unreadOnly')}
                 </label>
@@ -7202,7 +7106,7 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                     </p>
                 ) : (
                     <div className='space-y-2'>
-                        {items.map((item) => (
+                        {items.map(item => (
                             <Card key={item.id} title={item.title}>
                                 <p className='text-sm'>{item.summary}</p>
                                 <p className='mt-1 text-xs text-mh-textMuted'>
@@ -7240,7 +7144,7 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                     </p>
                 ) : (
                     <div className='grid gap-3 sm:grid-cols-2'>
-                        {availableRequests.map((request) => (
+                        {availableRequests.map(request => (
                             <Card
                                 key={request.aidPostUri}
                                 title={request.card.title}
@@ -7286,9 +7190,7 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                         {t('inbox.languages')}
                         <Input
                             value={languages}
-                            onChange={(event) =>
-                                setLanguages(event.target.value)
-                            }
+                            onChange={event => setLanguages(event.target.value)}
                             placeholder={t('inbox.languagesPlaceholder')}
                         />
                     </label>
@@ -7296,7 +7198,7 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                         {t('inbox.accessibility')}
                         <Input
                             value={accessibility}
-                            onChange={(event) =>
+                            onChange={event =>
                                 setAccessibility(event.target.value)
                             }
                             placeholder={t('inbox.accessibilityPlaceholder')}
@@ -7308,7 +7210,7 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                         {t('inbox.publishFirst')}
                     </p>
                 ) : (
-                    ownedRequests.map((request) => (
+                    ownedRequests.map(request => (
                         <div
                             key={request.aidPostUri}
                             className='mt-4 border-t border-mh-borderSoft pt-4'
@@ -7340,7 +7242,7 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                                 );
                                                 return;
                                             }
-                                            setMatches((current) => ({
+                                            setMatches(current => ({
                                                 ...current,
                                                 [request.aidPostUri]:
                                                     result.data.candidates,
@@ -7359,7 +7261,7 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                             </div>
                             <ol className='mt-3 space-y-2'>
                                 {(matches[request.aidPostUri] ?? []).map(
-                                    (candidate) => (
+                                    candidate => (
                                         <li
                                             key={candidate.candidateRef}
                                             className='rounded border border-mh-borderSoft p-3'
@@ -7377,7 +7279,7 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                             </p>
                                             <ul className='mt-2 list-disc pl-5 text-sm'>
                                                 {candidate.explanations.map(
-                                                    (explanation) => (
+                                                    explanation => (
                                                         <li key={explanation}>
                                                             {explanation}
                                                         </li>
@@ -7395,7 +7297,6 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                     ))
                 )}
             </Panel>
-
         </section>
     );
 };
@@ -9050,9 +8951,15 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         () => readDiscoveryStateFromUrl(defaultShellDiscoveryState),
     );
 
-    const location = useDiscoveryLocationController(discoveryState,
-        patch => setDiscoveryState(current => applyDiscoveryFilterPatch(current, patch)),
-        ['/map','/feed','/resources'].includes(currentRoute), String(t('discovery.nearYou')));
+    const location = useDiscoveryLocationController(
+        discoveryState,
+        patch =>
+            setDiscoveryState(current =>
+                applyDiscoveryFilterPatch(current, patch),
+            ),
+        ['/map', '/feed', '/resources'].includes(currentRoute),
+        String(t('discovery.nearYou')),
+    );
 
     const [feedRecords, setFeedRecords] = useState<FeedRecordEnvelope[]>([]);
     const [resourceCards, setResourceCards] = useState<ResourceDirectoryCard[]>(
@@ -9067,16 +8974,17 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         webDataMode === 'fixture' ? 'fixture' : 'idle',
     );
     const [directoryDataOrigin, setDirectoryDataOrigin] =
-        useState<ApiDataOrigin>(
-            webDataMode === 'fixture' ? 'fixture' : 'idle',
-        );
+        useState<ApiDataOrigin>(webDataMode === 'fixture' ? 'fixture' : 'idle');
     const [aidReload, setAidReload] = useState(0);
     const [directoryReload, setDirectoryReload] = useState(0);
     const [aidPage, setAidPage] = useState(() => readPaginationPageFromUrl());
     const [aidHasNextPage, setAidHasNextPage] = useState(false);
     const [aidTotal, setAidTotal] = useState(0);
-    const [aidAggregates, setAidAggregates] = useState<DiscoveryMapAggregates>();
-    const [directoryPage, setDirectoryPage] = useState(() => readPaginationPageFromUrl());
+    const [aidAggregates, setAidAggregates] =
+        useState<DiscoveryMapAggregates>();
+    const [directoryPage, setDirectoryPage] = useState(() =>
+        readPaginationPageFromUrl(),
+    );
     const [directoryHasNextPage, setDirectoryHasNextPage] = useState(false);
     const [directoryTotal, setDirectoryTotal] = useState(0);
     const [chatIntent, setChatIntent] = useState<ChatInitiationIntent>();
@@ -9140,7 +9048,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
     useEffect(() => {
         if (!auth.session || webDataMode === 'fixture') return;
         const controller = new AbortController();
-        void fetchAccountPreferencesViaApi(controller.signal).then((result) => {
+        void fetchAccountPreferencesViaApi(controller.signal).then(result => {
             if (!controller.signal.aborted && result.ok) {
                 changeLocale(result.data.language);
             }
@@ -9152,7 +9060,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         if (webDataMode === 'fixture') return;
         const controller = new AbortController();
         void fetchPublicMaintenanceStatusViaApi(controller.signal).then(
-            (result) => {
+            result => {
                 if (!controller.signal.aborted && result.ok) {
                     setMaintenanceStatus(result.data);
                 }
@@ -9181,7 +9089,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         const controller = new AbortController();
         setConsentRequired(undefined);
         setOnboardingError(undefined);
-        void fetchAccountOnboardingViaApi(controller.signal).then((result) => {
+        void fetchAccountOnboardingViaApi(controller.signal).then(result => {
             if (controller.signal.aborted) return;
             if (!result.ok) {
                 setOnboardingError(result.error);
@@ -9211,9 +9119,14 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         };
     }, []);
 
-    const discoveryQueryString = useMemo(() => serializeDiscoveryFilterState(discoveryState), [discoveryState]);
+    const discoveryQueryString = useMemo(
+        () => serializeDiscoveryFilterState(discoveryState),
+        [discoveryState],
+    );
 
-    const resetDiscoveryKeyRef = useRef(`${currentRoute}:${discoveryQueryString}`);
+    const resetDiscoveryKeyRef = useRef(
+        `${currentRoute}:${discoveryQueryString}`,
+    );
     useEffect(() => {
         const key = `${currentRoute}:${discoveryQueryString}`;
         if (resetDiscoveryKeyRef.current === key) return;
@@ -9236,7 +9149,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
             setIsMobileNavOpen(false);
             setIsSecondaryNavOpen(false);
             setCurrentRoute(readCurrentRoute());
-            setHistoryVersion((version) => version + 1);
+            setHistoryVersion(version => version + 1);
             const page = readPaginationPageFromUrl();
             setAidPage(page);
             setDirectoryPage(page);
@@ -9256,12 +9169,23 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
             return;
         }
 
-        const page = currentRoute === '/resources' ? directoryPage
-            : currentRoute === '/map' || currentRoute === '/feed' ? aidPage : 1;
+        const page =
+            currentRoute === '/resources'
+                ? directoryPage
+                : currentRoute === '/map' || currentRoute === '/feed'
+                  ? aidPage
+                  : 1;
         const pageParams = new URLSearchParams(discoveryQueryString);
         // Preserve selected-item and authentication return context across filter updates.
         const contextParams = new URLSearchParams(window.location.search);
-        for (const key of ['resource', 'uri', 'connection', 'conversation', 'view', 'resourceName']) {
+        for (const key of [
+            'resource',
+            'uri',
+            'connection',
+            'conversation',
+            'view',
+            'resourceName',
+        ]) {
             const value = contextParams.get(key);
             if (value) pageParams.set(key, value);
         }
@@ -9273,7 +9197,8 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         if (nextUrl !== currentUrl) {
             // Loading another page is a navigation; normalization of an alias is not.
             const previousPage = Number(contextParams.get('page') ?? 1);
-            if (page !== previousPage) window.history.pushState({}, '', nextUrl);
+            if (page !== previousPage)
+                window.history.pushState({}, '', nextUrl);
             else window.history.replaceState({}, '', nextUrl);
         }
     }, [aidPage, currentRoute, directoryPage, discoveryQueryString]);
@@ -9293,14 +9218,14 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
             aidPage,
             controller.signal,
         )
-            .then(async (result) => {
+            .then(async result => {
                 if (controller.signal.aborted) {
                     return;
                 }
 
                 if (result.ok) {
                     const records = await Promise.all(
-                        result.data.items.map(async (record) => {
+                        result.data.items.map(async record => {
                             if (
                                 !currentUserDid ||
                                 record.recipientDid !== currentUserDid
@@ -9320,7 +9245,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                                   : undefined;
                             const validTransitions = lifecycle.ok
                                 ? lifecycle.data.validTransitions.flatMap(
-                                      (value) => {
+                                      value => {
                                           const status =
                                               lifecycleStatusFromValue(value);
                                           return status ? [status] : [];
@@ -9345,7 +9270,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                                               ? {
                                                     timeline:
                                                         lifecycle.data.timeline.flatMap(
-                                                            (entry) => {
+                                                            entry => {
                                                                 const from =
                                                                     lifecycleStatusFromValue(
                                                                         entry.from,
@@ -9374,11 +9299,26 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                         }),
                     );
                     if (controller.signal.aborted) return;
-                    setFeedRecords((current) =>
-                        aidPage === 1
-                            ? appendDedupedPage([], records, (record) => record.aidPostUri)
-                            : appendDedupedPage(current, records, (record) => record.aidPostUri),
-                    );
+                    setFeedRecords(current => {
+                        const known = new Map(
+                            current.map(record => [record.aidPostUri, record]),
+                        );
+                        // A delayed projection must not replace a confirmed owner edit with an older revision.
+                        const fresh = records.map(record => {
+                            const previous = known.get(record.aidPostUri);
+                            return previous &&
+                                previous.recipientDid === currentUserDid &&
+                                Date.parse(previous.card.updatedAt) >
+                                    Date.parse(record.card.updatedAt)
+                                ? previous
+                                : record;
+                        });
+                        return appendDedupedPage(
+                            aidPage === 1 ? [] : current,
+                            fresh,
+                            record => record.aidPostUri,
+                        );
+                    });
                     setAidHasNextPage(result.data.hasNextPage);
                     setAidTotal(result.data.total);
                     setAidAggregates(result.data.aggregates);
@@ -9409,17 +9349,33 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         setIsDirectoryLoading(true);
         setDirectoryErrorMessage(undefined);
 
-        void (currentRoute === '/map' ? fetchMapResourcePageFromApi(discoveryState, controller.signal) : fetchDirectoryCardPageFromApi(discoveryState, directoryPage, controller.signal))
-            .then((result) => {
+        void (
+            currentRoute === '/map'
+                ? fetchMapResourcePageFromApi(discoveryState, controller.signal)
+                : fetchDirectoryCardPageFromApi(
+                      discoveryState,
+                      directoryPage,
+                      controller.signal,
+                  )
+        )
+            .then(result => {
                 if (controller.signal.aborted) {
                     return;
                 }
 
                 if (result.ok) {
-                    setResourceCards((current) =>
+                    setResourceCards(current =>
                         currentRoute === '/map' || directoryPage === 1
-                            ? appendDedupedPage([], result.data.items, (card) => card.uri)
-                            : appendDedupedPage(current, result.data.items, (card) => card.uri),
+                            ? appendDedupedPage(
+                                  [],
+                                  result.data.items,
+                                  card => card.uri,
+                              )
+                            : appendDedupedPage(
+                                  current,
+                                  result.data.items,
+                                  card => card.uri,
+                              ),
                     );
                     setDirectoryHasNextPage(result.data.hasNextPage);
                     setDirectoryTotal(result.data.total);
@@ -9459,7 +9415,14 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         event: MouseEvent<HTMLAnchorElement>,
         route: AppRoute,
     ) => {
-        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        if (
+            event.button !== 0 ||
+            event.metaKey ||
+            event.ctrlKey ||
+            event.shiftKey ||
+            event.altKey
+        )
+            return;
         event.preventDefault();
         setIsMobileNavOpen(false);
         setIsSecondaryNavOpen(false);
@@ -9473,13 +9436,18 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
 
     const pushDiscoveryState = (patch: Partial<DiscoveryFilterState>) => {
         if ('center' in patch) location.cancel();
-        setDiscoveryState((current) => {
+        setDiscoveryState(current => {
             const next = applyDiscoveryFilterPatch(current, patch);
             if (typeof window !== 'undefined') {
-                const params = new URLSearchParams(serializeDiscoveryFilterState(next));
+                const params = new URLSearchParams(
+                    serializeDiscoveryFilterState(next),
+                );
                 {
                     const context = new URLSearchParams(window.location.search);
-                    for (const key of ['uri', 'resource']) { const value = context.get(key); if (value) params.set(key, value); }
+                    for (const key of ['uri', 'resource']) {
+                        const value = context.get(key);
+                        if (value) params.set(key, value);
+                    }
                 }
                 const nextUrl = canonicalRouteUrl(currentRoute, params);
                 const currentUrl = `${window.location.pathname}${window.location.search}`;
@@ -9492,14 +9460,14 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
     };
 
     const applyLifecycleAction = (action: FeedLifecycleAction) => {
-        setFeedRecords((current) => {
-            const currentCards = current.map((record) => record.card);
+        setFeedRecords(current => {
+            const currentCards = current.map(record => record.card);
             const nextCards = applyFeedLifecycleAction(currentCards, action);
             const currentById = new Map(
-                current.map((record) => [record.card.id, record]),
+                current.map(record => [record.card.id, record]),
             );
 
-            return nextCards.map((card) => {
+            return nextCards.map(card => {
                 const existing = currentById.get(card.id);
                 if (existing) {
                     return {
@@ -9540,7 +9508,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         const request = buildChatInitiationRequest(chatIntent, currentUserDid);
         setChatRequestPreview(JSON.stringify(request, null, 2));
 
-        setChatState((current) =>
+        setChatState(current =>
             reduceChatLaunchState(current, {
                 type: 'submit',
                 intent: chatIntent,
@@ -9558,7 +9526,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         });
 
         if (!apiResult.ok) {
-            setChatState((current) =>
+            setChatState(current =>
                 reduceChatLaunchState(current, {
                     type: 'failure',
                     intent: chatIntent,
@@ -9571,7 +9539,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         const fallbackNotice = apiResult.data.fallbackNotice;
         const fallbackTransport = fallbackNotice?.transportPath;
 
-        setChatState((current) =>
+        setChatState(current =>
             reduceChatLaunchState(current, {
                 type: 'success',
                 intent: chatIntent,
@@ -9612,40 +9580,63 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
     const isDeferredFixtureRoute =
         webDataMode !== 'fixture' && deferredFixtureRoutes.has(currentRoute);
     const visibleAccountRoutes: readonly AppRoute[] =
-        webDataMode === 'fixture' ? accountRoutes
-        : !auth.session ? []
-        : productionAccountRoutes.filter(
-              route =>
-                  route !== '/moderation' ||
-                  auth.session?.role === 'admin' ||
-                  auth.session?.role === 'moderator',
-          );
+        webDataMode === 'fixture'
+            ? accountRoutes
+            : !auth.session
+              ? []
+              : productionAccountRoutes.filter(
+                    route =>
+                        route !== '/moderation' ||
+                        auth.session?.role === 'admin' ||
+                        auth.session?.role === 'moderator',
+                );
     const visibleSecondaryRoutes: readonly AppRoute[] =
-        webDataMode === 'fixture' ? secondaryRoutes
-        : auth.session ? [
-              '/volunteer',
-              '/organizations',
-              '/verification',
-              '/chat',
-              '/scheduling',
-              '/groups',
-          ]
-        : ['/volunteer', '/organizations'];
+        webDataMode === 'fixture'
+            ? secondaryRoutes
+            : auth.session
+              ? [
+                    '/volunteer',
+                    '/organizations',
+                    '/verification',
+                    '/chat',
+                    '/scheduling',
+                    '/groups',
+                ]
+              : ['/volunteer', '/organizations'];
 
     const content = isDeferredFixtureRoute ? (
         <Panel title={t('runtime.deferred')}>
             <p>{t('runtime.deferredHelp')}</p>
         </Panel>
     ) : requiresAuthentication && !auth.session ? (
-        <Panel title={t('runtime.signInRequired')}>
-            <p>{t('runtime.signInHelp')}</p>
-            <a
-                className='mt-3 inline-block font-bold underline'
-                href={`/login?returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`}
-            >
-                {t('runtime.signInContinue')}
-            </a>
-        </Panel>
+        <section className='mh-auth-gate'>
+            <h1 className='mh-route-title'>
+                {t(routeLabelKeys[currentRoute])}
+            </h1>
+            <Panel title={t('runtime.signInRequired')}>
+                <p>
+                    {t(
+                        currentRoute === '/posting'
+                            ? 'experience.signInPosting'
+                            : currentRoute === '/inbox' ||
+                                currentRoute === '/chat'
+                              ? 'experience.signInActivity'
+                              : 'runtime.signInHelp',
+                    )}
+                </p>
+                <a
+                    className='mt-3 inline-block font-bold underline'
+                    href={`/login?returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+                >
+                    {t('runtime.signInContinue')}
+                </a>
+                <p className='mt-4'>
+                    <a className='mh-link' href='/nearby'>
+                        {t('experience.browseWithoutAccount')}
+                    </a>
+                </p>
+            </Panel>
+        </section>
     ) : auth.session && webDataMode !== 'fixture' && onboardingError ? (
         <Panel title={t('runtime.onboardingUnavailable')}>
             <p role='alert'>
@@ -9673,71 +9664,128 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
             </p>
         </Panel>
     ) : currentRoute === '/map' || currentRoute === '/feed' ? (
-        <Suspense fallback={<p role='status'>{t('handoff.loadingRequest')}</p>}><LazyMapRoute
-            renderRequestActions={(record, position, total) => currentUserDid ? currentUserDid === record.recipientDid ? <><RequestLifecycleActions record={record} onRefresh={() => setAidReload(value => value + 1)} /><OwnerRecordActions record={record} position={position} total={total}
-                onReplaceRecord={replacement => setFeedRecords(records => records.map(item => item.aidPostUri === replacement.aidPostUri ? replacement : item))}
-                onDeleteRecord={uri => { setFeedRecords(records => records.filter(item => item.aidPostUri !== uri)); setAidTotal(value => Math.max(0, value - 1)); setAidAggregates(undefined); }}
-            /></> : <SafetyActions record={record} position={position} total={total} /> : null}
-            aggregates={aidAggregates}
-            resourceTotal={directoryTotal}
-            discoveryState={discoveryState}
-            filters={<DiscoveryFiltersPanel idPrefix='map' state={discoveryState} onPatch={patchDiscoveryState} />}
-            fixtureMode={webDataMode === 'fixture'}
-            originLabel={dataOriginLabel(aidDataOrigin)}
-            onPushDiscovery={pushDiscoveryState}
-            feedRecords={feedRecords}
-            resourceCards={resourceCards}
-            resourceErrorMessage={directoryErrorMessage}
-            isLoading={isAidLoading}
-            errorMessage={aidErrorMessage}
-            dataOrigin={aidDataOrigin}
-            onRetry={() => setAidReload((value) => value + 1)}
-            hasNextPage={aidHasNextPage}
-            total={aidTotal}
-            onLoadMore={() => setAidPage((page) => page + 1)}
-            onRetryResources={() => setDirectoryReload((value) => value + 1)}
-            onOpenChat={openChatFromRecord}
-            onTriageAction={(postId, action) => {
-                const nextStatus: AidStatus =
-                    action === 'mark_in_progress'
-                        ? 'in-progress'
-                        : action === 'mark_resolved'
-                          ? 'resolved'
-                          : 'open';
-
-                if (action !== 'contact_helper') {
-                    applyLifecycleAction({
-                        action: 'edit',
-                        id: postId,
-                        patch: {
-                            status: nextStatus,
-                            updatedAt: nowIso(),
-                        },
-                    });
+        <Suspense fallback={<p role='status'>{t('handoff.loadingRequest')}</p>}>
+            <LazyMapRoute
+                renderRequestActions={(record, position, total) =>
+                    currentUserDid ? (
+                        currentUserDid === record.recipientDid ? (
+                            <>
+                                <RequestLifecycleActions
+                                    record={record}
+                                    onRefresh={() =>
+                                        setAidReload(value => value + 1)
+                                    }
+                                />
+                                <OwnerRecordActions
+                                    record={record}
+                                    position={position}
+                                    total={total}
+                                    onReplaceRecord={replacement =>
+                                        setFeedRecords(records =>
+                                            records.map(item =>
+                                                item.aidPostUri ===
+                                                replacement.aidPostUri
+                                                    ? replacement
+                                                    : item,
+                                            ),
+                                        )
+                                    }
+                                    onDeleteRecord={uri => {
+                                        setFeedRecords(records =>
+                                            records.filter(
+                                                item => item.aidPostUri !== uri,
+                                            ),
+                                        );
+                                        setAidTotal(value =>
+                                            Math.max(0, value - 1),
+                                        );
+                                        setAidAggregates(undefined);
+                                    }}
+                                />
+                            </>
+                        ) : (
+                            <SafetyActions
+                                record={record}
+                                position={position}
+                                total={total}
+                            />
+                        )
+                    ) : null
                 }
-            }}
-        /></Suspense>
-    ) : currentRoute === '/requests/view' ? (
-        <Suspense fallback={<p role='status'>{t('handoff.loadingRequest')}</p>}><LazyRequestDetail /></Suspense>
-    ) : currentRoute === '/posting' ? (
-            <PostingRoute
-                onLocationChange={patchDiscoveryState}
-                location={discoveryState.center ? {
-                    center: discoveryState.center,
-                    areaLabel:
-                        discoveryState.areaLabel ??
-                        String(t('discovery.areaUnknown')),
-                } : undefined}
-                onCreateRecord={(record) => {
-                    setFeedRecords((current) => [record, ...current]);
-                    patchDiscoveryState({
-                        text: record.card.title,
-                        feedTab: 'latest',
-                    });
+                aggregates={aidAggregates}
+                resourceTotal={directoryTotal}
+                discoveryState={discoveryState}
+                filters={
+                    <DiscoveryFiltersPanel
+                        idPrefix='map'
+                        state={discoveryState}
+                        onPatch={patchDiscoveryState}
+                    />
+                }
+                fixtureMode={webDataMode === 'fixture'}
+                originLabel={dataOriginLabel(aidDataOrigin)}
+                onPushDiscovery={pushDiscoveryState}
+                feedRecords={feedRecords}
+                resourceCards={resourceCards}
+                resourceErrorMessage={directoryErrorMessage}
+                isLoading={isAidLoading}
+                errorMessage={aidErrorMessage}
+                dataOrigin={aidDataOrigin}
+                onRetry={() => setAidReload(value => value + 1)}
+                hasNextPage={aidHasNextPage}
+                total={aidTotal}
+                onLoadMore={() => setAidPage(page => page + 1)}
+                onRetryResources={() => setDirectoryReload(value => value + 1)}
+                onOpenChat={openChatFromRecord}
+                onTriageAction={(postId, action) => {
+                    const nextStatus: AidStatus =
+                        action === 'mark_in_progress'
+                            ? 'in-progress'
+                            : action === 'mark_resolved'
+                              ? 'resolved'
+                              : 'open';
+
+                    if (action !== 'contact_helper') {
+                        applyLifecycleAction({
+                            action: 'edit',
+                            id: postId,
+                            patch: {
+                                status: nextStatus,
+                                updatedAt: nowIso(),
+                            },
+                        });
+                    }
                 }}
-                onNavigate={navigate}
-                onCreateViaApi={createAidPostViaApi}
-            />    ) : currentRoute === '/resources' ? (
+            />
+        </Suspense>
+    ) : currentRoute === '/requests/view' ? (
+        <Suspense fallback={<p role='status'>{t('handoff.loadingRequest')}</p>}>
+            <LazyRequestDetail />
+        </Suspense>
+    ) : currentRoute === '/posting' ? (
+        <PostingRoute
+            onLocationChange={patchDiscoveryState}
+            location={
+                discoveryState.center
+                    ? {
+                          center: discoveryState.center,
+                          areaLabel:
+                              discoveryState.areaLabel ??
+                              String(t('discovery.areaUnknown')),
+                      }
+                    : undefined
+            }
+            onCreateRecord={record => {
+                setFeedRecords(current => [record, ...current]);
+                patchDiscoveryState({
+                    text: record.card.title,
+                    feedTab: 'latest',
+                });
+            }}
+            onNavigate={navigate}
+            onCreateViaApi={createAidPostViaApi}
+        />
+    ) : currentRoute === '/resources' ? (
         <ResourceRoute
             discoveryState={discoveryState}
             onPatchDiscovery={patchDiscoveryState}
@@ -9745,10 +9793,10 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
             isLoading={isDirectoryLoading}
             errorMessage={directoryErrorMessage}
             dataOrigin={directoryDataOrigin}
-            onRetry={() => setDirectoryReload((value) => value + 1)}
+            onRetry={() => setDirectoryReload(value => value + 1)}
             hasNextPage={directoryHasNextPage}
             total={directoryTotal}
-            onLoadMore={() => setDirectoryPage((page) => page + 1)}
+            onLoadMore={() => setDirectoryPage(page => page + 1)}
             resourceCards={resourceCards}
             currentUserDid={currentUserDid}
         />
@@ -9777,7 +9825,9 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
             currentUserDid={currentUserDid}
         />
     ) : currentRoute === '/groups' ? (
-        <Suspense fallback={<p role='status'>{t('groups.loading')}</p>}><LazyProductionGroups /></Suspense>
+        <Suspense fallback={<p role='status'>{t('groups.loading')}</p>}>
+            <LazyProductionGroups />
+        </Suspense>
     ) : currentRoute === '/chat' ? (
         webDataMode === 'fixture' ? (
             <ChatRoute
@@ -9793,7 +9843,9 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                 onReset={resetChat}
             />
         ) : (
-            <Suspense fallback={<p role='status'>{t('chat.loading')}</p>}><LazyProductionChat currentUserDid={currentUserDid} /></Suspense>
+            <Suspense fallback={<p role='status'>{t('chat.loading')}</p>}>
+                <LazyProductionChat currentUserDid={currentUserDid} />
+            </Suspense>
         )
     ) : currentRoute === '/settings' ? (
         webDataMode === 'fixture' ? (
@@ -9814,232 +9866,295 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
     );
 
     return (
-        <DiscoveryLocationContext.Provider value={location}><main className='mh-grain min-h-screen overflow-x-clip bg-mh-bg text-mh-text'>
-            <a
-                href='#main-content'
-                className='mh-skip-link sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-mh-accent focus:px-4 focus:py-2 focus:text-white focus:outline-2 focus:outline-offset-2'
-            >
-                {t('app.skipToContent')}
-            </a>
-            <div className='mh-grid-pattern mx-auto min-h-screen max-w-7xl px-3 pb-16 sm:px-6 lg:px-10'>
-                <header className='mh-masthead'>
-                    <a
-                        href='/'
-                        className='mh-brand'
-                        onClick={(event) => handleRouteClick(event, '/')}
-                    >
-                        <span className='mh-brand-mark' aria-hidden='true'>
-                            P
-                        </span>
-                        <span>
-                            <strong>{appTitle}</strong>
-                            <small>{t('runtime.tagline')}</small>
-                        </span>
-                    </a>
-                    <div className='mh-network-status' role='status'>
-                        <span aria-hidden='true' /> {t('runtime.environment')}
-                    </div>
-                    <label className='text-xs font-bold'>
-                        {t('a11y.languageSwitcher')}
-                        <select
-                            className='mh-input ml-2 px-2 py-1'
-                            aria-label={String(t('a11y.languageSwitcher'))}
-                            value={locale}
-                            onChange={(event) =>
-                                changeLocale(event.target.value as 'en' | 'es')
-                            }
+        <DiscoveryLocationContext.Provider value={location}>
+            <div className='mh-app min-h-screen bg-mh-bg text-mh-text'>
+                <a
+                    href='#main-content'
+                    className='mh-skip-link sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-mh-accent focus:px-4 focus:py-2 focus:text-white focus:outline-2 focus:outline-offset-2'
+                >
+                    {t('app.skipToContent')}
+                </a>
+                <div className='mh-app-frame mx-auto min-h-screen max-w-7xl px-4 pb-10 sm:px-6 lg:px-8'>
+                    <header className='mh-masthead'>
+                        <a
+                            href='/'
+                            className='mh-brand'
+                            onClick={event => handleRouteClick(event, '/')}
                         >
-                            <option value='en'>{t('account.english')}</option>
-                            <option value='es'>{t('account.spanish')}</option>
-                        </select>
-                    </label>
-                </header>
+                            <span className='mh-brand-mark' aria-hidden='true'>
+                                P
+                            </span>
+                            <span>
+                                <strong>{appTitle}</strong>
+                                <small>{t('runtime.tagline')}</small>
+                            </span>
+                        </a>
+                        <div className='mh-network-status' role='status'>
+                            <span aria-hidden='true' />{' '}
+                            {t('runtime.environment')}
+                        </div>
+                        <label className='text-xs font-bold'>
+                            {t('a11y.languageSwitcher')}
+                            <select
+                                className='mh-input ml-2 px-2 py-1'
+                                aria-label={String(t('a11y.languageSwitcher'))}
+                                value={locale}
+                                onChange={event =>
+                                    changeLocale(
+                                        event.target.value as 'en' | 'es',
+                                    )
+                                }
+                            >
+                                <option value='en'>
+                                    {t('account.english')}
+                                </option>
+                                <option value='es'>
+                                    {t('account.spanish')}
+                                </option>
+                            </select>
+                        </label>
+                    </header>
 
-                <nav aria-label={t('nav.ariaLabel')} className='mh-primary-nav'>
-                    <button
-                        ref={mobileNavToggleRef}
-                        type='button'
-                        className='mh-mobile-nav-toggle'
-                        aria-expanded={isMobileNavOpen}
-                        aria-controls='primary-navigation-links'
-                        onClick={() => setIsMobileNavOpen((open) => !open)}
+                    <nav
+                        aria-label={t('nav.ariaLabel')}
+                        className='mh-primary-nav'
                     >
-                        {t('nav.menu')}
-                    </button>
-                    <div
-                        className={`mh-nav-collapse${isMobileNavOpen ? ' is-open' : ''}`}
-                    >
-                    <div className='mh-nav-main'>
-                        <p className='mh-nav-group-label'>{t('nav.discoverGroup')}</p>
-                        {primaryRoutes.map((route) => (
-                            <a
-                                key={route}
-                                href={canonicalRouteUrl(route, discoveryQueryString)}
-                                className='mh-nav-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mh-accent'
-                                aria-current={
-                                    (currentRoute === route || route === '/feed' && currentRoute === '/map') ? 'page' : undefined
-                                }
-                                onClick={(event) =>
-                                    handleRouteClick(event, route)
-                                }
-                            >
-                                {t(route === '/feed' ? 'nav.nearby' : route === '/posting' ? 'nav.ask' : route === '/inbox' ? 'nav.myActivity' : routeLabelKeys[route])}
-                            </a>
-                        ))}
-                    </div>
-                    <div id='primary-navigation-links' className='mh-nav-tools'>
-                        <p className='mh-nav-group-label'>{t('nav.accountGroup')}</p>
-                        {visibleAccountRoutes.map((route) => (
-                            <a
-                                key={route}
-                                href={canonicalRouteUrl(route, discoveryQueryString)}
-                                className='mh-nav-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mh-accent'
-                                aria-current={
-                                    currentRoute === route ? 'page' : undefined
-                                }
-                                onClick={(event) =>
-                                    handleRouteClick(event, route)
-                                }
-                            >
-                                {t(routeLabelKeys[route])}
-                            </a>
-                        ))}
-                        <div className='mh-secondary-nav' ref={secondaryNavRef}>
-                            <p className='mh-nav-group-label'>{t('nav.secondaryGroup')}</p>
-                            <button
-                                ref={secondaryNavToggleRef}
-                                type='button'
-                                className='mh-nav-chip mh-secondary-nav-toggle'
-                                aria-expanded={isSecondaryNavOpen}
-                                aria-controls='secondary-navigation-links'
-                                onClick={() =>
-                                    setIsSecondaryNavOpen((open) => !open)
-                                }
-                            >
-                                {t('runtime.more')}
-                            </button>
-                            <div
-                                id='secondary-navigation-links'
-                                className={`mh-more-menu-panel${isSecondaryNavOpen ? ' is-open' : ''}`}
-                            >
-                                {visibleSecondaryRoutes.map((route) => (
+                        <button
+                            ref={mobileNavToggleRef}
+                            type='button'
+                            className='mh-mobile-nav-toggle'
+                            aria-expanded={isMobileNavOpen}
+                            aria-controls='primary-navigation-links'
+                            onClick={() => setIsMobileNavOpen(open => !open)}
+                        >
+                            {t('nav.menu')}
+                        </button>
+                        <div
+                            className={`mh-nav-collapse${isMobileNavOpen ? ' is-open' : ''}`}
+                        >
+                            <div className='mh-nav-main'>
+                                <p className='mh-nav-group-label'>
+                                    {t('nav.discoverGroup')}
+                                </p>
+                                {primaryRoutes.map(route => (
                                     <a
                                         key={route}
-                                        href={canonicalRouteUrl(route, discoveryQueryString)}
+                                        href={canonicalRouteUrl(
+                                            route,
+                                            discoveryQueryString,
+                                        )}
+                                        className='mh-nav-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mh-accent'
+                                        aria-current={
+                                            currentRoute === route ||
+                                            (route === '/feed' &&
+                                                currentRoute === '/map')
+                                                ? 'page'
+                                                : undefined
+                                        }
+                                        onClick={event =>
+                                            handleRouteClick(event, route)
+                                        }
+                                    >
+                                        {t(
+                                            route === '/feed'
+                                                ? 'nav.nearby'
+                                                : route === '/posting'
+                                                  ? 'nav.ask'
+                                                  : route === '/inbox'
+                                                    ? 'nav.myActivity'
+                                                    : routeLabelKeys[route],
+                                        )}
+                                    </a>
+                                ))}
+                            </div>
+                            <div
+                                id='primary-navigation-links'
+                                className='mh-nav-tools'
+                            >
+                                <p className='mh-nav-group-label'>
+                                    {t('nav.accountGroup')}
+                                </p>
+                                {visibleAccountRoutes.map(route => (
+                                    <a
+                                        key={route}
+                                        href={canonicalRouteUrl(
+                                            route,
+                                            discoveryQueryString,
+                                        )}
+                                        className='mh-nav-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mh-accent'
                                         aria-current={
                                             currentRoute === route
                                                 ? 'page'
                                                 : undefined
                                         }
-                                        onClick={(event) =>
+                                        onClick={event =>
                                             handleRouteClick(event, route)
                                         }
                                     >
                                         {t(routeLabelKeys[route])}
                                     </a>
                                 ))}
+                                <div
+                                    className='mh-secondary-nav'
+                                    ref={secondaryNavRef}
+                                >
+                                    <p className='mh-nav-group-label'>
+                                        {t('nav.secondaryGroup')}
+                                    </p>
+                                    <button
+                                        ref={secondaryNavToggleRef}
+                                        type='button'
+                                        className='mh-nav-chip mh-secondary-nav-toggle'
+                                        aria-expanded={isSecondaryNavOpen}
+                                        aria-controls='secondary-navigation-links'
+                                        onClick={() =>
+                                            setIsSecondaryNavOpen(open => !open)
+                                        }
+                                    >
+                                        {t('runtime.more')}
+                                    </button>
+                                    <div
+                                        id='secondary-navigation-links'
+                                        className={`mh-more-menu-panel${isSecondaryNavOpen ? ' is-open' : ''}`}
+                                    >
+                                        {visibleSecondaryRoutes.map(route => (
+                                            <a
+                                                key={route}
+                                                href={canonicalRouteUrl(
+                                                    route,
+                                                    discoveryQueryString,
+                                                )}
+                                                aria-current={
+                                                    currentRoute === route
+                                                        ? 'page'
+                                                        : undefined
+                                                }
+                                                onClick={event =>
+                                                    handleRouteClick(
+                                                        event,
+                                                        route,
+                                                    )
+                                                }
+                                            >
+                                                {t(routeLabelKeys[route])}
+                                            </a>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div
+                                    className='mh-auth-control'
+                                    aria-live='polite'
+                                >
+                                    {auth.status === 'booting' ? (
+                                        <span>
+                                            {t('runtime.checkingSession')}
+                                        </span>
+                                    ) : auth.session ? (
+                                        <>
+                                            <span className='max-w-48 truncate text-xs font-bold'>
+                                                {auth.session.handle
+                                                    ? `@${auth.session.handle.replace(/^@/, '')}`
+                                                    : t('nav.accountFallback')}
+                                            </span>
+                                            {auth.session
+                                                .canManageSignupInvitations ? (
+                                                <a
+                                                    className='mh-nav-chip'
+                                                    href='/admin/invites'
+                                                >
+                                                    {t('route.invites')}
+                                                </a>
+                                            ) : null}
+                                            <Button
+                                                variant='neutral'
+                                                className='px-3 py-1 text-xs'
+                                                onClick={() =>
+                                                    void auth.logout()
+                                                }
+                                            >
+                                                {t('runtime.signOut')}
+                                            </Button>
+                                        </>
+                                    ) : (
+                                        <a
+                                            className='mh-nav-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mh-accent'
+                                            href={`/login?returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`}
+                                        >
+                                            {t('runtime.signIn')}
+                                        </a>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                        <div className='mh-auth-control' aria-live='polite'>
-                            {auth.status === 'booting' ? (
-                                <span>{t('runtime.checkingSession')}</span>
-                            ) : auth.session ? (
-                                <>
-                                    <span className='max-w-48 truncate text-xs font-bold'>
-                                        {auth.session.handle
-                                            ? `@${auth.session.handle.replace(/^@/, '')}`
-                                            : t('nav.accountFallback')}
-                                    </span>
-                                    {auth.session.canManageSignupInvitations ? (
-                                        <a className='mh-nav-chip' href='/admin/invites'>
-                                            {t('route.invites')}
-                                        </a>
-                                    ) : null}
-                                    <Button
-                                        variant='neutral'
-                                        className='px-3 py-1 text-xs'
-                                        onClick={() => void auth.logout()}
-                                    >
-                                        {t('runtime.signOut')}
-                                    </Button>
-                                </>
-                            ) : (
-                                <a
-                                    className='mh-nav-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mh-accent'
-                                    href={`/login?returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`}
-                                >
-                                    {t('runtime.signIn')}
-                                </a>
-                            )}
+                    </nav>
+
+                    {maintenanceStatus?.active ? (
+                        <div
+                            role='alert'
+                            className='mb-4 border-4 border-mh-danger bg-mh-surfaceElev p-4'
+                        >
+                            <strong>{t('runtime.readOnly')}</strong>{' '}
+                            {maintenanceStatus.publicMessage}{' '}
+                            {t('runtime.readOnlyHelp')}
                         </div>
-                    </div>
-                    </div>
-                </nav>
+                    ) : null}
 
-                {maintenanceStatus?.active ? (
-                    <div
-                        role='alert'
-                        className='mb-4 border-4 border-mh-danger bg-mh-surfaceElev p-4'
+                    {!isOnline ? (
+                        <div
+                            role='alert'
+                            className='mb-4 border-4 border-mh-danger bg-mh-surfaceElev p-4'
+                        >
+                            <strong>{t('runtime.offline')}</strong>{' '}
+                            {t('runtime.offlineHelp')}
+                        </div>
+                    ) : null}
+
+                    <main
+                        id='main-content'
+                        ref={mainContentRef}
+                        tabIndex={-1}
+                        className='focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-mh-accent'
                     >
-                        <strong>{t('runtime.readOnly')}</strong>{' '}
-                        {maintenanceStatus.publicMessage}{' '}
-                        {t('runtime.readOnlyHelp')}
-                    </div>
-                ) : null}
+                        {content}
+                    </main>
 
-                {!isOnline ? (
-                    <div
-                        role='alert'
-                        className='mb-4 border-4 border-mh-danger bg-mh-surfaceElev p-4'
-                    >
-                        <strong>{t('runtime.offline')}</strong>{' '}
-                        {t('runtime.offlineHelp')}
-                    </div>
-                ) : null}
-
-                <div
-                    id='main-content'
-                    ref={mainContentRef}
-                    tabIndex={-1}
-                    className='focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-mh-accent'
-                >
-
-                    {content}
+                    <footer className='mh-footer'>
+                        <p>{t('runtime.footer')}</p>
+                        <div
+                            role='navigation'
+                            aria-label={t('runtime.legalLabel')}
+                        >
+                            <a
+                                href='/legal/terms'
+                                onClick={event =>
+                                    handleRouteClick(event, '/legal/terms')
+                                }
+                            >
+                                {t('legal.termsNav')}
+                            </a>
+                            <a
+                                href='/legal/privacy'
+                                onClick={event =>
+                                    handleRouteClick(event, '/legal/privacy')
+                                }
+                            >
+                                {t('legal.privacyNav')}
+                            </a>
+                            <a
+                                href='/legal/community-guidelines'
+                                onClick={event =>
+                                    handleRouteClick(
+                                        event,
+                                        '/legal/community-guidelines',
+                                    )
+                                }
+                            >
+                                {t('legal.guidelinesNav')}
+                            </a>
+                        </div>
+                    </footer>
                 </div>
-
-                <footer className='mh-footer'>
-                    <p>{t('runtime.footer')}</p>
-                    <div role='navigation' aria-label={t('runtime.legalLabel')}>
-                        <a
-                            href='/legal/terms'
-                            onClick={(event) =>
-                                handleRouteClick(event, '/legal/terms')
-                            }
-                        >
-                            {t('legal.termsNav')}
-                        </a>
-                        <a
-                            href='/legal/privacy'
-                            onClick={(event) =>
-                                handleRouteClick(event, '/legal/privacy')
-                            }
-                        >
-                            {t('legal.privacyNav')}
-                        </a>
-                        <a
-                            href='/legal/community-guidelines'
-                            onClick={(event) =>
-                                handleRouteClick(
-                                    event,
-                                    '/legal/community-guidelines',
-                                )
-                            }
-                        >
-                            {t('legal.guidelinesNav')}
-                        </a>
-                    </div>
-                </footer>
             </div>
-        </main></DiscoveryLocationContext.Provider>
+        </DiscoveryLocationContext.Provider>
     );
 };

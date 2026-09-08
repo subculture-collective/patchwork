@@ -20,15 +20,13 @@ export const Panel = ({
             aria-label={ariaLabel}
             aria-labelledby={ariaLabel ? undefined : headingId}
         >
-            <header
+            <h2
                 id={headingId}
                 className='mh-panel-titlebar mb-3 px-3 py-2 text-sm font-semibold tracking-[0.01em] text-mh-text'
             >
                 {title}
-            </header>
-            <div className='mh-grid-pattern rounded-2xl border border-mh-borderSoft bg-mh-surface p-4'>
-                {children}
-            </div>
+            </h2>
+            <div className='mh-panel-body'>{children}</div>
         </section>
     );
 };

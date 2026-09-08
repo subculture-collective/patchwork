@@ -83,10 +83,7 @@ test('available browser location persists across legacy list and map navigation'
     await expect(
         page.getByRole('navigation', { name: 'Nearby view' }),
     ).toHaveCount(0);
-    await page
-        .getByText('Location and filters', { exact: false })
-        .first()
-        .click();
+    await page.getByText('Filters', { exact: false }).first().click();
     await expect(
         page.getByText(
             /Finding your location timed out|Location permission was denied|Your device could not provide/,
@@ -134,7 +131,9 @@ test('clearing the area retains the same map and loads all-area results', async 
         page.getByText('Groceries for a neighbor', { exact: true }),
     ).toBeVisible();
 });
-test('county boundaries split into ZIPs with one keyboard action and regroup when zooming out', async ({ page }) => {
+test('county boundaries split into ZIPs with one keyboard action and regroup when zooming out', async ({
+    page,
+}) => {
     await page.goto('/nearby?lat=41.88&lng=-87.63&r=50000');
     await page.getByRole('button', { name: 'Explore Cook County, IL: 240 requests', exact: true }).focus();
     await page.keyboard.press('Enter');
@@ -142,20 +141,29 @@ test('county boundaries split into ZIPs with one keyboard action and regroup whe
     await expect(page.locator('path.mh-map-cluster')).toHaveCount(0);
     await expect(page.locator('.mh-postal-count')).toHaveCount(4);
     await expect(page.getByRole('button', { name: 'Explore Cook County, IL: 240 requests', exact: true })).toHaveAttribute('aria-pressed','true');
-    const emptyCounty = page.locator('path[aria-label$="0 requests"]').first();
+    const emptyCounty = page
+        .locator('path[aria-label$="0 requests"][aria-hidden="false"]')
+        .first();
     await emptyCounty.focus();
     await page.keyboard.press('Enter');
     await expect(page.locator('path[aria-pressed="true"]')).toHaveCount(1);
     await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Explore Cook County, IL: 240 requests', exact: true })).toBeAttached();
 });
-test('ZIP request panel returns to the previous browsing area', async ({ page }) => {
+test('ZIP request panel returns to the previous browsing area', async ({
+    page,
+}) => {
     await page.goto('/nearby?lat=41.88&lng=-87.63&r=50000');
     await page.getByRole('button', { name: 'Explore Cook County, IL: 240 requests', exact: true }).focus();
     await page.keyboard.press('Enter');
     await page.getByRole('button', { name: 'Show ZIP 60602: 60 requests', exact: true }).focus();
     await page.keyboard.press('Enter');
-    await expect(page.getByRole('region', { name: 'Requests in ZIP 60602', exact: true })).toBeVisible();
+    await expect(
+        page.getByRole('article', {
+            name: 'Requests in ZIP 60602',
+            exact: true,
+        }),
+    ).toBeVisible();
     await page.getByRole('button', { name: 'Back to ZIP areas', exact: true }).click();
     await expect(page.locator('.mh-map-detail-sheet')).toHaveCount(0);
     expect(new URL(page.url()).searchParams.get('zip')).toBeNull();
@@ -163,27 +171,25 @@ test('ZIP request panel returns to the previous browsing area', async ({ page })
     expect(new URL(page.url()).searchParams.get('r')).toBe('50000');
     await expect(page.getByRole('button', { name: 'ZIP areas', exact: true })).toHaveAttribute('aria-current', 'step');
 });
-test('filters collapse, use compact buttons and two columns on wider screens', async ({
+test('filters expose their state and remain usable by keyboard and touch', async ({
     page,
 }) => {
     await page.setViewportSize({ width: 900, height: 900 });
     await page.goto('/nearby?lat=41.88&lng=-87.63&r=20000');
     const filters = page.locator('.mh-filter-disclosure');
     await expect(filters).not.toHaveAttribute('open', '');
-    await filters.locator('summary').click();
-    await expect(filters).toHaveAttribute('open', '');
+    await filters.locator('summary').focus();
+    await page.keyboard.press('Enter');
+    const food = filters
+.getByRole('button', { name: 'Food', exact: true });
+    await food.click();
+    await expect(food).toHaveAttribute('aria-pressed', 'true');
+    expect(new URL(page.url()).searchParams.get('cat')).toBe('food');
     expect(
-        await filters
-            .locator('.mh-filter-grid')
-            .evaluate(
-                (el) =>
-                    getComputedStyle(el).gridTemplateColumns.split(' ').length,
-            ),
-    ).toBe(2);
-    const height = await filters
-        .getByRole('button', { name: 'Food', exact: true })
-        .evaluate((el) => el.getBoundingClientRect().height);
-    expect(height).toBeLessThanOrEqual(36);
+        await food.evaluate(el => el.getBoundingClientRect().height),
+    ).toBeGreaterThanOrEqual(44);
+    await food.click();
+    await expect(food).toHaveAttribute('aria-pressed', 'false');
 });
 test('request details provide context, area, dates and an actionable next step', async ({
     page,
@@ -257,7 +263,7 @@ for (const code of [1, 2, 3])
         await expect(page.locator('.leaflet-container')).toBeVisible();
         await page.locator('.mh-filter-disclosure summary').click();
         await page
-            .getByRole('button', { name: 'Update location', exact: true })
+            .getByRole('button', { name: 'Use my location', exact: true })
             .click();
         await expect
             .poll(() => new URL(page.url()).searchParams.get('lat'))
@@ -276,7 +282,9 @@ for (const code of [1, 2, 3])
         await expect(page.locator('.leaflet-container')).toBeVisible();
     });
 
-test('requests in one ZIP stay together at street zoom and are selectable from the list', async ({ page }) => {
+test('requests in one ZIP stay together at street zoom and are selectable from the list', async ({
+    page,
+}) => {
     await page.route('**/api/query/map?**', route => route.fulfill({ json: {
         total: 8, page: 1, pageSize: 20, hasNextPage: false,
         results: Array.from({ length: 8 }, (_, i) => ({ ...record, uri: uri + i, title: `Shared ZIP request ${i + 1}` })),
@@ -288,8 +296,16 @@ test('requests in one ZIP stay together at street zoom and are selectable from t
     for(let i=0;i<5;i++) await page.getByRole('button',{name:'Zoom in',exact:true}).click();
     await expect(page.locator('path[aria-label^="Show ZIP"]')).toHaveCount(1);
     await expect(page.locator('path.mh-map-marker')).toHaveCount(0);
-    await expect(page.getByRole('region',{name:'Requests in ZIP 60602',exact:true})).toBeVisible();
-    await page.getByRole('region',{name:'Requests in ZIP 60602',exact:true}).getByRole('button',{name:/Shared ZIP request 8/}).click();
+    await expect(
+        page.getByRole('article', {
+            name: 'Requests in ZIP 60602',
+            exact: true,
+        }),
+    ).toBeVisible();
+    await page
+        .getByRole('article', { name: 'Requests in ZIP 60602', exact: true })
+        .getByRole('button', { name: /Shared ZIP request 8/ })
+        .click();
     await expect(page.getByRole('region',{name:'Details for Shared ZIP request 8'})).toBeVisible();
 });
 
@@ -303,4 +319,76 @@ test('nearby resources searches the request area on arrival', async ({ page }) =
         return params.get('latitude') === lookupPostalArea('60602')!.latitude.toFixed(6) && params.get('longitude') === lookupPostalArea('60602')!.longitude.toFixed(6) && params.get('radiusKm') === '20';
     })).toBe(true);
     await expect(page.getByText('Closest to the selected area first. Distances are approximate.', { exact: true })).toBeVisible();
+});
+
+test('mobile ZIP search keeps one results list and preserves the map on return', async ({
+    page,
+}) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/nearby?lat=41.88&lng=-87.63&r=20000');
+    const map = page.locator('.leaflet-container');
+    await expect(map).toBeVisible();
+    await map.evaluate(el => el.setAttribute('data-continuity', 'same-map'));
+    await page.getByLabel('ZIP code', { exact: true }).fill('60602');
+    await page.getByRole('button', { name: 'Find area', exact: true }).click();
+    const results = page.getByRole('article', {
+        name: 'Requests in ZIP 60602',
+        exact: true,
+    });
+    await expect(results).toBeVisible();
+    await expect(page.locator('.mh-map-detail-sheet')).toHaveCount(0);
+    await expect(map).not.toBeVisible();
+    await page.getByRole('button', { name: 'Map', exact: true }).click();
+    await expect(map).toBeVisible();
+    await expect(map).toHaveAttribute('data-continuity', 'same-map');
+    await expect(
+        page.getByRole('button', { name: 'Show ZIP 60602: 60 requests', exact: true }),
+    ).toBeVisible();
+    const search = page.getByRole('textbox', { name: 'Search', exact: true });
+    await search.pressSequentially('pantry parcel');
+    await expect(search).toHaveValue('pantry parcel');
+    expect(new URL(page.url()).searchParams.get('q')).toBe('pantry parcel');
+});
+
+test('resource categories query the whole directory and restore through Back', async ({
+    page,
+}) => {
+    const queries: URL[] = [];
+    await page.route('**/api/query/directory?**', route => {
+        const url = new URL(route.request().url());
+        queries.push(url);
+        return route.fulfill({
+            json: {
+                total: 0,
+                page: 1,
+                pageSize: 20,
+                hasNextPage: false,
+                results: [],
+            },
+        });
+    });
+    await page.goto('/resources?lat=41.88&lng=-87.63&r=20000');
+    const legal = page.getByRole('button', { name: 'Legal aid', exact: true });
+    await legal.click();
+    await expect(legal).toHaveAttribute('aria-pressed', 'true');
+    await expect
+        .poll(() => queries.at(-1)?.searchParams.get('category'))
+        .toBe('legal-aid');
+    expect(new URL(page.url()).searchParams.get('resourceType')).toBe(
+        'legal-aid',
+    );
+    await expect(
+        page.getByRole('button', { name: 'Resolved', exact: true }),
+    ).toHaveCount(0);
+    await page
+        .getByRole('button', { name: 'All categories', exact: true })
+        .click();
+    await expect
+        .poll(() => queries.at(-1)?.searchParams.has('category'))
+        .toBe(false);
+    await page.goBack();
+    await expect(legal).toHaveAttribute('aria-pressed', 'true');
+    await expect
+        .poll(() => queries.at(-1)?.searchParams.get('category'))
+        .toBe('legal-aid');
 });

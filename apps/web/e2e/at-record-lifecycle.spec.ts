@@ -74,9 +74,11 @@ test.describe('real two-account AT record lifecycle', () => {
         await requester.goto(`/posting?${postingArea.toString()}`);
         await expect(requester.locator('.mh-auth-control').getByText(/^@/)).toBeVisible();
         await requester.getByLabel('ZIP code where help is needed').fill(postalCode);
-        await requester.getByLabel('Title').fill(title);
         await requester
-            .getByLabel('Description')
+            .getByLabel('What do you need?', { exact: true })
+            .fill(title);
+        await requester
+            .getByLabel('How can a neighbor help?', { exact: true })
             .fill('Disposable integration record. No private handoff data.');
         await expect(requester.getByLabel('Latitude')).toHaveCount(0);
         await expect(requester.getByLabel('Longitude')).toHaveCount(0);

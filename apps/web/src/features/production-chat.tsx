@@ -247,7 +247,7 @@ export const ProductionChat = ({ currentUserDid }: { currentUserDid: string }) =
 
         <div className='grid gap-5 lg:grid-cols-[minmax(15rem,1fr)_minmax(0,2fr)]'>
             <nav className='mh-card p-4' aria-labelledby='conversation-list-heading'>
-                <div className='flex items-center justify-between gap-2'>
+                <div className='flex flex-wrap items-center justify-between gap-2'>
                     <h2 id='conversation-list-heading' className='font-heading text-xl font-bold'>{t('chat.conversations')}</h2>
                     <button type='button' className='mh-button px-2 py-1 text-sm' onClick={() => void loadWorkspace()} disabled={busy}>{t('chat.refresh')}</button>
                 </div>

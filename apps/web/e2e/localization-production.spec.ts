@@ -8,45 +8,57 @@ const connectionId = '51111111-1111-4111-8111-111111111111';
 const routes = {
     en: [
         ['/', 'Patchwork'],
-        ['/nearby', 'Nearby map'],
-        ['/posting', 'Create request'],
+        ['/nearby', 'Nearby'],
+        ['/posting', 'Ask for help'],
         ['/resources', 'Resource directory'],
         ['/volunteer', 'Volunteer profiles'],
         ['/organizations', 'Organizations'],
         ['/verification', 'Verification'],
-        ['/inbox', 'Coordination inbox'],
+        ['/inbox', 'My activity'],
         ['/scheduling', 'Connection scheduling'],
         ['/notifications', 'Notification center'],
         ['/moderation', 'Moderator safety console'],
         ['/settings', 'Account privacy'],
-        ['/chat', 'Bounded text conversations for active accepted connections and current group-room members.'],
-        ['/groups', 'Private coordination spaces with explicit roles, expiring invitations, and immediate access checks.'],
+        [
+            '/chat',
+            'Talk with neighbors you are connected with, or with members of your groups.',
+        ],
+        [
+            '/groups',
+            'Coordinate with a group. Invite people, manage membership, and talk in shared rooms.',
+        ],
         ['/legal/terms', 'Terms of Service'],
         ['/legal/privacy', 'Privacy Policy'],
         ['/legal/community-guidelines', 'Community Guidelines'],
-        ['/login', 'Come on in. Your neighbors are here.'],
+        ['/login', 'Sign in to take part.'],
         ['/signup', 'Join your neighbors.'],
         ['/auth/callback?error=access_denied', 'Let’s get you back on track.'],
     ],
     es: [
         ['/', 'Patchwork'],
-        ['/nearby', 'Mapa cercano'],
-        ['/posting', 'Crear solicitud'],
+        ['/nearby', 'Cerca de ti'],
+        ['/posting', 'Pedir ayuda'],
         ['/resources', 'Directorio de recursos'],
         ['/volunteer', 'Perfiles de voluntariado'],
         ['/organizations', 'Organizaciones'],
         ['/verification', 'Verificación'],
-        ['/inbox', 'Bandeja de coordinación'],
+        ['/inbox', 'Mi actividad'],
         ['/scheduling', 'Programación de la conexión'],
         ['/notifications', 'Centro de notificaciones'],
         ['/moderation', 'Consola de seguridad de moderación'],
         ['/settings', 'Privacidad de la cuenta'],
-        ['/chat', 'Conversaciones de texto limitadas para conexiones aceptadas activas y miembros actuales de salas de grupo.'],
-        ['/groups', 'Espacios privados de coordinación con roles explícitos, invitaciones con vencimiento y controles de acceso inmediatos.'],
+        [
+            '/chat',
+            'Habla con vecinos con quienes te has conectado o con miembros de tus grupos.',
+        ],
+        [
+            '/groups',
+            'Coordínate con un grupo. Invita personas, administra miembros y conversa en salas compartidas.',
+        ],
         ['/legal/terms', 'Términos del servicio'],
         ['/legal/privacy', 'Política de privacidad'],
         ['/legal/community-guidelines', 'Normas de la comunidad'],
-        ['/login', 'Adelante. Tu comunidad está aquí.'],
+        ['/login', 'Inicia sesión para participar.'],
         ['/signup', 'Únete a tu comunidad.'],
         ['/auth/callback?error=access_denied', 'Volvamos a encaminarte.'],
     ],
@@ -204,13 +216,15 @@ test('language switching preserves in-progress production form state', async ({
     await page.goto(
         '/posting?tab=nearby&r=20000&lat=41.88&lng=-87.63&area=Disposable+test+area',
     );
-    await page.getByLabel('Title').fill('Groceries for a neighbor');
+    await page
+        .getByLabel('What do you need?', { exact: true })
+        .fill('Groceries for a neighbor');
     await page.getByLabel('Language').selectOption('es');
     await expect(
-        page.getByRole('heading', { name: 'Crear solicitud' }),
+        page.getByRole('heading', { name: 'Pedir ayuda' }),
     ).toBeVisible();
-    await expect(page.getByLabel('Título')).toHaveValue(
-        'Groceries for a neighbor',
-    );
+    await expect(
+        page.getByLabel('¿Qué necesitas?', { exact: true }),
+    ).toHaveValue('Groceries for a neighbor');
     await expect(page.locator('html')).toHaveAttribute('lang', 'es');
 });

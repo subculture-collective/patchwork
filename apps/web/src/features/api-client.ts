@@ -294,6 +294,7 @@ const buildDirectoryQueryParams = (
         params.set('radiusKm', String(radiusKm));
     }
 
+    if (state.resourceCategory) params.set('category', state.resourceCategory);
     if (state.text) {
         params.set('searchText', state.text);
     }
@@ -2407,13 +2408,24 @@ export const fetchDirectoryCardPageFromApi = async (
 };
 
 /** Map pins include every page in the current search, independent of directory pagination. */
-export const fetchMapResourcePageFromApi = async (state: DiscoveryFilterState, signal?: AbortSignal): Promise<ApiClientResult<PagedResult<ResourceDirectoryCard>>> => {
-    const first = await fetchDirectoryCardPageFromApi(state, 1, signal);
+export const fetchMapResourcePageFromApi = async (
+    state: DiscoveryFilterState,
+    signal?: AbortSignal,
+): Promise<ApiClientResult<PagedResult<ResourceDirectoryCard>>> => {
+    const first = await fetchDirectoryCardPageFromApi(
+        { ...state, resourceCategory: undefined },
+        1,
+        signal,
+    );
     if (!first.ok) return first;
     const items = [...first.data.items];
     const pages = Math.ceil(first.data.total / first.data.pageSize);
     for (let page = 2; page <= pages; page++) {
-        const next = await fetchDirectoryCardPageFromApi(state, page, signal);
+        const next = await fetchDirectoryCardPageFromApi(
+            { ...state, resourceCategory: undefined },
+            page,
+            signal,
+        );
         if (!next.ok) return next;
         if (next.data.total !== first.data.total) return invalidResponseFailure('The resource list changed while loading. Search this area again.');
         items.push(...next.data.items);

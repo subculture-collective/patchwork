@@ -18,6 +18,7 @@ describe('discovery filters', () => {
             feedTab: 'nearby',
             text: 'milk',
             category: 'food',
+            resourceCategory: 'legal-aid',
             status: 'open',
             minUrgency: 4,
             center: { lat: 1.3, lng: 103.8 },
@@ -37,13 +38,14 @@ describe('discovery filters', () => {
 
     it('normalizes invalid query values and preserves safe defaults', () => {
         const parsed = parseDiscoveryFilterState(
-            '?cat=invalid&st=unknown&u=99&r=12&lat=111&lng=103.81&tab=nearby&q=   ',
+            '?cat=invalid&resourceType=invalid&st=unknown&u=99&r=12&lat=111&lng=103.81&tab=nearby&q=   ',
             defaultDiscoveryFilterState,
         );
 
         expect(parsed.feedTab).toBe('nearby');
         expect(parsed.status).toBe('open');
         expect(parsed.category).toBeUndefined();
+        expect(parsed.resourceCategory).toBeUndefined();
         expect(parsed.minUrgency).toBe(5);
         expect(parsed.radiusMeters).toBe(300);
         expect(parsed.center).toBeUndefined();

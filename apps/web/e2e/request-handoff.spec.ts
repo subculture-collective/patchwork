@@ -58,7 +58,6 @@ for (const failure of ['UNAVAILABLE', 'ACTIVE_VOLUNTEER_PROFILE_REQUIRED']) test
     expect(commands[0]?.body).toEqual({ requestUri: uri, note: 'I can collect the order at 3 pm.' });
 });
 
-
 test('saved requests survive delayed discovery, paginate, and recover independently of the feed', async ({ page }) => {
     let published = false;
     let unavailable = false;
@@ -110,7 +109,6 @@ test('saved requests survive delayed discovery, paginate, and recover independen
     expect(requestsRead).toBeGreaterThanOrEqual(5);
 });
 
-
 test('a resource deep link loads outside the current result page and retries without requiring map coordinates', async ({ page }) => {
     const resourceUri = 'at://did:plc:regional/app.patchwork.directory.resource/help';
     let fail = true;
@@ -139,42 +137,50 @@ test('a resource deep link loads outside the current result page and retries wit
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
-
-for (const allowed of [true, false]) test(`posting requires a ZIP without requesting device location when permission is ${allowed ? 'allowed' : 'denied'}`, async ({ page }) => {
-    await page.addInitScript(granted => {
-        Object.defineProperty(navigator, 'geolocation', { configurable: true, value: {
-            getCurrentPosition: (success: (value: unknown) => void, failure: () => void) => granted
-                ? success({ coords: { latitude: 41.88123456, longitude: -87.63123456 } }) : failure(),
-        } });
-    }, allowed);
-    let submitted: Record<string, unknown> | undefined;
-    await page.route('**/api/**', async route => {
-        const path = new URL(route.request().url()).pathname;
-        if (path.endsWith('/at/aid-posts')) {
-            submitted = route.request().postDataJSON();
-            return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'UNAVAILABLE' } }) });
-        }
-        const body = path.endsWith('/auth/session') ? { session: { did: 'did:plc:location-author', expiresAt: '2099-01-01T00:00:00Z' } }
-            : path.endsWith('/account/onboarding') ? { policyVersion: '2026-07-28', requiredDocuments: [], consentRequired: false, acceptedAt: '2026-09-05T12:00:00Z' }
-            : { error: { code: 'NOT_FOUND' } };
-        await route.fulfill({ status: 'error' in body ? 404 : 200, contentType: 'application/json', body: JSON.stringify(body) });
+for (const allowed of [true, false])
+    test(`posting requires a ZIP without requesting device location when permission is ${allowed ? 'allowed' : 'denied'}`, async ({
+        page,
+    }) => {
+        await page.addInitScript(granted => {
+            Object.defineProperty(navigator, 'geolocation', { configurable: true, value: {
+                getCurrentPosition: (success: (value: unknown) => void, failure: () => void) => granted
+                    ? success({ coords: { latitude: 41.88123456, longitude: -87.63123456 } }) : failure(),
+            } });
+        }, allowed);
+        let submitted: Record<string, unknown> | undefined;
+        await page.route('**/api/**', async route => {
+            const path = new URL(route.request().url()).pathname;
+            if (path.endsWith('/at/aid-posts')) {
+                submitted = route.request().postDataJSON();
+                return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { code: 'UNAVAILABLE' } }) });
+            }
+            const body = path.endsWith('/auth/session') ? { session: { did: 'did:plc:location-author', expiresAt: '2099-01-01T00:00:00Z' } }
+                : path.endsWith('/account/onboarding') ? { policyVersion: '2026-07-28', requiredDocuments: [], consentRequired: false, acceptedAt: '2026-09-05T12:00:00Z' }
+                : { error: { code: 'NOT_FOUND' } };
+            await route.fulfill({ status: 'error' in body ? 404 : 200, contentType: 'application/json', body: JSON.stringify(body) });
+        });
+        await page.goto('/posting');
+        await page
+            .getByRole('textbox', { name: 'What do you need?', exact: true })
+            .fill('A ride to the pantry');
+        await page
+            .getByRole('textbox', {
+                name: 'How can a neighbor help?',
+                exact: true,
+            })
+            .fill('I need a ride to pick up groceries tomorrow.');
+        const publish = page.getByRole('button', { name: 'Publish request', exact: true });
+        await page.getByRole('textbox', { name: 'ZIP code where help is needed', exact: true }).fill('60625');
+        await expect(publish).toBeEnabled();
+        expect(new URL(page.url()).pathname).toBe('/posting');
+        expect(new URL(page.url()).searchParams.has('lat')).toBe(false);
+        const saved = await page.evaluate(() => sessionStorage.getItem('patchwork:posting-text:v1'));
+        expect(saved).toContain('A ride to the pantry');
+        expect(saved).not.toMatch(/latitude|longitude|precision|center|41\.88|87\.63/);
+        await publish.click();
+        await expect.poll(() => submitted).toBeTruthy();
+        expect(submitted?.location).toEqual({ countryCode: 'US', postalCode: '60625' });
     });
-    await page.goto('/posting');
-    await page.getByRole('textbox', { name: 'Title', exact: true }).fill('A ride to the pantry');
-    await page.getByRole('textbox', { name: 'Description', exact: true }).fill('I need a ride to pick up groceries tomorrow.');
-    const publish = page.getByRole('button', { name: 'Publish request', exact: true });
-    await page.getByRole('textbox', { name: 'ZIP code where help is needed', exact: true }).fill('60625');
-    await expect(publish).toBeEnabled();
-    expect(new URL(page.url()).pathname).toBe('/posting');
-    expect(new URL(page.url()).searchParams.has('lat')).toBe(false);
-    const saved = await page.evaluate(() => sessionStorage.getItem('patchwork:posting-text:v1'));
-    expect(saved).toContain('A ride to the pantry');
-    expect(saved).not.toMatch(/latitude|longitude|precision|center|41\.88|87\.63/);
-    await publish.click();
-    await expect.poll(() => submitted).toBeTruthy();
-    expect(submitted?.location).toEqual({ countryCode: 'US', postalCode: '60625' });
-});
-
 
 for (const operation of ['accept', 'complete'] as const) test(`${operation} retries keep the same operation key after an uncertain response`, async ({ page, baseURL }) => {
     const commands: Array<{ key?: string; body: unknown }> = [];

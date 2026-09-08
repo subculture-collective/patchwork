@@ -673,7 +673,10 @@ describe('api client', () => {
 
         globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-        const result = await fetchDirectoryCardsFromApi(baseDiscoveryState);
+        const result = await fetchDirectoryCardsFromApi({
+            ...baseDiscoveryState,
+            resourceCategory: 'food-bank',
+        });
 
         expect(result.ok).toBe(false);
         if (result.ok) {
@@ -721,7 +724,10 @@ describe('api client', () => {
         );
         globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-        const result = await fetchDirectoryCardsFromApi(baseDiscoveryState);
+        const result = await fetchDirectoryCardsFromApi({
+            ...baseDiscoveryState,
+            resourceCategory: 'food-bank',
+        });
 
         expect(result).toMatchObject({
             ok: true,
@@ -746,6 +752,12 @@ describe('api client', () => {
             fetchMock.mock.calls as unknown as Array<[unknown]>
         )[0];
         expect(String(firstCall?.[0])).toContain('/query/directory');
+        expect(
+            new URL(
+                String(firstCall?.[0]),
+                'http://localhost',
+            ).searchParams.get('category'),
+        ).toBe('food-bank');
         expect(String(firstCall?.[0])).toContain('pageSize=20');
     });
 

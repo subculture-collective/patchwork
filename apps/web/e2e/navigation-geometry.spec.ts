@@ -150,9 +150,11 @@ test('activity aliases retain the selected connection', async ({ page }) => {
     expect(new URL(page.url()).searchParams.get('connection')).toBe('handoff-target');
 });
 
-test('map filter changes discard legacy dataset and can be undone through Back', async ({ page }) => {
+test('map filter changes discard legacy dataset and can be undone through Back', async ({
+    page,
+}) => {
     await page.goto('/nearby?view=map&dataset=demo&lat=41.85&lng=-87.93&r=20000');
-    await page.locator('summary').filter({ hasText: 'Location and filters' }).click();
+    await page.locator('summary').filter({ hasText: 'Filters' }).click();
     const before = page.url();
     await page.getByRole('button', { name: 'Food', exact: true }).click();
     expect(new URL(page.url()).searchParams.get('dataset')).toBe(null);
