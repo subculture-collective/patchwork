@@ -8,6 +8,7 @@ from datetime import date
 import hashlib
 import html
 import json
+import math
 from pathlib import Path
 import re
 from importlib.util import module_from_spec, spec_from_file_location
@@ -26,10 +27,41 @@ def link(raw, fallback):
     return fallback if result == 'https://findahealthcenter.hrsa.gov/' else result
 
 
+def within_postal_boundary(latitude, longitude, geometry):
+    """Allow 250 m for simplified Census boundaries; never move the publisher pin."""
+    polygons = [geometry['coordinates']] if geometry['type'] == 'Polygon' else geometry['coordinates']
+    x_scale = 111320 * math.cos(math.radians(latitude))
+    def inside(ring):
+        result = False
+        for (x1, y1), (x2, y2) in zip(ring, ring[1:]):
+            if (y1 > latitude) != (y2 > latitude) and longitude < (x2-x1)*(latitude-y1)/(y2-y1)+x1:
+                result = not result
+        return result
+    def near(ring):
+        for (x1, y1), (x2, y2) in zip(ring, ring[1:]):
+            ax, ay = (x1-longitude)*x_scale, (y1-latitude)*111320
+            bx, by = (x2-longitude)*x_scale, (y2-latitude)*111320
+            dx, dy = bx-ax, by-ay
+            length = dx*dx+dy*dy
+            t = max(0, min(1, -(ax*dx+ay*dy)/length)) if length else 0
+            if (ax+t*dx)**2+(ay+t*dy)**2 <= 250**2:
+                return True
+        return False
+    for rings in polygons:
+        if inside(rings[0]) and not any(inside(hole) for hole in rings[1:]):
+            return True
+        if any(near(ring) for ring in rings):
+            return True
+    return False
+
+
 def build(food, hud, geocodes, retrieved):
     existing = [r for file in ['chicago-metro-public-resources.json','national-public-resources.json'] for r in json.loads((DATA/file).read_text())['resources']]
     ids = {r['id'] for r in existing}; seen = {key(r) for r in existing}
     postal = json.loads((ROOT/'packages/at-lexicons/src/postal-index.json').read_text())
+    shapes = {feature['properties']['id']:feature['geometry']
+        for file in (ROOT/'apps/web/public/geography/census2020').glob('*-zip.json')
+        for feature in json.loads(file.read_text())['features']}
     sources = {}; resources = []; skipped = Counter()
     food_sha = hashlib.sha256(json.dumps(food,sort_keys=True,separators=(',',':')).encode()).hexdigest()
     hud_sha = hashlib.sha256(json.dumps(hud,sort_keys=True,separators=(',',':')).encode()).hexdigest()
@@ -51,9 +83,8 @@ def build(food, hud, geocodes, retrieved):
         lat,lng=a.get('latitude'),a.get('longitude')
         if not isinstance(lat,(float,int)) or not isinstance(lng,(float,int)) or lat==0 or lng==0 or (round(lat,3)==lat and round(lng,3)==lng): skipped['coarse_coordinates']+=1; continue
         if zip_code not in postal: skipped['unsupported_zip']+=1;continue
-        # Reject wrong-state/wildly misplaced coordinates without moving the source pin.
-        plat,plng=postal[zip_code][:2]
-        if abs(lat-plat)>1 or abs(lng-plng)>2: skipped['coordinate_zip_conflict']+=1;continue
+        if zip_code not in shapes or not within_postal_boundary(lat, lng, shapes[zip_code]):
+            skipped['coordinate_zip_conflict']+=1;continue
         network=next((n for n in a.get('networkAffiliationsList',[]) if n.get('regionId')==a.get('regionId')),None)
         if not network: skipped['missing_network_provenance']+=1;continue
         source_id='vivery-network-'+str(a['regionId']);fallback='https://www.feedingillinois.org/food-resources-illinois'
