@@ -31,6 +31,14 @@ describe('sourced public resource seed', () => {
         expect(food.every(resource => resource.services?.includes('food') && resource.coordinateBasis === 'publisher-address')).toBe(true);
         expect(housing.length).toBeGreaterThan(400);
         expect(housing.every(resource => resource.services?.includes('housing') && resource.coordinateBasis === 'census-address-range')).toBe(true);
+        const socialSecurity = publicResourceSeed.filter(resource => resource.sourceId === 'ssa-field-offices');
+        expect(socialSecurity.length).toBeGreaterThan(1000);
+        expect(socialSecurity.every(resource => resource.services?.includes('benefits') && resource.services?.includes('disability')
+            && resource.coordinateBasis === 'census-address-range' && /SSI/.test(resource.publicAccess))).toBe(true);
+        const veterans = publicResourceSeed.filter(resource => resource.sourceId === 'va-public-offices');
+        expect(veterans.length).toBeGreaterThan(400);
+        expect(veterans.every(resource => new URL(resource.website).hostname.endsWith('va.gov')
+            && (resource.services?.includes('health') || resource.services?.includes('benefits')))).toBe(true);
     });
 
     it('keeps the source closure and omits that branch from the active seed', () => {

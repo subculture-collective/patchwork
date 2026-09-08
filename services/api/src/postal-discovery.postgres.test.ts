@@ -58,6 +58,10 @@ describe('ZIP discovery and sourced-resource claims',()=>{
         expect(result.body).toMatchObject({total:1, results:[{name:'DuPagePads — Client Access Center'}]});
         const legal = await queryProjected(pool, new URLSearchParams({service:'legal', pageSize:'1'}), 'directory');
         expect(legal.body).toMatchObject({total:publicResourceSeed.filter(resource => resource.services?.includes('legal')).length, hasNextPage:true});
+        const socialSecurity = await queryProjected(pool, new URLSearchParams({service:'benefits', searchText:'SSI Social Security', pageSize:'1'}), 'directory');
+        expect(socialSecurity.body).toMatchObject({total:publicResourceSeed.filter(resource => resource.sourceId === 'ssa-field-offices').length, hasNextPage:true});
+        const disability = await queryProjected(pool, new URLSearchParams({service:'disability', searchText:'SSA field office', pageSize:'1'}), 'directory');
+        expect(disability.body).toMatchObject({total:publicResourceSeed.filter(resource => resource.sourceId === 'ssa-field-offices').length});
         const invalid = await queryProjected(pool, new URLSearchParams({service:'not-a-service'}), 'directory');
         expect(invalid.statusCode).toBe(400);
         const libraries = await queryProjected(pool, new URLSearchParams({service:'community'}), 'directory');

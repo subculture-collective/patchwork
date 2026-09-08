@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { resourceServices } from '../../../../packages/shared/src/resource-services.js';
 import { directoryResourceSchema } from '@patchwork/at-lexicons';
+import governmentSnapshot from './seed-data/national-government-resources.json' with { type: 'json' };
 import communitySnapshot from './seed-data/national-community-resources.json' with { type: 'json' };
 import nationalSnapshot from './seed-data/national-public-resources.json' with { type: 'json' };
 import snapshot from './seed-data/chicago-metro-public-resources.json' with { type: 'json' };
@@ -32,6 +33,7 @@ const sourceSchema = z.object({
     url: z.string().url().refine(url => new URL(url).protocol === 'https:'),
     apiUrl: z.string().url(),
     retrievedAt: z.string().date(),
+    publishedAt: z.string().date().optional(),
     sha256: z.string().regex(/^[a-f0-9]{64}$/),
 }).strict();
 
@@ -67,9 +69,9 @@ export function parsePublicResourceCatalog(input: unknown) {
 
 export const publicResourceCatalog = parsePublicResourceCatalog({
     scope: { name: 'United States public resource directory', sourceUrl: nationalSnapshot.scope.sourceUrl,
-        countyIds: [...new Set([...snapshot.scope.countyIds, ...nationalSnapshot.scope.countyIds, ...communitySnapshot.scope.countyIds])].sort() },
-    sources: { ...snapshot.sources, ...nationalSnapshot.sources, ...communitySnapshot.sources },
-    resources: [...snapshot.resources, ...nationalSnapshot.resources, ...communitySnapshot.resources],
+        countyIds: [...new Set([...snapshot.scope.countyIds, ...nationalSnapshot.scope.countyIds, ...communitySnapshot.scope.countyIds, ...governmentSnapshot.scope.countyIds])].sort() },
+    sources: { ...snapshot.sources, ...nationalSnapshot.sources, ...communitySnapshot.sources, ...governmentSnapshot.sources },
+    resources: [...snapshot.resources, ...nationalSnapshot.resources, ...communitySnapshot.resources, ...governmentSnapshot.resources],
 });
 export const publicResourceSeed = publicResourceCatalog.resources.filter(
     resource => resource.operationalStatus !== 'closed',
