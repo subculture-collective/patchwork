@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { resourceServices } from '../../../../packages/shared/src/resource-services.js';
 import { directoryResourceSchema } from '@patchwork/at-lexicons';
+import nationalSnapshot from './seed-data/national-public-resources.json' with { type: 'json' };
 import snapshot from './seed-data/chicago-metro-public-resources.json' with { type: 'json' };
 import { postalLocationSchema } from '../../../../packages/at-lexicons/src/postal-geography.js';
 
@@ -14,7 +15,7 @@ const publicResourceSchema = z.object({
     coordinateBasis: z.enum(['publisher-address', 'census-address-range']),
     streetAddress: z.string().min(1).max(300),
     city: z.string().min(1),
-    state: z.enum(['IL', 'IN', 'WI']),
+    state: z.enum(['AL','AK','AZ','AR','CA','CO','CT','DE','DC','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','PR','VI','GU','AS','MP']),
     postalCode: postalLocationSchema.shape.postalCode,
     latitude: z.number().min(-90).max(90),
     longitude: z.number().min(-180).max(180),
@@ -63,7 +64,12 @@ export function parsePublicResourceCatalog(input: unknown) {
     };
 }
 
-export const publicResourceCatalog = parsePublicResourceCatalog(snapshot);
+export const publicResourceCatalog = parsePublicResourceCatalog({
+    scope: { name: 'United States public resource directory', sourceUrl: nationalSnapshot.scope.sourceUrl,
+        countyIds: [...new Set([...snapshot.scope.countyIds, ...nationalSnapshot.scope.countyIds])].sort() },
+    sources: { ...snapshot.sources, ...nationalSnapshot.sources },
+    resources: [...snapshot.resources, ...nationalSnapshot.resources],
+});
 export const publicResourceSeed = publicResourceCatalog.resources.filter(
     resource => resource.operationalStatus !== 'closed',
 );

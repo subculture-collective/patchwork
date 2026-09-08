@@ -8,10 +8,10 @@ import {
 } from 'react';
 import type { DiscoveryFilterState } from '../discovery-filters';
 export const discoveryFallback = {
-    center: { lat: 41.7, lng: -88.2 },
-    areaLabel: 'Chicago metro area',
-    radiusMeters: 180000,
-    feedTab: 'nearby' as const,
+    center: undefined,
+    areaLabel: 'United States',
+    radiusMeters: undefined,
+    feedTab: 'latest' as const,
 };
 type Status =
     'idle' | 'requesting' | 'granted' | 'denied' | 'timeout' | 'unavailable';

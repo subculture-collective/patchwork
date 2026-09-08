@@ -1,4 +1,3 @@
-import { discoveryFallback } from './discovery-location';
 import { useMapSelection } from './use-map-selection';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { DiscoveryMapAggregates } from '@patchwork/shared';
@@ -156,7 +155,7 @@ export const MapRoute = ({
     const onSelectPost = selection.selectRequest;
     const setSelectedResourceUri = selection.selectResource;
     const [cameraCenter, setCameraCenter] = useState(
-        discoveryState.center ?? discoveryFallback.center,
+        discoveryState.center ?? { lat: 39.5, lng: -98.35 },
     );
     useEffect(() => {
         if (discoveryState.center) setCameraCenter(discoveryState.center);

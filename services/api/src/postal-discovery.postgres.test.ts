@@ -13,8 +13,14 @@ describe('ZIP discovery and sourced-resource claims',()=>{
     const pool=new Pool({connectionString:databaseUrl});
     beforeAll(async()=>{
         await pool.query('TRUNCATE public_resource_claims,public_resource_listings,public_resource_audit_events,showcase_record_metadata,showcase_seed_runs,indexer_aid_post_projections,indexer_directory_resource_projections,organizations CASCADE');
+        const preview = await importPublicResources(pool,{maxNewPerState:5});
+        expect(Object.values(preview.additionsByState).every(count => count <= 5)).toBe(true);
+        expect(preview.newResources).toBeGreaterThan(250);
+        expect((await pool.query('SELECT count(*)::integer AS count FROM public_resource_listings')).rows[0].count).toBe(0);
+        await importPublicResources(pool,{apply:true,maxNewPerState:5});
+        expect((await pool.query('SELECT count(*)::integer AS count FROM public_resource_listings')).rows[0].count).toBe(preview.newResources);
         await importPublicResources(pool,{apply:true});
-    });
+    }, 30000);
     afterAll(async()=>pool.end());
     it('imports real resources without creating requests or claiming ownership',async()=>{
         const requests=await pool.query('SELECT count(*)::integer AS total,count(postal_code)::integer AS located FROM indexer_aid_post_projections');

@@ -18,7 +18,7 @@ const quote = (value: string) => `"${value.replaceAll('"', '""')}"`;
 
 /** Dry-run by default. Reset requires stopped writers and a verified database backup. */
 export async function importPublicResources(pool: Pool, options: {
-    apply?: boolean; reset?: boolean; expectedDatabase?: string; backupSha256?: string;
+    apply?: boolean; reset?: boolean; expectedDatabase?: string; backupSha256?: string; maxNewPerState?: number;
 } = {}) {
     const client = await pool.connect();
     try {
@@ -32,7 +32,20 @@ export async function importPublicResources(pool: Pool, options: {
             "SELECT schemaname,tablename FROM pg_tables WHERE schemaname IN ('public','jetstream_v1_rollback','jetstream_v2_shadow') ORDER BY 1,2",
         )).rows;
         const cleared = tables.filter(table => !(table.schemaname === 'public' && preserved.has(table.tablename)));
-        const preview = { database, catalogResources: publicResourceSeed.length, newRequests: 0,
+        const existingRecords = new Map((await client.query<{uri:string;record_origin:string;seed_version:string}>(
+            'SELECT uri,record_origin,seed_version FROM indexer_directory_resource_projections WHERE uri = ANY($1::text[])',
+            [publicResourceSeed.map(resource => `at://${did}/app.patchwork.directory.resource/${resource.id}`)],
+        )).rows.map(row => [row.uri,row]));
+        if (options.maxNewPerState !== undefined && (!Number.isInteger(options.maxNewPerState) || options.maxNewPerState < 1 || options.reset)) throw new Error('A positive per-state batch limit is supported only for additive imports.');
+        const additionsByState = new Map<string,number>();
+        const batch = publicResourceSeed.filter(resource => {
+            if (!options.reset && existingRecords.has(`at://${did}/app.patchwork.directory.resource/${resource.id}`)) return true;
+            const count = additionsByState.get(resource.state) ?? 0;
+            if (options.maxNewPerState !== undefined && count >= options.maxNewPerState) return false;
+            additionsByState.set(resource.state,count+1);
+            return true;
+        });
+        const preview = { database, catalogResources: publicResourceSeed.length, batchResources: batch.length, newResources: [...additionsByState.values()].reduce((a,b)=>a+b,0), additionsByState: Object.fromEntries(additionsByState), newRequests: 0,
             counties: new Set(publicResourceSeed.map(resource => resource.countyId)).size,
             resetTables: options.reset ? cleared.map(table => `${table.schemaname}.${table.tablename}`) : [],
             preservedTables: tables.filter(table => table.schemaname === 'public' && preserved.has(table.tablename)).map(table => table.tablename),
@@ -42,12 +55,12 @@ export async function importPublicResources(pool: Pool, options: {
             // No CASCADE: unexpected references outside this explicit scope must fail closed.
             await client.query(`TRUNCATE ${cleared.map(table => `${quote(table.schemaname)}.${quote(table.tablename)}`).join(',')} RESTART IDENTITY`);
         }
-        for (const resource of publicResourceSeed) {
+        for (const resource of batch) {
             const uri = `at://${did}/app.patchwork.directory.resource/${resource.id}`;
             const source = resource.source;
-            const existing = await client.query('SELECT record_origin,seed_version FROM indexer_directory_resource_projections WHERE uri=$1', [uri]);
-            if (existing.rowCount) {
-                if (existing.rows[0].record_origin !== 'sourced-public' || existing.rows[0].seed_version !== PUBLIC_RESOURCE_VERSION) throw new Error('Catalog key occupied by a different record.');
+            const existing = options.reset ? undefined : existingRecords.get(uri);
+            if (existing) {
+                if (existing.record_origin !== 'sourced-public' || existing.seed_version !== PUBLIC_RESOURCE_VERSION) throw new Error('Catalog key occupied by a different record.');
                 continue; // Never overwrite a claimed operator edit or silently renew provenance.
             }
             await client.query(`INSERT INTO indexer_directory_resource_projections
@@ -65,7 +78,7 @@ export async function importPublicResources(pool: Pool, options: {
                 [uri,PUBLIC_RESOURCE_VERSION,source.name,source.url,source.retrievedAt]);
         }
         await client.query(`INSERT INTO showcase_seed_runs(seed_version,manifest_sha256,applied_at,record_count) VALUES($1,$2,NOW(),$3) ON CONFLICT(seed_version) DO NOTHING`,
-            [PUBLIC_RESOURCE_VERSION,preview.manifestSha256,publicResourceSeed.length]);
+            [`${PUBLIC_RESOURCE_VERSION}:${hash(batch.map(resource => resource.id).join('\n')).slice(0,12)}`,preview.manifestSha256,batch.length]);
         await client.query('COMMIT');
         return preview;
     } catch (error) { await client.query('ROLLBACK'); throw error; }
@@ -76,7 +89,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1
     const argument = (name: string) => process.argv.find(value => value.startsWith(`${name}=`))?.slice(name.length+1);
     const pool = new Pool({ connectionString: process.env.API_DATABASE_URL });
     importPublicResources(pool, { apply: process.argv.includes('--apply'), reset: process.argv.includes('--reset'),
-        expectedDatabase: argument('--database'), backupSha256: argument('--backup-sha256') })
+        expectedDatabase: argument('--database'), backupSha256: argument('--backup-sha256'),
+        maxNewPerState: argument('--max-new-per-state') === undefined ? undefined : Number(argument('--max-new-per-state')) })
         .then(result => console.log(JSON.stringify(result,null,2)))
         .catch(error => { console.error(error instanceof Error ? error.message : 'Import failed.'); process.exitCode=1; })
         .finally(() => pool.end());

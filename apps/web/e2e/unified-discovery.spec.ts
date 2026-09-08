@@ -259,7 +259,7 @@ for (const code of [1, 2, 3])
         await page.goto('/nearby');
         await expect
             .poll(() => new URL(page.url()).searchParams.get('area'))
-            .toBe('Chicago metro area');
+            .toBe('United States');
         await expect(page.locator('.leaflet-container')).toBeVisible();
         await page.locator('.mh-filter-disclosure summary').click();
         await page

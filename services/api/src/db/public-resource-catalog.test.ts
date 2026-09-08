@@ -11,11 +11,20 @@ describe('sourced public resource seed', () => {
             expect(resource.streetAddress).not.toBe('');
             expect(resource.source.url).toMatch(/^https:\/\//);
             expect(resource.operationalStatus).toBe('unknown');
-            expect(resource.latitude).toBeGreaterThan(40.5);
-            expect(resource.latitude).toBeLessThan(43);
-            expect(resource.longitude).toBeGreaterThan(-90);
-            expect(resource.longitude).toBeLessThan(-86);
+            expect(resource.latitude).toBeGreaterThan(-90);
+            expect(resource.latitude).toBeLessThan(90);
+            expect(resource.longitude).toBeGreaterThan(-180);
+            expect(resource.longitude).toBeLessThan(180);
         }
+    });
+
+    it('covers every state without importing artificial activity', () => {
+        const states = new Set(publicResourceSeed.map(resource => resource.state));
+        for (const state of 'AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY'.split(' ')) expect(states.has(state as never)).toBe(true);
+        const national = publicResourceSeed.filter(resource => resource.sourceId === 'hrsa-national');
+        expect(national.length).toBeGreaterThan(10000);
+        expect(national.every(resource => resource.id.startsWith('hrsa-site-') && resource.services?.includes('health'))).toBe(true);
+        expect(national.every(resource => new URL(resource.website).hostname.includes('.'))).toBe(true);
     });
 
     it('keeps the source closure and omits that branch from the active seed', () => {
