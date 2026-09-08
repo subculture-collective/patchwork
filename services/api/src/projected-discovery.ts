@@ -6,6 +6,7 @@ import { computeDiscoveryRank, validateAidFeedQueryInput, validateAidQueryInput,
 import type { ApiRouteResult } from './query-service.js';
 
 export const discoveryDataset = (params: URLSearchParams) => z.enum(['all', 'community', 'demo']).parse(params.get('dataset') ?? 'all');
+const programAcronyms = new Set(['ssi', 'ssdi', 'ssa', 'snap', 'tanf', 'wic', 'liheap', 'va']);
 const number = (params: URLSearchParams, key: string) => params.has(key) && params.get(key)!.trim() ? Number(params.get(key)) : undefined;
 const queryInput = (params: URLSearchParams) => ({
     latitude: number(params, 'latitude'), longitude: number(params, 'longitude'), radiusKm: number(params, 'radiusKm'),
@@ -50,7 +51,10 @@ export async function readProjectionPage<T extends QueryResultRow>(pool: Pool, p
         }
         // Match each word in any order, including partial names, addresses and service descriptions.
         for (const word of input.searchText?.toLowerCase().split(/\s+/).filter(Boolean) ?? []) {
-            where.push(`strpos(p.searchable_text, ${bind(word)}) > 0`);
+            // SSI must not match the middle of "assistance"; keep partial matching for ordinary words.
+            where.push(programAcronyms.has(word)
+                ? `p.searchable_text ~ ${bind(`\\m${word}\\M`)}`
+                : `strpos(p.searchable_text, ${bind(word)}) > 0`);
         }
     } else if (input.searchText) where.push(`strpos(p.searchable_text, ${bind(input.searchText.toLowerCase())}) > 0`);
     if (input.freshnessHours) where.push(`p.record_updated_at >= ${nowParam}::timestamptz - ${bind(input.freshnessHours)}::double precision * INTERVAL '1 hour'`);
