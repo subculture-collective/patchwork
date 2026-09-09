@@ -392,21 +392,32 @@ test('resource categories query the whole directory and restore through Back', a
 });
 
 
-test('resource services compose with keywords and ZIP and reset without losing place', async ({ page }) => {
+test('resource filters survive directory-to-Nearby navigation, reload and reset', async ({ page }) => {
     const queries: URL[] = [];
     await page.route('**/api/query/directory?**', route => {
         queries.push(new URL(route.request().url()));
         return route.fulfill({ json: { total: 0, page: 1, pageSize: 20, hasNextPage: false, results: [] } });
     });
     await page.goto('/resources?zip=60187');
-    await page.getByLabel('What do you need?', { exact: true }).selectOption('hygiene');
-    await page.getByLabel('Service, organization, or keyword', { exact: true }).fill('laundry showers');
-    await expect.poll(() => queries.at(-1)?.searchParams.get('service')).toBe('hygiene');
-    await expect.poll(() => queries.at(-1)?.searchParams.get('searchText')).toBe('laundry showers');
+    await page.getByLabel('What do you need?', { exact: true }).selectOption('youth');
+    await page.getByLabel('Service, organization, or keyword', { exact: true }).fill('nutrition');
+    await expect.poll(() => queries.at(-1)?.searchParams.get('service')).toBe('youth');
+    await expect.poll(() => queries.at(-1)?.searchParams.get('searchText')).toBe('nutrition');
     expect(new URL(page.url()).searchParams.get('zip')).toBe('60187');
+    await page.getByLabel('Program or benefit', { exact: true }).selectOption('wic');
+    await page.getByLabel('Resource type', { exact: true }).selectOption('clinic');
+    await page.getByLabel('Search distance', { exact: true }).selectOption('5000');
+    await page.getByRole('navigation', { name: 'Primary flows' }).getByRole('link', { name: 'Nearby', exact: true }).click();
+    await expect.poll(() => queries.at(-1)?.searchParams.get('pageSize')).toBe('100');
+    expect(Object.fromEntries(queries.at(-1)!.searchParams)).toMatchObject({service:'youth',program:'wic',category:'clinic',radiusKm:'5',searchText:'nutrition'});
     await page.reload();
-    await expect(page.getByLabel('What do you need?', { exact: true })).toHaveValue('hygiene');
+    await expect(page.getByLabel('What do you need?', { exact: true })).toHaveValue('youth');
+    await expect(page.getByLabel('Program or benefit', { exact: true })).toHaveValue('wic');
+    await expect(page.getByLabel('Search distance', { exact: true })).toHaveValue('5000');
     await page.getByRole('button', { name: 'Reset filters', exact: true }).first().click();
     await expect.poll(() => queries.at(-1)?.searchParams.has('service')).toBe(false);
+    expect(queries.at(-1)?.searchParams.has('program')).toBe(false);
+    expect(queries.at(-1)?.searchParams.has('category')).toBe(false);
+    expect(queries.at(-1)?.searchParams.get('radiusKm')).toBe('20');
     expect(new URL(page.url()).searchParams.get('zip')).toBe('60187');
 });

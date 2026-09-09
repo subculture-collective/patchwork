@@ -310,7 +310,7 @@ const routeLabelKeys: Readonly<Record<AppRoute, string>> = {
 };
 
 const primaryRoutes: readonly AppRoute[] = [
-    '/feed',
+    '/map',
     '/posting',
     '/resources',
     '/inbox',
@@ -9296,7 +9296,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
     }, [aidPage, aidReload, currentRoute, currentUserDid, discoveryState, t]);
 
     useEffect(() => {
-        if (currentRoute !== '/resources' && currentRoute !== '/map') {
+        if (currentRoute !== '/resources' && currentRoute !== '/map' && currentRoute !== '/feed') {
             return undefined;
         }
         if (webDataMode === 'fixture') return undefined;
@@ -9305,7 +9305,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         setDirectoryErrorMessage(undefined);
 
         void (
-            currentRoute === '/map'
+            currentRoute !== '/resources'
                 ? fetchMapResourcePageFromApi(discoveryState, controller.signal)
                 : fetchDirectoryCardPageFromApi(
                       discoveryState,
@@ -9320,7 +9320,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
 
                 if (result.ok) {
                     setResourceCards(current =>
-                        currentRoute === '/map' || directoryPage === 1
+                        currentRoute !== '/resources' || directoryPage === 1
                             ? appendDedupedPage(
                                   [],
                                   result.data.items,
