@@ -186,6 +186,8 @@ export class ApiDiscoveryQueryService {
     queryDirectory(params: URLSearchParams): ApiRouteResult {
         try {
             const input = validateDirectoryQueryInput({
+                service: readString(params, 'service'),
+                program: readString(params, 'program'),
                 category: readString(params, 'category'),
                 status: readString(params, 'status'),
                 operationalStatus: readString(params, 'operationalStatus'),

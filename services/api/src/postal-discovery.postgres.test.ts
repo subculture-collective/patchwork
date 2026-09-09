@@ -67,6 +67,32 @@ describe('ZIP discovery and sourced-resource claims',()=>{
         const libraries = await queryProjected(pool, new URLSearchParams({service:'community'}), 'directory');
         expect((libraries.body as {total:number}).total).toBeGreaterThan(80);
     });
+    it('combines published program evidence with other filters before pagination', async () => {
+        const cases = [
+            ['wic', (r: typeof publicResourceSeed[number]) => ['idhs-wic','colorado-wic'].includes(r.sourceId)],
+            ['snap', (r: typeof publicResourceSeed[number]) => ['idhs-benefits','idhs-snap-outreach'].includes(r.sourceId)],
+            ['public-housing', (r: typeof publicResourceSeed[number]) => r.sourceId === 'hud-public-housing-authorities' && r.publicAccess.includes('for public housing')],
+            ['housing-vouchers', (r: typeof publicResourceSeed[number]) => r.sourceId === 'hud-public-housing-authorities' && r.publicAccess.includes('Housing Choice Voucher')],
+            ['va-benefits', (r: typeof publicResourceSeed[number]) => r.sourceId === 'va-public-offices' && r.publicAccess.includes('Government VA benefits office')],
+            ['vet-center', (r: typeof publicResourceSeed[number]) => r.sourceId === 'va-public-offices' && r.publicAccess.includes('Government VA Vet Center')],
+        ] as const;
+        for (const [program, matches] of cases) {
+            const expected = publicResourceSeed.filter(matches);
+            expect(expected.length).toBeGreaterThan(1);
+            const response = await queryProjected(pool, new URLSearchParams({program, pageSize:'1'}), 'directory');
+            expect(response.statusCode).toBe(200);
+            expect(response.body).toMatchObject({total:expected.length, hasNextPage:true});
+            const rows = (response.body as {results:{uri:string}[]}).results;
+            expect(rows).toHaveLength(1);
+            expect(expected.some(r => rows[0]!.uri.endsWith('/'+r.id))).toBe(true);
+        }
+        const wic = await queryProjected(pool, new URLSearchParams({program:'wic',service:'youth',category:'clinic',pageSize:'1'}), 'directory');
+        expect(wic.body).toMatchObject({total:publicResourceSeed.filter(r => ['idhs-wic','colorado-wic'].includes(r.sourceId)).length});
+        const incompatible = await queryProjected(pool, new URLSearchParams({program:'wic',service:'legal'}), 'directory');
+        expect(incompatible.body).toMatchObject({total:0,results:[]});
+        const invalid = await queryProjected(pool, new URLSearchParams({program:'not-a-program'}), 'directory');
+        expect(invalid.statusCode).toBe(400);
+    });
     it('requires independent verified ownership, preserves source evidence, and revokes edits',async()=>{
         const owner=`did:plc:postal-owner-${randomUUID()}`,reviewer='did:plc:postal-reviewer';
         const created=await new OrganizationService(pool).create(owner,{name:'Test Resource Operator',description:'Local test operator.'}) as {organization:{id:string}};

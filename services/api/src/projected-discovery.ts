@@ -1,4 +1,4 @@
-import { categoryServices } from '@patchwork/shared';
+import { categoryServices, resourceProgramEvidence } from '@patchwork/shared';
 import { lookupPostalArea } from '@patchwork/at-lexicons';
 import { z, ZodError } from 'zod';
 import type { Pool, QueryResultRow } from 'pg';
@@ -10,7 +10,7 @@ const programAcronyms = new Set(['ssi', 'ssdi', 'ssa', 'snap', 'tanf', 'wic', 'l
 const number = (params: URLSearchParams, key: string) => params.has(key) && params.get(key)!.trim() ? Number(params.get(key)) : undefined;
 const queryInput = (params: URLSearchParams) => ({
     latitude: number(params, 'latitude'), longitude: number(params, 'longitude'), radiusKm: number(params, 'radiusKm'),
-    service: params.get('service') || undefined,
+    service: params.get('service') || undefined, program: params.get('program') || undefined,
     category: params.get('category') || undefined, status: params.get('status') || undefined,
     urgency: params.get('urgency') || undefined, minimumUrgency: params.get('minimumUrgency') || undefined, operationalStatus: params.get('operationalStatus') || undefined,
     freshnessHours: number(params, 'freshnessHours'), searchText: params.get('searchText') || undefined,
@@ -48,6 +48,12 @@ export async function readProjectionPage<T extends QueryResultRow>(pool: Pool, p
             const service = bind(directoryInput.service);
             const categories = Object.entries(categoryServices).filter(([, value]) => value === directoryInput.service).map(([key]) => key);
             where.push(`(p.category = ANY(${bind(categories)}::text[]) OR EXISTS (SELECT 1 FROM public_resource_listings listing WHERE listing.resource_uri=p.uri AND listing.listed AND (listing.source_snapshot->'services' ? ${service} OR (${service} = 'community' AND listing.source_snapshot->>'sourceId' = 'cpl'))))`);
+        }
+        if (directoryInput.program) {
+            const evidence = resourceProgramEvidence[directoryInput.program];
+            const phrase = evidence.phrase ? `AND strpos(listing.source_snapshot->>'publicAccess', ${bind(evidence.phrase)}) > 0` : '';
+            where.push(`EXISTS (SELECT 1 FROM public_resource_listings listing WHERE listing.resource_uri=p.uri AND listing.listed
+                AND listing.source_snapshot->>'sourceId' = ANY(${bind(evidence.sourceIds)}::text[]) ${phrase})`);
         }
         // Match each word in any order, including partial names, addresses and service descriptions.
         for (const word of input.searchText?.toLowerCase().split(/\s+/).filter(Boolean) ?? []) {

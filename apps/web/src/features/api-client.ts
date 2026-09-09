@@ -295,6 +295,7 @@ const buildDirectoryQueryParams = (
     }
 
     if (state.resourceService) params.set('service', state.resourceService);
+    if (state.resourceProgram) params.set('program', state.resourceProgram);
     if (state.resourceCategory) params.set('category', state.resourceCategory);
     if (state.text) {
         params.set('searchText', state.text);
@@ -2413,7 +2414,7 @@ export const fetchMapResourcePageFromApi = async (
     state: DiscoveryFilterState,
     signal?: AbortSignal,
 ): Promise<ApiClientResult<PagedResult<ResourceDirectoryCard>>> => {
-    const params = buildDirectoryQueryParams({ ...state, resourceCategory: undefined, resourceService: undefined }, 1);
+    const params = buildDirectoryQueryParams(state, 1);
     params.set('pageSize', '100');
     const result = await requestJson('/query/directory', params, signal);
     if (!result.ok) return result;

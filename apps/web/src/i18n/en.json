@@ -471,7 +471,12 @@
         "searchPlaceholder": "Rent assistance, showers, legal help…",
         "serviceLabel": "What do you need?",
         "allServices": "All services",
-        "searchHelp": "Services may have eligibility or appointment requirements. Check the listing before visiting."
+        "searchHelp": "Services may have eligibility or appointment requirements. Check the listing before visiting.",
+        "programLabel": "Program or benefit",
+        "allPrograms": "All programs",
+        "distanceLabel": "Search distance",
+        "programHelp": "All filters apply together. Program filters include only listings with published program information. Confirm eligibility and appointments with the provider.",
+        "filtersLegend": "Filter resources"
     },
     "volunteer": {
         "heading": "Volunteer onboarding",
@@ -1479,5 +1484,17 @@
         "youth": "Youth & family support",
         "reentry": "Reentry support",
         "community": "Libraries & shared tools"
+    },
+    "resourcePrograms": {
+        "wic": "WIC nutrition program",
+        "snap": "SNAP application help",
+        "tanf": "TANF cash assistance",
+        "medicaid": "Medicaid application help",
+        "social-security": "Social Security / SSI / SSDI",
+        "va-benefits": "VA benefits offices",
+        "vet-center": "Vet Center counseling",
+        "public-housing": "Public housing applications",
+        "housing-vouchers": "Section 8 / housing vouchers",
+        "housing-counseling": "Housing counseling"
     }
 }

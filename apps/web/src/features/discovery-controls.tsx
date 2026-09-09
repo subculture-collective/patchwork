@@ -1,4 +1,4 @@
-import { resourceServices, resourceServiceLabels } from '@patchwork/shared';
+import { resourceServices, resourceServiceLabels, resourcePrograms, resourceProgramLabels } from '@patchwork/shared';
 import { directoryCategories } from '../discovery-filters';
 import { useEffect, useState } from 'react';
 import { lookupPostalArea } from '@patchwork/at-lexicons';
@@ -15,11 +15,13 @@ export function DiscoveryControls({
     state,
     onPatch,
     resourceMode = false,
+    resourceFilters = false,
 }: {
     idPrefix: string;
     state: DiscoveryFilterState;
     onPatch: (patch: Partial<DiscoveryFilterState>) => void;
     resourceMode?: boolean;
+    resourceFilters?: boolean;
 }) {
     const { t } = useLocale();
     const location = useDiscoveryLocation();
@@ -123,8 +125,9 @@ export function DiscoveryControls({
                     </div>
                 </form>
             </div>
-            {resourceMode && (
-                <div className='grid gap-3 sm:grid-cols-2'>
+            {(resourceMode || resourceFilters) && (
+                <fieldset className='grid gap-3 sm:grid-cols-2'>
+                    <legend className='mb-2 font-semibold'>{t('resources.filtersLegend')}</legend>
                     <div>
                         <label htmlFor={`${idPrefix}-service`}>{t('resources.serviceLabel')}</label>
                         <select id={`${idPrefix}-service`} className='mh-input w-full px-3 py-2 text-base'
@@ -132,6 +135,15 @@ export function DiscoveryControls({
                             onChange={event => onPatch({ resourceService: (event.target.value || undefined) as DiscoveryFilterState['resourceService'] })}>
                             <option value=''>{t('resources.allServices')}</option>
                             {resourceServices.map(service => <option key={service} value={service}>{t(`resourceServices.${service}`, { defaultValue: resourceServiceLabels[service] })}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label htmlFor={`${idPrefix}-program`}>{t('resources.programLabel')}</label>
+                        <select id={`${idPrefix}-program`} className='mh-input w-full px-3 py-2 text-base'
+                            value={state.resourceProgram ?? ''}
+                            onChange={event => onPatch({ resourceProgram: (event.target.value || undefined) as DiscoveryFilterState['resourceProgram'] })}>
+                            <option value=''>{t('resources.allPrograms')}</option>
+                            {resourcePrograms.map(program => <option key={program} value={program}>{t(`resourcePrograms.${program}`, { defaultValue: resourceProgramLabels[program] })}</option>)}
                         </select>
                     </div>
                     <div>
@@ -143,12 +155,21 @@ export function DiscoveryControls({
                             {directoryCategories.map(category => <option key={category} value={category}>{t(`labels.${category}`)}</option>)}
                         </select>
                     </div>
-                    <p className='text-sm text-mh-textMuted'>{t('resources.searchHelp')}</p>
-                    {(state.text || state.resourceService || state.resourceCategory) && <button className='mh-text-button justify-self-start'
-                        onClick={() => { setSearch(''); onPatch({ text: undefined, resourceService: undefined, resourceCategory: undefined }); }}>
+                    {state.center && <div>
+                        <label htmlFor={`${idPrefix}-radius`}>{t('resources.distanceLabel')}</label>
+                        <select id={`${idPrefix}-radius`} className='mh-input w-full px-3 py-2 text-base'
+                            value={state.radiusMeters ?? 20000}
+                            onChange={event => onPatch({ radiusMeters: Number(event.target.value) })}>
+                            {[...new Set([5000, 10000, 20000, 50000, 100000, 250000, state.radiusMeters ?? 20000])].sort((a,b)=>a-b)
+                                .map(radius => <option key={radius} value={radius}>{radius / 1000} km</option>)}
+                        </select>
+                    </div>}
+                    <p className='text-sm text-mh-textMuted sm:col-span-2'>{t(state.resourceProgram ? 'resources.programHelp' : 'resources.searchHelp')}</p>
+                    {(state.text || state.resourceService || state.resourceProgram || state.resourceCategory || state.radiusMeters) && <button className='mh-text-button justify-self-start'
+                        onClick={() => { setSearch(''); onPatch({ text: undefined, resourceService: undefined, resourceProgram: undefined, resourceCategory: undefined, radiusMeters: undefined }); }}>
                         {t('discovery.resetFilters')}
                     </button>}
-                </div>
+                </fieldset>
             )}
             {zipError && (
                 <p role='alert' id={`${idPrefix}-zip-error`}>

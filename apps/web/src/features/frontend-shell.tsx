@@ -2872,7 +2872,7 @@ const ResourceRoute = ({
                         <Button
                             variant='neutral'
                             className='px-3 py-1 text-xs'
-                            onClick={() => onPatchDiscovery({ resourceCategory: undefined, resourceService: undefined, text: undefined })}
+                            onClick={() => onPatchDiscovery({ resourceCategory: undefined, resourceService: undefined, resourceProgram: undefined, text: undefined })}
                         >
                             {t('discovery.resetFilters')}
                         </Button>
@@ -9673,6 +9673,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                 filters={
                     <DiscoveryFiltersPanel
                         idPrefix='map'
+                        resourceFilters
                         state={discoveryState}
                         onPatch={patchDiscoveryState}
                     />

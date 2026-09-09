@@ -471,7 +471,12 @@
         "searchPlaceholder": "Ayuda con alquiler, duchas, asistencia legal…",
         "serviceLabel": "¿Qué necesitas?",
         "allServices": "Todos los servicios",
-        "searchHelp": "Los servicios pueden tener requisitos de elegibilidad o cita. Revisa la información antes de ir."
+        "searchHelp": "Los servicios pueden tener requisitos de elegibilidad o cita. Revisa la información antes de ir.",
+        "programLabel": "Programa o beneficio",
+        "allPrograms": "Todos los programas",
+        "distanceLabel": "Distancia de búsqueda",
+        "programHelp": "Todos los filtros se aplican juntos. Los filtros de programa incluyen solo servicios con información publicada del programa. Confirme la elegibilidad y las citas con el proveedor.",
+        "filtersLegend": "Filtrar recursos"
     },
     "volunteer": {
         "heading": "Incorporación de voluntarios",
@@ -1479,5 +1484,17 @@
         "youth": "Apoyo para jóvenes y familias",
         "reentry": "Apoyo para la reinserción",
         "community": "Bibliotecas y herramientas compartidas"
+    },
+    "resourcePrograms": {
+        "wic": "Programa de nutrición WIC",
+        "snap": "Ayuda para solicitar SNAP",
+        "tanf": "Asistencia en efectivo TANF",
+        "medicaid": "Ayuda para solicitar Medicaid",
+        "social-security": "Seguro Social / SSI / SSDI",
+        "va-benefits": "Oficinas de beneficios del VA",
+        "vet-center": "Asesoramiento en Vet Centers",
+        "public-housing": "Solicitudes de vivienda pública",
+        "housing-vouchers": "Sección 8 / vales de vivienda",
+        "housing-counseling": "Asesoramiento de vivienda"
     }
 }

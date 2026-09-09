@@ -19,6 +19,8 @@ describe('discovery filters', () => {
             text: 'milk',
             category: 'food',
             resourceCategory: 'legal-aid',
+            resourceService: 'housing',
+            resourceProgram: 'housing-counseling',
             status: 'open',
             minUrgency: 4,
             center: { lat: 1.3, lng: 103.8 },
@@ -38,7 +40,7 @@ describe('discovery filters', () => {
 
     it('normalizes invalid query values and preserves safe defaults', () => {
         const parsed = parseDiscoveryFilterState(
-            '?cat=invalid&resourceType=invalid&st=unknown&u=99&r=12&lat=111&lng=103.81&tab=nearby&q=   ',
+            '?program=invalid&service=invalid&cat=invalid&resourceType=invalid&st=unknown&u=99&r=12&lat=111&lng=103.81&tab=nearby&q=   ',
             defaultDiscoveryFilterState,
         );
 
@@ -46,6 +48,8 @@ describe('discovery filters', () => {
         expect(parsed.status).toBe('open');
         expect(parsed.category).toBeUndefined();
         expect(parsed.resourceCategory).toBeUndefined();
+        expect(parsed.resourceService).toBeUndefined();
+        expect(parsed.resourceProgram).toBeUndefined();
         expect(parsed.minUrgency).toBe(5);
         expect(parsed.radiusMeters).toBe(300);
         expect(parsed.center).toBeUndefined();

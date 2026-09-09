@@ -692,14 +692,16 @@ describe('api client', () => {
         });
     });
 
-    it('bounds map downloads even when the directory has nationwide results', async () => {
+    it('keeps directory filters on bounded map downloads', async () => {
         const fetchMock = vi.fn(async () => createJsonResponse({total:30000,page:1,pageSize:100,hasNextPage:true,results:[]}));
         globalThis.fetch = fetchMock as unknown as typeof fetch;
-        const result = await fetchMapResourcePageFromApi(baseDiscoveryState);
+        const result = await fetchMapResourcePageFromApi({...baseDiscoveryState, resourceService:'youth', resourceProgram:'wic', resourceCategory:'clinic', radiusMeters:5000});
         expect(fetchMock).toHaveBeenCalledTimes(1);
         expect(result).toMatchObject({ok:true,data:{total:30000,hasNextPage:true}});
         const url = String((fetchMock.mock.calls as unknown as Array<[unknown]>)[0]?.[0]);
         expect(url).toContain('pageSize=100');
+        const params = new URL(url, 'https://patchwork.test').searchParams;
+        expect(Object.fromEntries(params)).toMatchObject({service:'youth',program:'wic',category:'clinic',radiusKm:'5'});
     });
 
     it('maps durable directory projection responses into resource cards', async () => {
