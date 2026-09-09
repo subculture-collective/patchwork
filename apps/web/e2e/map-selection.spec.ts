@@ -50,3 +50,35 @@ test('integrated discovery removes the examples switch and normalizes legacy dat
     expect(new URL(page.url()).searchParams.has('dataset')).toBe(false);
     expect(datasets.every(dataset => dataset === 'all')).toBe(true);
 });
+
+
+test('nearby resource list opens visit information and returns to the same search and map', async ({ page }) => {
+    await page.setViewportSize({width:390,height:844});
+    const resourceUri='at://did:plc:public-resource/app.patchwork.directory.resource/clinic';
+    const resource={uri:resourceUri,authorDid:'did:plc:public-resource',name:'Neighborhood WIC clinic',category:'clinic',serviceArea:'Chicago, IL 60608',status:'unverified',operationalStatus:'unknown',recordOrigin:'sourced-public',
+        approximateGeo:{latitude:41.85,longitude:-87.67,precisionKm:1},contact:{url:'https://example.org/wic',phone:'312-555-0100'},
+        openHours:'Tuesday by appointment',eligibilityNotes:'WIC eligibility applies. Call before visiting.',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),
+        publicListing:{sourceName:'Public clinic directory',sourceUrl:'https://example.org',sourceRetrievedAt:new Date().toISOString(),claimStatus:'unclaimed'},
+        exactPublicAddress:{streetAddress:'100 Public Street, Chicago IL 60608',latitude:41.85,longitude:-87.67,kind:'exact-public-resource',approvalExpiresAt:new Date(Date.now()+86400000).toISOString()}};
+    const queries: string[]=[];
+    await page.route('**/api/**', route => {
+        const url=new URL(route.request().url());
+        if(url.pathname.endsWith('/query/directory')) {queries.push(url.search);return route.fulfill({json:pageResult([resource])});}
+        if(url.pathname.endsWith('/query/map')) return route.fulfill({json:pageResult([])});
+        return route.fulfill({status:401,json:{error:{code:'AUTHENTICATION_REQUIRED',message:'Sign in.'}}});
+    });
+    await page.goto('/nearby?nearby=resources&zip=60608&program=wic&r=5000');
+    await page.getByRole('button',{name:'Resources (1)',exact:true}).click();
+    await page.locator('.mh-resource-result').click();
+    await expect(page.getByRole('region',{name:'Published hours',exact:true})).toContainText('Tuesday by appointment');
+    await expect(page.getByRole('region',{name:'Before you visit',exact:true})).toContainText('Call before visiting');
+    await expect(page.getByRole('link',{name:'Get directions',exact:true})).toHaveAttribute('href',/41.85/);
+    await page.getByRole('button',{name:'Close',exact:true}).click();
+    await expect(page.getByRole('button',{name:'Resources (1)',exact:true})).toHaveAttribute('aria-pressed','true');
+    expect(new URL(page.url()).searchParams.get('r')).toBe('5000');
+    const count=queries.length;
+    await page.getByRole('button',{name:'Show Neighborhood WIC clinic on map',exact:true}).click();
+    await expect(page.getByRole('button',{name:'Map',exact:true})).toHaveAttribute('aria-pressed','true');
+    await expect(page.getByTitle('Neighborhood WIC clinic',{exact:true})).toBeVisible();
+    expect(queries.length).toBe(count);
+});

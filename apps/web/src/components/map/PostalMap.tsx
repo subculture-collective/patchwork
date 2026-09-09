@@ -14,6 +14,9 @@ interface Props {
     resources: readonly ResourceDirectoryCard[];
     center: { lat: number; lng: number };
     selectedPostalCode?: string;
+    searchRadiusMeters?: number;
+    resourceMode?: boolean;
+    selectedResourceUri?: string;
     onSelectPostalCode: (code: string) => void;
     onClearPostalCode: () => void;
     onSelectResource: (uri: string) => void;
@@ -37,6 +40,7 @@ async function boundaries(file: string, signal: AbortSignal): Promise<Boundaries
 export function PostalMap(props: Props) {
     const { t } = useLocale();
     const [mapSize, setMapSize] = useState('');
+    const [boundaryView, setBoundaryView] = useState(0);
     const container = useRef<HTMLDivElement>(null);
     const mapRef = useRef<L.Map | null>(null);
     const callbacks = useRef(props);
@@ -165,6 +169,7 @@ export function PostalMap(props: Props) {
         };
         map.on('moveend', () => {
             updateStates();
+            if (callbacks.current.resourceMode) setBoundaryView(value => value + 1);
             const point = map.getCenter();
             if (
                 Math.abs(point.lat - previousView.lat) < 0.00001 &&
@@ -211,8 +216,15 @@ export function PostalMap(props: Props) {
             ignoreNextCenter.current = false;
             return;
         }
-        if (map) map.panTo([props.center.lat, props.center.lng]);
-    }, [props.center.lat, props.center.lng]);
+        if (!map) return;
+        interactiveMove.current = false;
+        // A list-to-map transition reveals the container before ResizeObserver runs.
+        // Refresh Leaflet dimensions before centering the selected public place.
+        map.invalidateSize({ pan: false });
+        if (props.searchRadiusMeters) {
+            map.fitBounds(L.latLng(props.center.lat, props.center.lng).toBounds(props.searchRadiusMeters * 2), {padding:[24,24], animate:false, maxZoom:15});
+        } else map.panTo([props.center.lat, props.center.lng]);
+    }, [props.center.lat, props.center.lng, props.searchRadiusMeters]);
 
     useEffect(() => {
         if (previousPostalCode.current && !props.selectedPostalCode) {
@@ -256,6 +268,7 @@ export function PostalMap(props: Props) {
                     L.geoJSON(collection, {
                         filter: feature =>
                             !isZip ||
+                            (props.resourceMode && L.geoJSON(feature).getBounds().intersects(map.getBounds())) ||
                             counts.areas.has(feature.properties.id) ||
                             feature.properties.id === props.selectedPostalCode,
                         style: feature => ({
@@ -295,16 +308,16 @@ export function PostalMap(props: Props) {
                                     : (counts.areas.get(
                                           feature.properties.id,
                                       ) ?? 0);
-                            const label = t('postal.areaCount', {
+                            const label = props.resourceMode ? feature.properties.name : t('postal.areaCount', {
                                 area: feature.properties.name,
                                 count,
                             });
                             const text = document.createElement('span');
-                            text.textContent = isZip ? String(count) : label;
+                            text.textContent = isZip && !props.resourceMode ? String(count) : label;
                             text.title = label;
                             layer.bindTooltip(text, {
                                 permanent:
-                                    isZip || (!isCounty && level === 'state'),
+                                    !props.resourceMode && (isZip || (!isCounty && level === 'state')),
                                 direction: 'center',
                                 pane: 'postalLabels',
                                 className: isZip
@@ -440,6 +453,7 @@ export function PostalMap(props: Props) {
             group.remove();
         };
     }, [
+        boundaryView, props.resourceMode,
         counts,
         level,
         zoom,
@@ -482,7 +496,7 @@ export function PostalMap(props: Props) {
             const marker = L.marker([place.lat, place.lng], {
                 icon: L.divIcon({
                     html: dot,
-                    className: 'mh-exact-resource-pin',
+                    className: `mh-exact-resource-pin ${place.resources.some(resource => resource.uri === props.selectedResourceUri) ? 'is-selected' : ''}`,
                     iconSize: [hitSize, hitSize],
                     iconAnchor: [hitSize / 2, hitSize / 2],
                 }),
@@ -532,7 +546,7 @@ export function PostalMap(props: Props) {
             map.off('moveend resize', updateMarkerVisibility);
             group.remove();
         };
-    }, [props.resources, zoom]);
+    }, [props.resources, props.selectedResourceUri, zoom]);
 
     const selectedZipArea = props.selectedPostalCode
         ? lookupPostalArea(props.selectedPostalCode)
@@ -554,6 +568,7 @@ export function PostalMap(props: Props) {
     return (
         <div>
             <nav
+                hidden={props.resourceMode}
                 aria-label={t('postal.levels')}
                 className='mb-3 flex flex-wrap items-center gap-2 text-sm'
             >
@@ -603,7 +618,7 @@ export function PostalMap(props: Props) {
                     </>
                 )}
             </nav>
-            {activeCounty && (
+            {activeCounty && !props.resourceMode && (
                 <p className='mb-2 text-sm'>
                     <strong>{activeCounty.name}</strong> ·{' '}
                     {t('postal.searchCount', {
@@ -620,8 +635,8 @@ export function PostalMap(props: Props) {
                     })}
                 </p>
             )}
-            <p className='mb-2 text-sm' role='status'>
-                {props.selectedPostalCode
+            <p className={props.resourceMode ? 'sr-only' : 'mb-2 text-sm'} role='status'>
+                {props.resourceMode ? t('nearby.resourceMapHelp') : props.selectedPostalCode
                     ? t('postal.zipDetail', { zip: props.selectedPostalCode })
                     : t(`postal.by${level}`)}
                 {loading ? ` · ${t('postal.loading')}` : ''}
@@ -643,7 +658,7 @@ export function PostalMap(props: Props) {
                 aria-label={t('postal.mapLabel')}
             />
             <p className='mt-2 text-xs text-mh-textMuted'>
-                {t('postal.legend')}
+                {t(props.resourceMode ? 'nearby.resourceMapLegend' : 'postal.legend')}
             </p>
         </div>
     );

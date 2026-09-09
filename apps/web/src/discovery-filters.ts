@@ -42,6 +42,7 @@ export const directoryCategories = [
 ] as const;
 
 export interface DiscoveryFilterState {
+    nearbyIntent?: 'resources' | 'requests';
     resourceService?: ResourceService;
     resourceProgram?: ResourceProgram;
     resourceCategory?: (typeof directoryCategories)[number];
@@ -215,6 +216,7 @@ export function normalizeDiscoveryFilterState(
 
     return {
         feedTab,
+        ...(['resources', 'requests'].includes(state.nearbyIntent ?? '') ? { nearbyIntent: state.nearbyIntent } : {}),
         ...(state.resourceProgram && resourcePrograms.includes(state.resourceProgram) ? { resourceProgram: state.resourceProgram } : {}),
         ...(state.resourceService && resourceServices.includes(state.resourceService) ? { resourceService: state.resourceService } : {}),
         ...(state.resourceCategory &&
@@ -302,6 +304,7 @@ export function serializeDiscoveryFilterState(
         params.set('tab', state.feedTab);
     }
 
+    if (state.nearbyIntent) params.set('nearby', state.nearbyIntent);
     if (state.postalCode) params.set('zip', state.postalCode);
     if (state.resourceService) params.set('service', state.resourceService);
     if (state.resourceProgram) params.set('program', state.resourceProgram);
@@ -359,6 +362,7 @@ export function parseDiscoveryFilterState(
             parsedTab ??
             fallback.feedTab ??
             defaultDiscoveryFilterState.feedTab,
+        nearbyIntent: (params.get('nearby') ?? fallback.nearbyIntent) as DiscoveryFilterState['nearbyIntent'],
         postalCode: params.get('zip') ?? fallback.postalCode,
         resourceProgram: (params.get('program') ?? fallback.resourceProgram) as ResourceProgram | undefined,
         resourceService: (params.get('service') ?? fallback.resourceService) as ResourceService | undefined,
@@ -380,4 +384,10 @@ export function parseDiscoveryFilterState(
         areaLabel: params.get('area') ?? fallback.areaLabel,
         since: params.get('since') ?? fallback.since,
     });
+}
+
+/** Existing request links retain their meaning; resource filters select the resource journey. */
+export function nearbyResourceIntent(state: DiscoveryFilterState): boolean {
+    return state.nearbyIntent ? state.nearbyIntent === 'resources'
+        : Boolean(state.resourceProgram || state.resourceService || state.resourceCategory);
 }

@@ -1496,5 +1496,33 @@
         "public-housing": "Public housing applications",
         "housing-vouchers": "Section 8 / housing vouchers",
         "housing-counseling": "Housing counseling"
+    },
+    "nearby": {
+        "intentLabel": "What are you looking for?",
+        "resources": "Public resources",
+        "requests": "Community requests",
+        "resourceStory": "Find public services near a ZIP code or your location. Compare places, then contact the provider.",
+        "requestStory": "See what neighbors need in each ZIP area and find a request you can help with.",
+        "resourceList": "Resources ({{count}})",
+        "skipToResources": "Skip map, browse resources",
+        "loadingResources": "Finding resources…",
+        "resourceCount": "{{count}} matching resources",
+        "distanceFromZip": "Nearest first from the ZIP area, not your home. Distances are straight-line estimates.",
+        "distanceFromArea": "Nearest first from your selected search center. Distances are straight-line estimates.",
+        "chooseLocation": "Choose a ZIP code or use your location to find the closest resources.",
+        "noResources": "No resources match these filters in this area. Try a wider distance or fewer filters.",
+        "expandDistance": "Search farther away",
+        "moreResources": "Showing the first 100 matches. Narrow the area or continue in the full directory.",
+        "fullDirectory": "Browse these results in the directory",
+        "searchMaxArea": "Search within 250 km of map center",
+        "resourceMapHelp": "Choose a place on the map or browse the resource list.",
+        "resourceMapLegend": "Pins show public street addresses. Move the map, then choose Search this area to update results.",
+        "removeFilter": "Remove {{filter}} filter",
+        "resourcesLoadingShort": "Resources…",
+        "publishedHours": "Published hours",
+        "beforeVisiting": "Before you visit",
+        "showOnMap": "Show on map",
+        "showPlaceOnMap": "Show {{name}} on map",
+        "resourceAreaSummary": "{{places}} resources · within {{distance}} km"
     }
 }

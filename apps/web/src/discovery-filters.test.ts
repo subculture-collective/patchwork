@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+    nearbyResourceIntent,
     applyDiscoveryFilterPatch,
     defaultDiscoveryFilterState,
     parseDiscoveryFilterState,
@@ -15,6 +16,7 @@ import { buildDiscoveryFilterChipModel } from './discovery-primitives.js';
 describe('discovery filters', () => {
     it('serializes and parses a stable URL state', () => {
         const initial: DiscoveryFilterState = {
+            nearbyIntent: 'resources',
             feedTab: 'nearby',
             text: 'milk',
             category: 'food',
@@ -54,6 +56,13 @@ describe('discovery filters', () => {
         expect(parsed.radiusMeters).toBe(300);
         expect(parsed.center).toBeUndefined();
         expect(parsed.text).toBeUndefined();
+    });
+
+    it('keeps request links and explicit intent distinct from resource refinements', () => {
+        expect(nearbyResourceIntent({...defaultDiscoveryFilterState, postalCode:'60608'})).toBe(false);
+        expect(nearbyResourceIntent({...defaultDiscoveryFilterState, resourceProgram:'wic'})).toBe(true);
+        expect(nearbyResourceIntent({...defaultDiscoveryFilterState, nearbyIntent:'requests',resourceProgram:'wic'})).toBe(false);
+        expect(nearbyResourceIntent(parseDiscoveryFilterState('?nearby=resources&zip=60608', defaultDiscoveryFilterState))).toBe(true);
     });
 
     it('map/feed query contracts share filters while latest feed omits location', () => {

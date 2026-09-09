@@ -31,3 +31,16 @@ The implementation tokens in `apps/web/src/styles/tokens.css` are authoritative.
 ## Validation
 
 Check complete journeys in a real browser, including narrow screens, 200% text, keyboard navigation, denied location, ZIP lookup, map/list continuity, request details, resource contact, and errors. Use automated accessibility checks alongside visual inspection. Local fixture and read-only public-data previews are not authenticated live acceptance or deployment evidence.
+
+
+## Nearby journeys
+
+Nearby has two explicit intents, persisted as `nearby=resources` or `nearby=requests`. Existing request links keep their meaning; links with resource refinements select resources unless the visitor explicitly chooses requests. Moving from the directory to Nearby carries the resource intent and filters.
+
+- **Find help close to me.** Choose Public resources, enter a ZIP or use device location, and refine service/program/type. Map pins and the resource list use the same bounded server query. The list is nearest first when a center exists. Distances are straight-line estimates from the selected center or ZIP representative point, never travel times or distance from an inferred home.
+- **Look in another area.** A ZIP change or location refresh preserves the chosen radius. Changing radius reframes the resource map. Panning changes the camera only; Search this area explicitly commits a new center/radius and clears the old ZIP while retaining resource refinements. Searches wider than the supported radius disclose the limit.
+- **Choose a place before travelling.** A resource result opens address, published hours, eligibility notes, contact links and directions. Closing detail retains the search/list. Show on map repositions the camera without altering the search center or fetching different results. Source provenance and claim boundaries remain visible.
+- **Help a neighbor.** Community requests uses county/ZIP counts and a request list. Selecting a ZIP can open that list on mobile. Public resource searches keep the mobile map and offer a separate resource list; they never redirect visitors to an empty requests list.
+- **Recover without starting over.** Location denial retains a chosen area and ZIP entry remains available. Filters are expandable with visible removable selections. Empty resource results offer a wider search when below the maximum radius. API failure is distinguished from an empty result. URL state supports reload, sharing and browser history; exact request addresses remain private.
+
+At mobile widths, the resource journey keeps ZIP/location controls above the map, places keyword/program/service/type refinements in a disclosure, and switches between the retained map and resource list. County and ZIP boundaries remain keyboard operable; resource mode uses area names without request counts. The full directory remains available for results beyond the map's 100-resource limit.

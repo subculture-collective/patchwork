@@ -1,6 +1,7 @@
 import { resourceServices, resourceServiceLabels, resourcePrograms, resourceProgramLabels } from '@patchwork/shared';
 import { directoryCategories } from '../discovery-filters';
 import { useEffect, useState } from 'react';
+import { nearbyResourceIntent } from '../discovery-filters';
 import { lookupPostalArea } from '@patchwork/at-lexicons';
 import type { DiscoveryFilterState } from '../discovery-filters';
 import { buildDiscoveryFilterChipModel } from '../discovery-primitives';
@@ -48,6 +49,8 @@ export function DiscoveryControls({
     const filtersActive = Boolean(
         state.category || state.status || state.minUrgency || state.since,
     );
+    const showResourceFilters = resourceMode || (resourceFilters && nearbyResourceIntent(state));
+    const resourceFilterCount = [state.resourceService, state.resourceProgram, state.resourceCategory].filter(Boolean).length;
     const clearPlace = () => {
         location.cancel();
         setZip('');
@@ -59,13 +62,8 @@ export function DiscoveryControls({
             feedTab: 'latest',
         });
     };
-    return (
-        <section
-            className='mh-discovery-controls'
-            aria-label={t('discovery.title')}
-        >
-            <div className='mh-search-row'>
-                <div className='mh-search-field'>
+    const keywordField = (
+        <div className='mh-search-field'>
                     <label htmlFor={`${idPrefix}-search`}>
                         {resourceMode ? t('resources.searchLabel') : t('discovery.searchText')}
                     </label>
@@ -78,6 +76,14 @@ export function DiscoveryControls({
                         onChange={(event) => applySearch(event.target.value)}
                     />
                 </div>
+    );
+    return (
+        <section
+            className={`mh-discovery-controls ${resourceFilters && resourceMode ? 'is-resource-map' : ''}`}
+            aria-label={t('discovery.title')}
+        >
+            <div className='mh-search-row'>
+                {!(resourceFilters && resourceMode) && keywordField}
                 <form
                     className='mh-place-search'
                     onSubmit={(event) => {
@@ -92,7 +98,7 @@ export function DiscoveryControls({
                         onPatch({
                             postalCode: zip,
                             center: undefined,
-                            radiusMeters: undefined,
+                            radiusMeters: state.radiusMeters,
                             areaLabel: `ZIP ${zip}`,
                             feedTab: 'nearby',
                         });
@@ -125,9 +131,12 @@ export function DiscoveryControls({
                     </div>
                 </form>
             </div>
-            {(resourceMode || resourceFilters) && (
+            {showResourceFilters && (
+                <details className='mh-resource-filter-disclosure' open={resourceFilters ? undefined : true}>
+                    <summary>{t('resources.filtersLegend')}{resourceFilterCount ? ` · ${resourceFilterCount}` : ''}</summary>
                 <fieldset className='grid gap-3 sm:grid-cols-2'>
-                    <legend className='mb-2 font-semibold'>{t('resources.filtersLegend')}</legend>
+                    <legend className='sr-only'>{t('resources.filtersLegend')}</legend>
+                    {resourceFilters && resourceMode && <div className='sm:col-span-2'>{keywordField}</div>}
                     <div>
                         <label htmlFor={`${idPrefix}-service`}>{t('resources.serviceLabel')}</label>
                         <select id={`${idPrefix}-service`} className='mh-input w-full px-3 py-2 text-base'
@@ -170,7 +179,16 @@ export function DiscoveryControls({
                         {t('discovery.resetFilters')}
                     </button>}
                 </fieldset>
+                </details>
             )}
+            {resourceFilters && showResourceFilters && <div className='mh-active-resource-filters'>
+                {([
+                    ['resourceService', state.resourceService, state.resourceService ? t(`resourceServices.${state.resourceService}`) : ''],
+                    ['resourceProgram', state.resourceProgram, state.resourceProgram ? t(`resourcePrograms.${state.resourceProgram}`) : ''],
+                    ['resourceCategory', state.resourceCategory, state.resourceCategory ? t(`labels.${state.resourceCategory}`) : ''],
+                ] as const).filter(([,value]) => value).map(([field,,label]) => <button key={field} className='mh-nav-chip'
+                    aria-label={t('nearby.removeFilter', {filter:label})} onClick={() => onPatch({[field]:undefined})}>{label} <span aria-hidden='true'>×</span></button>)}
+            </div>}
             {zipError && (
                 <p role='alert' id={`${idPrefix}-zip-error`}>
                     {t('experience.zipError')}
@@ -186,12 +204,12 @@ export function DiscoveryControls({
                 </button>
                 <p
                     role='status'
-                    className={state.postalCode ? 'sr-only' : undefined}
+                    className='text-sm text-mh-textMuted'
                 >
                     {location.status === 'requesting' ?
                         t('discovery.locationRequesting')
                     : state.postalCode ?
-                        `ZIP ${state.postalCode}`
+                        `ZIP ${state.postalCode}${resourceMode ? ` · ${(state.radiusMeters ?? 20000) / 1000} km` : ''}`
                     :   (state.areaLabel ??
                         t(
                             state.center ?

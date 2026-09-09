@@ -1,3 +1,5 @@
+import { haversineDistanceMeters } from '../geo-utils';
+import { nearbyResourceIntent, serializeDiscoveryFilterState } from '../discovery-filters';
 import { useMapSelection } from './use-map-selection';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { DiscoveryMapAggregates } from '@patchwork/shared';
@@ -6,7 +8,7 @@ import type { ChatEntrySurface } from '../chat-ux';
 import type { FeedRecordEnvelope } from './discovery-runtime';
 import type { ApiDataOrigin } from './api-client';
 import { buildMapViewModel, closeMapDetailDrawer, openMapDetailDrawer, type MapAidCard, type MapTriageAction } from '../map-ux';
-import { buildResourceOverlayViewModel, type ResourceDirectoryCard } from '../resource-directory-ux';
+import { currentExactPublicAddress, buildResourceOverlayViewModel, type ResourceDirectoryCard } from '../resource-directory-ux';
 import { useLocale } from '../i18n';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
@@ -64,6 +66,7 @@ interface MapRouteProps {
     originLabel: string;
     aggregates?: DiscoveryMapAggregates;
     resourceTotal?: number;
+    resourcesLoading?: boolean;
     discoveryState: DiscoveryFilterState;
     onPushDiscovery: (patch: Partial<DiscoveryFilterState>) => void;
     feedRecords: readonly FeedRecordEnvelope[];
@@ -94,6 +97,7 @@ export const MapRoute = ({
     originLabel,
     aggregates,
     resourceTotal,
+    resourcesLoading,
     discoveryState,
     onPushDiscovery,
     feedRecords,
@@ -111,8 +115,9 @@ export const MapRoute = ({
     onOpenChat,
 }: MapRouteProps) => {
     const { t, fmt } = useLocale();
+    const resourceIntent = nearbyResourceIntent(discoveryState);
     const [mobileView, setMobileView] = useState<'map' | 'list'>(
-        discoveryState.postalCode ? 'list' : 'map',
+        discoveryState.postalCode && !resourceIntent ? 'list' : 'map',
     );
     const paginationFocus = usePaginationFocus({
         itemCount: feedRecords.length,
@@ -128,8 +133,8 @@ export const MapRoute = ({
         undefined,
     );
     useEffect(() => {
-        if (discoveryState.postalCode) setMobileView('list');
-    }, [discoveryState.postalCode]);
+        if (discoveryState.postalCode || resourceIntent) setMobileView(resourceIntent ? 'map' : 'list');
+    }, [discoveryState.postalCode, resourceIntent]);
     const leaveZip = () => {
         setMobileView('map');
         onPushDiscovery({
@@ -148,6 +153,7 @@ export const MapRoute = ({
         discoveryState.center?.lat,
         discoveryState.center?.lng,
         discoveryState.postalCode,
+        discoveryState.radiusMeters,
     ]);
     const selection = useMapSelection(feedRecords, resourceCards, 'all');
     const selectedRecord = selection.request;
@@ -231,12 +237,12 @@ export const MapRoute = ({
 
     return (
         <section
-            className={`mh-discovery-route mh-nearby-workspace is-${mobileView}`}
+            className={`mh-discovery-route mh-nearby-workspace is-${mobileView} ${resourceIntent ? 'is-resource-journey' : ''}`}
         >
             <header className='mh-nearby-header'>
                 <h1 className='mh-route-title'>{t('map.heading')}</h1>
                 <p className='mt-2 text-sm text-mh-textMuted'>
-                    {t('experience.nearbyDescription')}
+                    {t(resourceIntent ? 'nearby.resourceStory' : 'nearby.requestStory')}
                 </p>
                 <div className='mt-3 flex flex-wrap gap-2'>
                     {dataOrigin !== 'api' && (
@@ -291,6 +297,14 @@ export const MapRoute = ({
                 ) : null}
             </header>
 
+            <div className='mh-nearby-intent' role='group' aria-label={t('nearby.intentLabel')}>
+                {(['resources', 'requests'] as const).map(intent => <Button key={intent}
+                    aria-pressed={resourceIntent === (intent === 'resources')}
+                    variant={resourceIntent === (intent === 'resources') ? 'primary' : 'neutral'}
+                    onClick={() => { selection.close(); onPushDiscovery({ nearbyIntent: intent }); }}>
+                    {t(`nearby.${intent}`)}
+                </Button>)}
+            </div>
             <div className='mh-nearby-controls'>{filters}</div>
             <div
                 className='mh-nearby-view-switch'
@@ -309,7 +323,7 @@ export const MapRoute = ({
                     variant={mobileView === 'list' ? 'primary' : 'neutral'}
                     onClick={() => setMobileView('list')}
                 >
-                    {t('experience.listView', { count: total })}
+                    {resourceIntent ? (resourcesLoading ? t('nearby.resourcesLoadingShort') : t('nearby.resourceList', { count: resourceTotal ?? 0 })) : t('experience.listView', { count: total })}
                 </Button>
             </div>
             <section
@@ -328,7 +342,7 @@ export const MapRoute = ({
                         );
                     }}
                 >
-                    {t('experience.skipMap')}
+                    {t(resourceIntent ? 'nearby.skipToResources' : 'experience.skipMap')}
                 </a>
                 {(resourceTotal ?? 0) > resourceCards.length && (
                     <p role='status' className='mb-3 text-sm text-mh-textMuted'>
@@ -348,7 +362,7 @@ export const MapRoute = ({
                             setViewport(undefined);
                         }}
                     >
-                        {t('handoff.searchArea')}
+                        {t(viewport.radiusMeters > 250000 ? 'nearby.searchMaxArea' : 'handoff.searchArea')}
                     </Button>
                 )}
 
@@ -366,13 +380,13 @@ export const MapRoute = ({
                         role='status'
                         aria-live='polite'
                     >
-                        <Badge tone='info'>{t('map.filteredArea')}</Badge>
+                        {!resourceIntent && <Badge tone='info'>{t('map.filteredArea')}</Badge>}
                         <p className='mr-auto text-sm text-mh-textMuted'>
                             <strong className='text-mh-text'>
-                                {activeArea.label}
+                                {discoveryState.postalCode ? `ZIP ${discoveryState.postalCode}` : discoveryState.areaLabel ?? activeArea.label}
                             </strong>{' '}
                             ·{' '}
-                            {t('map.areaSummary', {
+                            {t(resourceIntent ? 'nearby.resourceAreaSummary' : 'map.areaSummary', {
                                 requests: fmt.number(
                                     aggregates?.requestCount ??
                                         mapView.filteredCards.length,
@@ -406,9 +420,12 @@ export const MapRoute = ({
                         fallback={<div className='mh-skeleton h-96 w-full' />}
                     >
                         <LazyPostalMap
-                            cells={aggregates?.cells ?? []}
+                            cells={resourceIntent ? [] : aggregates?.cells ?? []}
+                            resourceMode={resourceIntent}
                             resources={resourceCards}
-                            selectedPostalCode={discoveryState.postalCode}
+                            selectedResourceUri={selectedResource?.uri}
+                            selectedPostalCode={resourceIntent ? undefined : discoveryState.postalCode}
+                            searchRadiusMeters={resourceIntent && discoveryState.center ? (discoveryState.radiusMeters ?? 20000) : undefined}
                             center={cameraCenter}
                             onViewportChange={setViewport}
                             onClearPostalCode={leaveZip}
@@ -421,11 +438,11 @@ export const MapRoute = ({
                                             discoveryState.radiusMeters,
                                         areaLabel: discoveryState.areaLabel,
                                     };
-                                setMobileView('list');
+                                setMobileView(resourceIntent ? 'map' : 'list');
                                 onPushDiscovery({
                                     postalCode,
                                     center: undefined,
-                                    radiusMeters: undefined,
+                                    radiusMeters: resourceIntent ? discoveryState.radiusMeters : undefined,
                                     areaLabel: `ZIP ${postalCode}`,
                                 });
                             }}
@@ -470,7 +487,38 @@ export const MapRoute = ({
                 tabIndex={-1}
                 className='mh-nearby-results scroll-mt-24'
             >
-                <Card
+                {resourceIntent ? <Card title={t('nearby.resources')}>
+                    <p role='status' className='text-sm text-mh-textMuted'>
+                        {resourcesLoading ? t('nearby.loadingResources') : t('nearby.resourceCount', {count: resourceTotal ?? 0})}
+                    </p>
+                    <p className='mt-2 text-sm text-mh-textMuted'>{t(discoveryState.postalCode ? 'nearby.distanceFromZip' : discoveryState.center ? 'nearby.distanceFromArea' : 'nearby.chooseLocation')}</p>
+                    {!resourceErrorMessage && !resourcesLoading && !resourceCards.length && <div className='py-4'>
+                        <p>{t('nearby.noResources')}</p>
+                        {discoveryState.center && (discoveryState.radiusMeters ?? 20000) < 250000 && <Button variant='neutral' onClick={() => onPushDiscovery({radiusMeters: Math.min(250000, (discoveryState.radiusMeters ?? 20000)*2)})}>{t('nearby.expandDistance')}</Button>}
+                    </div>}
+                    <ul className='mh-nearby-resource-list'>
+                        {resourceCards.map(resource => <li key={resource.uri} className='mh-record-card'>
+                            <button className='mh-resource-result' onClick={() => setSelectedResourceUri(resource.uri)}>
+                                <strong>{resource.name}</strong>
+                                {discoveryState.center && <span>{fmt.number(haversineDistanceMeters(discoveryState.center, resource.location) / 1000, {maximumFractionDigits: 1})} km</span>}
+                                <span>{resource.exactPublicAddress?.streetAddress ?? resource.location.areaLabel}</span>
+                                <span>{resource.openHours ?? t('resources.hoursUnavailable')}</span>
+                                <span className='mh-link'>{t('resources.openDetails')}</span>
+                            </button>
+                            {currentExactPublicAddress(resource) && <button className='mh-text-button px-1 text-sm'
+                                aria-label={t('nearby.showPlaceOnMap', {name:resource.name})}
+                                onClick={() => {
+                                    const address = currentExactPublicAddress(resource)!;
+                                    setCameraCenter({lat:address.latitude,lng:address.longitude});
+                                    setViewport(undefined);
+                                    setMobileView('map');
+                                    requestAnimationFrame(() => document.querySelector('.mh-nearby-map')?.scrollIntoView({block:'start'}));
+                                }}>{t('nearby.showOnMap')}</button>}
+                        </li>)}
+                    </ul>
+                    {(resourceTotal ?? 0)>resourceCards.length && <p className='mt-4'>{t('nearby.moreResources')}</p>}
+                    <a className='mh-link inline-block py-3' href={`/resources?${serializeDiscoveryFilterState(discoveryState)}`}>{t('nearby.fullDirectory')}</a>
+                </Card> : <Card
                     title={
                         discoveryState.postalCode
                             ? t('experience.zipRequests', {
@@ -623,7 +671,7 @@ export const MapRoute = ({
                                 </p>
                             )}
                     </div>{' '}
-                </Card>
+                </Card>}
             </div>
 
             {drawer.open && selectedRecord ? (

@@ -72,7 +72,7 @@ export function useDiscoveryLocationController(
                     center,
                     postalCode: undefined,
                     areaLabel: nearYou,
-                    radiusMeters: 20000,
+                    radiusMeters: stateRef.current.radiusMeters ?? 20000,
                     feedTab: 'nearby',
                 });
             },

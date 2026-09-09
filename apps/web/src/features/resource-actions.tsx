@@ -30,6 +30,14 @@ export function ResourceActions({ resource }: { resource: ResourceDetail }) {
     return <div className='space-y-2'>
         {address && <p className='font-bold'>{address.streetAddress}</p>}
         {resource.operationalStatus === 'unknown' && <p className='text-sm'>{t('labels.unknown')}</p>}
+        {resource.openHours && <section aria-label={t('nearby.publishedHours')} className='py-2'>
+            <h3 className='font-semibold'>{t('nearby.publishedHours')}</h3>
+            <p className='text-sm'>{resource.openHours}</p>
+        </section>}
+        {resource.eligibilityNotes && <section aria-label={t('nearby.beforeVisiting')} className='py-2'>
+            <h3 className='font-semibold'>{t('nearby.beforeVisiting')}</h3>
+            <p className='text-sm'>{resource.eligibilityNotes}</p>
+        </section>}
         <p className='text-sm'>{t('handoff.resourceContactHint')}</p>
         <div className='flex flex-wrap gap-2'>
             {links.website && <a className={linkClass} href={links.website} target='_blank' rel='noopener noreferrer'>{t('handoff.visitWebsite')}</a>}

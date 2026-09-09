@@ -1,3 +1,4 @@
+import { nearbyResourceIntent } from '../discovery-filters';
 import { Modal } from '../components/Modal';
 import { MapDetailSheet } from './map-detail-sheet';
 import { DiscoveryControls as DiscoveryFiltersPanel } from './discovery-controls';
@@ -9353,8 +9354,11 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
     }, [currentRoute, directoryPage, directoryReload, discoveryState, t]);
 
     const navigate = (route: AppRoute) => {
+        const nextDiscoveryState = currentRoute === '/resources' && (route === '/map' || route === '/feed')
+            ? applyDiscoveryFilterPatch(discoveryState, {nearbyIntent:'resources'}) : discoveryState;
+        if (nextDiscoveryState !== discoveryState) setDiscoveryState(nextDiscoveryState);
         if (typeof window !== 'undefined') {
-            const nextUrl = canonicalRouteUrl(route, discoveryQueryString);
+            const nextUrl = canonicalRouteUrl(route, serializeDiscoveryFilterState(nextDiscoveryState));
             const currentUrl = `${window.location.pathname}${window.location.search}`;
 
             if (nextUrl !== currentUrl) {
@@ -9669,11 +9673,13 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                 }
                 aggregates={aidAggregates}
                 resourceTotal={directoryTotal}
+                resourcesLoading={isDirectoryLoading}
                 discoveryState={discoveryState}
                 filters={
                     <DiscoveryFiltersPanel
                         idPrefix='map'
                         resourceFilters
+                        resourceMode={nearbyResourceIntent(discoveryState)}
                         state={discoveryState}
                         onPatch={patchDiscoveryState}
                     />

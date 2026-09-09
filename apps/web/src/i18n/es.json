@@ -1496,5 +1496,33 @@
         "public-housing": "Solicitudes de vivienda pública",
         "housing-vouchers": "Sección 8 / vales de vivienda",
         "housing-counseling": "Asesoramiento de vivienda"
+    },
+    "nearby": {
+        "intentLabel": "¿Qué buscas?",
+        "resources": "Recursos públicos",
+        "requests": "Solicitudes de la comunidad",
+        "resourceStory": "Encuentra servicios públicos cerca de un código postal o tu ubicación. Compara lugares y contacta al proveedor.",
+        "requestStory": "Consulta qué necesitan tus vecinos en cada zona postal y encuentra una solicitud que puedas apoyar.",
+        "resourceList": "Recursos ({{count}})",
+        "skipToResources": "Omitir mapa, ver recursos",
+        "loadingResources": "Buscando recursos…",
+        "resourceCount": "{{count}} recursos encontrados",
+        "distanceFromZip": "Ordenados desde la zona postal, no desde tu casa. Las distancias son estimaciones en línea recta.",
+        "distanceFromArea": "Ordenados desde el centro de búsqueda. Las distancias son estimaciones en línea recta.",
+        "chooseLocation": "Elige un código postal o usa tu ubicación para encontrar recursos cercanos.",
+        "noResources": "No hay recursos que coincidan en esta zona. Amplía la distancia o reduce los filtros.",
+        "expandDistance": "Buscar más lejos",
+        "moreResources": "Se muestran los primeros 100 resultados. Reduce la zona o continúa en el directorio.",
+        "fullDirectory": "Ver estos resultados en el directorio",
+        "searchMaxArea": "Buscar a 250 km del centro del mapa",
+        "resourceMapHelp": "Elige un lugar en el mapa o consulta la lista de recursos.",
+        "resourceMapLegend": "Los marcadores muestran direcciones públicas. Mueve el mapa y selecciona Buscar en esta área para actualizar los resultados.",
+        "removeFilter": "Quitar filtro {{filter}}",
+        "resourcesLoadingShort": "Recursos…",
+        "publishedHours": "Horario publicado",
+        "beforeVisiting": "Antes de visitar",
+        "showOnMap": "Mostrar en el mapa",
+        "showPlaceOnMap": "Mostrar {{name}} en el mapa",
+        "resourceAreaSummary": "{{places}} recursos · a {{distance}} km"
     }
 }

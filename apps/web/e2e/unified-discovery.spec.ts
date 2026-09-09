@@ -414,10 +414,40 @@ test('resource filters survive directory-to-Nearby navigation, reload and reset'
     await expect(page.getByLabel('What do you need?', { exact: true })).toHaveValue('youth');
     await expect(page.getByLabel('Program or benefit', { exact: true })).toHaveValue('wic');
     await expect(page.getByLabel('Search distance', { exact: true })).toHaveValue('5000');
+    await page.locator('.mh-resource-filter-disclosure summary').click();
     await page.getByRole('button', { name: 'Reset filters', exact: true }).first().click();
     await expect.poll(() => queries.at(-1)?.searchParams.has('service')).toBe(false);
     expect(queries.at(-1)?.searchParams.has('program')).toBe(false);
     expect(queries.at(-1)?.searchParams.has('category')).toBe(false);
     expect(queries.at(-1)?.searchParams.get('radiusKm')).toBe('20');
     expect(new URL(page.url()).searchParams.get('zip')).toBe('60187');
+});
+
+
+test('resource searches keep the mobile map and a separate resource list through ZIP changes', async ({ page }) => {
+    await page.setViewportSize({width:390,height:844});
+    const queries: URL[]=[];
+    await page.route('**/api/query/map?**', route => route.fulfill({json:{total:0,page:1,pageSize:20,hasNextPage:false,results:[]}}));
+    await page.route('**/api/query/directory?**', route => {
+        queries.push(new URL(route.request().url()));
+        return route.fulfill({json:{total:0,page:1,pageSize:100,hasNextPage:false,results:[]}});
+    });
+    await page.goto('/nearby?nearby=resources&zip=60608&r=5000');
+    await expect(page.getByRole('button',{name:'Public resources',exact:true})).toHaveAttribute('aria-pressed','true');
+    await expect(page.getByRole('button',{name:'Map',exact:true})).toHaveAttribute('aria-pressed','true');
+    await expect(page.locator('.mh-resource-filter-disclosure')).not.toHaveAttribute('open','');
+    await page.getByRole('textbox',{name:'ZIP code',exact:true}).fill('80219');
+    await page.getByRole('button',{name:'Find area',exact:true}).click();
+    await expect.poll(() => queries.at(-1)?.searchParams.get('radiusKm')).toBe('5');
+    expect(new URL(page.url()).searchParams.get('zip')).toBe('80219');
+    await expect(page.getByRole('button',{name:'Map',exact:true})).toHaveAttribute('aria-pressed','true');
+    await page.getByRole('button',{name:'Resources (0)',exact:true}).click();
+    await expect(page.getByText('No resources match these filters in this area. Try a wider distance or fewer filters.')).toBeVisible();
+    await page.getByRole('button',{name:'Search farther away',exact:true}).click();
+    await expect.poll(() => queries.at(-1)?.searchParams.get('radiusKm')).toBe('10');
+    await page.getByRole('button',{name:'Community requests',exact:true}).click();
+    await expect(page.getByRole('button',{name:'Requests (0)',exact:true})).toHaveAttribute('aria-pressed','true');
+    await expect(page.getByRole('heading',{name:'Requests in ZIP 80219',exact:true})).toBeVisible();
+    await page.goBack();
+    await expect(page.getByRole('button',{name:'Public resources',exact:true})).toHaveAttribute('aria-pressed','true');
 });
