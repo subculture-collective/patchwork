@@ -39,6 +39,15 @@ describe('sourced public resource seed', () => {
         expect(publicHousing.length).toBeGreaterThan(3000);
         expect(publicHousing.every(resource => resource.services?.includes('housing') && resource.services?.includes('benefits')
             && resource.coordinateBasis === 'publisher-address' && /waiting lists/.test(resource.publicAccess))).toBe(true);
+        expect(publicResourceSeed.some(resource => /^(test|demo|dummy|sample|example)([ -]*[0-9]+)?$/i.test(resource.name))).toBe(false);
+        const stateBenefits = publicResourceSeed.filter(resource => resource.sourceId === 'idhs-benefits');
+        expect(stateBenefits.length).toBeGreaterThan(50);
+        expect(stateBenefits.every(resource => resource.services?.includes('benefits') && /SNAP/.test(resource.publicAccess)
+            && !/remote|long term care/i.test(resource.name))).toBe(true);
+        const wic = publicResourceSeed.filter(resource => resource.sourceId === 'idhs-wic');
+        expect(wic.length).toBeGreaterThan(150);
+        expect(wic.every(resource => resource.services?.includes('youth') && resource.services?.includes('food')
+            && /WIC/i.test(resource.name) && resource.category === 'clinic')).toBe(true);
         const veterans = publicResourceSeed.filter(resource => resource.sourceId === 'va-public-offices');
         expect(veterans.length).toBeGreaterThan(400);
         expect(veterans.every(resource => new URL(resource.website).hostname.endsWith('va.gov')

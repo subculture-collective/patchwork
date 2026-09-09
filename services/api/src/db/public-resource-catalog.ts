@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { resourceServices } from '../../../../packages/shared/src/resource-services.js';
 import { directoryResourceSchema } from '@patchwork/at-lexicons';
+import benefitsSnapshot from './seed-data/state-benefit-resources.json' with { type: 'json' };
 import governmentSnapshot from './seed-data/national-government-resources.json' with { type: 'json' };
 import communitySnapshot from './seed-data/national-community-resources.json' with { type: 'json' };
 import nationalSnapshot from './seed-data/national-public-resources.json' with { type: 'json' };
@@ -69,9 +70,9 @@ export function parsePublicResourceCatalog(input: unknown) {
 
 export const publicResourceCatalog = parsePublicResourceCatalog({
     scope: { name: 'United States public resource directory', sourceUrl: nationalSnapshot.scope.sourceUrl,
-        countyIds: [...new Set([...snapshot.scope.countyIds, ...nationalSnapshot.scope.countyIds, ...communitySnapshot.scope.countyIds, ...governmentSnapshot.scope.countyIds])].sort() },
-    sources: { ...snapshot.sources, ...nationalSnapshot.sources, ...communitySnapshot.sources, ...governmentSnapshot.sources },
-    resources: [...snapshot.resources, ...nationalSnapshot.resources, ...communitySnapshot.resources, ...governmentSnapshot.resources],
+        countyIds: [...new Set([...snapshot.scope.countyIds, ...nationalSnapshot.scope.countyIds, ...communitySnapshot.scope.countyIds, ...governmentSnapshot.scope.countyIds, ...benefitsSnapshot.scope.countyIds])].sort() },
+    sources: { ...snapshot.sources, ...nationalSnapshot.sources, ...communitySnapshot.sources, ...governmentSnapshot.sources, ...benefitsSnapshot.sources },
+    resources: [...snapshot.resources, ...nationalSnapshot.resources, ...communitySnapshot.resources, ...governmentSnapshot.resources, ...benefitsSnapshot.resources],
 });
 export const publicResourceSeed = publicResourceCatalog.resources.filter(
     resource => resource.operationalStatus !== 'closed',
