@@ -51,7 +51,7 @@ describePostgres('buyer-ready showcase seed', () => {
         expect(replay).toEqual(first);
         expect(first).toMatchObject({
             seedVersion: SHOWCASE_SEED_VERSION,
-            metadataRecords: 15,
+            metadataRecords: 41,
         });
         const counts = await pool.query<{
             origin: string;
@@ -65,7 +65,7 @@ describePostgres('buyer-ready showcase seed', () => {
         );
         expect(counts.rows).toEqual([
             { origin: 'sourced-public', count: '1' },
-            { origin: 'synthetic', count: '14' },
+            { origin: 'synthetic', count: '40' },
         ]);
         expect(
             (
@@ -92,21 +92,41 @@ describePostgres('buyer-ready showcase seed', () => {
              WHERE seed_version = $1`,
             [SHOWCASE_SEED_VERSION],
         );
-        expect(volunteer.rows).toEqual([
-            {
-                display_name: 'Jordan Example',
-                precision_km: 5,
-                no_permanent_address: true,
-            },
-        ]);
+        expect(volunteer.rows).toHaveLength(7);
+        expect(volunteer.rows).toContainEqual({
+            display_name: 'Jordan Example',
+            precision_km: 5,
+            no_permanent_address: true,
+        });
+        expect(volunteer.rows.every(row => row.precision_km >= 3)).toBe(true);
         const directory = await pool.query<{ contact: { url: string } }>(
             `SELECT contact FROM indexer_directory_resource_projections
              WHERE seed_version = $1`,
             [SHOWCASE_SEED_VERSION],
         );
-        expect(directory.rows[0]?.contact.url).toMatch(
-            /^https:\/\/showcase\.invalid\//,
+        expect(directory.rows).toHaveLength(9);
+        expect(directory.rows.every(row =>
+            /^https:\/\/showcase\.invalid\//.test(row.contact.url),
+        )).toBe(true);
+        const countyCoverage = await pool.query<{
+            county: string;
+            aid_count: string;
+        }>(
+            `SELECT CASE
+                        WHEN searchable_text ILIKE '%cook county%' THEN 'Cook'
+                        WHEN searchable_text ILIKE '%dupage county%' THEN 'DuPage'
+                    END AS county,
+                    COUNT(*)::text AS aid_count
+             FROM indexer_aid_post_projections
+             WHERE seed_version = $1
+               AND searchable_text ILIKE ANY (ARRAY['%cook county%', '%dupage county%'])
+             GROUP BY county ORDER BY county`,
+            [SHOWCASE_SEED_VERSION],
         );
+        expect(countyCoverage.rows).toEqual([
+            { county: 'Cook', aid_count: '6' },
+            { county: 'DuPage', aid_count: '6' },
+        ]);
         const sourced = await pool.query<{
             origin: string;
             source_url: string;
@@ -168,13 +188,11 @@ describePostgres('buyer-ready showcase seed', () => {
             did: 'did:plc:showcase-requester',
             recordOrigin: 'synthetic',
         });
-        expect(
-            (exported['data'] as {
-                publicAidPosts: Array<{ recordOrigin: string }>;
-            }).publicAidPosts,
-        ).toEqual([
-            expect.objectContaining({ recordOrigin: 'synthetic' }),
-        ]);
+        const exportedAidPosts = (exported['data'] as {
+            publicAidPosts: Array<{ recordOrigin: string }>;
+        }).publicAidPosts;
+        expect(exportedAidPosts).toHaveLength(13);
+        expect(exportedAidPosts.every(post => post.recordOrigin === 'synthetic')).toBe(true);
         await expect(
             privacy.deactivate(
                 'did:plc:showcase-requester',

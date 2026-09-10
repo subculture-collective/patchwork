@@ -136,6 +136,8 @@ describe('AT authentication flow', () => {
                         did: 'did:plc:alice',
                         handle: 'alice.example.com',
                         expiresAt: '2026-07-12T12:00:00.000Z',
+                        role: 'administrator',
+                        canManageSignupInvitations: true,
                     },
                 }),
                 {
@@ -152,6 +154,8 @@ describe('AT authentication flow', () => {
             did: 'did:plc:alice',
             handle: 'alice.example.com',
             expiresAt: '2026-07-12T12:00:00.000Z',
+            role: 'administrator',
+            canManageSignupInvitations: true,
         });
         expect(fetchMock).toHaveBeenCalledWith(
             '/api/auth/session',
@@ -386,7 +390,7 @@ describe('AT authentication flow', () => {
             await new Promise(resolve => setTimeout(resolve, 0));
         });
 
-        expect(container.textContent).toContain('Your invitation link is ready');
+        expect(container.textContent).toContain('Your invitation is ready');
         expect(container.querySelector('#invite-code')).toBeNull();
         expect(window.location.search).toBe('?returnTo=%2Fmap');
         expect(container.innerHTML).not.toContain(token);

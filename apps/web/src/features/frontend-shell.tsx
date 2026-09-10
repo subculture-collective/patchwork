@@ -10,7 +10,6 @@ import {
     type MouseEvent,
 } from 'react';
 import { ariaLive } from '../a11y';
-import { shellSections } from '../app-shell';
 import {
     aidCategories,
     applyDiscoveryFilterPatch,
@@ -241,7 +240,7 @@ const dataOriginLabel = (origin: ApiDataOrigin): string =>
         : origin === 'fixture'
           ? 'Local fixture demo'
           : origin === 'idle'
-            ? 'Awaiting area selection'
+            ? 'Requesting location'
             : 'API unavailable';
 
 const appRoutes = [
@@ -319,10 +318,6 @@ const secondaryRoutes = appRoutes.filter(
         !accountRoutes.includes(route) &&
         !route.startsWith('/legal/'),
 );
-const productionSecondaryRoutes = secondaryRoutes.filter(
-    (route) => !deferredFixtureRoutes.has(route),
-);
-
 const resourceCategoryOptions: readonly DirectoryResourceCategory[] = [
     'food-bank',
     'shelter',
@@ -357,6 +352,16 @@ const urgencyPreferenceOptions: readonly VolunteerOnboardingDraft['preferredUrge
 const nowIso = (): string => new Date().toISOString();
 
 const nearbyDefaultRadiusMeters = 20000;
+const locationCoordinatePrecision = 100;
+
+const demoAreaPresets = {
+    chicagoland: {
+        center: { lat: 41.85, lng: -87.93 },
+        areaLabel: 'Cook & DuPage demo',
+        radiusMeters: 65000,
+        feedTab: 'nearby' as const,
+    },
+} as const;
 
 const defaultShellDiscoveryState = applyDiscoveryFilterPatch(
     defaultDiscoveryFilterState,
@@ -366,8 +371,10 @@ const defaultShellDiscoveryState = applyDiscoveryFilterPatch(
 );
 
 const buildNearbyPatch = (): Partial<DiscoveryFilterState> => ({
-    feedTab: 'nearby',
+    center: undefined,
+    areaLabel: undefined,
     radiusMeters: undefined,
+    feedTab: 'nearby',
 });
 
 const toSeverityTone = (
@@ -469,71 +476,104 @@ const DiscoveryFiltersPanel = ({
     onPatch,
 }: DiscoveryFiltersPanelProps) => {
     const { t } = useLocale();
-    const [areaLatitude, setAreaLatitude] = useState('');
-    const [areaLongitude, setAreaLongitude] = useState('');
-    const [areaLabel, setAreaLabel] = useState(state.areaLabel ?? '');
-    const [areaRadius, setAreaRadius] = useState(String(state.radiusMeters ?? nearbyDefaultRadiusMeters));
+    const [locationAccess, setLocationAccess] = useState<
+        'idle' | 'requesting' | 'granted' | 'fallback'
+    >('idle');
+    const requestedLocationRef = useRef(false);
     const chipModel = useMemo(
         () => buildDiscoveryFilterChipModel(state),
         [state],
     );
 
-    const latValue = state.center ? String(state.center.lat) : areaLatitude;
-    const lngValue = state.center ? String(state.center.lng) : areaLongitude;
+    const requestLocation = useCallback(() => {
+        setLocationAccess('requesting');
+
+        if (!navigator.geolocation) {
+            setLocationAccess('fallback');
+            onPatch(demoAreaPresets.chicagoland);
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            position => {
+                const approximateCenter = {
+                    lat:
+                        Math.round(
+                            position.coords.latitude * locationCoordinatePrecision,
+                        ) / locationCoordinatePrecision,
+                    lng:
+                        Math.round(
+                            position.coords.longitude * locationCoordinatePrecision,
+                        ) / locationCoordinatePrecision,
+                };
+                setLocationAccess('granted');
+                onPatch({
+                    center: approximateCenter,
+                    areaLabel: String(t('discovery.nearYou')),
+                    radiusMeters: nearbyDefaultRadiusMeters,
+                    feedTab: 'nearby',
+                });
+            },
+            () => {
+                setLocationAccess('fallback');
+                onPatch(demoAreaPresets.chicagoland);
+            },
+            {
+                enableHighAccuracy: false,
+                maximumAge: 300000,
+                timeout: 5000,
+            },
+        );
+    }, [onPatch, t]);
+
+    useEffect(() => {
+        if (state.center || requestedLocationRef.current) return;
+        requestedLocationRef.current = true;
+        requestLocation();
+    }, [requestLocation, state.center]);
 
     return (
         <Panel title={String(t('discovery.title'))}>
             {!state.center ? (
                 <div className='mh-alert mb-4 text-sm' role='status'>
-                    <strong>{t('discovery.areaRequiredTitle')}</strong>{' '}
-                    {t('discovery.demoAreaHelp')}
-                </div>
-            ) : (
-                <p className='mb-4 text-sm text-mh-textMuted' role='status'>
-                    {t('discovery.selectedAreaHelp')}
-                </p>
-            )}
-            {!state.center ? (
-                <div className='mb-4 border-2 border-mh-borderSoft bg-mh-surfaceElev p-3'>
-                    <label
-                        htmlFor={`${idPrefix}-area-label`}
-                        className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
-                    >
-                        {t('discovery.areaLabel')}
-                    </label>
-                    <Input
-                        id={`${idPrefix}-area-label`}
-                        name={`${idPrefix}-area-label`}
-                        autoComplete='off'
-                        placeholder={String(t('discovery.areaLabelPlaceholder'))}
-                        value={areaLabel}
-                        onChange={(event) => setAreaLabel(event.target.value)}
-                    />
-                    <p className='mt-2 text-xs text-mh-textMuted'>
-                        {t('discovery.areaPickerDescription')}
-                    </p>
-                    <div className='mt-3'>
-                        <Suspense fallback={<div className='mh-skeleton h-64 w-full' />}>
-                            <LazyInteractiveMap
-                                cards={[]}
-                                onSelectPostId={() => undefined}
-                                onTilesFailed={() => undefined}
-                                onConfirmArea={(center) => {
-                                    const label =
-                                        areaLabel.trim() ||
-                                        String(t('discovery.areaUnknown'));
-                                    onPatch({
-                                        center,
-                                        areaLabel: label,
-                                        radiusMeters: nearbyDefaultRadiusMeters,
-                                        feedTab: 'nearby',
-                                    });
-                                }}
-                            />
-                        </Suspense>
+                    <strong>{t('discovery.locationPermissionTitle')}</strong>{' '}
+                    {locationAccess === 'requesting'
+                        ? t('discovery.locationRequesting')
+                        : t('discovery.locationPermissionHelp')}
+                    <div>
+                        <Button
+                            type='button'
+                            className='mt-3 px-3 py-2 text-xs'
+                            disabled={locationAccess === 'requesting'}
+                            onClick={requestLocation}
+                        >
+                            {locationAccess === 'requesting'
+                                ? t('discovery.locationRequestingButton')
+                                : t('discovery.locationButton')}
+                        </Button>
                     </div>
                 </div>
-            ) : null}
+            ) : (
+                <div
+                    className='mb-4 flex flex-wrap items-center justify-between gap-3 text-sm text-mh-textMuted'
+                    role='status'
+                >
+                    <span>
+                        {locationAccess === 'fallback'
+                            ? t('discovery.locationFallback')
+                            : t('discovery.locationActive')}
+                    </span>
+                    <Button
+                        type='button'
+                        variant='neutral'
+                        className='px-3 py-1 text-xs'
+                        disabled={locationAccess === 'requesting'}
+                        onClick={requestLocation}
+                    >
+                        {t('discovery.updateLocation')}
+                    </Button>
+                </div>
+            )}
             <label
                 htmlFor={`${idPrefix}-search`}
                 className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
@@ -649,117 +689,17 @@ const DiscoveryFiltersPanel = ({
                     </div>
                 </div>
 
-                <details>
-                    <summary className='cursor-pointer text-sm font-bold'>
-                        {t('discovery.advancedLocation')}
-                    </summary>
-                    <p className='mt-2 text-xs text-mh-textMuted'>
-                        {t('discovery.coordinateHelp')}
-                    </p>
-                    <div className='mt-3 grid gap-3 sm:grid-cols-3'>
-                        <div>
-                        <label
-                            htmlFor={`${idPrefix}-radius`}
-                            className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-textMuted'
-                        >
-                            {t('discovery.radiusMeters')}
-                        </label>
-                        <Input
-                            id={`${idPrefix}-radius`}
-                            name={`${idPrefix}-radius`}
-                            autoComplete='off'
-                            type='number'
-                            min={300}
-                            max={100000}
-                            placeholder={String(nearbyDefaultRadiusMeters)}
-                            value={areaRadius}
-                            onChange={(event) => {
-                                setAreaRadius(event.target.value);
-                            }}
-                        />
-                        </div>
-                        <div>
-                        <label
-                            htmlFor={`${idPrefix}-lat`}
-                            className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-textMuted'
-                        >
-                            {t('discovery.centerLat')}
-                        </label>
-                        <Input
-                            id={`${idPrefix}-lat`}
-                            name={`${idPrefix}-lat`}
-                            autoComplete='off'
-                            type='number'
-                            step='0.0001'
-                            min={-90}
-                            max={90}
-                            value={latValue}
-                            onChange={(event) => {
-                                const value = event.target.value;
-                                setAreaLatitude(value);
-                            }}
-                        />
-                        </div>
-                        <div>
-                        <label
-                            htmlFor={`${idPrefix}-lng`}
-                            className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-textMuted'
-                        >
-                            {t('discovery.centerLng')}
-                        </label>
-                        <Input
-                            id={`${idPrefix}-lng`}
-                            name={`${idPrefix}-lng`}
-                            autoComplete='off'
-                            type='number'
-                            step='0.0001'
-                            min={-180}
-                            max={180}
-                            value={lngValue}
-                            onChange={(event) => {
-                                const value = event.target.value;
-                                setAreaLongitude(value);
-                            }}
-                        />
-                        </div>
-                    </div>
-                    <Button
-                        type='button'
-                        className='mt-3 px-3 py-1 text-xs'
-                        disabled={
-                            !areaLabel.trim() ||
-                            Number.isNaN(Number.parseFloat(areaLatitude)) ||
-                            Number.isNaN(Number.parseFloat(areaLongitude)) ||
-                            Number.isNaN(Number.parseInt(areaRadius, 10))
-                        }
-                        onClick={() => onPatch({
-                            center: {
-                                lat: Number.parseFloat(areaLatitude),
-                                lng: Number.parseFloat(areaLongitude),
-                            },
-                            areaLabel: areaLabel.trim(),
-                            radiusMeters: Number.parseInt(areaRadius, 10),
-                            feedTab: 'nearby',
-                        })}
-                    >
-                        {t('discovery.confirmArea')}
-                    </Button>
-                </details>
-
                 <div className='flex flex-wrap items-center justify-between gap-3 border-t-2 border-mh-borderSoft pt-4'>
                     <Button
                         variant='neutral'
                         className='px-3 py-1 text-xs'
                         onClick={() => {
                             onPatch({
-                                feedTab: 'latest',
+                                feedTab: state.center ? 'nearby' : 'latest',
                                 text: undefined,
                                 category: undefined,
                                 status: undefined,
                                 minUrgency: undefined,
-                                center: undefined,
-                                areaLabel: undefined,
-                                radiusMeters: undefined,
                                 since: undefined,
                             });
                         }}
@@ -776,7 +716,6 @@ const DiscoveryFiltersPanel = ({
 };
 
 interface DashboardRouteProps {
-    appTitle: string;
     onNavigate: (route: AppRoute) => void;
     discoveryState: DiscoveryFilterState;
     onPatchDiscovery: (patch: Partial<DiscoveryFilterState>) => void;
@@ -858,7 +797,6 @@ const LegalPolicyRoute = ({
 };
 
 const DashboardRoute = ({
-    appTitle,
     onNavigate,
     discoveryState,
     onPatchDiscovery,
@@ -866,198 +804,266 @@ const DashboardRoute = ({
     const { t } = useLocale();
     return (
         <>
-            <header className='mh-hero mb-8 pb-6 sm:pb-8'>
-                <div className='mb-5 flex flex-wrap items-center justify-between gap-3'>
-                    <p className='mh-kicker'>{t('dashboard.phaseLabel')}</p>
-                    <Badge tone='danger'>{t('dashboard.safetyBadge')}</Badge>
-                </div>
-
-                <div className='grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]'>
-                    <div>
-                        <h1 className='font-heading text-5xl font-black leading-[0.88] tracking-[-0.055em] sm:text-6xl md:text-7xl lg:text-8xl'>
-                            {appTitle}
-                        </h1>
-                        <p className='mt-4 max-w-xl text-base text-mh-textMuted sm:text-lg'>
-                            {t('dashboard.description')}
-                        </p>
-                        <div className='mt-5 flex flex-wrap gap-2'>
-                            <Button
-                                onClick={() => {
-                                    onPatchDiscovery(buildNearbyPatch());
-                                    onNavigate('/map');
-                                }}
-                            >
-                                {t('dashboard.openMapTriage')}
-                            </Button>
-                            <Button
-                                variant='secondary'
-                                onClick={() => onNavigate('/posting')}
-                            >
-                                {t('dashboard.openPostingForm')}
-                            </Button>
-                            {webDataMode === 'fixture' ? (
-                                <Button
-                                    variant='neutral'
-                                    onClick={() => onNavigate('/chat')}
-                                >
-                                    {t('dashboard.openChatHandoff')}
-                                </Button>
-                            ) : null}
-                        </div>
+            <header className='mh-landing-hero'>
+                <div className='mh-landing-hero__copy'>
+                    <p className='mh-kicker'>{t('dashboard.eyebrow')}</p>
+                    <h1 className='mh-landing-title'>
+                        {t('dashboard.heading')}
+                    </h1>
+                    <p className='mh-landing-deck'>
+                        {t('dashboard.description')}
+                    </p>
+                    <div className='mt-7 flex flex-wrap gap-3'>
+                        <Button
+                            onClick={() => {
+                                onPatchDiscovery(buildNearbyPatch());
+                                onNavigate('/map');
+                            }}
+                        >
+                            {t('dashboard.browseNeeds')}
+                        </Button>
+                        <Button
+                            variant='secondary'
+                            onClick={() => onNavigate('/posting')}
+                        >
+                            {t('dashboard.askForHelp')}
+                        </Button>
+                        <Button
+                            variant='neutral'
+                            onClick={() => onNavigate('/resources')}
+                        >
+                            {t('dashboard.findResources')}
+                        </Button>
                     </div>
-
-                    <aside className='mh-card p-4 sm:p-5'>
-                        <p className='mh-kicker'>
-                            {t('dashboard.servicePosture')}
-                        </p>
-                        <ul className='mt-3 grid gap-2'>
-                            <li className='mh-stat-tile'>
-                                <p className='text-xs uppercase tracking-widest text-mh-textSoft'>
-                                    {t('dashboard.discoverySource')}
-                                </p>
-                                <p className='mt-1 text-sm font-black text-mh-text'>
-                                    {t('dashboard.durableProjections')}
-                                </p>
-                            </li>
-                            <li className='mh-stat-tile'>
-                                <p className='text-xs uppercase tracking-widest text-mh-textSoft'>
-                                    {t('dashboard.safetyControls')}
-                                </p>
-                                <p className='mt-1 text-sm font-black text-mh-text'>
-                                    {t('dashboard.reportsAndBlocks')}
-                                </p>
-                            </li>
-                            <li className='mh-stat-tile'>
-                                <p className='text-xs uppercase tracking-widest text-mh-textSoft'>
-                                    {t('dashboard.accountControls')}
-                                </p>
-                                <p className='mt-1 text-sm font-black text-mh-text'>
-                                    {t('dashboard.exportAndDeactivation')}
-                                </p>
-                            </li>
-                        </ul>
-                    </aside>
+                    <p className='mh-landing-note'>
+                        <span aria-hidden='true' />{' '}
+                        {t('dashboard.locationPromise')}
+                    </p>
                 </div>
+
+                <aside
+                    className='mh-how-card'
+                    aria-labelledby='how-patchwork-works'
+                >
+                    <div className='mh-how-card__patches' aria-hidden='true'>
+                        <span />
+                        <span />
+                        <span />
+                        <span />
+                    </div>
+                    <p className='mh-kicker'>{t('dashboard.howEyebrow')}</p>
+                    <h2 id='how-patchwork-works' className='mh-how-card__title'>
+                        {t('dashboard.howTitle')}
+                    </h2>
+                    <ol className='mt-5 grid gap-4'>
+                        {(['discover', 'connect', 'coordinate'] as const).map(
+                            (step, index) => (
+                                <li key={step} className='mh-how-step'>
+                                    <span
+                                        className='mh-how-step__number'
+                                        aria-hidden='true'
+                                    >
+                                        {index + 1}
+                                    </span>
+                                    <div>
+                                        <h3 className='font-bold text-mh-text'>
+                                            {t(`dashboard.${step}Title`)}
+                                        </h3>
+                                        <p className='mt-1 text-sm text-mh-textMuted'>
+                                            {t(`dashboard.${step}Description`)}
+                                        </p>
+                                    </div>
+                                </li>
+                            ),
+                        )}
+                    </ol>
+                </aside>
             </header>
 
-            <div className='grid gap-6 lg:grid-cols-5'>
-                <section className='lg:col-span-3'>
-                    <Panel title={String(t('dashboard.discoveryShellTitle'))}>
-                        <p className='mb-3 text-sm text-mh-textMuted'>
-                            {t('dashboard.discoveryShellDescription')}
+            <section
+                className='mh-landing-section'
+                aria-labelledby='start-heading'
+            >
+                <div className='mh-landing-section__header'>
+                    <div>
+                        <p className='mh-kicker'>
+                            {t('dashboard.startEyebrow')}
                         </p>
-                        <label
-                            htmlFor='search-requests'
-                            className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
+                        <h2
+                            id='start-heading'
+                            className='mh-landing-section__title'
                         >
-                            {t('dashboard.searchRequests')}
-                        </label>
-                        <Input
-                            id='search-requests'
-                            name='searchRequests'
-                            autoComplete='off'
-                            placeholder={String(
-                                t('discovery.searchPlaceholder'),
-                            )}
-                            value={discoveryState.text ?? ''}
-                            onChange={(event) => {
-                                const nextValue = event.target.value.trim();
-                                onPatchDiscovery({
-                                    text:
-                                        nextValue.length > 0
-                                            ? nextValue
-                                            : undefined,
-                                });
-                            }}
-                        />
-                        <div className='mt-4 flex flex-wrap gap-2'>
-                            <Button
-                                onClick={() => {
-                                    onPatchDiscovery(buildNearbyPatch());
-                                    onNavigate('/map');
-                                }}
-                            >
-                                {t('dashboard.findNearby')}
-                            </Button>
-                            <Button
-                                variant='secondary'
-                                onClick={() => onNavigate('/posting')}
-                            >
-                                {t('dashboard.createPost')}
-                            </Button>
-                            <Button
-                                variant='neutral'
-                                onClick={() => onNavigate('/feed')}
-                            >
-                                {t('dashboard.openLiveFeed')}
-                            </Button>
-                        </div>
-                    </Panel>
-                </section>
+                            {t('dashboard.startTitle')}
+                        </h2>
+                    </div>
+                    <p>{t('dashboard.startDescription')}</p>
+                </div>
 
-                <section className='lg:col-span-2'>
-                    <Card title={String(t('dashboard.operatingBoundaryTitle'))}>
-                        <ul className='list-disc space-y-1 pl-5 text-sm'>
-                            <li>{t('dashboard.notEmergency')}</li>
-                            <li>{t('dashboard.approximateLocations')}</li>
-                            <li>{t('dashboard.signInBoundary')}</li>
-                        </ul>
-                        <p className='mt-3'>
-                            {t('dashboard.readGuidelinesPrefix')}{' '}
-                            <TextLink href='/legal/community-guidelines'>
-                                {t('dashboard.communityGuidelines')}
-                            </TextLink>{' '}
-                            {t('dashboard.readGuidelinesSuffix')}
-                        </p>
-                    </Card>
-                </section>
-
-                <section className='lg:col-span-5'>
-                    <Card
-                        title={String(t('dashboard.quickRouteHandoffsTitle'))}
+                <div className='grid gap-4 md:grid-cols-3'>
+                    <button
+                        type='button'
+                        className='mh-path-card mh-path-card--needs'
+                        onClick={() => {
+                            onPatchDiscovery(buildNearbyPatch());
+                            onNavigate('/feed');
+                        }}
                     >
-                        <ul className='grid gap-3 sm:grid-cols-2 lg:grid-cols-3'>
-                            {shellSections
-                                .filter(
-                                    (section) =>
-                                        primaryRoutes.includes(
-                                            section.route as AppRoute,
-                                        ) ||
-                                        (webDataMode === 'fixture'
-                                            ? accountRoutes
-                                            : productionAccountRoutes
-                                        ).includes(section.route as AppRoute),
-                                )
-                                .map((section) => (
-                                    <li
-                                        key={section.route}
-                                        className='rounded-none border-2 border-mh-borderSoft bg-mh-surfaceElev p-3'
-                                    >
-                                        <p className='text-sm font-bold text-mh-text'>
-                                            {section.title}
-                                        </p>
-                                        <p className='mt-1 text-xs text-mh-textSoft'>
-                                            {section.description}
-                                        </p>
-                                        <p className='mt-2'>
-                                            <button
-                                                type='button'
-                                                className='mh-link text-sm'
-                                                onClick={() =>
-                                                    onNavigate(section.route)
-                                                }
-                                            >
-                                                {t('dashboard.openSection', {
-                                                    title: section.title,
-                                                })}
-                                            </button>
-                                        </p>
-                                    </li>
-                                ))}
-                        </ul>
-                    </Card>
-                </section>
-            </div>
+                        <span
+                            className='mh-path-card__index'
+                            aria-hidden='true'
+                        >
+                            {t('dashboard.needsIndex')}
+                        </span>
+                        <span className='mh-path-card__title'>
+                            {t('dashboard.needsTitle')}
+                        </span>
+                        <span className='mh-path-card__description'>
+                            {t('dashboard.needsDescription')}
+                        </span>
+                        <span className='mh-path-card__link'>
+                            {t('dashboard.needsAction')}{' '}
+                            <span aria-hidden='true'>→</span>
+                        </span>
+                    </button>
+                    <button
+                        type='button'
+                        className='mh-path-card mh-path-card--offer'
+                        onClick={() => onNavigate('/volunteer')}
+                    >
+                        <span
+                            className='mh-path-card__index'
+                            aria-hidden='true'
+                        >
+                            {t('dashboard.offerIndex')}
+                        </span>
+                        <span className='mh-path-card__title'>
+                            {t('dashboard.offerTitle')}
+                        </span>
+                        <span className='mh-path-card__description'>
+                            {t('dashboard.offerDescription')}
+                        </span>
+                        <span className='mh-path-card__link'>
+                            {t('dashboard.offerAction')}{' '}
+                            <span aria-hidden='true'>→</span>
+                        </span>
+                    </button>
+                    <button
+                        type='button'
+                        className='mh-path-card mh-path-card--resources'
+                        onClick={() => onNavigate('/resources')}
+                    >
+                        <span
+                            className='mh-path-card__index'
+                            aria-hidden='true'
+                        >
+                            {t('dashboard.resourcesIndex')}
+                        </span>
+                        <span className='mh-path-card__title'>
+                            {t('dashboard.resourcesTitle')}
+                        </span>
+                        <span className='mh-path-card__description'>
+                            {t('dashboard.resourcesDescription')}
+                        </span>
+                        <span className='mh-path-card__link'>
+                            {t('dashboard.resourcesAction')}{' '}
+                            <span aria-hidden='true'>→</span>
+                        </span>
+                    </button>
+                </div>
+            </section>
+
+            <section
+                className='mh-nearby-band'
+                aria-labelledby='nearby-heading'
+            >
+                <div>
+                    <p className='mh-kicker'>{t('dashboard.nearbyEyebrow')}</p>
+                    <h2 id='nearby-heading' className='mh-nearby-band__title'>
+                        {t('dashboard.nearbyTitle')}
+                    </h2>
+                    <p className='mt-2 max-w-xl text-sm text-mh-textMuted sm:text-base'>
+                        {t('dashboard.nearbyDescription')}
+                    </p>
+                </div>
+                <div className='mh-nearby-band__search'>
+                    <label htmlFor='search-requests' className='sr-only'>
+                        {t('dashboard.searchRequests')}
+                    </label>
+                    <Input
+                        id='search-requests'
+                        name='searchRequests'
+                        autoComplete='off'
+                        placeholder={String(t('discovery.searchPlaceholder'))}
+                        value={discoveryState.text ?? ''}
+                        onChange={(event) => {
+                            const nextValue = event.target.value.trim();
+                            onPatchDiscovery({
+                                text:
+                                    nextValue.length > 0
+                                        ? nextValue
+                                        : undefined,
+                            });
+                        }}
+                    />
+                    <Button
+                        onClick={() => {
+                            onPatchDiscovery(buildNearbyPatch());
+                            onNavigate('/map');
+                        }}
+                    >
+                        {t('dashboard.exploreMap')}
+                    </Button>
+                </div>
+            </section>
+
+            <section
+                className='mh-trust-section'
+                aria-labelledby='trust-heading'
+            >
+                <div className='mh-trust-section__intro'>
+                    <p className='mh-kicker'>{t('dashboard.trustEyebrow')}</p>
+                    <h2
+                        id='trust-heading'
+                        className='mh-landing-section__title'
+                    >
+                        {t('dashboard.trustTitle')}
+                    </h2>
+                    <p>{t('dashboard.trustDescription')}</p>
+                </div>
+                <ul className='mh-trust-list'>
+                    <li>
+                        <strong>{t('dashboard.approximateTitle')}</strong>
+                        <span>{t('dashboard.approximateDescription')}</span>
+                    </li>
+                    <li>
+                        <strong>{t('dashboard.privateTitle')}</strong>
+                        <span>{t('dashboard.privateDescription')}</span>
+                    </li>
+                    <li>
+                        <strong>{t('dashboard.controlTitle')}</strong>
+                        <span>{t('dashboard.controlDescription')}</span>
+                    </li>
+                </ul>
+            </section>
+
+            <aside className='mh-safety-note' aria-labelledby='safety-heading'>
+                <div>
+                    <p className='mh-kicker'>{t('dashboard.safetyEyebrow')}</p>
+                    <h2
+                        id='safety-heading'
+                        className='font-heading text-xl font-bold'
+                    >
+                        {t('dashboard.notEmergency')}
+                    </h2>
+                </div>
+                <p>
+                    {t('dashboard.safetyDescription')}{' '}
+                    <TextLink href='/legal/community-guidelines'>
+                        {t('dashboard.communityGuidelines')}
+                    </TextLink>
+                    {t('dashboard.safetySuffix')}
+                </p>
+            </aside>
         </>
     );
 };
@@ -1447,7 +1453,9 @@ const MapRoute = ({
                             {mapView.clusters.map((cluster) => (
                                 <li key={cluster.id} className='mh-record-card'>
                                     <p className='text-sm font-bold text-mh-text'>
-                                        {cluster.label}
+                                        {t('map.requestsInArea', {
+                                            count: cluster.count,
+                                        })}
                                     </p>
                                     <p className='mt-1 text-xs text-mh-textSoft'>
                                         {t('map.clusterRequests', {
@@ -10358,16 +10366,27 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         currentRoute === '/settings';
     const isDeferredFixtureRoute =
         webDataMode !== 'fixture' && deferredFixtureRoutes.has(currentRoute);
-    const visibleAccountRoutes =
-        webDataMode === 'fixture' ? accountRoutes : productionAccountRoutes;
-    const visibleSecondaryRoutes =
-        webDataMode === 'fixture'
-            ? secondaryRoutes
-            : (
-                  [...productionSecondaryRoutes, '/volunteer', '/chat'] as const
-              ).filter(
-                  (route) => route !== '/scheduling' || Boolean(auth.session),
-              );
+    const visibleAccountRoutes: readonly AppRoute[] =
+        webDataMode === 'fixture' ? accountRoutes
+        : !auth.session ? []
+        : productionAccountRoutes.filter(
+              route =>
+                  route !== '/moderation' ||
+                  auth.session?.role === 'admin' ||
+                  auth.session?.role === 'moderator',
+          );
+    const visibleSecondaryRoutes: readonly AppRoute[] =
+        webDataMode === 'fixture' ? secondaryRoutes
+        : auth.session ? [
+              '/volunteer',
+              '/organizations',
+              '/posting',
+              '/verification',
+              '/chat',
+              '/scheduling',
+              '/groups',
+          ]
+        : ['/volunteer', '/organizations'];
 
     const content = isDeferredFixtureRoute ? (
         <Panel title={t('runtime.deferred')}>
@@ -10638,7 +10657,6 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         <LegalPolicyRoute route={currentRoute} />
     ) : (
         <DashboardRoute
-            appTitle={appTitle}
             onNavigate={navigate}
             discoveryState={discoveryState}
             onPatchDiscovery={patchDiscoveryState}

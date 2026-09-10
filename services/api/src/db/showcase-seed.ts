@@ -5,9 +5,9 @@ import { loadApiConfig } from '@patchwork/shared';
 import type { Pool, PoolClient } from 'pg';
 import { createPostgresPool } from './discovery-events.js';
 
-export const SHOWCASE_SEED_VERSION = 'buyer-ready-2026-07-28-v1';
-const SEEDED_AT = '2026-07-28T12:00:00.000Z';
-const RETENTION_UNTIL = '2027-07-28T12:00:00.000Z';
+export const SHOWCASE_SEED_VERSION = 'chicagoland-demo-2026-09-04-v2';
+const SEEDED_AT = '2026-09-04T12:00:00.000Z';
+const RETENTION_UNTIL = '2027-09-04T12:00:00.000Z';
 const SOURCE_URL = 'https://cloud.citynews.chicago.gov/Newsletter';
 const REQUESTER_DID = 'did:plc:showcase-requester';
 const HELPER_DID = 'did:plc:showcase-helper';
@@ -26,7 +26,114 @@ const CONNECTION_ID = '40000000-0000-4000-8000-000000000004';
 const FEEDBACK_ID = '50000000-0000-4000-8000-000000000005';
 const NOTIFICATION_ID = '60000000-0000-4000-8000-000000000006';
 
-const metadata = [
+const additionalAidSeeds = [
+    {
+        slug: 'cook-austin-grocery-pickup',
+        title: 'Grocery pickup near Austin',
+        description: 'A fictional neighbor needs a grocery pickup before Friday evening.',
+        category: 'food', urgency: 'high', status: 'open',
+        area: 'Austin, Chicago · Cook County', latitude: 41.895, longitude: -87.765, precisionKm: 3,
+    },
+    {
+        slug: 'cook-cicero-clinic-ride',
+        title: 'Ride to a clinic near Cicero',
+        description: 'A fictional neighbor is looking for a round-trip ride to a daytime appointment.',
+        category: 'transport', urgency: 'medium', status: 'open',
+        area: 'Cicero · Cook County', latitude: 41.845, longitude: -87.754, precisionKm: 3,
+    },
+    {
+        slug: 'cook-rogers-park-winter-coat',
+        title: 'Warm coat needed in Rogers Park',
+        description: 'A fictional family is seeking a clean adult winter coat in a medium size.',
+        category: 'other', urgency: 'medium', status: 'open',
+        area: 'Rogers Park, Chicago · Cook County', latitude: 42.010, longitude: -87.670, precisionKm: 3,
+    },
+    {
+        slug: 'cook-evanston-childcare-swap',
+        title: 'After-school childcare swap',
+        description: 'Two fictional households want to coordinate a one-afternoon childcare exchange.',
+        category: 'childcare', urgency: 'low', status: 'open',
+        area: 'Evanston · Cook County', latitude: 42.046, longitude: -87.687, precisionKm: 4,
+    },
+    {
+        slug: 'cook-south-shore-ramp-help',
+        title: 'Help moving a portable ramp',
+        description: 'A fictional resident needs two people to move a lightweight accessibility ramp.',
+        category: 'medical', urgency: 'high', status: 'in-progress',
+        area: 'South Shore, Chicago · Cook County', latitude: 41.760, longitude: -87.575, precisionKm: 4,
+    },
+    {
+        slug: 'cook-oak-park-pet-supplies',
+        title: 'Temporary pet food supply',
+        description: 'A fictional neighbor could use one week of sealed cat food while between paychecks.',
+        category: 'food', urgency: 'medium', status: 'open',
+        area: 'Oak Park · Cook County', latitude: 41.885, longitude: -87.784, precisionKm: 3,
+    },
+    {
+        slug: 'dupage-wheaton-pantry-pickup',
+        title: 'Pantry pickup in Wheaton',
+        description: 'A fictional household needs help collecting a prepaid pantry order this weekend.',
+        category: 'food', urgency: 'high', status: 'open',
+        area: 'Wheaton · DuPage County', latitude: 41.866, longitude: -88.107, precisionKm: 4,
+    },
+    {
+        slug: 'dupage-naperville-medical-ride',
+        title: 'Morning medical ride in Naperville',
+        description: 'A fictional older adult is seeking a ride to and from a morning appointment.',
+        category: 'transport', urgency: 'medium', status: 'open',
+        area: 'Naperville · DuPage County', latitude: 41.750, longitude: -88.153, precisionKm: 5,
+    },
+    {
+        slug: 'dupage-glen-ellyn-moving-boxes',
+        title: 'Moving boxes and packing tape',
+        description: 'A fictional renter is looking for reusable moving boxes and two rolls of tape.',
+        category: 'shelter', urgency: 'low', status: 'open',
+        area: 'Glen Ellyn · DuPage County', latitude: 41.877, longitude: -88.068, precisionKm: 3,
+    },
+    {
+        slug: 'dupage-lombard-yard-help',
+        title: 'One-hour outdoor cleanup help',
+        description: 'A fictional neighbor with limited mobility needs help gathering light yard debris.',
+        category: 'medical', urgency: 'medium', status: 'in-progress',
+        area: 'Lombard · DuPage County', latitude: 41.880, longitude: -88.007, precisionKm: 4,
+    },
+    {
+        slug: 'dupage-downers-grove-childcare',
+        title: 'Childcare during a job interview',
+        description: 'A fictional parent needs two hours of daytime childcare during an interview.',
+        category: 'childcare', urgency: 'high', status: 'open',
+        area: 'Downers Grove · DuPage County', latitude: 41.795, longitude: -88.010, precisionKm: 4,
+    },
+    {
+        slug: 'dupage-west-chicago-blankets',
+        title: 'Blankets for a temporary stay',
+        description: 'A fictional household is seeking two clean blankets for temporary lodging.',
+        category: 'shelter', urgency: 'medium', status: 'open',
+        area: 'West Chicago · DuPage County', latitude: 41.884, longitude: -88.204, precisionKm: 5,
+    },
+] as const;
+
+const additionalResourceSeeds = [
+    { slug: 'cook-oak-park-food-pickup', name: 'Patchwork Demo Food Pickup', area: 'Oak Park · Cook County', category: 'food-bank', latitude: 41.885, longitude: -87.784, precisionKm: 3, hours: 'Demo hours: Tue and Thu, 10–2' },
+    { slug: 'cook-cicero-welcome-center', name: 'Patchwork Demo Welcome Center', area: 'Cicero · Cook County', category: 'shelter', latitude: 41.845, longitude: -87.754, precisionKm: 3, hours: 'Demo hours: daily, 8–6' },
+    { slug: 'cook-evanston-health-navigation', name: 'Patchwork Demo Health Navigation', area: 'Evanston · Cook County', category: 'clinic', latitude: 42.046, longitude: -87.687, precisionKm: 4, hours: 'Demo hours: Mon–Fri, 9–5' },
+    { slug: 'cook-chicago-heights-tenant-desk', name: 'Patchwork Demo Tenant Help Desk', area: 'Chicago Heights · Cook County', category: 'legal-aid', latitude: 41.506, longitude: -87.635, precisionKm: 5, hours: 'Demo hours: Wed, 12–7' },
+    { slug: 'dupage-wheaton-food-shelf', name: 'Patchwork Demo Food Shelf', area: 'Wheaton · DuPage County', category: 'food-bank', latitude: 41.866, longitude: -88.107, precisionKm: 4, hours: 'Demo hours: Mon, Wed and Sat' },
+    { slug: 'dupage-naperville-welcome-desk', name: 'Patchwork Demo Overnight Welcome Desk', area: 'Naperville · DuPage County', category: 'shelter', latitude: 41.750, longitude: -88.153, precisionKm: 5, hours: 'Demo hours: daily, 5–10' },
+    { slug: 'dupage-lombard-clinic-guide', name: 'Patchwork Demo Clinic Guide', area: 'Lombard · DuPage County', category: 'clinic', latitude: 41.880, longitude: -88.007, precisionKm: 4, hours: 'Demo hours: Mon–Fri, 8–4' },
+    { slug: 'dupage-downers-grove-family-law', name: 'Patchwork Demo Family Legal Desk', area: 'Downers Grove · DuPage County', category: 'legal-aid', latitude: 41.795, longitude: -88.010, precisionKm: 4, hours: 'Demo hours: Tue and Thu, 1–6' },
+] as const;
+
+const additionalVolunteerSeeds = [
+    { slug: 'cook-maya-example', name: 'Maya Example', bio: 'Fictional volunteer available for food pickup and short errands.', area: 'Oak Park and Austin · Cook County', capabilities: ['errands', 'delivery'], skills: ['grocery-shopping', 'car'], languages: ['en', 'es'], availability: 'within-24h', latitude: 41.890, longitude: -87.775, precisionKm: 6 },
+    { slug: 'cook-luis-example', name: 'Luis Example', bio: 'Fictional bilingual volunteer offering translation and appointment accompaniment.', area: 'Cicero and Berwyn · Cook County', capabilities: ['companionship', 'translation'], skills: ['appointment-support'], languages: ['en', 'es'], availability: 'scheduled', latitude: 41.850, longitude: -87.785, precisionKm: 6 },
+    { slug: 'cook-nia-example', name: 'Nia Example', bio: 'Fictional volunteer available for childcare swaps and supply coordination.', area: 'South Side Chicago · Cook County', capabilities: ['childcare', 'coordination'], skills: ['family-support'], languages: ['en'], availability: 'scheduled', latitude: 41.760, longitude: -87.620, precisionKm: 8 },
+    { slug: 'dupage-priya-example', name: 'Priya Example', bio: 'Fictional volunteer offering rides and grocery delivery on weekends.', area: 'Wheaton and Glen Ellyn · DuPage County', capabilities: ['transport', 'delivery'], skills: ['car', 'grocery-shopping'], languages: ['en', 'hi'], availability: 'scheduled', latitude: 41.870, longitude: -88.085, precisionKm: 7 },
+    { slug: 'dupage-sam-example', name: 'Sam Example', bio: 'Fictional volunteer available for light moving and outdoor tasks.', area: 'Lombard and Downers Grove · DuPage County', capabilities: ['moving', 'yard-help'], skills: ['lifting', 'basic-tools'], languages: ['en'], availability: 'within-24h', latitude: 41.840, longitude: -88.010, precisionKm: 7 },
+    { slug: 'dupage-evan-example', name: 'Evan Example', bio: 'Fictional volunteer offering technology help and resource navigation.', area: 'Naperville and West Chicago · DuPage County', capabilities: ['technology', 'navigation'], skills: ['forms', 'device-setup'], languages: ['en'], availability: 'scheduled', latitude: 41.820, longitude: -88.180, precisionKm: 9 },
+] as const;
+
+const metadata: ReadonlyArray<readonly [string, string, 'synthetic' | 'sourced-public']> = [
     ['person', REQUESTER_DID, 'synthetic'],
     ['person', HELPER_DID, 'synthetic'],
     ['person', VOLUNTEER_DID, 'synthetic'],
@@ -42,7 +149,22 @@ const metadata = [
     ['organization', SOURCED_ORG_ID, 'sourced-public'],
     ['moderation-case', REQUEST_URI, 'synthetic'],
     ['notification', NOTIFICATION_ID, 'synthetic'],
-] as const;
+    ...additionalAidSeeds.map(seed => [
+        'aid-post',
+        `at://${REQUESTER_DID}/app.patchwork.aid.post/${seed.slug}`,
+        'synthetic',
+    ] as const),
+    ...additionalResourceSeeds.map(seed => [
+        'directory-resource',
+        `at://${SYSTEM_DID}/app.patchwork.directory.resource/${seed.slug}`,
+        'synthetic',
+    ] as const),
+    ...additionalVolunteerSeeds.map(seed => [
+        'volunteer-profile',
+        `at://${VOLUNTEER_DID}/app.patchwork.volunteer.profile/${seed.slug}`,
+        'synthetic',
+    ] as const),
+];
 
 const manifestSha256 = createHash('sha256')
     .update(JSON.stringify(metadata))
@@ -176,6 +298,34 @@ export const seedBuyerReadyShowcase = async (
             );
         }
 
+        for (const seed of additionalAidSeeds) {
+            await assertNoVisitorCollision(
+                client,
+                'indexer_aid_post_projections',
+                'uri',
+                `at://${REQUESTER_DID}/app.patchwork.aid.post/${seed.slug}`,
+                'aid-post',
+            );
+        }
+        for (const seed of additionalResourceSeeds) {
+            await assertNoVisitorCollision(
+                client,
+                'indexer_directory_resource_projections',
+                'uri',
+                `at://${SYSTEM_DID}/app.patchwork.directory.resource/${seed.slug}`,
+                'directory-resource',
+            );
+        }
+        for (const seed of additionalVolunteerSeeds) {
+            await assertNoVisitorCollision(
+                client,
+                'indexer_volunteer_profile_projections',
+                'uri',
+                `at://${VOLUNTEER_DID}/app.patchwork.volunteer.profile/${seed.slug}`,
+                'volunteer-profile',
+            );
+        }
+
         await client.query(
             `DELETE FROM moderation_queue_items
              WHERE seed_version = $1 AND record_origin = 'synthetic'`,
@@ -303,6 +453,39 @@ export const seedBuyerReadyShowcase = async (
              )`,
             [REQUEST_URI, didHash(REQUESTER_DID), SEEDED_AT, SHOWCASE_SEED_VERSION],
         );
+        for (const [index, seed] of additionalAidSeeds.entries()) {
+            await client.query(
+                `INSERT INTO indexer_aid_post_projections (
+                     uri, collection, cid, revision, author_did_hash, title,
+                     description, category, urgency, status, searchable_text,
+                     latitude, longitude, precision_km, record_created_at,
+                     record_updated_at, source_cursor, source_event_id,
+                     projected_at, record_origin, seed_version
+                 ) VALUES (
+                     $1, 'app.patchwork.aid.post', $2, '1', $3, $4, $5, $6,
+                     $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $13,
+                     'synthetic', $16
+                 )`,
+                [
+                    `at://${REQUESTER_DID}/app.patchwork.aid.post/${seed.slug}`,
+                    `bafydemoaid${String(index + 1).padStart(2, '0')}`,
+                    didHash(REQUESTER_DID),
+                    seed.title,
+                    seed.description,
+                    seed.category,
+                    seed.urgency,
+                    seed.status,
+                    `${seed.title} ${seed.description} ${seed.area} fictional synthetic demo`.toLowerCase(),
+                    seed.latitude,
+                    seed.longitude,
+                    seed.precisionKm,
+                    SEEDED_AT,
+                    920001 + index,
+                    `showcase:aid:${index + 2}`,
+                    SHOWCASE_SEED_VERSION,
+                ],
+            );
+        }
         await client.query(
             `INSERT INTO indexer_directory_resource_projections (
                  uri, collection, cid, revision, author_did_hash, name,
@@ -325,6 +508,41 @@ export const seedBuyerReadyShowcase = async (
              )`,
             [DIRECTORY_URI, didHash(SYSTEM_DID), SEEDED_AT, SHOWCASE_SEED_VERSION],
         );
+        for (const [index, seed] of additionalResourceSeeds.entries()) {
+            await client.query(
+                `INSERT INTO indexer_directory_resource_projections (
+                     uri, collection, cid, revision, author_did_hash, name,
+                     service_area, category, verification_status, contact,
+                     searchable_text, latitude, longitude, precision_km,
+                     open_hours, eligibility_notes, operational_status,
+                     record_created_at, record_updated_at, source_cursor,
+                     source_event_id, projected_at, record_origin, seed_version
+                 ) VALUES (
+                     $1, 'app.patchwork.directory.resource', $2, '1', $3,
+                     $4, $5, $6, 'unverified', $7, $8, $9, $10, $11, $12,
+                     'Synthetic demonstration listing; confirm all real services independently.',
+                     'open', $13, $13, $14, $15, $13, 'synthetic', $16
+                 )`,
+                [
+                    `at://${SYSTEM_DID}/app.patchwork.directory.resource/${seed.slug}`,
+                    `bafydemoresource${String(index + 1).padStart(2, '0')}`,
+                    didHash(SYSTEM_DID),
+                    seed.name,
+                    seed.area,
+                    seed.category,
+                    JSON.stringify({ url: `https://showcase.invalid/${seed.slug}` }),
+                    `${seed.name} ${seed.area} fictional synthetic demo`.toLowerCase(),
+                    seed.latitude,
+                    seed.longitude,
+                    seed.precisionKm,
+                    seed.hours,
+                    SEEDED_AT,
+                    921001 + index,
+                    `showcase:directory:${index + 2}`,
+                    SHOWCASE_SEED_VERSION,
+                ],
+            );
+        }
         await client.query(
             `INSERT INTO indexer_volunteer_profile_projections (
                  uri, collection, cid, revision, author_did_hash,
@@ -347,10 +565,47 @@ export const seedBuyerReadyShowcase = async (
              )`,
             [VOLUNTEER_URI, didHash(VOLUNTEER_DID), SEEDED_AT, SHOWCASE_SEED_VERSION],
         );
+        for (const [index, seed] of additionalVolunteerSeeds.entries()) {
+            await client.query(
+                `INSERT INTO indexer_volunteer_profile_projections (
+                     uri, collection, cid, revision, author_did_hash,
+                     display_name, bio, capabilities, availability,
+                     contact_preference, skills, languages, service_area_label,
+                     no_permanent_address, latitude, longitude, precision_km,
+                     searchable_text, record_created_at, record_updated_at,
+                     source_cursor, source_event_id, projected_at,
+                     record_origin, seed_version
+                 ) VALUES (
+                     $1, 'app.patchwork.volunteer.profile', $2, '1', $3, $4,
+                     $5, $6, $7, 'chat-only', $8, $9, $10, FALSE, $11, $12,
+                     $13, $14, $15, $15, $16, $17, $15, 'synthetic', $18
+                 )`,
+                [
+                    `at://${VOLUNTEER_DID}/app.patchwork.volunteer.profile/${seed.slug}`,
+                    `bafydemovolunteer${String(index + 1).padStart(2, '0')}`,
+                    didHash(VOLUNTEER_DID),
+                    seed.name,
+                    seed.bio,
+                    JSON.stringify(seed.capabilities),
+                    seed.availability,
+                    JSON.stringify(seed.skills),
+                    JSON.stringify(seed.languages),
+                    seed.area,
+                    seed.latitude,
+                    seed.longitude,
+                    seed.precisionKm,
+                    `${seed.name} ${seed.bio} ${seed.area} ${seed.capabilities.join(' ')} ${seed.languages.join(' ')} fictional synthetic demo`.toLowerCase(),
+                    SEEDED_AT,
+                    922001 + index,
+                    `showcase:volunteer:${index + 2}`,
+                    SHOWCASE_SEED_VERSION,
+                ],
+            );
+        }
         await client.query(
             `INSERT INTO indexer_projection_state (
                  singleton, latest_cursor, heartbeat_at
-             ) VALUES (TRUE, 910003, $1)
+             ) VALUES (TRUE, 922006, $1)
              ON CONFLICT (singleton) DO UPDATE SET
                  latest_cursor = GREATEST(
                      COALESCE(indexer_projection_state.latest_cursor, 0),

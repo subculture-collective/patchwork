@@ -9,6 +9,7 @@ readonly client_image="${PATCHWORK_POSTGRES_CLIENT_IMAGE:-postgres:17}"
 readonly backup_script="${PATCHWORK_BACKUP_SCRIPT:-/srv/repos/subcult/patchwork/scripts/backup-postgres.sh}"
 readonly backup_dir="${PATCHWORK_BACKUP_DIR:-/srv/backups/patchwork}"
 readonly metrics_dir="${PATCHWORK_METRICS_DIR:-/srv/apps/monitoring/data/node-exporter-textfile}"
+readonly docker_network="${PATCHWORK_BACKUP_DOCKER_NETWORK:-host}"
 
 for command in docker node sed; do
     command -v "$command" >/dev/null
@@ -49,7 +50,7 @@ install -d -m 0700 "$backup_dir"
 install -d -m 0755 "$metrics_dir"
 docker image inspect "$client_image" >/dev/null
 
-docker run --rm --pull=never --network host \
+docker run --rm --pull=never --network "$docker_network" \
     --volume "$backup_script:/backup-postgres.sh:ro" \
     --volume "$backup_dir:/backups/patchwork" \
     --volume "$metrics_dir:/metrics" \

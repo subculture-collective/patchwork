@@ -224,3 +224,7 @@ Monitoring:
 - Keep cross-service contracts in `packages/shared`.
 - Prefer deterministic fixtures in tests.
 - Treat geoprivacy/moderation regressions as release blockers.
+
+## License
+
+Licensed under `GPL-3.0-or-later`. See [LICENSE](LICENSE).

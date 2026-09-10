@@ -329,7 +329,7 @@ export function clusterMapCards(
             radiusMeters,
             urgencyMax,
             status: toClusterStatus(groupedCards),
-            label: `${groupedCards.length} requests in approximate area`,
+            label: `${groupedCards.length} ${groupedCards.length === 1 ? 'request' : 'requests'} in approximate area`,
         } satisfies MapCluster;
     });
 }

@@ -84,14 +84,14 @@ test('secondary routes stay inside the mobile viewport', async ({ page }) => {
 
     await page.getByRole('button', { name: /menu/i }).click();
 
-    const chatLink = page.getByRole('link', { name: 'Chat', exact: true });
-    await expect(chatLink).toBeVisible();
-    const bounds = await chatLink.boundingBox();
+    const organizationsLink = page.getByRole('link', { name: 'Organizations', exact: true });
+    await expect(organizationsLink).toBeVisible();
+    const bounds = await organizationsLink.boundingBox();
     expect(bounds).not.toBeNull();
     expect(bounds!.x).toBeGreaterThanOrEqual(0);
     expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(320);
-    await chatLink.click();
-    await expect(page).toHaveURL(/\/chat/);
+    await organizationsLink.click();
+    await expect(page).toHaveURL(/\/organizations/);
 });
 
 test('secondary routes remain visible at 200 percent text sizing', async ({ page }) => {
@@ -100,7 +100,7 @@ test('secondary routes remain visible at 200 percent text sizing', async ({ page
     await page.addStyleTag({ content: 'html { font-size: 200% !important; }' });
     await page.getByRole('button', { name: /menu/i }).click();
 
-    for (const name of ['Chat', 'Groups', 'Volunteer', 'Organizations']) {
+    for (const name of ['Volunteer', 'Organizations']) {
         const link = page.getByRole('link', { name, exact: true });
         await expect(link).toBeVisible();
         const bounds = await link.boundingBox();
@@ -118,9 +118,9 @@ test('desktop secondary navigation renders above page content', async ({ page })
     await toggle.click();
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
 
-    const groupsLink = page.getByRole('link', { name: 'Groups', exact: true });
-    await expect(groupsLink).toBeVisible();
-    const isForeground = await groupsLink.evaluate(element => {
+    const organizationsLink = page.getByRole('link', { name: 'Organizations', exact: true });
+    await expect(organizationsLink).toBeVisible();
+    const isForeground = await organizationsLink.evaluate(element => {
         const bounds = element.getBoundingClientRect();
         const hit = document.elementFromPoint(
             bounds.left + bounds.width / 2,

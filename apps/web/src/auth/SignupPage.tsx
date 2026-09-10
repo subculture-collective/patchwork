@@ -242,12 +242,14 @@ export const SignupPage = () => {
                         <small>{t('auth.tagline')}</small>
                     </span>
                 </a>
-                <p className='mh-kicker mt-12'>{t('auth.safer')}</p>
+                <p className='mh-kicker mt-12'>
+                    {t(inviteToken ? 'auth.invitedKicker' : 'auth.safer')}
+                </p>
                 <h1
                     id='signup-heading'
                     className='font-heading mt-3 text-5xl font-black leading-none tracking-[-0.045em] sm:text-6xl'
                 >
-                    {t('auth.joinHeading')}
+                    {t(inviteToken ? 'auth.invitedHeading' : 'auth.joinHeading')}
                 </h1>
                 <p className='mt-5 max-w-md text-mh-textMuted'>
                     {t(inviteToken ? 'auth.joinHelpShared' : 'auth.joinHelp')}
@@ -264,14 +266,14 @@ export const SignupPage = () => {
                 <p className='mh-kicker'>{t('auth.createYourAccount')}</p>
 
                 {inviteToken ? (
-                    <div
-                        className='border-2 border-mh-success bg-mh-success/10 p-3'
-                        role='status'
-                    >
-                        <strong>{t('auth.sharedInviteReady')}</strong>
-                        <p className='mt-1 text-sm text-mh-textMuted'>
-                            {t('auth.sharedInviteHelp')}
-                        </p>
+                    <div className='mh-invite-welcome' role='status'>
+                        <span className='mh-invite-welcome__mark' aria-hidden='true' />
+                        <div>
+                            <strong>{t('auth.sharedInviteReady')}</strong>
+                            <p className='mt-1 text-sm text-mh-textMuted'>
+                                {t('auth.sharedInviteHelp')}
+                            </p>
+                        </div>
                     </div>
                 ) : null}
 
