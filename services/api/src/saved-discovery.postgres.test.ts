@@ -46,7 +46,7 @@ describe('private saved discovery', () => {
         ).rejects.toThrow('no longer available');
         expect((await service.list('did:plc:saved-alice')).items).toEqual([]);
     });
-    it('establishes a baseline, emits one private daily digest and stops checks after opt-out', async () => {
+    it.each(['opt-out','remove'] as const)('establishes a baseline and cancels queued digests on %s', async (action) => {
         const did = 'did:plc:digest';
         await pool.query(
             'DELETE FROM notification_intents WHERE recipient_did=$1',
@@ -93,13 +93,14 @@ describe('private saved discovery', () => {
       SELECT notification_id,'email',gen_random_uuid(),'digest-test:'||notification_id,'pending',NOW(),NOW(),NOW() FROM notification_intents WHERE recipient_did=$1`,
             [did],
         );
-        await service.setAlerts(did, { id: saved.id, enabled: false });
+        if(action==='remove') await service.remove(did,{id:saved.id});
+        else await service.setAlerts(did, { id: saved.id, enabled: false });
         const delivery = await pool.query(
             `SELECT d.status FROM notification_delivery_attempts d JOIN notification_intents n USING(notification_id) WHERE n.recipient_did=$1`,
             [did],
         );
         expect(delivery.rows.map((row) => row.status)).toEqual(['skipped']);
-        expect((await service.list(did)).items[0]?.alertsEnabled).toBe(false);
+        expect((await service.list(did)).items[0]?.alertsEnabled).toBe(action==='remove' ? undefined : false);
         expect(
             await service.runDigestSweep(
                 new Date(tomorrow.getTime() + 86400001),

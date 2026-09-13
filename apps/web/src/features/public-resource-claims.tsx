@@ -283,6 +283,7 @@ export function PublicResourceClaimManagement() {
 function PublicResourceListingEditor({ resourceUri }: { resourceUri: string }) {
   const { t } = useLocale();
   const [resource, setResource] = useState<ResourceDetail>();
+  const [reconfirmServiceIds, setReconfirmServiceIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   return (
@@ -295,7 +296,7 @@ function PublicResourceListingEditor({ resourceUri }: { resourceUri: string }) {
             setBusy(true);
             void fetchResourceViaApi(resourceUri).then((result) => {
               setBusy(false);
-              if (result.ok) setResource(result.data);
+              if (result.ok) {setResource(result.data); setReconfirmServiceIds([]);}
               else setMessage(result.error);
             });
           }}
@@ -325,6 +326,7 @@ function PublicResourceListingEditor({ resourceUri }: { resourceUri: string }) {
               expectedUpdatedAt: resource.updatedAt,
               serviceProfile: resource.serviceProfile,
               serviceProfileRevision: resource.serviceProfileRevision ?? 0,
+              reconfirmServiceIds,
               name: String(data.get("name")),
               openHours: String(data.get("hours")),
               eligibilityNotes: String(data.get("access")),
@@ -392,6 +394,8 @@ function PublicResourceListingEditor({ resourceUri }: { resourceUri: string }) {
           </label>
           <ResourceProfileEditor
             profile={resource.serviceProfile}
+            reconfirmServiceIds={reconfirmServiceIds}
+            onReconfirmChange={setReconfirmServiceIds}
             onChange={(profile) =>
               setResource({ ...resource, serviceProfile: profile })
             }

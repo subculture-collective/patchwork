@@ -2,7 +2,7 @@ import { readProjectionPage } from './projected-discovery.js';
 import { savedSearchSchema } from '@patchwork/shared';
 import { lookupPostalArea } from '@patchwork/at-lexicons';
 import { createHash, randomUUID } from 'node:crypto';
-import type { Pool } from 'pg';
+import type { Pool, PoolClient } from 'pg';
 import {
     savedDiscoveryInputSchema,
     type SavedDiscoveryItem,
@@ -133,19 +133,7 @@ export class SavedDiscoveryService {
                     'SAVED_ITEM_NOT_FOUND',
                     'This saved item is unavailable.',
                 );
-            if (!input.enabled) {
-                // Already handed-off provider sends cannot be recalled; cancel queued work.
-                await client.query(
-                    `UPDATE notification_delivery_attempts d SET status='skipped',locked_at=NULL,last_error_code='saved-alerts-disabled',updated_at=NOW()
-           FROM notification_intents n WHERE d.notification_id=n.notification_id AND n.recipient_did=$1
-           AND n.notification_type='saved_discovery_changed' AND d.status IN ('pending','retry')`,
-                    [did],
-                );
-                await client.query(
-                    `DELETE FROM notification_intents WHERE recipient_did=$1 AND notification_type='saved_discovery_changed' AND channels_materialized_at IS NULL`,
-                    [did],
-                );
-            }
+            if (!input.enabled) await cancelSavedDeliveries(client,did);
             await client.query('COMMIT');
             return { updated: true };
         } catch (error) {
@@ -269,10 +257,28 @@ export class SavedDiscoveryService {
     }
     async remove(did: string, body: unknown) {
         const { id } = z.object({ id: z.string().uuid() }).strict().parse(body);
-        await this.pool.query(
-            'DELETE FROM saved_discovery WHERE owner_did=$1 AND id=$2',
-            [did, id],
-        );
+        const client=await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            const deleted=await client.query('DELETE FROM saved_discovery WHERE owner_did=$1 AND id=$2 RETURNING id',[did,id]);
+            if(deleted.rowCount)await cancelSavedDeliveries(client,did);
+            await client.query('COMMIT');
+        } catch(error) {await client.query('ROLLBACK');throw error;} finally {client.release();}
         return { removed: true };
     }
+}
+
+async function cancelSavedDeliveries(client:PoolClient,did:string) {
+// Already handed-off provider sends cannot be recalled; cancel queued work.
+                await client.query(
+                    `UPDATE notification_delivery_attempts d SET status='skipped',locked_at=NULL,last_error_code='saved-alerts-disabled',updated_at=NOW()
+           FROM notification_intents n WHERE d.notification_id=n.notification_id AND n.recipient_did=$1
+           AND n.notification_type='saved_discovery_changed' AND d.status IN ('pending','retry')`,
+                    [did],
+                );
+                await client.query(
+                    `DELETE FROM notification_intents WHERE recipient_did=$1 AND notification_type='saved_discovery_changed' AND channels_materialized_at IS NULL`,
+                    [did],
+                );
+
 }

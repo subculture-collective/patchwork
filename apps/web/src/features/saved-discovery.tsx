@@ -109,6 +109,8 @@ export function SavedDiscoveryPanel({ did }: { did: string }) {
     useEffect(() => {
         setItems([]);
         setMessage('');
+        setLoaded(false);
+        void load();
     }, [did]);
     return (
         <section id="saved-discovery">

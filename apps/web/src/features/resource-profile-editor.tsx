@@ -12,8 +12,12 @@ export function ResourceProfileEditor({
     onChange,
     sourceUrl,
     sourceName,
+    reconfirmServiceIds,
+    onReconfirmChange,
 }: {
     profile?: ResourceProfile;
+    reconfirmServiceIds: string[];
+    onReconfirmChange: (ids: string[]) => void;
     onChange: (profile: ResourceProfile) => void;
     sourceUrl: string;
     sourceName: string;
@@ -57,6 +61,10 @@ export function ResourceProfileEditor({
                     <legend>
                         {service.name || t('profileEditor.newService')}
                     </legend>
+                    <label className="block">
+                        <input type="checkbox" checked={reconfirmServiceIds.includes(service.id)} onChange={event => onReconfirmChange(event.target.checked ? [...reconfirmServiceIds,service.id] : reconfirmServiceIds.filter(id=>id!==service.id))} />
+                        {t('profileEditor.reconfirm')}
+                    </label>
                     <label className="block">
                         {t('profileEditor.name')}
                         <input

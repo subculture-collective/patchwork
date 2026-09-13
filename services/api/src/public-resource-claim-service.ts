@@ -1,3 +1,4 @@
+import { confirmProviderProfile } from './provider-resource-profile.js';
 import { resourceProfileSchema } from '@patchwork/shared';
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
@@ -6,7 +7,7 @@ import { PublicHttpError } from './http/error-response.js';
 
 const claimSchema = z.object({ resourceUri: z.string().max(500), organizationId: z.string().uuid(), evidence: z.string().trim().min(20).max(2000) }).strict();
 const decisionSchema = z.object({ claimId: z.string().uuid(), action: z.enum(['approve','deny','revoke']), reason: z.string().trim().min(10).max(2000) }).strict();
-const editSchema = z.object({ expectedUpdatedAt:z.string().datetime().optional(), serviceProfile:resourceProfileSchema.optional(), serviceProfileRevision:z.number().int().nonnegative().optional(), resourceUri: z.string().max(500), name: z.string().trim().min(1).max(120), openHours: z.string().trim().min(1).max(200), eligibilityNotes: z.string().trim().min(1).max(500), contact: z.object({ url: z.string().url().refine(url => /^https?:/.test(url)), phone: z.string().max(32).optional() }).strict() }).strict();
+const editSchema = z.object({ reconfirmServiceIds:z.array(z.string().regex(/^[a-z0-9-]{1,80}$/)).max(50).default([]), expectedUpdatedAt:z.string().datetime().optional(), serviceProfile:resourceProfileSchema.optional(), serviceProfileRevision:z.number().int().nonnegative().optional(), resourceUri: z.string().max(500), name: z.string().trim().min(1).max(120), openHours: z.string().trim().min(1).max(200), eligibilityNotes: z.string().trim().min(1).max(500), contact: z.object({ url: z.string().url().refine(url => /^https?:/.test(url)), phone: z.string().max(32).optional() }).strict() }).strict();
 const fail = (status: number, code: string, message: string): never => { throw new PublicHttpError(status,code,message); };
 
 export class PublicResourceClaimService {
@@ -89,12 +90,10 @@ export class PublicResourceClaimService {
             if(!parsed.expectedUpdatedAt)fail(428,'RESOURCE_REVISION_REQUIRED','Reload the resource before editing.');
             if(new Date(projection.rows[0].record_updated_at).toISOString()!==parsed.expectedUpdatedAt)fail(409,'RESOURCE_REVISION_CONFLICT','This listing changed. Reload it before saving your changes.');
             if(parsed.serviceProfile) {
-                const current=await client.query('SELECT revision FROM resource_service_profiles WHERE resource_uri=$1 FOR UPDATE',[parsed.resourceUri]);
+                const current=await client.query('SELECT revision,profile FROM resource_service_profiles WHERE resource_uri=$1 FOR UPDATE',[parsed.resourceUri]);
                 if(parsed.serviceProfileRevision!==(current.rows[0]?.revision??0))fail(409,'RESOURCE_REVISION_CONFLICT','Service details changed. Reload the listing before saving.');
-                // Verified managers author reviewed assertions; clients cannot backdate approval or extend it indefinitely.
-                const confirmedAt=new Date().toISOString();
-                const expiresAt=new Date(Date.now()+30*86400000).toISOString();
-                const profile=JSON.parse(JSON.stringify(parsed.serviceProfile),(key,value)=>key==='evidence'?{...value,confirmedAt,expiresAt,reviewStatus:'reviewed'}:value);
+                if(parsed.reconfirmServiceIds.some(id=>!parsed.serviceProfile!.services.some(service=>service.id===id)))fail(400,'INVALID_RECONFIRMATION','Reload the service details before confirming them.');
+                const profile=confirmProviderProfile(parsed.serviceProfile,current.rows[0]?.profile,parsed.reconfirmServiceIds);
                 await client.query(`INSERT INTO resource_service_profiles(resource_uri,profile) VALUES($1,$2)
                     ON CONFLICT(resource_uri) DO UPDATE SET profile=EXCLUDED.profile,revision=resource_service_profiles.revision+1,updated_at=NOW()`,[parsed.resourceUri,JSON.stringify(profile)]);
             }

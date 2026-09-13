@@ -1681,7 +1681,8 @@
             "at-most": "Como máximo",
             "at-least": "Como mínimo"
         },
-        "exceptionDate": "Horario especial el"
+        "exceptionDate": "Horario especial el",
+        "reconfirm": "Revisé todos los requisitos y horarios publicados de este servicio y confirmo que siguen vigentes."
     },
     "resourceMap": {
         "cluster": "{{count}} recursos — acerca el mapa para explorar",

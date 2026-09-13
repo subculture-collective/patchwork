@@ -121,6 +121,11 @@ describe('ZIP discovery and sourced-resource claims',()=>{
         expect(profile.profile.services[0].delivery.evidence.reviewStatus).toBe('reviewed');
         await importPublicResources(pool,{apply:true});
         expect((await pool.query('SELECT profile FROM resource_service_profiles WHERE resource_uri=$1',[resourceUri])).rows[0].profile).toEqual(profile.profile);
+        const refreshedTimestamp=(await pool.query('SELECT record_updated_at FROM indexer_directory_resource_projections WHERE uri=$1',[resourceUri])).rows[0].record_updated_at.toISOString();
+        await service.edit(owner,{...edit,name:'Renamed public library',expectedUpdatedAt:refreshedTimestamp,serviceProfile:profile.profile,serviceProfileRevision:1});
+        expect((await pool.query('SELECT profile,revision FROM resource_service_profiles WHERE resource_uri=$1',[resourceUri])).rows[0]).toEqual({profile:profile.profile,revision:2});
+        expect((await pool.query('SELECT profile FROM resource_service_profile_history WHERE resource_uri=$1 AND revision=1',[resourceUri])).rows[0].profile).toEqual(profile.profile);
+
 
         expect((await pool.query('SELECT source_snapshot FROM public_resource_listings WHERE resource_uri=$1',[resourceUri])).rows[0].source_snapshot).toEqual(sourceBefore);
         await service.decide(reviewer,{...decision,action:'revoke'});

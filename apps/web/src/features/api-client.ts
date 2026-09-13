@@ -3869,7 +3869,7 @@ export async function fetchResourceViaApi(uri: string, signal?: AbortSignal, dat
 export const submitPublicResourceClaimViaApi = (input: { resourceUri: string; organizationId: string; evidence: string }) => requestJsonPost('/organizations/resource-claims',input);
 export const listPublicResourceClaimsViaApi = () => requestJson('/organizations/resource-claims',new URLSearchParams());
 export const decidePublicResourceClaimViaApi = (input: { claimId: string; action: 'approve'|'deny'|'revoke'; reason: string }) => requestJsonPut('/organizations/resource-claims/decision',input);
-export const editPublicResourceViaApi = (input: { expectedUpdatedAt?:string;serviceProfile?:import('@patchwork/shared').ResourceProfile;serviceProfileRevision?:number;resourceUri: string; name: string; openHours: string; eligibilityNotes: string; contact: { url: string; phone?: string } }) => requestJsonPut('/organizations/public-resource',input);
+export const editPublicResourceViaApi = (input: { expectedUpdatedAt?:string;serviceProfile?:import('@patchwork/shared').ResourceProfile;serviceProfileRevision?:number; reconfirmServiceIds?:string[];resourceUri: string; name: string; openHours: string; eligibilityNotes: string; contact: { url: string; phone?: string } }) => requestJsonPut('/organizations/public-resource',input);
 
 export const listSavedDiscoveryViaApi = async ():Promise<ApiClientResult<{items:import('@patchwork/shared').SavedDiscoveryItem[]}>> => {
     const result=await requestJson('/account/saved-discovery',new URLSearchParams());

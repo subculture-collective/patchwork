@@ -1681,7 +1681,8 @@
             "at-most": "At most",
             "at-least": "At least"
         },
-        "exceptionDate": "Special hours on"
+        "exceptionDate": "Special hours on",
+        "reconfirm": "I checked all published requirements and hours for this service and confirm they are still current."
     },
     "resourceMap": {
         "cluster": "{{count}} resources — zoom to explore",
