@@ -1,3 +1,4 @@
+import { resourceProfileSchema } from '@patchwork/shared';
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import { z } from 'zod';
@@ -5,7 +6,7 @@ import { PublicHttpError } from './http/error-response.js';
 
 const claimSchema = z.object({ resourceUri: z.string().max(500), organizationId: z.string().uuid(), evidence: z.string().trim().min(20).max(2000) }).strict();
 const decisionSchema = z.object({ claimId: z.string().uuid(), action: z.enum(['approve','deny','revoke']), reason: z.string().trim().min(10).max(2000) }).strict();
-const editSchema = z.object({ resourceUri: z.string().max(500), name: z.string().trim().min(1).max(120), openHours: z.string().trim().min(1).max(200), eligibilityNotes: z.string().trim().min(1).max(500), contact: z.object({ url: z.string().url().refine(url => /^https?:/.test(url)), phone: z.string().max(32).optional() }).strict() }).strict();
+const editSchema = z.object({ expectedUpdatedAt:z.string().datetime().optional(), serviceProfile:resourceProfileSchema.optional(), serviceProfileRevision:z.number().int().nonnegative().optional(), resourceUri: z.string().max(500), name: z.string().trim().min(1).max(120), openHours: z.string().trim().min(1).max(200), eligibilityNotes: z.string().trim().min(1).max(500), contact: z.object({ url: z.string().url().refine(url => /^https?:/.test(url)), phone: z.string().max(32).optional() }).strict() }).strict();
 const fail = (status: number, code: string, message: string): never => { throw new PublicHttpError(status,code,message); };
 
 export class PublicResourceClaimService {
@@ -83,8 +84,22 @@ export class PublicResourceClaimService {
             await this.requireManager(client,listing.claimed_by_organization_id,actorDid);
             const verified = await client.query("SELECT 1 FROM verification_applications WHERE subject_type='organization' AND organization_id=$1 AND subject_ref=$1::uuid::text AND status='approved' AND expires_at>NOW()",[listing.claimed_by_organization_id]);
             if (!verified.rowCount) fail(403,'ORGANIZATION_VERIFICATION_REQUIRED','Renew organization verification before editing this listing.');
+            const projection=await client.query('SELECT record_updated_at FROM indexer_directory_resource_projections WHERE uri=$1 FOR UPDATE',[parsed.resourceUri]);
+            if(!projection.rowCount)fail(404,'PUBLIC_LISTING_NOT_FOUND','The resource listing is no longer available.');
+            if(!parsed.expectedUpdatedAt)fail(428,'RESOURCE_REVISION_REQUIRED','Reload the resource before editing.');
+            if(new Date(projection.rows[0].record_updated_at).toISOString()!==parsed.expectedUpdatedAt)fail(409,'RESOURCE_REVISION_CONFLICT','This listing changed. Reload it before saving your changes.');
+            if(parsed.serviceProfile) {
+                const current=await client.query('SELECT revision FROM resource_service_profiles WHERE resource_uri=$1 FOR UPDATE',[parsed.resourceUri]);
+                if(parsed.serviceProfileRevision!==(current.rows[0]?.revision??0))fail(409,'RESOURCE_REVISION_CONFLICT','Service details changed. Reload the listing before saving.');
+                // Verified managers author reviewed assertions; clients cannot backdate approval or extend it indefinitely.
+                const confirmedAt=new Date().toISOString();
+                const expiresAt=new Date(Date.now()+30*86400000).toISOString();
+                const profile=JSON.parse(JSON.stringify(parsed.serviceProfile),(key,value)=>key==='evidence'?{...value,confirmedAt,expiresAt,reviewStatus:'reviewed'}:value);
+                await client.query(`INSERT INTO resource_service_profiles(resource_uri,profile) VALUES($1,$2)
+                    ON CONFLICT(resource_uri) DO UPDATE SET profile=EXCLUDED.profile,revision=resource_service_profiles.revision+1,updated_at=NOW()`,[parsed.resourceUri,JSON.stringify(profile)]);
+            }
             const updated = await client.query(`UPDATE indexer_directory_resource_projections SET name=$2,open_hours=$3,eligibility_notes=$4,contact=$5,
-                searchable_text=lower($2||' '||$4),record_updated_at=NOW() WHERE uri=$1`,[parsed.resourceUri,parsed.name,parsed.openHours,parsed.eligibilityNotes,JSON.stringify(parsed.contact)]);
+                searchable_text=lower($2||' '||$4),record_updated_at=greatest(NOW(),record_updated_at+INTERVAL '1 millisecond') WHERE uri=$1`,[parsed.resourceUri,parsed.name,parsed.openHours,parsed.eligibilityNotes,JSON.stringify(parsed.contact)]);
             if (!updated.rowCount) fail(404,'PUBLIC_LISTING_NOT_FOUND','The resource listing is no longer available.');
             await client.query("INSERT INTO public_resource_audit_events(resource_uri,actor_did,action,details) VALUES($1,$2,'listing-edited',$3)",[parsed.resourceUri,actorDid,JSON.stringify(parsed)]);
             await client.query('COMMIT'); return { updated:true };

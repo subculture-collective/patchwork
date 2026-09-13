@@ -189,6 +189,7 @@ const spanishNotificationCopy: Readonly<
         title: 'Turno sin asistencia',
         body: 'Un turno programado requiere revisión.',
     },
+    saved_discovery_changed: { title: 'Tus elementos guardados tienen novedades', body: 'Abre Mi actividad para revisar los cambios en tus elementos guardados.' },
     system_announcement: {
         title: 'Anuncio de Patchwork',
         body: 'Hay una actualización del servicio disponible.',

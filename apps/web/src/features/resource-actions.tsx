@@ -1,3 +1,5 @@
+import { ResourceServiceDetails } from './resource-service-details';
+import { SaveDiscoveryButton } from './saved-discovery';
 import { PublicResourceClaim } from './public-resource-claims';
 import { useLocale } from '../i18n';
 import { currentExactPublicAddress, type ResourceDetail } from '../resource-directory-ux';
@@ -38,6 +40,7 @@ export function ResourceActions({ resource }: { resource: ResourceDetail }) {
             <h3 className='font-semibold'>{t('nearby.beforeVisiting')}</h3>
             <p className='text-sm'>{resource.eligibilityNotes}</p>
         </section>}
+        {resource.serviceProfile && <ResourceServiceDetails resourceUri={resource.uri} profile={resource.serviceProfile} />}
         <p className='text-sm'>{t('handoff.resourceContactHint')}</p>
         <div className='flex flex-wrap gap-2'>
             {links.website && <a className={linkClass} href={links.website} target='_blank' rel='noopener noreferrer'>{t('handoff.visitWebsite')}</a>}
@@ -45,6 +48,7 @@ export function ResourceActions({ resource }: { resource: ResourceDetail }) {
             {links.directions && <a className={linkClass} href={links.directions} target='_blank' rel='noopener noreferrer'>{t('handoff.directions')}</a>}
             <a className={linkClass} href={`/posting?${query.toString()}`}>{t('handoff.askCommunity')}</a>
         </div>
+        <SaveDiscoveryButton input={{kind:'resource',resourceUri:resource.uri}} />
         <PublicResourceClaim resource={resource} />
         {!links.website && !links.telephone && <p className='text-sm'>{t('handoff.contactUnavailable')}</p>}
         {!links.directions && <p className='text-xs'>{t('handoff.approximateResource')}</p>}

@@ -1,3 +1,5 @@
+import { resourceMapResponseSchema, type ResourceMapViewport } from '@patchwork/shared';
+import { resourceProfileSchema } from '@patchwork/shared';
 import type { DiscoveryMapAggregates } from '@patchwork/shared';
 import {
     aidCategories,
@@ -2287,6 +2289,8 @@ const mapDirectoryPayloadToDetails = (
             } } : {}),
             openHours: readString(row, 'openHours'),
             eligibilityNotes: readString(row, 'eligibilityNotes'),
+            serviceProfile:resourceProfileSchema.safeParse(row['serviceProfile']).data,
+            serviceProfileRevision:readNumber(row,'serviceProfileRevision'),
             contact: {
                 url: readString(contact, 'url'),
                 phone: readString(contact, 'phone'),
@@ -2413,8 +2417,9 @@ export const fetchDirectoryCardPageFromApi = async (
 export const fetchMapResourcePageFromApi = async (
     state: DiscoveryFilterState,
     signal?: AbortSignal,
+    page = 1,
 ): Promise<ApiClientResult<PagedResult<ResourceDirectoryCard>>> => {
-    const params = buildDirectoryQueryParams(state, 1);
+    const params = buildDirectoryQueryParams(state, page);
     params.set('pageSize', '100');
     const result = await requestJson('/query/directory', params, signal);
     if (!result.ok) return result;
@@ -3864,4 +3869,22 @@ export async function fetchResourceViaApi(uri: string, signal?: AbortSignal, dat
 export const submitPublicResourceClaimViaApi = (input: { resourceUri: string; organizationId: string; evidence: string }) => requestJsonPost('/organizations/resource-claims',input);
 export const listPublicResourceClaimsViaApi = () => requestJson('/organizations/resource-claims',new URLSearchParams());
 export const decidePublicResourceClaimViaApi = (input: { claimId: string; action: 'approve'|'deny'|'revoke'; reason: string }) => requestJsonPut('/organizations/resource-claims/decision',input);
-export const editPublicResourceViaApi = (input: { resourceUri: string; name: string; openHours: string; eligibilityNotes: string; contact: { url: string; phone?: string } }) => requestJsonPut('/organizations/public-resource',input);
+export const editPublicResourceViaApi = (input: { expectedUpdatedAt?:string;serviceProfile?:import('@patchwork/shared').ResourceProfile;serviceProfileRevision?:number;resourceUri: string; name: string; openHours: string; eligibilityNotes: string; contact: { url: string; phone?: string } }) => requestJsonPut('/organizations/public-resource',input);
+
+export const listSavedDiscoveryViaApi = async ():Promise<ApiClientResult<{items:import('@patchwork/shared').SavedDiscoveryItem[]}>> => {
+    const result=await requestJson('/account/saved-discovery',new URLSearchParams());
+    if(!result.ok)return result;
+    const body=result.data as {items?:unknown};
+    return body && Array.isArray(body.items) ? {ok:true,data:body as {items:import('@patchwork/shared').SavedDiscoveryItem[]}} : invalidResponseFailure('Saved resources could not be loaded.');
+};
+export const saveDiscoveryViaApi = (input:import('@patchwork/shared').SavedDiscoveryInput) => requestJsonPut('/account/saved-discovery',input);
+export const removeSavedDiscoveryViaApi = (id:string) => requestJsonDelete('/account/saved-discovery',{id});
+
+export const fetchResourceMapViaApi = async(state:DiscoveryFilterState,viewport:ResourceMapViewport,signal?:AbortSignal)=>{
+    const params=buildDirectoryQueryParams(state,1);params.set('mapZoom',String(viewport.zoom));
+    for(const key of ['west','east','south','north'] as const)params.set(key,String(viewport[key]));
+    const result=await requestJson('/query/resource-map',params,signal);if(!result.ok)return result;
+    const parsed=resourceMapResponseSchema.safeParse(result.data);return parsed.success?{ok:true as const,data:parsed.data}:invalidResponseFailure('Resource map response was malformed.');
+};
+
+export const setSavedDiscoveryAlertsViaApi=(id:string,enabled:boolean)=>requestJsonPut('/account/saved-discovery/alerts',{id,enabled});

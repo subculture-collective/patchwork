@@ -83,3 +83,11 @@ Generated coverage, screenshots, traces, and run output stay in ignored
 `coverage/`, `output/`, `.playwright-cli/`, and Playwright artifact directories.
 The artifact privacy check runs before CI uploads. Keep historical run results
 with CI/releases rather than adding completion documents or test-count ledgers.
+
+
+## Product journey additions
+
+- Saved discovery: shared schema tests reject precise origins and eligibility profiles; PostgreSQL tests own deduplication, owner isolation, alert baselines and daily digest behavior. Account-privacy integration covers export and deactivation. The browser journey saves, reloads, reopens and removes an item.
+- Resource map: PostgreSQL compares full filtered totals with viewport cell counts independently of the list page. Browser journeys expand aggregates and select a resource outside the loaded page.
+- Service details: shared tests cover expired/conflicting evidence, incomplete answers, overnight schedules, closures and DST. Browser checks prove answers never enter requests, URLs or browser storage and clear on reload. Claim integration protects imported evidence and rejects stale provider edits.
+- Advanced routing remains an unqualified capability until graph builds, coverage, request cancellation, transient-origin privacy, real itineraries, concurrent performance and the post-activation observation window pass. Do not infer routing completion from service-profile tests.

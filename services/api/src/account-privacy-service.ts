@@ -164,6 +164,7 @@ export class AccountPrivacyService {
                     removedOrganizations += removed.rowCount ?? 0;
                 }
             }
+            await client.query('DELETE FROM saved_discovery WHERE owner_did=$1',[did]);
             await client.query("DELETE FROM public_resource_claims WHERE applicant_did=$1 AND status<>'approved'",[did]);
             await client.query("UPDATE public_resource_claims SET evidence='Evidence removed at account request.' WHERE applicant_did=$1",[did]);
             const organizationStewardships = await client.query(
@@ -1150,6 +1151,7 @@ export class AccountPrivacyService {
              WHERE actor_did = $1 ORDER BY occurred_at, audit_event_id`,
             [did],
         );
+        const savedDiscovery = await client.query('SELECT kind,resource_uri,search,alerts_enabled,created_at FROM saved_discovery WHERE owner_did=$1 ORDER BY created_at,id',[did]);
         const authoringReceipts = await client.query('SELECT post_uri, title, source_cid, public_status, source_written_at, deleted_at, retention_until FROM aid_authoring_receipts WHERE owner_did = $1 ORDER BY source_written_at, post_uri', [did]);
         const commandMetadata = await client.query<{
                 method: string;
@@ -1655,6 +1657,7 @@ export class AccountPrivacyService {
                     occurredAt: iso(row.occurred_at),
                     retentionUntil: iso(row.retention_until),
                 })),
+                savedDiscovery: savedDiscovery.rows,
                 authoringReceipts: authoringReceipts.rows.map(row => ({
                     uri: row.post_uri, title: row.title, sourceCid: row.source_cid,
                     publicStatus: row.public_status, sourceWrittenAt: row.source_written_at.toISOString(),

@@ -32,3 +32,7 @@ export * from './account-onboarding.js';
 export * from './organizations.js';
 
 export * from './resource-services.js';
+
+export * from './saved-discovery.js';
+export * from './resource-profile.js';
+export * from './resource-map.js';

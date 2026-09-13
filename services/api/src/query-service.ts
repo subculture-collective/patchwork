@@ -390,6 +390,8 @@ export class PostgresProjectionQueryService {
         const listings = await this.pool.query(`SELECT resource_uri, source_name, source_url, source_retrieved_at,
             claimed_by_organization_id FROM public_resource_listings WHERE resource_uri=ANY($1::text[])`,
             [(result.body as ApiQueryDirectoryResponse).results.map(row => row.uri)]);
+        const profiles=await this.pool.query('SELECT resource_uri,profile,revision FROM resource_service_profiles WHERE resource_uri=ANY($1::text[])',[(result.body as ApiQueryDirectoryResponse).results.map(row=>row.uri)]);
+        const profileByUri=new Map(profiles.rows.map(row=>[row.resource_uri,{serviceProfile:row.profile,serviceProfileRevision:row.revision}]));
         const listingByUri = new Map(listings.rows.map(row => [row.resource_uri, {
             sourceName: row.source_name, sourceUrl: row.source_url, sourceRetrievedAt: new Date(row.source_retrieved_at).toISOString(),
             claimStatus: row.claimed_by_organization_id ? 'claimed' : 'unclaimed',
@@ -407,6 +409,7 @@ export class PostgresProjectionQueryService {
                 ...body,
                 results: body.results.map(row => ({
                     ...row,
+                    ...profileByUri.get(row.uri),
                     ...(listingByUri.has(row.uri) ? { publicListing: listingByUri.get(row.uri) } : {}),
                     ...(exactByUri.has(row.uri) ?
                         { exactPublicAddress: exactByUri.get(row.uri) }

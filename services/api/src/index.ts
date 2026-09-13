@@ -1,3 +1,6 @@
+import { createResourceMapHandler } from './http/resource-map-handler.js';
+import { SavedDiscoveryService } from './saved-discovery-service.js';
+import { createSavedDiscoveryHandler } from './http/saved-discovery-handler.js';
 import { AuthoringReceiptService } from './authoring-receipts.js';
 import { createAccountRequestsHandler } from './http/account-requests-handler.js';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
@@ -512,6 +515,9 @@ const accountPrivacyHandler =
             },
         })
     :   undefined;
+const resourceMapHandler=postgresPool?createResourceMapHandler(postgresPool):undefined;
+const savedDiscoveryService=postgresPool?new SavedDiscoveryService(postgresPool):undefined;
+const savedDiscoveryHandler = savedDiscoveryService && authenticateApiRequest ? createSavedDiscoveryHandler(savedDiscoveryService,authenticateApiRequest) : undefined;
 const accountRequestsHandler = authoringReceiptService && authenticateApiRequest
     ? createAccountRequestsHandler(authoringReceiptService, authenticateApiRequest) : undefined;
 const accountOnboardingHandler =
@@ -2041,6 +2047,10 @@ export const createApiServer = () => {
             return;
         }
 
+        if(resourceMapHandler?.(request,response,requestUrl))return;
+        if(requestUrl.pathname==='/query/resource-map'){writeJson(response,503,{error:{code:'RESOURCE_MAP_UNAVAILABLE',message:'Resource map is unavailable.'}});return;}
+        if (savedDiscoveryHandler?.(request, response, requestUrl)) return;
+        if (requestUrl.pathname === '/account/saved-discovery'||requestUrl.pathname === '/account/saved-discovery/alerts') { writeJson(response,503,{error:{code:'SAVED_DISCOVERY_UNAVAILABLE',message:'Saved discovery is unavailable.'}});return; }
         if (accountRequestsHandler?.(request, response, requestUrl)) return;
         if (requestUrl.pathname === '/account/requests') {
             writeJson(response, 503, { error: { code: 'ACCOUNT_REQUESTS_UNAVAILABLE', message: 'Your requests are temporarily unavailable.' } });
@@ -2615,6 +2625,7 @@ export const startApiServer = () => {
                 intervalMs:
                     config.API_NOTIFICATION_INTERVAL_SECONDS * 1_000,
                 enforce: async () => {
+                    try { await savedDiscoveryService?.runDigestSweep(); } catch { console.error(JSON.stringify({level:'error',event:'saved_discovery_digest_failed'})); }
                     const delivery =
                         await notificationService.runDeliverySweep();
                     const expired =

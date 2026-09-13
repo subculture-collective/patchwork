@@ -36,6 +36,8 @@ export interface ResourceDirectoryCard {
         precisionMeters: number;
         areaLabel?: string;
     };
+    serviceProfile?: import('@patchwork/shared').ResourceProfile;
+    serviceProfileRevision?: number;
     openHours?: string;
     eligibilityNotes?: string;
     contact: {

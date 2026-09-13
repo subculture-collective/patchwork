@@ -890,3 +890,6 @@ input[type="file"] { max-width: 100%; min-width: 0; }
 .is-resource-journey .mh-map-skip:focus { position:static; width:auto; height:auto; clip-path:none; padding:6px; }
 
 .mh-exact-resource-pin.is-selected .mh-exact-resource-pin-dot { outline:3px solid var(--mh-focus); outline-offset:3px; }
+
+.mh-resource-cluster { display:grid; place-items:center; border:1px solid var(--mh-border); background:var(--mh-surface,#fff); color:var(--mh-text,#222); border-radius:4px; font-weight:700; }
+.mh-resource-cluster:focus-visible { outline:3px solid var(--mh-accent,#176b52); outline-offset:3px; }

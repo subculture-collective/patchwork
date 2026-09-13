@@ -1,4 +1,4 @@
-import { categoryServices, resourceProgramEvidence } from '@patchwork/shared';
+import { categoryServices, resourceProgramEvidence, resourceMapViewportSchema, type ResourceMapCell } from '@patchwork/shared';
 import { lookupPostalArea } from '@patchwork/at-lexicons';
 import { z, ZodError } from 'zod';
 import type { Pool, QueryResultRow } from 'pg';
@@ -16,16 +16,17 @@ const queryInput = (params: URLSearchParams) => ({
     freshnessHours: number(params, 'freshnessHours'), searchText: params.get('searchText') || undefined,
     page: number(params, 'page'), pageSize: number(params, 'pageSize'),
 });
-export interface BoundedPage<T> { rows: T[]; total: number; page: number; pageSize: number; now: string; aggregates?: DiscoveryMapAggregates; freshness: { latestCursor: number | null; projectedAt: string | null; observedAt: string | null; lagSeconds: number | null }; }
+export interface BoundedPage<T> { rows: T[]; allUris?:string[]; total: number; page: number; pageSize: number; now: string; aggregates?: DiscoveryMapAggregates; resourceMap?:{total:number;mapped:number;cells:ResourceMapCell[]}; freshness: { latestCursor: number | null; projectedAt: string | null; observedAt: string | null; lagSeconds: number | null }; }
 
 /** Filters, ranking, totals and pagination stay in PostgreSQL. Only one page crosses the wire. */
-export async function readProjectionPage<T extends QueryResultRow>(pool: Pool, params: URLSearchParams, kind: 'map' | 'feed' | 'directory', viewerDid?: string, uri?: string): Promise<BoundedPage<T>> {
+export async function readProjectionPage<T extends QueryResultRow>(pool: Pick<Pool,'query'>, params: URLSearchParams, kind: 'map' | 'feed' | 'directory', viewerDid?: string, uri?: string, includeAllUris=false): Promise<BoundedPage<T>> {
     const dataset = discoveryDataset(params);
     const raw = queryInput(params);
     const input = kind === 'directory' ? validateDirectoryQueryInput(raw) : kind === 'map' && (raw.latitude !== undefined || raw.longitude !== undefined || raw.radiusKm !== undefined) ? validateAidQueryInput(raw) : validateAidFeedQueryInput(raw);
     const page = input.page ?? 1, pageSize = input.pageSize ?? 20;
     const values: unknown[] = [];
     const bind = (value: unknown) => { values.push(value); return `$${values.length}`; };
+    const viewport=kind==='directory'&&params.has('mapZoom')?resourceMapViewportSchema.parse({zoom:number(params,'mapZoom'),west:number(params,'west'),east:number(params,'east'),south:number(params,'south'),north:number(params,'north')}):undefined;
     const now = new Date().toISOString();
     const nowParam = bind(now);
     const where = [dataset === 'all' ? 'TRUE' : `p.record_origin ${dataset === 'demo' ? '=' : '<>'} 'synthetic'`];
@@ -94,7 +95,21 @@ export async function readProjectionPage<T extends QueryResultRow>(pool: Pool, p
         ? 'distance_km ASC, record_updated_at DESC, uri COLLATE "C"'
         : `${score} record_updated_at DESC, uri COLLATE "C"`;
     const limit = bind(pageSize), offset = bind((page - 1) * pageSize);
-    const result = await pool.query<{ rows: T[]; aggregates: DiscoveryMapAggregates | null; total: string; projected_at: string | null; state: { latest_cursor: string | null; heartbeat_at: string } | null }>(`WITH candidates AS MATERIALIZED (
+    // Bound cells even when a caller combines street zoom with a world viewport.
+    // Coarsening conserves every match instead of truncating marker results.
+    const longitudeSpan = viewport ? (viewport.east >= viewport.west ? viewport.east - viewport.west : 360 - viewport.west + viewport.east) : 0;
+    const mapStep=viewport?bind(Math.max(360/(2**viewport.zoom*4), longitudeSpan / 40, (viewport.north - viewport.south) / 40)):undefined;
+    const mapWhere=viewport?`e.latitude BETWEEN ${bind(viewport.south)} AND ${bind(viewport.north)} AND ${viewport.west<=viewport.east?`e.longitude BETWEEN ${bind(viewport.west)} AND ${bind(viewport.east)}`:`(e.longitude>=${bind(viewport.west)} OR e.longitude<=${bind(viewport.east)})`}`:'FALSE';
+    const mapCte=viewport&&kind==='directory'?`, exact_places AS (
+        SELECT f.uri,p.name,e.latitude,e.longitude FROM filtered f JOIN indexer_directory_resource_projections p ON p.uri=f.uri JOIN LATERAL (
+            SELECT latitude,longitude FROM eligible_public_resource_addresses a WHERE a.resource_uri=f.uri ORDER BY basis DESC,valid_until DESC LIMIT 1
+        ) e ON TRUE WHERE ${mapWhere}
+    ), resource_cells AS (
+        SELECT avg(latitude) AS latitude,avg(longitude) AS longitude,count(*)::integer AS count,
+            CASE WHEN count(*)=1 THEN min(uri) END AS "resourceUri",CASE WHEN count(*)=1 OR (min(latitude)=max(latitude) AND min(longitude)=max(longitude)) THEN to_jsonb((array_agg(jsonb_build_object('uri',uri,'name',name) ORDER BY uri))[1:20]) ELSE '[]'::jsonb END AS members,min(longitude) AS west,max(longitude) AS east,min(latitude) AS south,max(latitude) AS north
+        FROM exact_places GROUP BY floor(latitude/${mapStep}::double precision),floor(longitude/${mapStep}::double precision)
+    )`:'';
+    const result = await pool.query<{ rows: T[]; all_uris?:string[]; resource_map?:{total:number;mapped:number;cells:ResourceMapCell[]}; aggregates: DiscoveryMapAggregates | null; total: string; projected_at: string | null; state: { latest_cursor: string | null; heartbeat_at: string } | null }>(`WITH candidates AS MATERIALIZED (
         SELECT p.uri, ${kind === 'directory' ? 'NULL::text' : 'p.postal_code'} AS postal_code, ${kind === 'directory' ? 'p.latitude' : 'CASE WHEN p.postal_code IS NOT NULL THEN p.latitude END'} AS latitude, ${kind === 'directory' ? 'p.longitude' : 'CASE WHEN p.postal_code IS NOT NULL THEN p.longitude END'} AS longitude, p.precision_km, p.record_created_at, p.record_updated_at, p.projected_at, ${distance} AS distance_km FROM ${table} p WHERE ${where.join(' AND ')}
     ), filtered AS MATERIALIZED (SELECT * FROM candidates ${radius}), paged AS (
         SELECT * FROM filtered ORDER BY ${order} LIMIT ${limit} OFFSET ${offset}
@@ -110,12 +125,14 @@ export async function readProjectionPage<T extends QueryResultRow>(pool: Pool, p
             count(*)::integer AS count, max(precision_km) + 1 AS "radiusKm", postal_code AS "postalCode"
         FROM filtered WHERE latitude IS NOT NULL AND longitude IS NOT NULL
         GROUP BY 1, 2, postal_code ORDER BY 1, 2, postal_code
-    ) SELECT ${nowParam}::timestamptz AS query_at, stats.total::text AS total, stats.projected_at,
+    ) ${mapCte} SELECT ${nowParam}::timestamptz AS query_at, stats.total::text AS total, stats.projected_at,
+        ${includeAllUris?"coalesce((SELECT jsonb_agg(uri ORDER BY uri) FROM filtered),'[]'::jsonb)":'NULL::jsonb'} AS all_uris,
+        ${viewport&&kind==='directory'?`jsonb_build_object('total',stats.total,'mapped',(SELECT count(*) FROM exact_places),'cells',coalesce((SELECT jsonb_agg(to_jsonb(c) ORDER BY latitude,longitude) FROM resource_cells c),'[]'::jsonb))`:'NULL::jsonb'} AS resource_map,
         ${kind === 'map' ? `jsonb_build_object('requestCount', stats.total, 'locatedRequestCount', stats.located, 'truncated', (SELECT count(*) > 34000 FROM cells), 'cells', coalesce((SELECT jsonb_agg(to_jsonb(c)) FROM (SELECT * FROM cells LIMIT 34000) c), '[]'::jsonb))` : 'NULL::jsonb'} AS aggregates,
         coalesce((SELECT jsonb_agg(to_jsonb(r) - 'ordinal' ORDER BY r.ordinal) FROM page_records r), '[]'::jsonb) AS rows,
         (SELECT jsonb_build_object('latest_cursor', latest_cursor::text, 'heartbeat_at', heartbeat_at) FROM indexer_projection_state WHERE singleton = TRUE) AS state FROM stats`, values);
     const data = result.rows[0]!;
-    return { rows: data.rows, total: Number(data.total), page, pageSize, now, ...(data.aggregates ? { aggregates: data.aggregates } : {}), freshness: {
+    return { ...(data.all_uris?{allUris:data.all_uris}:{}),...(data.resource_map?{resourceMap:data.resource_map}:{}),rows: data.rows, total: Number(data.total), page, pageSize, now, ...(data.aggregates ? { aggregates: data.aggregates } : {}), freshness: {
         latestCursor: data.state?.latest_cursor ? Number(data.state.latest_cursor) : null,
         projectedAt: data.projected_at ? new Date(data.projected_at).toISOString() : null,
         observedAt: data.state ? new Date(data.state.heartbeat_at).toISOString() : null,
@@ -124,7 +141,7 @@ export async function readProjectionPage<T extends QueryResultRow>(pool: Pool, p
 }
 const iso = (value: string) => new Date(value).toISOString();
 const common = (row: QueryResultRow) => ({ uri: row.uri as string, authorDid: String(row.uri).split('/')[2]!, ...(row.cid ? { cid: row.cid as string } : {}), createdAt: iso(row.record_created_at), updatedAt: iso(row.record_updated_at), recordOrigin: row.record_origin });
-export async function queryProjected(pool: Pool, params: URLSearchParams, kind: 'map' | 'feed' | 'directory', viewerDid?: string, uri?: string): Promise<ApiRouteResult> {
+export async function queryProjected(pool: Pick<Pool,'query'>, params: URLSearchParams, kind: 'map' | 'feed' | 'directory', viewerDid?: string, uri?: string): Promise<ApiRouteResult> {
     try {
         const result = await readProjectionPage(pool, params, kind, viewerDid, uri);
         const results = result.rows.map(row => {

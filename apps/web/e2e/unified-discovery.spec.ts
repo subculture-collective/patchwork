@@ -451,3 +451,26 @@ test('resource searches keep the mobile map and a separate resource list through
     await page.goBack();
     await expect(page.getByRole('button',{name:'Public resources',exact:true})).toHaveAttribute('aria-pressed','true');
 });
+
+
+test('Nearby loads resources beyond its first page and retains filters and selection', async ({ page }) => {
+    await page.setViewportSize({width:390,height:844});
+    const queries: URL[]=[];
+    const resource=(n:number)=>({uri:`at://did:plc:resource/app.patchwork.directory.resource/${n}`,authorDid:'did:plc:resource',name:`Public clinic ${n}`,category:'clinic',serviceArea:'Chicago, IL 60608',status:'unverified',operationalStatus:'unknown',contact:{url:'https://example.org'},approximateGeo:{latitude:41.85,longitude:-87.67,precisionKm:1},createdAt:'2026-09-01T00:00:00Z',updatedAt:'2026-09-01T00:00:00Z'});
+    await page.route('**/api/query/directory?**',route=>{
+        const url=new URL(route.request().url());queries.push(url);
+        const next=Number(url.searchParams.get('page')??1);
+        return route.fulfill({json:{results:next===1?Array.from({length:100},(_,i)=>resource(i)): [resource(100)],total:101,page:next,pageSize:100,hasNextPage:next===1}});
+    });
+    await page.goto('/nearby?nearby=resources&zip=60608&program=wic&r=5000');
+    await page.getByRole('button',{name:'Resources (101)',exact:true}).click();
+    await page.getByRole('button',{name:'Load more',exact:true}).click();
+    await expect(page.locator('.mh-resource-result')).toHaveCount(101);
+    await expect(page.getByRole('button',{name:'Load more',exact:true})).toHaveCount(0);
+    expect(queries.some(url=>url.searchParams.get('page')==='2'&&url.searchParams.get('program')==='wic')).toBe(true);
+    await page.locator('.mh-resource-result').last().click();
+    await expect(page.getByRole('heading',{name:'Public clinic 100',exact:true})).toBeVisible();
+    await page.getByRole('button',{name:'Close',exact:true}).click();
+    await expect(page.locator('.mh-resource-result')).toHaveCount(101);
+    expect(new URL(page.url()).searchParams.get('r')).toBe('5000');
+});

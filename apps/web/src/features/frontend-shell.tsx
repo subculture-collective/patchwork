@@ -1,3 +1,4 @@
+import { SavedDiscoveryPanel } from './saved-discovery';
 import { nearbyResourceIntent } from '../discovery-filters';
 import { Modal } from '../components/Modal';
 import { MapDetailSheet } from './map-detail-sheet';
@@ -6591,6 +6592,7 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                     {t('myRequests.refresh')}
                 </Button>
             </header>
+            <SavedDiscoveryPanel key={did} did={did} />
 
             <div id='my-requests' className='scroll-mt-24'>
                 <Suspense fallback={null}>
@@ -9126,7 +9128,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         }
 
         const page =
-            currentRoute === '/resources'
+            currentRoute === '/resources' || ((currentRoute === '/map' || currentRoute === '/feed') && nearbyResourceIntent(discoveryState))
                 ? directoryPage
                 : currentRoute === '/map' || currentRoute === '/feed'
                   ? aidPage
@@ -9307,7 +9309,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
 
         void (
             currentRoute !== '/resources'
-                ? fetchMapResourcePageFromApi(discoveryState, controller.signal)
+                ? fetchMapResourcePageFromApi(discoveryState, controller.signal, directoryPage)
                 : fetchDirectoryCardPageFromApi(
                       discoveryState,
                       directoryPage,
@@ -9321,7 +9323,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
 
                 if (result.ok) {
                     setResourceCards(current =>
-                        currentRoute !== '/resources' || directoryPage === 1
+                        directoryPage === 1
                             ? appendDedupedPage(
                                   [],
                                   result.data.items,
@@ -9674,6 +9676,8 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                 aggregates={aidAggregates}
                 resourceTotal={directoryTotal}
                 resourcesLoading={isDirectoryLoading}
+                resourcesHasNextPage={directoryHasNextPage}
+                onLoadMoreResources={() => setDirectoryPage(page => page + 1)}
                 discoveryState={discoveryState}
                 filters={
                     <DiscoveryFiltersPanel

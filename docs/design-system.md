@@ -43,4 +43,25 @@ Nearby has two explicit intents, persisted as `nearby=resources` or `nearby=requ
 - **Help a neighbor.** Community requests uses county/ZIP counts and a request list. Selecting a ZIP can open that list on mobile. Public resource searches keep the mobile map and offer a separate resource list; they never redirect visitors to an empty requests list.
 - **Recover without starting over.** Location denial retains a chosen area and ZIP entry remains available. Filters are expandable with visible removable selections. Empty resource results offer a wider search when below the maximum radius. API failure is distinguished from an empty result. URL state supports reload, sharing and browser history; exact request addresses remain private.
 
-At mobile widths, the resource journey keeps ZIP/location controls above the map, places keyword/program/service/type refinements in a disclosure, and switches between the retained map and resource list. County and ZIP boundaries remain keyboard operable; resource mode uses area names without request counts. The full directory remains available for results beyond the map's 100-resource limit.
+At mobile widths, the resource journey keeps ZIP/location controls above the map, places keyword/program/service/type refinements in a disclosure, and switches between the retained map and resource list. County and ZIP boundaries remain keyboard operable; resource mode uses area names without request counts. The resource list can load additional pages. The server aggregates the complete matching set for the visible map independently of the loaded list; individual pins represent eligible public addresses.
+
+
+## Whole-product acceptance contracts
+
+| Journey | Acceptance owner and remaining qualification |
+| --- | --- |
+| Find help | Shared server filtering, full-list pagination and independent resource-map aggregation; verify viewport count conservation and cross-page selection. |
+| Determine whether a service can help | Versioned service assertions with source, review state and expiry. Optional eligibility answers stay in browser memory and clear on resource/account changes or reload. Structured source ingestion and Chicago coverage qualification remain required. |
+| Plan a visit | Published service schedules distinguish scheduled open, scheduled closed and unknown. Self-hosted road/transit routing, precise-origin consent, coverage qualification and arrival-time matching remain required. |
+| Ask for help | ZIP-only publication, restored drafts, authoring receipts and lifecycle controls; qualify actual authentication, PDS publication and indexing on disposable test identities. |
+| Help a neighbor | Offers, responses, private connections and expiry; qualify actual lifecycle persistence and recovery rather than relying solely on browser fixtures. |
+| Coordinate and finish | Chat, schedule/timezones, peer address exchange, groups and outcomes; qualify real authenticated delivery and consent boundaries. |
+| Return later | Private saved resources/searches, daily opt-in digests, ownership, export and deletion. Exact origins and eligibility answers are rejected by saved-search contracts. |
+| Maintain a resource | Independent claims, bilingual management, reviewed service editor and revision conflicts. Provider edits preserve original imported source snapshots. |
+| Resolve problems | Existing moderation/account controls; dedicated listing corrections and source-review workflow remain required. |
+
+Saved discovery is capped at 200 items per account, with an explicit recoverable limit response. Alert baselines are established on opt-in; one generic notification per account per UTC day summarizes changes. Delivery follows existing channel preferences. Search alerts identify newly matching records; resource alerts compare public service/contact details. No source query, resource name, precise location or eligibility answer enters notification copy.
+
+A provider's service assertions require reconfirmation after 30 days. Blank fields remain unknown. Simple eligibility rules are independent requirements combined with AND; alternative or complex rules remain explanatory text. Provider edits require the loaded resource timestamp and service-profile revision so a stale form cannot overwrite a newer edit.
+
+The routing exception described in the product plan is not active until the dedicated transient-routing service, consent UI and updated privacy checks are implemented and qualified. Existing exact-personal-location restrictions remain authoritative meanwhile.

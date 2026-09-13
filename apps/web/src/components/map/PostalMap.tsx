@@ -1,3 +1,6 @@
+import { fetchResourceMapViaApi } from '../../features/api-client';
+import type { DiscoveryFilterState } from '../../discovery-filters';
+import type { ResourceMapCell } from '@patchwork/shared';
 import 'leaflet/dist/leaflet.css';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
@@ -16,6 +19,8 @@ interface Props {
     selectedPostalCode?: string;
     searchRadiusMeters?: number;
     resourceMode?: boolean;
+    discoveryState?: DiscoveryFilterState;
+    onShowResourceList?:()=>void;
     selectedResourceUri?: string;
     onSelectPostalCode: (code: string) => void;
     onClearPostalCode: () => void;
@@ -55,6 +60,8 @@ export function PostalMap(props: Props) {
     const browseZoom = useRef(11);
     const previousPostalCode = useRef(props.selectedPostalCode);
     const fittedZip = useRef<string | undefined>(undefined);
+    const [resourceCells,setResourceCells]=useState<ResourceMapCell[]>();
+    const [resourceMapError,setResourceMapError]=useState(false);
     const [zoom, setZoom] = useState(props.selectedPostalCode ? 13 : 9);
     const [boundaryError, setBoundaryError] = useState<string>();
     const [retry, setRetry] = useState(0);
@@ -464,6 +471,17 @@ export function PostalMap(props: Props) {
         t,
     ]);
 
+    useEffect(()=>{
+        const map=mapRef.current;
+        if(!map||!props.resourceMode||!props.discoveryState){setResourceCells(undefined);return;}
+        const controller=new AbortController();const bounds=map.getBounds();
+        const timer=setTimeout(()=>{void fetchResourceMapViaApi(props.discoveryState!,{zoom:Math.min(20,Math.max(0,Math.round(map.getZoom()))),west:Math.max(-180,bounds.getWest()),east:Math.min(180,bounds.getEast()),south:Math.max(-90,bounds.getSouth()),north:Math.min(90,bounds.getNorth())},controller.signal).then(result=>{
+            if(controller.signal.aborted)return;
+            setResourceMapError(!result.ok);setResourceCells(result.ok?result.data.cells:undefined);
+        });},150);
+        return ()=>{clearTimeout(timer);controller.abort();};
+    },[props.resourceMode,props.discoveryState,boundaryView,mapSize]);
+
     useEffect(() => {
         const map = mapRef.current;
         if (!map) return;
@@ -473,7 +491,7 @@ export function PostalMap(props: Props) {
             string,
             { lat: number; lng: number; resources: ResourceDirectoryCard[] }
         >();
-        for (const resource of props.resources) {
+        for (const resource of resourceCells ? [] : props.resources) {
             const address = currentExactPublicAddress(resource);
             if (!address) continue;
             const key = `${address.latitude},${address.longitude}`;
@@ -484,6 +502,21 @@ export function PostalMap(props: Props) {
             };
             place.resources.push(resource);
             places.set(key, place);
+        }
+        for(const cell of resourceCells??[]) {
+            const content=document.createElement('span');content.textContent=cell.count>1?String(cell.count):'';
+            content.className=cell.count>1?'mh-resource-cluster-count':'mh-exact-resource-pin-dot';
+            if(cell.count===1){const size=Math.max(5,Math.min(18,5+(zoom-5)*1.1));content.style.width=`${size}px`;content.style.height=`${size}px`;}
+            const marker=L.marker([cell.latitude,cell.longitude],{icon:L.divIcon({html:content,className:cell.count>1?'mh-resource-cluster':`mh-exact-resource-pin ${cell.resourceUri===props.selectedResourceUri?'is-selected':''}`,iconSize:[32,32],iconAnchor:[16,16]}),title:cell.count===1?cell.members[0]?.name:t('resourceMap.cluster',{count:cell.count}),keyboard:true}).addTo(group);
+            markers.push(marker);
+            if(cell.resourceUri)marker.on('click',()=>callbacks.current.onSelectResource(cell.resourceUri!));
+            else if(cell.west!==cell.east||cell.south!==cell.north)marker.on('click',()=>map.fitBounds([[cell.south,cell.west],[cell.north,cell.east]],{padding:[40,40],maxZoom:20}));
+            else {
+                const list=document.createElement('div');
+                for(const member of cell.members){const button=document.createElement('button');button.className='mh-button block my-2';button.textContent=member.name;button.onclick=()=>callbacks.current.onSelectResource(member.uri);list.append(button);}
+                if(cell.count>cell.members.length){const more=document.createElement('button');more.className='mh-button';more.textContent=t('resourceMap.moreAtPlace',{count:cell.count});more.onclick=()=>callbacks.current.onShowResourceList?.();list.append(more);}
+                marker.bindPopup(list);
+            }
         }
         const size = Math.max(5, Math.min(18, 5 + (zoom - 5) * 1.1));
         // Keep small visual pins while preserving a usable pointer target.
@@ -546,7 +579,7 @@ export function PostalMap(props: Props) {
             map.off('moveend resize', updateMarkerVisibility);
             group.remove();
         };
-    }, [props.resources, props.selectedResourceUri, zoom]);
+    }, [props.resources, resourceCells, props.selectedResourceUri, zoom, t]);
 
     const selectedZipArea = props.selectedPostalCode
         ? lookupPostalArea(props.selectedPostalCode)
@@ -657,6 +690,7 @@ export function PostalMap(props: Props) {
                 className='mh-interactive-map h-[60vh] min-h-96 w-full'
                 aria-label={t('postal.mapLabel')}
             />
+            {props.resourceMode&&resourceMapError&&<p role='status' className='text-sm'>{t('resourceMap.unavailable')}</p>}
             <p className='mt-2 text-xs text-mh-textMuted'>
                 {t(props.resourceMode ? 'nearby.resourceMapLegend' : 'postal.legend')}
             </p>

@@ -38,6 +38,7 @@ export const NOTIFICATION_TYPES = [
     'shift_conflict',
     'shift_no_show',
     'system_announcement',
+    'saved_discovery_changed',
     'schedule_proposed',
     'schedule_changed',
     'schedule_confirmed',

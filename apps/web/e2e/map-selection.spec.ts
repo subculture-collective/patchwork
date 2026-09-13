@@ -82,3 +82,22 @@ test('nearby resource list opens visit information and returns to the same searc
     await expect(page.getByTitle('Neighborhood WIC clinic',{exact:true})).toBeVisible();
     expect(queries.length).toBe(count);
 });
+
+
+test('resource map aggregates include results outside the loaded page and expand to exact pins',async({page})=>{
+    const uri='at://did:plc:aggregate/app.patchwork.directory.resource/outside';
+    const queries:number[]=[];
+    await page.route('**/api/**',route=>{
+        const url=new URL(route.request().url());
+        if(url.pathname.endsWith('/query/resource-map')){
+            const zoom=Number(url.searchParams.get('mapZoom'));queries.push(zoom);
+            return route.fulfill({json:{total:150,mapped:150,cells:zoom<13?[{latitude:41.85,longitude:-87.67,count:150,resourceUri:null,members:[],west:-87.675,east:-87.665,south:41.845,north:41.855}]:[{latitude:41.85,longitude:-87.67,count:1,resourceUri:uri,members:[{uri,name:'Clinic outside first page'}],west:-87.67,east:-87.67,south:41.85,north:41.85}]}});
+        }
+        if(url.pathname.includes('/query/'))return route.fulfill({json:pageResult([])});
+        return route.fulfill({status:401,json:{error:{code:'AUTHENTICATION_REQUIRED',message:'Sign in.'}}});
+    });
+    await page.goto('/nearby?nearby=resources&zip=60608&r=20000');
+    await page.getByTitle('150 resources — zoom to explore',{exact:true}).click();
+    await expect(page.getByTitle('Clinic outside first page',{exact:true})).toBeVisible();
+    expect(queries.some(zoom=>zoom>=13)).toBe(true);
+});

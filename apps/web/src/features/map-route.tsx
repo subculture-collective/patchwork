@@ -1,3 +1,4 @@
+import { SaveSearchButton } from './saved-discovery';
 import { haversineDistanceMeters } from '../geo-utils';
 import { nearbyResourceIntent, serializeDiscoveryFilterState } from '../discovery-filters';
 import { useMapSelection } from './use-map-selection';
@@ -67,6 +68,8 @@ interface MapRouteProps {
     aggregates?: DiscoveryMapAggregates;
     resourceTotal?: number;
     resourcesLoading?: boolean;
+    resourcesHasNextPage?: boolean;
+    onLoadMoreResources?: () => void;
     discoveryState: DiscoveryFilterState;
     onPushDiscovery: (patch: Partial<DiscoveryFilterState>) => void;
     feedRecords: readonly FeedRecordEnvelope[];
@@ -98,6 +101,8 @@ export const MapRoute = ({
     aggregates,
     resourceTotal,
     resourcesLoading,
+    resourcesHasNextPage,
+    onLoadMoreResources,
     discoveryState,
     onPushDiscovery,
     feedRecords,
@@ -128,6 +133,12 @@ export const MapRoute = ({
                 String(t('discovery.loadedRange', { start, end })),
             [t],
         ),
+    });
+    const resourcePaginationFocus = usePaginationFocus({
+        itemCount: resourceCards.length,
+        isLoading: Boolean(resourcesLoading),
+        hasNextPage: Boolean(resourcesHasNextPage),
+        announce: useCallback((start: number, end: number) => String(t('discovery.loadedRange', {start, end})), [t]),
     });
     const previousZipArea = useRef<Partial<DiscoveryFilterState> | undefined>(
         undefined,
@@ -422,6 +433,8 @@ export const MapRoute = ({
                         <LazyPostalMap
                             cells={resourceIntent ? [] : aggregates?.cells ?? []}
                             resourceMode={resourceIntent}
+                            discoveryState={discoveryState}
+                            onShowResourceList={()=>setMobileView('list')}
                             resources={resourceCards}
                             selectedResourceUri={selectedResource?.uri}
                             selectedPostalCode={resourceIntent ? undefined : discoveryState.postalCode}
@@ -496,6 +509,7 @@ export const MapRoute = ({
                         <p>{t('nearby.noResources')}</p>
                         {discoveryState.center && (discoveryState.radiusMeters ?? 20000) < 250000 && <Button variant='neutral' onClick={() => onPushDiscovery({radiusMeters: Math.min(250000, (discoveryState.radiusMeters ?? 20000)*2)})}>{t('nearby.expandDistance')}</Button>}
                     </div>}
+                    <SaveSearchButton state={discoveryState} />
                     <ul className='mh-nearby-resource-list'>
                         {resourceCards.map(resource => <li key={resource.uri} className='mh-record-card'>
                             <button className='mh-resource-result' onClick={() => setSelectedResourceUri(resource.uri)}>
@@ -516,7 +530,9 @@ export const MapRoute = ({
                                 }}>{t('nearby.showOnMap')}</button>}
                         </li>)}
                     </ul>
-                    {(resourceTotal ?? 0)>resourceCards.length && <p className='mt-4'>{t('nearby.moreResources')}</p>}
+                    <p ref={resourcePaginationFocus.loadedCountRef} tabIndex={-1} className='mt-4' role='status'>{t('discovery.loadedCount', {loaded:resourceCards.length,total:resourceTotal ?? resourceCards.length})}</p>
+                    {resourcesHasNextPage && onLoadMoreResources && <Button ref={resourcePaginationFocus.loadMoreRef} variant='neutral' disabled={resourcesLoading} onClick={() => resourcePaginationFocus.loadMore(onLoadMoreResources)}>{t('discovery.loadMore')}</Button>}
+                    <p className='sr-only' role='status'>{resourcePaginationFocus.announcement}</p>
                     <a className='mh-link inline-block py-3' href={`/resources?${serializeDiscoveryFilterState(discoveryState)}`}>{t('nearby.fullDirectory')}</a>
                 </Card> : <Card
                     title={
