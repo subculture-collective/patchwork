@@ -165,6 +165,8 @@ export class AccountPrivacyService {
                 }
             }
             await client.query('DELETE FROM saved_discovery WHERE owner_did=$1',[did]);
+            await client.query('DELETE FROM resource_corrections WHERE reporter_did=$1',[did]);
+            await client.query("UPDATE resource_correction_events SET actor_did=NULL,details='{\"redactedForDeactivation\":true}'::jsonb WHERE actor_did=$1",[did]);
             await client.query("DELETE FROM public_resource_claims WHERE applicant_did=$1 AND status<>'approved'",[did]);
             await client.query("UPDATE public_resource_claims SET evidence='Evidence removed at account request.' WHERE applicant_did=$1",[did]);
             const organizationStewardships = await client.query(
@@ -1151,6 +1153,7 @@ export class AccountPrivacyService {
              WHERE actor_did = $1 ORDER BY occurred_at, audit_event_id`,
             [did],
         );
+        const resourceCorrections=await client.query('SELECT id,resource_uri,category,explanation,source_url,status,response,submitted_at,updated_at FROM resource_corrections WHERE reporter_did=$1 ORDER BY submitted_at,id',[did]);
         const savedDiscovery = await client.query('SELECT kind,resource_uri,search,alerts_enabled,created_at FROM saved_discovery WHERE owner_did=$1 ORDER BY created_at,id',[did]);
         const authoringReceipts = await client.query('SELECT post_uri, title, source_cid, public_status, source_written_at, deleted_at, retention_until FROM aid_authoring_receipts WHERE owner_did = $1 ORDER BY source_written_at, post_uri', [did]);
         const commandMetadata = await client.query<{
@@ -1658,6 +1661,7 @@ export class AccountPrivacyService {
                     retentionUntil: iso(row.retention_until),
                 })),
                 savedDiscovery: savedDiscovery.rows,
+                resourceCorrections:resourceCorrections.rows,
                 authoringReceipts: authoringReceipts.rows.map(row => ({
                     uri: row.post_uri, title: row.title, sourceCid: row.source_cid,
                     publicStatus: row.public_status, sourceWrittenAt: row.source_written_at.toISOString(),

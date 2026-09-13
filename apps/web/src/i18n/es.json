@@ -1688,5 +1688,53 @@
         "cluster": "{{count}} recursos — acerca el mapa para explorar",
         "moreAtPlace": "Ver los {{count}} recursos en la lista",
         "unavailable": "No se pudo cargar el mapa completo. Se muestran lugares de la lista cargada; mueve el mapa para reintentar."
+    },
+    "corrections": {
+        "report": "Informar de datos incorrectos del recurso",
+        "privacy": "Las correcciones se revisan antes de cambiar el recurso. No incluyas direcciones personales, datos médicos ni otra información privada. Puedes enviar sin iniciar sesión.",
+        "category": "¿Qué necesita corrección?",
+        "categories": {
+            "contact": "Datos de contacto",
+            "hours": "Horarios",
+            "access": "Acceso o requisitos",
+            "closure": "Cierre",
+            "other": "Otra información"
+        },
+        "explanation": "Explica la corrección",
+        "source": "Enlace a una fuente pública (opcional)",
+        "submit": "Enviar corrección",
+        "submitted": "Corrección recibida. Guarda tu comprobante privado para consultar su estado.",
+        "receiptHelp": "Tu comprobante privado: guarda una copia; cualquiera que lo tenga puede ver y responder a esta corrección.",
+        "receipt": "Comprobante privado de corrección",
+        "check": "Consultar estado de la corrección",
+        "followup": "Información adicional solicitada por quien revisa",
+        "sendFollowup": "Enviar información adicional",
+        "review": "Revisión de correcciones de recursos",
+        "mine": "Mis correcciones de recursos",
+        "empty": "No hay correcciones para mostrar.",
+        "previous": "Correcciones anteriores",
+        "next": "Correcciones siguientes",
+        "decision": "Decisión de revisión",
+        "response": "Respuesta visible para quien envió esta corrección",
+        "loadListing": "Cargar el recurso actual antes de aplicar",
+        "field": "Campo que corregir",
+        "replacement": "Información corregida",
+        "verifiedSource": "Enlace a la fuente pública verificada",
+        "fields": {
+            "name": "Nombre",
+            "openHours": "Horarios publicados",
+            "eligibilityNotes": "Requisitos de acceso publicados",
+            "url": "Sitio web",
+            "phone": "Teléfono"
+        },
+        "status": {
+            "pending": "Pendiente de revisión",
+            "needs-information": "Se solicita más información",
+            "applied": "Corrección aplicada",
+            "denied": "Corrección rechazada",
+            "duplicate": "Corrección duplicada"
+        },
+        "refresh": "Actualizar correcciones",
+        "saveDecision": "Guardar decisión de corrección"
     }
 }

@@ -1688,5 +1688,53 @@
         "cluster": "{{count}} resources — zoom to explore",
         "moreAtPlace": "Browse all {{count}} resources in the list",
         "unavailable": "The full resource map could not load. Showing locations from the loaded list; retry by moving the map."
+    },
+    "corrections": {
+        "report": "Report incorrect listing information",
+        "privacy": "Corrections are reviewed before a listing changes. Do not include personal addresses, medical details, or other private information. You may submit without signing in.",
+        "category": "What needs correcting?",
+        "categories": {
+            "contact": "Contact information",
+            "hours": "Hours",
+            "access": "Access or requirements",
+            "closure": "Closure",
+            "other": "Other information"
+        },
+        "explanation": "Explain the correction",
+        "source": "Public source link (optional)",
+        "submit": "Submit correction",
+        "submitted": "Correction received. Save your private receipt to check its status.",
+        "receiptHelp": "Your private receipt — keep a copy; anyone with it can view and respond to this correction.",
+        "receipt": "Private correction receipt",
+        "check": "Check correction status",
+        "followup": "Additional information requested by the reviewer",
+        "sendFollowup": "Send additional information",
+        "review": "Listing correction review",
+        "mine": "My listing corrections",
+        "empty": "No corrections to show.",
+        "previous": "Previous corrections",
+        "next": "Next corrections",
+        "decision": "Review decision",
+        "response": "Response visible to the person who submitted this correction",
+        "loadListing": "Load current listing before applying",
+        "field": "Field to correct",
+        "replacement": "Corrected information",
+        "verifiedSource": "Verified public source link",
+        "fields": {
+            "name": "Name",
+            "openHours": "Published hours",
+            "eligibilityNotes": "Published access requirements",
+            "url": "Website",
+            "phone": "Phone"
+        },
+        "status": {
+            "pending": "Awaiting review",
+            "needs-information": "More information requested",
+            "applied": "Correction applied",
+            "denied": "Correction declined",
+            "duplicate": "Duplicate correction"
+        },
+        "refresh": "Refresh corrections",
+        "saveDecision": "Save correction decision"
     }
 }

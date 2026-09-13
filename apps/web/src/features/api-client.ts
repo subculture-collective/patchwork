@@ -3888,3 +3888,29 @@ export const fetchResourceMapViaApi = async(state:DiscoveryFilterState,viewport:
 };
 
 export const setSavedDiscoveryAlertsViaApi=(id:string,enabled:boolean)=>requestJsonPut('/account/saved-discovery/alerts',{id,enabled});
+
+export interface ResourceCorrection {
+ id:string;resource_uri:string;category:'contact'|'hours'|'access'|'closure'|'other';explanation:string;source_url?:string;
+ status:'pending'|'needs-information'|'applied'|'denied'|'duplicate';revision:number;response?:string;
+}
+
+const validCorrection=(value:unknown):value is ResourceCorrection=>isRecord(value)&&typeof value.id==='string'&&typeof value.resource_uri==='string'&&typeof value.explanation==='string'&&Number.isInteger(value.revision)&&['pending','needs-information','applied','denied','duplicate'].includes(String(value.status));
+const correctionCommand=async(path:string,body:unknown)=>{
+ const result=await requestJsonPost(path,body);
+ if(!result.ok)return result;
+ if(!isRecord(result.data)||(path==='/resource-corrections'?typeof result.data.id!=='string':result.data.updated!==true))return invalidResponseFailure('Correction confirmation was malformed. Check its status before retrying.');
+ return result;
+};
+export const submitResourceCorrectionViaApi=(body:unknown)=>correctionCommand('/resource-corrections',body);
+export const resourceCorrectionStatusViaApi=async(receipt:string)=>{
+ const result=await requestJsonPost('/resource-corrections/status',{receipt});
+ if(!result.ok)return result;
+ return isRecord(result.data)&&validCorrection(result.data.correction)?result:invalidResponseFailure('Correction status was malformed. Try again.');
+};
+export const respondResourceCorrectionViaApi=(body:unknown)=>correctionCommand('/resource-corrections/respond',body);
+export const decideResourceCorrectionViaApi=(body:unknown)=>correctionCommand('/resource-corrections/review',body);
+export const listResourceCorrectionsViaApi=async(review=false,page=1)=>{
+ const result=await requestJson(`/resource-corrections${review?'/review':''}`,new URLSearchParams({page:String(page)}));
+ if(!result.ok)return result;
+ return isRecord(result.data)&&Array.isArray(result.data.items)&&result.data.items.every(validCorrection)&&typeof result.data.hasNextPage==='boolean'?result:invalidResponseFailure('Correction list was malformed. Try again.');
+};

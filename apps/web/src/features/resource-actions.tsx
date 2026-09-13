@@ -1,3 +1,4 @@
+import { ResourceCorrectionForm } from './resource-corrections';
 import { ResourceServiceDetails } from './resource-service-details';
 import { SaveDiscoveryButton } from './saved-discovery';
 import { PublicResourceClaim } from './public-resource-claims';
@@ -50,6 +51,7 @@ export function ResourceActions({ resource }: { resource: ResourceDetail }) {
         </div>
         <SaveDiscoveryButton input={{kind:'resource',resourceUri:resource.uri}} />
         <PublicResourceClaim resource={resource} />
+        <ResourceCorrectionForm key={resource.uri} resourceUri={resource.uri} />
         {!links.website && !links.telephone && <p className='text-sm'>{t('handoff.contactUnavailable')}</p>}
         {!links.directions && <p className='text-xs'>{t('handoff.approximateResource')}</p>}
     </div>;

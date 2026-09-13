@@ -1,3 +1,4 @@
+import { ResourceCorrectionList } from './resource-corrections';
 import { ResourceProfileEditor } from "./resource-profile-editor";
 import { resourceProfileSchema } from "@patchwork/shared";
 import { useState } from "react";
@@ -202,6 +203,7 @@ export function PublicResourceClaimManagement() {
         {loaded ? t("claims.refresh") : t("claims.viewClaims")}
       </Button>
       {message && <p role="status">{message}</p>}
+      {reviewer && <ResourceCorrectionList review />}
       {loaded && !claims.length && <p>{t("claims.empty")}</p>}
       <ul className="space-y-4">
         {claims.map((claim) => (

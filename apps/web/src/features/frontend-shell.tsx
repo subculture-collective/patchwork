@@ -1,3 +1,4 @@
+import { ResourceCorrectionList } from './resource-corrections';
 import { SavedDiscoveryPanel } from './saved-discovery';
 import { nearbyResourceIntent } from '../discovery-filters';
 import { Modal } from '../components/Modal';
@@ -6593,6 +6594,7 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                 </Button>
             </header>
             <SavedDiscoveryPanel key={did} did={did} />
+            <ResourceCorrectionList key={`corrections-${did}`} />
 
             <div id='my-requests' className='scroll-mt-24'>
                 <Suspense fallback={null}>

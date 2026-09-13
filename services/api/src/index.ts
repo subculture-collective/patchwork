@@ -1,3 +1,5 @@
+import { ResourceCorrectionService } from './resource-correction-service.js';
+import { createResourceCorrectionHandler } from './http/resource-correction-handler.js';
 import { createResourceMapHandler } from './http/resource-map-handler.js';
 import { SavedDiscoveryService } from './saved-discovery-service.js';
 import { createSavedDiscoveryHandler } from './http/saved-discovery-handler.js';
@@ -516,6 +518,8 @@ const accountPrivacyHandler =
         })
     :   undefined;
 const resourceMapHandler=postgresPool?createResourceMapHandler(postgresPool):undefined;
+const resourceCorrectionService=postgresPool?new ResourceCorrectionService(postgresPool):undefined;
+const resourceCorrectionHandler = resourceCorrectionService && authenticateApiRequest ? createResourceCorrectionHandler(resourceCorrectionService,authenticateApiRequest) : undefined;
 const savedDiscoveryService=postgresPool?new SavedDiscoveryService(postgresPool):undefined;
 const savedDiscoveryHandler = savedDiscoveryService && authenticateApiRequest ? createSavedDiscoveryHandler(savedDiscoveryService,authenticateApiRequest) : undefined;
 const accountRequestsHandler = authoringReceiptService && authenticateApiRequest
@@ -2049,6 +2053,8 @@ export const createApiServer = () => {
 
         if(resourceMapHandler?.(request,response,requestUrl))return;
         if(requestUrl.pathname==='/query/resource-map'){writeJson(response,503,{error:{code:'RESOURCE_MAP_UNAVAILABLE',message:'Resource map is unavailable.'}});return;}
+        if (resourceCorrectionHandler?.(request,response,requestUrl)) return;
+        if (requestUrl.pathname.startsWith('/resource-corrections')) {writeJson(response,503,{error:{code:'CORRECTIONS_UNAVAILABLE',message:'Listing corrections are unavailable.'}});return;}
         if (savedDiscoveryHandler?.(request, response, requestUrl)) return;
         if (requestUrl.pathname === '/account/saved-discovery'||requestUrl.pathname === '/account/saved-discovery/alerts') { writeJson(response,503,{error:{code:'SAVED_DISCOVERY_UNAVAILABLE',message:'Saved discovery is unavailable.'}});return; }
         if (accountRequestsHandler?.(request, response, requestUrl)) return;
@@ -2630,6 +2636,7 @@ export const startApiServer = () => {
                         await notificationService.runDeliverySweep();
                     const expired =
                         await notificationService.runRetentionSweep();
+                        await resourceCorrectionService?.retain();
                     const metrics =
                         await notificationService.getOperatorMetrics();
                     notificationDeliveryPending = metrics.pending;

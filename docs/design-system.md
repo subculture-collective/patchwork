@@ -58,10 +58,12 @@ At mobile widths, the resource journey keeps ZIP/location controls above the map
 | Coordinate and finish | Chat, schedule/timezones, peer address exchange, groups and outcomes; qualify real authenticated delivery and consent boundaries. |
 | Return later | Private saved resources/searches, daily opt-in digests, ownership, export and deletion. Exact origins and eligibility answers are rejected by saved-search contracts. |
 | Maintain a resource | Independent claims, bilingual management, reviewed service editor and revision conflicts. Provider edits preserve original imported source snapshots. |
-| Resolve problems | Existing moderation/account controls; dedicated listing corrections and source-review workflow remain required. |
+| Resolve problems | Anonymous listing corrections use private receipts; signed-in submitters have account history. Independent reviewers can request information, decline, identify duplicates or apply sourced corrections with revision checks. Source-review automation remains required. |
 
 Saved discovery is capped at 200 items per account, with an explicit recoverable limit response. Alert baselines are established on opt-in; one generic notification per account per UTC day summarizes changes. Delivery follows existing channel preferences. Search alerts identify newly matching records; resource alerts compare public service/contact details. No source query, resource name, precise location or eligibility answer enters notification copy.
 
 Changed or explicitly reconfirmed provider service assertions expire after 30 days. Unchanged assertions retain their original evidence and expiry, and previous profile revisions remain in the database history. Blank fields remain unknown. Simple eligibility rules are independent requirements combined with AND; alternative or complex rules remain explanatory text. Provider edits require the loaded resource timestamp and service-profile revision so a stale form cannot overwrite a newer edit.
 
 The routing exception described in the product plan is not active until the dedicated transient-routing service, consent UI and updated privacy checks are implemented and qualified. Existing exact-personal-location restrictions remain authoritative meanwhile.
+
+Listing-correction receipts stay in browser memory and travel only in non-cacheable POST bodies. The server stores receipt hashes. Corrections are retained for two years; account deactivation removes owned submissions. Applied changes retain an audit trail and original source snapshots. Corrections to hours or requirements quarantine conflicting structured assertions until reconfirmed.

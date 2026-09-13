@@ -124,6 +124,8 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
  * Select the appropriate rate limiter for a given route pathname.
  */
 export const selectLimiter = (method: string | undefined, pathname: string): RateLimiter => {
+    if (pathname === '/resource-corrections/review') return moderationLimiter;
+    if (method === 'POST' && ['/resource-corrections','/resource-corrections/respond'].includes(pathname)) return reportLimiter;
     if (method === 'GET' && pathname === '/auth/session') {
         return generalLimiter;
     }
