@@ -55,6 +55,14 @@ No immutable image digest, controlled pre-alpha deployment, `/api/health/ready`
 result, deployed source SHA, or post-deploy Chrome acceptance evidence was
 produced in this implementation run.
 
+## Jetstream v2 source update — 2026-08-15
+
+`caaef1e` changed the production and staging defaults to Jetstream v2 with a
+`v2-live` projection. The repository retains a v1 rollback projection and has
+v2 source, backfill, comparison, and cutover tests. No protected staging v2
+replay, projection comparison, or credentialed PDS lifecycle run is attached to
+this register. Do not treat the source change as deployed evidence.
+
 ## Local verification record — 2026-08-07
 
 - `npm run check`: passed; 1,034 tests passed and 118 service-dependent tests

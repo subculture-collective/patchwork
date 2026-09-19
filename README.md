@@ -63,7 +63,7 @@ operate as a public mutual-aid service.
 
 ## Prerequisites
 
-- Node.js `>=20.19.0`
+- Node.js `>=22.15.0`
 - npm
 - Docker or another PostgreSQL 16 instance
 

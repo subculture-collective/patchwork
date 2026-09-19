@@ -1,6 +1,6 @@
 # Patchwork layered test traceability
 
-Updated: 2026-08-07
+Updated: 2026-08-21
 
 This document describes what each test layer actually executes. Test counts are reported by layer because fixture-heavy unit coverage is not equivalent to PostgreSQL, HTTP, browser, or live AT Protocol evidence.
 
@@ -19,6 +19,12 @@ This document describes what each test layer actually executes. Test counts are 
 | External AT protocol | Disposable accounts against the staging PDS | Manual controlled exercise | Home-network staging PDS | Redacted evidence only |
 
 ## Current verified baseline
+
+At `00559d8`, `npm test` passed 1,047 tests and skipped 122 tests because the
+required PostgreSQL or provider services were not configured. `npm run
+typecheck` and `npm run test:operations` also passed. The operations check
+verified eight stories and 40 protected-pilot criteria. This local result does
+not replace the dated integration, browser, or deployment evidence below.
 
 The first six rows are the local remediation run from 2026-08-07. The external
 AT protocol and capacity rows retain earlier controlled-environment evidence
@@ -51,7 +57,7 @@ Counts can change as tests are consolidated. Readiness depends on covered bounda
 | Groups | Role/invitation/room schemas | Legacy in-memory service is not imported by production | Ownership, hashed invitation, request-intersection, removal, export, deactivation, and restart journeys | Session-derived identity and idempotent group routes | Owner create/invite/room journey at 320px/200% with axe | No external group authority | Independent security/privacy/accessibility/translation review |
 | Bounded chat | Size, cursor, redaction, receipt, and report validation | Legacy `/chat/initiate` remains unreachable | Direct/group restart, dedupe, pagination, rate, block/removal, export/deactivation, and body-absence journeys | Session-derived identity and idempotent chat routes; body only in JSON mutation | Honest EN/ES trust disclosure, retry-ID stability, read/redact/report, offline draft, reflow, and axe | No external messaging provider | Protected staging and independent review; not E2EE |
 | English/Spanish runtime | Key parity, interpolation, and raw-JSX AST scan | — | Account language preference persists | Authenticated preferences apply server notification language | Every production route scanned in EN/ES for copy, lang, reflow, and axe; switching preserves form/URL state | Professional translation not performed | Professional translation review remains a launch gate |
-| Discovery | Firehose, ranking, discovery rule, data-mode, and typed API failure tests | Local demo fixtures require explicit fixture mode | Cursor, heartbeat, normalized aid-post projections, tombstones, and dead letters persist | Real PostgreSQL projection filters, pagination, freshness, and startup lag rejection | Map/feed UI, accessibility, API-unavailable visibility, and idempotent retry with no fixture substitution | Aid and directory records traversed the home PDS, local Jetstream, PostgreSQL, and browser | Protected staging repetition and partner verification administration |
+| Discovery | Jetstream v1/v2 source, v2 bounded backfill, projection comparison, ranking, discovery rule, data-mode, and typed API failure tests | Local demo fixtures require explicit fixture mode | Cursor, heartbeat, normalized aid-post projections, tombstones, dead letters, v2 control state, and v1 rollback projections persist | Real PostgreSQL projection filters, pagination, freshness, and startup lag rejection | Map/feed UI, accessibility, API-unavailable visibility, and idempotent retry with no fixture substitution | Aid and directory records traversed the home PDS, local Jetstream, PostgreSQL, and browser before the v2 cutover | Protected-staging and live-PDS v2 replay/comparison evidence; partner verification administration |
 | Moderation | Policy and queue state tests | Worker fixture services are test-only | Concurrent PostgreSQL queue, lease, audit, policy, and retention stores back production | Authenticated API-to-worker commands derive the actor from the session | Console UX remains deferred | No public external dependency | Staging alert/game-day execution and operator workflow |
 | Privacy | Geo floor and redaction tests | Fixture response checks | Audit payload redaction and scheduled retention | HTTP boundary avoids actor override | Accessibility and artifact redaction | Redacted lifecycle evidence | Formal policy approval and staging observation |
 | Account access/deactivation | Response schema, browser client, durable account suppression | Deferred preference controls remain fixture-development only | Subject-owned export; deactivation removes Patchwork state and suppresses replay/login | Cookie-derived DID; export GET and deactivation POST carry no body identity | Production Settings JSON export; explicit confirm/cancel; CSRF-protected empty-body deactivation; revoked-session state | Full AT repository remains portable outside Patchwork | Controlled reactivation, AT-repository deletion, casework review, and formal privacy approval |

@@ -1,18 +1,20 @@
 # Jetstream v2 migration
 
-Patchwork keeps the current v1 projection live while v2 rebuilds an isolated
-copy. Do not point the live worker at v2 or reuse its checkpoint.
+Patchwork uses Jetstream v2 in `v2-live` mode for the public projection. The
+v1 projection and its checkpoint remain in rollback storage. Do not reuse a v1
+checkpoint for v2 or run the shadow worker with the live worker.
 
 ## Cursor and storage boundary
 
 - v1 checkpoints use `jetstream-v1-time-us` and contain Unix-microsecond
   `time_us` values.
 - v2 checkpoints use `jetstream-v2-seq` and contain network sequence values.
-- v2 records, tombstones, identity state, account state, sync work, and
-  projection freshness live in the `jetstream_v2_shadow` schema.
+- During a shadow rebuild, v2 records, tombstones, identity state, account
+  state, sync work, and projection freshness live in the
+  `jetstream_v2_shadow` schema.
 - Before cutover, v2 writes only in `v2-shadow` mode. After the atomic
-  promotion, `v2-live` writes the public projection. The indexer rejects every
-  other source/projection pairing.
+  promotion, `v2-live` writes the public projection. The indexer accepts only
+  `v1` with `live`, or `v2` with `v2-shadow` or `v2-live`.
 
 The first v2 run pins a live network sequence, snapshots only Patchwork commits
 from sequence zero, then snapshots identity/account/sync history only for DIDs
@@ -27,9 +29,9 @@ Bluesky-hosted v2 replay combines an unauthenticated live WebSocket with
 metered HTTP archive requests. Create an API key at
 `https://bsky.network/account#api-keys-section-heading` and inject it only as
 the `JETSTREAM_API_KEY` deployment secret. Patchwork refuses to start a v2
-replay without it; the v1 worker neither requires nor receives this key.
+replay without it. The live v2 worker also requires this key.
 
-## Start a rebuild
+## Rebuild a shadow projection
 
 Apply the API and indexer migrations, run the bounded backfill, then explicitly
 enable the shadow profile:
@@ -44,7 +46,7 @@ docker compose --profile jetstream-v2-shadow up -d patchwork-v2-shadow
 The profile is opt-in and does not replace `patchwork-spool`. Set
 `JETSTREAM_API_KEY` before starting it. The SDK service origin defaults to
 `https://jetstream.us-east.bsky.network` and may be overridden with
-`INDEXER_V2_URL`.
+`INDEXER_V2_URL`. The live worker requires `JETSTREAM_API_KEY` too.
 
 ## Compare projections
 
@@ -63,9 +65,10 @@ Also inspect `jetstream_v2_shadow.indexer_repo_reconciliation_queue`. A sync
 event is a durable reconciliation trigger, not proof that repository
 reconciliation has completed.
 
-## Cutover gate
+## Historical cutover gate
 
-Before running `scripts/cutover-jetstream-v2.sql`, require all of the following:
+The v2 cutover completed in `caaef1e`. Use these checks before any future
+cutover or rollback rehearsal:
 
 1. The v2 replay has reached the live tail and the worker remains ready.
 2. URI and current-CID comparisons are clean or every exception is explained.
@@ -75,10 +78,11 @@ Before running `scripts/cutover-jetstream-v2.sql`, require all of the following:
 5. The v1 worker and v2 shadow worker are both stopped at their durable
    checkpoints.
 
-The SQL cutover copies the current public projection into the
-`jetstream_v1_rollback` schema, replaces the public projection and control
-tables from `jetstream_v2_shadow` in one transaction, and leaves
-`jetstream-v1-time-us` untouched. Start only `patchwork-spool` afterward with
-`INDEXER_JETSTREAM_VERSION=v2` and `INDEXER_PROJECTION_MODE=v2-live`; leave the
-shadow worker stopped. Because Patchwork is not currently serving public
-traffic, no time-based soak period is required.
+The SQL cutover copied the public projection into the `jetstream_v1_rollback`
+schema, replaced the public projection and control tables from
+`jetstream_v2_shadow` in one transaction, and retained
+`jetstream-v1-time-us`. `patchwork-spool` now starts with
+`INDEXER_JETSTREAM_VERSION=v2` and `INDEXER_PROJECTION_MODE=v2-live`. Leave the
+shadow worker stopped unless you run a new comparison. This repository has no
+fresh protected-staging or live-PDS v2 evidence, so the cutover does not change
+the public-launch `NO-GO` decision.

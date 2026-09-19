@@ -11,6 +11,7 @@ do not commit resolved Compose output or an environment file.
 | `PATCHWORK_STAGING_POSTGRES_PASSWORD` | Random database password, URL-safe | PostgreSQL and all migration/runtime services |
 | `STAGING_ATPROTO_SERVICE_DID` | Real staging service DID; never `did:example` | API, indexer, moderation, migrations |
 | `ATPROTO_PDS_URL` | Controlled PDS HTTPS origin | AT runtimes |
+| `ATPROTO_ACCOUNT_PDS_URL` | Controlled account-PDS HTTPS origin | API and API migrations |
 | `STAGING_ATPROTO_OAUTH_CLIENT_ID` | Public HTTPS OAuth client metadata URL | API |
 | `STAGING_ATPROTO_OAUTH_REDIRECT_URI` | Registered HTTPS callback URL | API |
 | `STAGING_ATPROTO_SESSION_ENCRYPTION_KEY` | Base64 encoding of exactly 32 random bytes | API session encryption |
@@ -19,7 +20,7 @@ do not commit resolved Compose output or an environment file.
 | `STAGING_VITE_MAP_TILE_URL` | Same-origin content-addressed URL matching `/tiles/us.<sha256>.pmtiles` | Web build |
 | `STAGING_MODERATION_SERVICE_TOKEN` | Random internal bearer secret | API and moderation worker |
 | `INDEXER_FIREHOSE_URL` | Approved Jetstream/WebSocket source | Indexer |
-| `JETSTREAM_API_KEY` | Bluesky Preferred Providers API key; required for metered v2 replay HTTP requests and never sent to the v1 source | v2 shadow indexer |
+| `JETSTREAM_API_KEY` | Bluesky Preferred Providers API key; required for Jetstream v2 archive replay | Live v2 indexer, shadow indexer, and v2 backfill |
 
 ## Protected browser-lifecycle inputs
 

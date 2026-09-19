@@ -4,8 +4,8 @@ Decision date: 2026-07-28 (America/Chicago)
 
 Decision: **NO-GO**
 
-Next review: **2026-08-11**, or earlier when every hard gate below has current
-evidence.
+Next review: **not scheduled**. A new review requires current evidence for every
+hard gate below.
 
 Patchwork must not accept pilot participants or public traffic. The local alpha
 implementation is materially stronger than the abandoned prototype. Phase 6
@@ -66,6 +66,19 @@ S3 backup replication, independent security/privacy/accessibility/translation
 reviews, and production capacity approval also remain unavailable. The current
 decision is therefore **NO-GO**: public traffic and participant recruitment
 remain prohibited.
+
+## Jetstream v2 cutover addendum — 2026-08-15
+
+`caaef1e` promoted the indexer from Jetstream v1 to v2. Production and staging
+Compose defaults now use `INDEXER_JETSTREAM_VERSION=v2` and
+`INDEXER_PROJECTION_MODE=v2-live`. The v1 projection and checkpoint remain in
+rollback storage. The repository includes v2 source, backfill, shadow-store,
+comparison, and cutover tests.
+
+No protected-staging v2 replay, projection comparison, disconnect drill, or
+credentialed PDS lifecycle run is recorded. The cutover changes the source
+code's ingestion path. It does not satisfy any launch gate. The decision remains
+**NO-GO**.
 
 ## Evidence reviewed
 
