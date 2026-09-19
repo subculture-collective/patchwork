@@ -1736,5 +1736,26 @@
         },
         "refresh": "Actualizar correcciones",
         "saveDecision": "Guardar decisión de corrección"
+    },
+    "sourceRefresh": {
+        "title": "Revisión de actualización de fuentes editoriales",
+        "help": "Compara la evidencia editorial conservada con el recurso actual. Los candidatos que solo cambian datos de contacto pueden aplicarse después de volver a comprobar todas las protecciones; los demás cambios requieren revisión.",
+        "queue": "Cola",
+        "pending": "Pendientes",
+        "resolved": "Resueltos",
+        "refresh": "Actualizar candidatos",
+        "empty": "No hay candidatos de actualización para mostrar.",
+        "summary": "{{disposition}} de {{source}}, recuperado el {{date}}",
+        "fields": "Campos modificados",
+        "reasons": "Motivos de revisión",
+        "evidence": "Evidencia editorial",
+        "comparison": "Valor anterior y valor normalizado de la fuente",
+        "applyContact": "Aplicar actualización de contacto verificada",
+        "dismissReason": "Motivo del descarte",
+        "dismiss": "Descartar candidato",
+        "applied": "La actualización de contacto se aplicó y quedó registrada.",
+        "dismissed": "El candidato fue descartado.",
+        "previous": "Candidatos anteriores",
+        "next": "Candidatos siguientes"
     }
 }

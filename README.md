@@ -65,6 +65,7 @@ required external-service checks, and guidance on adding durable tests.
 - [Service boundaries](docs/architecture/service-boundaries.md)
 - [API contracts](docs/architecture/buyer-ready-api-contracts.md)
 - [Postal geography, public sources, and claims](docs/architecture/postal-geography.md)
+- [Source-refresh preview and remaining automation](docs/source-refresh.md)
 - [AT Protocol contracts](docs/at-protocol/README.md)
 - [Staging environment](docs/operations/staging-environment.md)
 - [Deployment and rollback](docs/operations/progressive-delivery-runbook.md)

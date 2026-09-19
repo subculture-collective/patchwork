@@ -17,7 +17,12 @@
         "test": "node ../../scripts/test.mjs unit services/api/src",
         "test:integration:postgres": "node ../../scripts/test.mjs postgres services/api/src",
         "test:integration:attachments": "node ../../scripts/test.mjs attachments",
-        "db:seed:resources": "tsx src/db/public-resource-seed.ts"
+        "db:seed:resources": "tsx src/db/public-resource-seed.ts",
+        "resources:refresh:preview": "tsx src/db/public-resource-refresh-preview.ts",
+        "resources:refresh:cpl": "tsx src/source-refresh/chicago-public-library-cli.ts",
+        "resources:refresh:cpl-run": "tsx src/source-refresh/chicago-public-library-run.ts",
+        "resources:refresh:persist": "tsx src/source-refresh/source-refresh-persist-cli.ts",
+        "resources:refresh:apply-contact": "tsx src/source-refresh/source-refresh-apply-cli.ts"
     },
     "dependencies": {
         "@atproto/oauth-client-node": "0.4.8",

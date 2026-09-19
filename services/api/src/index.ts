@@ -1,5 +1,7 @@
 import { ResourceCorrectionService } from './resource-correction-service.js';
 import { createResourceCorrectionHandler } from './http/resource-correction-handler.js';
+import { SourceRefreshService } from './source-refresh/source-refresh-service.js';
+import { createSourceRefreshHandler } from './http/source-refresh-handler.js';
 import { createResourceMapHandler } from './http/resource-map-handler.js';
 import { SavedDiscoveryService } from './saved-discovery-service.js';
 import { createSavedDiscoveryHandler } from './http/saved-discovery-handler.js';
@@ -520,6 +522,8 @@ const accountPrivacyHandler =
 const resourceMapHandler=postgresPool?createResourceMapHandler(postgresPool):undefined;
 const resourceCorrectionService=postgresPool?new ResourceCorrectionService(postgresPool):undefined;
 const resourceCorrectionHandler = resourceCorrectionService && authenticateApiRequest ? createResourceCorrectionHandler(resourceCorrectionService,authenticateApiRequest) : undefined;
+const sourceRefreshService=postgresPool?new SourceRefreshService(postgresPool):undefined;
+const sourceRefreshHandler=sourceRefreshService&&authenticateApiRequest?createSourceRefreshHandler(sourceRefreshService,authenticateApiRequest):undefined;
 const savedDiscoveryService=postgresPool?new SavedDiscoveryService(postgresPool):undefined;
 const savedDiscoveryHandler = savedDiscoveryService && authenticateApiRequest ? createSavedDiscoveryHandler(savedDiscoveryService,authenticateApiRequest) : undefined;
 const accountRequestsHandler = authoringReceiptService && authenticateApiRequest
@@ -2055,6 +2059,8 @@ export const createApiServer = () => {
         if(requestUrl.pathname==='/query/resource-map'){writeJson(response,503,{error:{code:'RESOURCE_MAP_UNAVAILABLE',message:'Resource map is unavailable.'}});return;}
         if (resourceCorrectionHandler?.(request,response,requestUrl)) return;
         if (requestUrl.pathname.startsWith('/resource-corrections')) {writeJson(response,503,{error:{code:'CORRECTIONS_UNAVAILABLE',message:'Listing corrections are unavailable.'}});return;}
+        if (sourceRefreshHandler?.(request,response,requestUrl)) return;
+        if (requestUrl.pathname.startsWith('/admin/source-refresh')) {writeJson(response,503,{error:{code:'SOURCE_REFRESH_UNAVAILABLE',message:'Source-refresh review is unavailable.'}});return;}
         if (savedDiscoveryHandler?.(request, response, requestUrl)) return;
         if (requestUrl.pathname === '/account/saved-discovery'||requestUrl.pathname === '/account/saved-discovery/alerts') { writeJson(response,503,{error:{code:'SAVED_DISCOVERY_UNAVAILABLE',message:'Saved discovery is unavailable.'}});return; }
         if (accountRequestsHandler?.(request, response, requestUrl)) return;

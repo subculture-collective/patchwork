@@ -8,7 +8,7 @@ import nationalSnapshot from './seed-data/national-public-resources.json' with {
 import snapshot from './seed-data/chicago-metro-public-resources.json' with { type: 'json' };
 import { postalLocationSchema } from '../../../../packages/at-lexicons/src/postal-geography.js';
 
-const publicResourceSchema = z.object({
+export const publicResourceSchema = z.object({
     id: z.string().min(1),
     services: z.array(z.enum(resourceServices)).min(1).optional(),
     name: z.string().min(1).max(120),
@@ -29,7 +29,7 @@ const publicResourceSchema = z.object({
     publicAccess: z.string().min(1).max(500),
 }).strict();
 
-const sourceSchema = z.object({
+export const publicResourceSourceSchema = z.object({
     name: z.string().min(1),
     url: z.string().url().refine(url => new URL(url).protocol === 'https:'),
     apiUrl: z.string().url(),
@@ -38,13 +38,16 @@ const sourceSchema = z.object({
     sha256: z.string().regex(/^[a-f0-9]{64}$/),
 }).strict();
 
+export const publicResourceCatalogSchema = z.object({
+    scope: z.object({ name: z.string(), countyIds: z.array(z.string().regex(/^\d{5}$/)).min(1), sourceUrl: z.string().url() }).strict(),
+    sources: z.record(publicResourceSourceSchema),
+    resources: z.array(publicResourceSchema).min(1),
+}).strict();
+export type PublicResourceCatalogInput = z.input<typeof publicResourceCatalogSchema>;
+
 /** Import provenance establishes a public location, never ownership or endorsement. */
 export function parsePublicResourceCatalog(input: unknown) {
-    const catalog = z.object({
-        scope: z.object({ name: z.string(), countyIds: z.array(z.string().regex(/^\d{5}$/)).min(1), sourceUrl: z.string().url() }).strict(),
-        sources: z.record(sourceSchema),
-        resources: z.array(publicResourceSchema).min(1),
-    }).strict().parse(input);
+    const catalog = publicResourceCatalogSchema.parse(input);
     if (new Set(catalog.resources.map(resource => resource.id)).size !== catalog.resources.length) {
         throw new Error('Duplicate public resource source identifier.');
     }

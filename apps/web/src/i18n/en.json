@@ -1736,5 +1736,26 @@
         },
         "refresh": "Refresh corrections",
         "saveDecision": "Save correction decision"
+    },
+    "sourceRefresh": {
+        "title": "Publisher source refresh review",
+        "help": "Compare retained publisher evidence with the current listing. Contact-only candidates can be applied after all guards are rechecked; other changes remain review-only.",
+        "queue": "Queue",
+        "pending": "Pending",
+        "resolved": "Resolved",
+        "refresh": "Refresh candidates",
+        "empty": "No source-refresh candidates to show.",
+        "summary": "{{disposition}} from {{source}}, retrieved {{date}}",
+        "fields": "Changed fields",
+        "reasons": "Review reasons",
+        "evidence": "Publisher evidence",
+        "comparison": "Before and normalized source value",
+        "applyContact": "Apply verified contact update",
+        "dismissReason": "Reason for dismissal",
+        "dismiss": "Dismiss candidate",
+        "applied": "The contact update was applied and audited.",
+        "dismissed": "The candidate was dismissed.",
+        "previous": "Previous candidates",
+        "next": "Next candidates"
     }
 }

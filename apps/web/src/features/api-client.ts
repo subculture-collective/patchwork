@@ -3914,3 +3914,48 @@ export const listResourceCorrectionsViaApi=async(review=false,page=1)=>{
  if(!result.ok)return result;
  return isRecord(result.data)&&Array.isArray(result.data.items)&&result.data.items.every(validCorrection)&&typeof result.data.hasNextPage==='boolean'?result:invalidResponseFailure('Correction list was malformed. Try again.');
 };
+
+export interface SourceRefreshCandidate {
+    candidateId: string;
+    runId: string;
+    resourceUri: string;
+    disposition: 'contact-automation-candidate' | 'review' | 'new-listing-review' | 'missing-review';
+    changedFields: string[];
+    reasons: string[];
+    before: Record<string, unknown> | null;
+    after: Record<string, unknown> | null;
+    evidence: { url?: string; retrievedAt?: string; sha256?: string } | null;
+    status: 'pending' | 'applied' | 'dismissed' | 'superseded';
+    decisionDetails: Record<string, unknown> | null;
+    sourceId: string;
+    rawSha256: string;
+    normalizedSha256: string;
+    retrievedAt: string;
+    createdAt: string;
+    updatedAt: string;
+    appliedAt: string | null;
+}
+
+const validSourceRefreshCandidate = (value: unknown): value is SourceRefreshCandidate =>
+    isRecord(value) && typeof value.candidateId === 'string' && typeof value.runId === 'string'
+    && typeof value.resourceUri === 'string' && typeof value.disposition === 'string'
+    && Array.isArray(value.changedFields) && value.changedFields.every(field => typeof field === 'string')
+    && Array.isArray(value.reasons) && value.reasons.every(reason => typeof reason === 'string')
+    && typeof value.status === 'string' && typeof value.sourceId === 'string'
+    && typeof value.rawSha256 === 'string' && typeof value.normalizedSha256 === 'string'
+    && typeof value.retrievedAt === 'string' && typeof value.createdAt === 'string'
+    && typeof value.updatedAt === 'string';
+
+export const listSourceRefreshCandidatesViaApi = async (status: 'pending' | 'resolved' = 'pending', page = 1) => {
+    const result = await requestJson('/admin/source-refresh/candidates', new URLSearchParams({ status, page: String(page) }));
+    if (!result.ok) return result;
+    return isRecord(result.data) && Array.isArray(result.data.items)
+        && result.data.items.every(validSourceRefreshCandidate)
+        && typeof result.data.hasNextPage === 'boolean'
+        ? result as ApiClientSuccess<{items: SourceRefreshCandidate[]; page: number; hasNextPage: boolean}>
+        : invalidResponseFailure('Source-refresh review data was malformed. Try again.');
+};
+export const dismissSourceRefreshCandidateViaApi = (input: {candidateId: string; expectedUpdatedAt: string; reason: string}) =>
+    requestJsonPost('/admin/source-refresh/candidates/dismiss', input);
+export const applySourceRefreshContactViaApi = (candidateId: string) =>
+    requestJsonPost('/admin/source-refresh/candidates/apply-contact', { candidateId });

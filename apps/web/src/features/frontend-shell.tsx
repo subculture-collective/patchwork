@@ -1,4 +1,5 @@
 import { ResourceCorrectionList } from './resource-corrections';
+import { SourceRefreshReview } from './source-refresh-review';
 import { SavedDiscoveryPanel } from './saved-discovery';
 import { nearbyResourceIntent } from '../discovery-filters';
 import { Modal } from '../components/Modal';
@@ -8543,6 +8544,8 @@ const ModeratorConsoleRoute = ({
                     </a>
                 </div>
             </Panel>
+
+            <SourceRefreshReview />
 
             {error ? (
                 <p
