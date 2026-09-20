@@ -221,3 +221,46 @@ feed, baseline identifier retention, schema, geography and exact-byte bounds.
 Storage limits and the non-JSON/large-publisher manifest evolution remain
 separate work in issues #27 and #28. No new source schedule is activated by this
 change.
+
+### Publisher quarantine and recovery
+
+Migration 0039 adds durable source-specific quarantine incidents. In persist
+mode, a typed publisher-contract failure (malformed schema, oversized response,
+unexpected response identity, wrong geography or suspicious record loss) records
+a failure and quarantines that source. Later scheduled runs return
+`skipped-quarantined` before fetching and do not renew attempt/success timestamps.
+Other sources can run. Transient network/429/5xx failures retain bounded retries;
+storage and persistence failures do not masquerade as publisher schema failures.
+
+Inspect an incident:
+
+```sh
+npm run resources:refresh:quarantine -w @patchwork/api -- --source=cpl
+```
+
+After investigating/fixing the source contract, use the registered runner's
+`--mode=preview` with a separate retained evidence directory. Preview is allowed
+while quarantined and never clears an incident or writes a success heartbeat.
+Review the complete-feed result before explicitly clearing the exact incident:
+
+```sh
+npm run resources:refresh:quarantine -w @patchwork/api -- \
+  --source=cpl --quarantine=<incident-uuid> \
+  --reason='Reviewed complete publisher preview and corrected source contract.'
+```
+
+Clearance takes the same source lock as the runner and fails during an active
+job or when the incident ID is stale. A later incident cannot be cleared using
+an older ID. History and the operator-supplied review reason remain in the
+database. Clearance does not run a job, renew evidence or change public data.
+Database access controls who can run this administrative CLI; there is no public
+resume endpoint. The CLI does not independently attest that a human reviewed
+the preview, so that remains the responder's responsibility.
+
+`patchwork_source_refresh_quarantined` exposes the active state; the repository's
+`PatchworkSourceRefreshQuarantined` rule targets each affected source using the
+existing staging scrape labels and on-call owner. Deploy/reload and verify the
+rule through the ordinary monitoring rollout; adding the file is not live alert
+qualification. Apply migrations before the new application code. For application
+rollback, pause the source timer first: older runners do not know about the new
+quarantine table. Keep incident history and evidence intact.

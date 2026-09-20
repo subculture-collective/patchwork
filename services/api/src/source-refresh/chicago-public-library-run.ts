@@ -5,6 +5,7 @@ import { Pool } from 'pg';
 import { previewPublicResourceRefresh } from '../db/public-resource-refresh-preview.js';
 import { fetchCplPublisherEvidence } from './chicago-public-library.js';
 import { SourceRefreshService } from './source-refresh-service.js';
+import { PublisherValidationError } from './publisher-validation-error.js';
 
 import { parsePausedSources, resolveSource } from './source-registry.js';
 import { recordRegisteredSourceAttempt, runSourceJob } from './source-runner.js';
@@ -31,7 +32,7 @@ export async function runCplSourceRefresh(options: {
         preview: evidence => {
             if (evidence.manifest.rowCount < source.minRows || evidence.manifest.rowCount > source.maxRows
                 || evidence.manifest.rawBytes > source.maxBytes) {
-                throw new Error('Publisher evidence is outside its registered complete-feed bounds.');
+                throw new PublisherValidationError('Publisher evidence is outside its registered complete-feed bounds.');
             }
             return previewPublicResourceRefresh(options.pool, evidence.catalog, new Date(evidence.manifest.retrievedAt));
         },

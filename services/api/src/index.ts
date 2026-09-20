@@ -1,3 +1,4 @@
+import { renderRegisteredSourceMetrics } from './source-refresh/source-refresh-metrics.js';
 import { ResourceCorrectionService } from './resource-correction-service.js';
 import { createResourceCorrectionHandler } from './http/resource-correction-handler.js';
 import { SourceRefreshService } from './source-refresh/source-refresh-service.js';
@@ -828,30 +829,7 @@ const renderPrometheusMetrics = (): string => {
 const renderSourceRefreshMetrics = async (): Promise<string> => {
     if (!postgresPool) return '';
     try {
-        const result = await postgresPool.query<{
-            source_id: string;
-            last_attempt_succeeded: boolean;
-            last_attempt_timestamp: string;
-            last_success_timestamp: string | null;
-        }>(`SELECT source_id,last_attempt_succeeded,
-            EXTRACT(EPOCH FROM last_attempt_at)::text AS last_attempt_timestamp,
-            EXTRACT(EPOCH FROM last_success_at)::text AS last_success_timestamp
-            FROM source_refresh_operational_status ORDER BY source_id`);
-        const lines = [
-            '# HELP patchwork_source_refresh_last_attempt_success Whether the latest scheduled source refresh completed without error.',
-            '# TYPE patchwork_source_refresh_last_attempt_success gauge',
-            '# HELP patchwork_source_refresh_last_attempt_timestamp_seconds Unix timestamp of the latest scheduled source refresh attempt.',
-            '# TYPE patchwork_source_refresh_last_attempt_timestamp_seconds gauge',
-            '# HELP patchwork_source_refresh_last_success_timestamp_seconds Unix timestamp of the latest completed source refresh.',
-            '# TYPE patchwork_source_refresh_last_success_timestamp_seconds gauge',
-        ];
-        for (const row of result.rows) {
-            const labels = `{project="patchwork",service="api",source="${row.source_id}"}`;
-            lines.push(`patchwork_source_refresh_last_attempt_success${labels} ${row.last_attempt_succeeded ? 1 : 0}`);
-            lines.push(`patchwork_source_refresh_last_attempt_timestamp_seconds${labels} ${Number(row.last_attempt_timestamp)}`);
-            if (row.last_success_timestamp !== null) lines.push(`patchwork_source_refresh_last_success_timestamp_seconds${labels} ${Number(row.last_success_timestamp)}`);
-        }
-        return lines.join('\n');
+        return await renderRegisteredSourceMetrics(postgresPool);
     } catch {
         return '';
     }
