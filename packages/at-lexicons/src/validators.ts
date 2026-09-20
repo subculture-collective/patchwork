@@ -205,6 +205,7 @@ export const directoryResourceSchema = z.object({
         'clinic',
         'legal-aid',
         'hotline',
+        'library',
         'other',
     ]),
     serviceArea: z.string().min(1).max(120),

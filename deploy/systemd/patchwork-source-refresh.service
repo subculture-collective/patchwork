@@ -1,0 +1,20 @@
+[Unit]
+Description=Retain and compare Chicago publisher evidence for Patchwork
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=PATCHWORK_SOURCE_REFRESH_CONTAINER=patchwork-staging-api
+Environment=PATCHWORK_SOURCE_REFRESH_HOST_DIR=/srv/patchwork-public/source-refresh
+Environment=PATCHWORK_SOURCE_REFRESH_CONTAINER_DIR=/var/lib/patchwork/source-refresh
+Environment=PATCHWORK_SOURCE_REFRESH_MAX_BYTES=2147483648
+ExecStart=/usr/local/sbin/patchwork-source-refresh
+TimeoutStartSec=15min
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+[Install]
+WantedBy=multi-user.target

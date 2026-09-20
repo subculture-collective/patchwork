@@ -38,6 +38,7 @@ export const directoryCategories = [
     'clinic',
     'legal-aid',
     'hotline',
+    'library',
     'other',
 ] as const;
 
@@ -46,6 +47,7 @@ export interface DiscoveryFilterState {
     resourceService?: ResourceService;
     resourceProgram?: ResourceProgram;
     resourceCategory?: (typeof directoryCategories)[number];
+    includeLibraries?: boolean;
     postalCode?: string;
     dataset?: 'all' | 'community' | 'demo';
     feedTab: FeedTab;
@@ -223,6 +225,7 @@ export function normalizeDiscoveryFilterState(
         directoryCategories.includes(state.resourceCategory)
             ? { resourceCategory: state.resourceCategory }
             : {}),
+        ...(state.includeLibraries === true ? { includeLibraries: true } : {}),
         ...(state.postalCode && /^\d{5}$/.test(state.postalCode) ? { postalCode: state.postalCode } : {}),
         // Legacy dataset links now open the same integrated discovery view.
         ...(text ? { text } : {}),
@@ -310,6 +313,7 @@ export function serializeDiscoveryFilterState(
     if (state.resourceProgram) params.set('program', state.resourceProgram);
     if (state.resourceCategory)
         params.set('resourceType', state.resourceCategory);
+    if (state.includeLibraries) params.set('libraries', '1');
     if (state.text) {
         params.set('q', state.text);
     }
@@ -368,6 +372,8 @@ export function parseDiscoveryFilterState(
         resourceService: (params.get('service') ?? fallback.resourceService) as ResourceService | undefined,
         resourceCategory: (params.get('resourceType') ??
             fallback.resourceCategory) as DiscoveryFilterState['resourceCategory'],
+        includeLibraries:
+            params.get('libraries') === '1' || fallback.includeLibraries === true,
         text: params.get('q') ?? fallback.text,
         category: parsedCategory ?? fallback.category,
         status: parsedStatus ?? fallback.status,
@@ -389,5 +395,5 @@ export function parseDiscoveryFilterState(
 /** Existing request links retain their meaning; resource filters select the resource journey. */
 export function nearbyResourceIntent(state: DiscoveryFilterState): boolean {
     return state.nearbyIntent ? state.nearbyIntent === 'resources'
-        : Boolean(state.resourceProgram || state.resourceService || state.resourceCategory);
+        : Boolean(state.resourceProgram || state.resourceService || state.resourceCategory || state.includeLibraries);
 }

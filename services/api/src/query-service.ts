@@ -82,6 +82,13 @@ const readString = (
 
     return value;
 };
+const readBoolean = (params: URLSearchParams, key: string): boolean | string | undefined => {
+    const value = params.get(key);
+    if (value === null || value.trim() === '') return undefined;
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+};
 
 const formatValidationError = (error: ZodError): ApiQueryErrorResponse => {
     return {
@@ -112,6 +119,7 @@ export class ApiDiscoveryQueryService {
                 longitude: readNumber(params, 'longitude'),
                 radiusKm: readNumber(params, 'radiusKm'),
                 category: readString(params, 'category'),
+                includeLibraries: readBoolean(params, 'includeLibraries'),
                 urgency: readString(params, 'urgency'),
                 minimumUrgency: readString(params, 'minimumUrgency'),
                 status: readString(params, 'status'),

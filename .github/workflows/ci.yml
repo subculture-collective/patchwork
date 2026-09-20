@@ -94,6 +94,7 @@ jobs:
                   echo "Image tag: ${IMAGE_TAG}"
 
             - name: Build Docker images with immutable tags (#109)
+              id: build-images
               run: |
                   docker build --target api-runtime \
                     --build-arg GIT_SHA=${{ steps.image-tag.outputs.sha }} \
@@ -119,7 +120,7 @@ jobs:
                     --format table patchwork-api:ci | tee trivy-api-report.txt
 
             - name: Trivy container scan — Web
-              if: success() || failure()
+              if: steps.build-images.outcome == 'success' && (success() || failure())
               run: |
                   docker run --rm \
                     --volume /var/run/docker.sock:/var/run/docker.sock \

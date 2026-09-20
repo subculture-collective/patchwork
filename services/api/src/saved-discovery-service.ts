@@ -182,6 +182,7 @@ export class SavedDiscoveryService {
                           category: search.resourceCategory,
                           service: search.resourceService,
                           program: search.resourceProgram,
+                          includeLibraries: search.includeLibraries,
                       }
                     : {
                           category: search.category,

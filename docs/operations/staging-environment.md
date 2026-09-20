@@ -14,6 +14,7 @@ is validated against production-equivalent infrastructure before promotion.
 | Moderation | `patchwork-thimble` | `patchwork-staging-thimble` | 4200 |
 | Web | `patchwork-web` | `patchwork-staging-web` | 80 |
 | Postgres | `patchwork-postgres` | `patchwork-staging-postgres` | 5432 |
+| Routing (opt-in) | `patchwork-routing` | `patchwork-staging-routing` | 8080 |
 
 Both environments use:
 - The same `Dockerfile` multi-stage build targets
@@ -39,6 +40,7 @@ where necessary (hostnames, DIDs, database passwords):
 | `ATPROTO_OAUTH_REDIRECT_URI` | Production callback | Staging callback |
 | `ATPROTO_SESSION_ENCRYPTION_KEY` | Production encryption key | Staging encryption key |
 | `MODERATION_SERVICE_TOKEN` | Production internal token | Staging internal token |
+| `API_ROUTING_SERVICE_URL` | Internal OTP GTFS GraphQL URL or empty | Internal OTP GTFS GraphQL URL or empty |
 
 See `docs/operations/staging-secrets.md` for the complete injection and rotation
 contract. Neither manifest supplies identity, datasource, origin, OAuth,

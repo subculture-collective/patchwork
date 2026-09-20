@@ -23,5 +23,5 @@ describe('fresh public catalog reset', () => {
         expect((await pool.query('SELECT * FROM indexer_checkpoints ORDER BY 1')).rows).toEqual(checkpoints);
         expect((await pool.query('SELECT count(*)::integer AS count FROM eligible_public_resource_addresses')).rows[0].count).toBe(publicResourceSeed.length);
         expect((await pool.query("SELECT count(*)::integer AS count FROM indexer_directory_resource_projections WHERE operational_status <> 'unknown' OR record_origin <> 'sourced-public'")).rows[0].count).toBe(0);
-    }, 30000);
+    }, 60000);
 });

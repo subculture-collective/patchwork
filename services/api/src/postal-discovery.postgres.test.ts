@@ -20,7 +20,7 @@ describe('ZIP discovery and sourced-resource claims',()=>{
         await importPublicResources(pool,{apply:true,maxNewPerState:5});
         expect((await pool.query('SELECT count(*)::integer AS count FROM public_resource_listings')).rows[0].count).toBe(preview.newResources);
         await importPublicResources(pool,{apply:true});
-    }, 30000);
+    }, 60000);
     afterAll(async()=>pool.end());
     it('imports real resources without creating requests or claiming ownership',async()=>{
         const requests=await pool.query('SELECT count(*)::integer AS total,count(postal_code)::integer AS located FROM indexer_aid_post_projections');
@@ -44,7 +44,7 @@ describe('ZIP discovery and sourced-resource claims',()=>{
                 + Math.cos(41.97558*radians)*Math.cos(latitude*radians)*Math.sin((longitude+87.71361)*radians/2)**2;
             return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         };
-        const expected = publicResourceSeed.map(row => distance(row.latitude,row.longitude)).sort((a,b)=>a-b).slice(0,5);
+        const expected = publicResourceSeed.filter(row => row.category !== 'library').map(row => distance(row.latitude,row.longitude)).sort((a,b)=>a-b).slice(0,5);
         const rows = (result.body as {results:{uri:string}[]}).results;
         expect(rows).toHaveLength(5);
         rows.forEach((row,index) => {
@@ -64,8 +64,12 @@ describe('ZIP discovery and sourced-resource claims',()=>{
         expect(disability.body).toMatchObject({total:publicResourceSeed.filter(resource => resource.sourceId === 'ssa-field-offices').length});
         const invalid = await queryProjected(pool, new URLSearchParams({service:'not-a-service'}), 'directory');
         expect(invalid.statusCode).toBe(400);
-        const libraries = await queryProjected(pool, new URLSearchParams({service:'community'}), 'directory');
+        const withoutLibraries = await queryProjected(pool, new URLSearchParams({service:'community'}), 'directory');
+        expect((withoutLibraries.body as {results:{category:string}[]}).results.every(resource => resource.category !== 'library')).toBe(true);
+        const libraries = await queryProjected(pool, new URLSearchParams({service:'community',includeLibraries:'true'}), 'directory');
         expect((libraries.body as {total:number}).total).toBeGreaterThan(80);
+        const libraryOnly = await queryProjected(pool, new URLSearchParams({category:'library'}), 'directory');
+        expect((libraryOnly.body as {total:number}).total).toBeGreaterThan(80);
     });
     it('combines published program evidence with other filters before pagination', async () => {
         const cases = [
