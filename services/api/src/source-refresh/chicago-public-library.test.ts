@@ -48,6 +48,27 @@ describe('Chicago Public Library publisher adapter', () => {
         expect(catalog.resources[0]).not.toHaveProperty('eligibility');
     });
 
+    it('accepts the current publisher branch and service-hours column names', () => {
+        const input = rows().map(row => {
+            const { name_, hours_of_operation, ...rest } = row;
+            return { ...rest, branch_: name_, service_hours: hours_of_operation };
+        });
+        const catalog = normalizeCplPublisherBytes(encode(input), now, baselines());
+        expect(catalog.resources[0]).toMatchObject({
+            name: 'Branch 1 — Chicago Public Library',
+            usualHours: 'Mon. & Wed., Noon-8; Tue. & Thu., 10-6',
+        });
+    });
+
+    it('keeps a temporarily closed branch whose publisher row omits its phone', () => {
+        const input = rows();
+        delete (input[0]! as { phone?: string }).phone;
+        input[0]!.hours_of_operation = 'Closed until further notice';
+        const catalog = normalizeCplPublisherBytes(encode(input), now, baselines());
+        expect(catalog.resources[0]).toMatchObject({ usualHours: 'Closed until further notice' });
+        expect(catalog.resources[0]).not.toHaveProperty('phone');
+    });
+
     it('fetches the pinned endpoint and retains exact raw bytes plus derived evidence', async () => {
         const outputDir = await workspace();
         const raw = encode(rows());
