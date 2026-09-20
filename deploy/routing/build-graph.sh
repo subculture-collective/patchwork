@@ -19,7 +19,7 @@ docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=2g \
     --memory=8g --cpus=6 -e JAVA_TOOL_OPTIONS='-Xmx6g' \
     -v "$work_dir:/var/opentripplanner" "$image" --build --save
 test -s "$work_dir/graph.obj"
-sha256sum "$work_dir/graph.obj" >"$work_dir/graph.obj.sha256"
+(cd "$work_dir" && sha256sum graph.obj >graph.obj.sha256)
 if test -s "$data_dir/graph.obj"; then
     stamp="$(date -u '+%Y%m%dT%H%M%SZ')"
     mkdir -p "$data_dir/previous"
