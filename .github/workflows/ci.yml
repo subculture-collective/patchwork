@@ -42,12 +42,19 @@ jobs:
             - name: Operational controls
               run: npm run test:operations
 
+            - name: Package complete coverage report
+              if: always()
+              run: |
+                  if [ -d coverage ]; then
+                    tar -czf "$RUNNER_TEMP/patchwork-test-coverage.tar.gz" -C coverage .
+                  fi
+
             - name: Upload coverage report
               uses: https://gitea.com/actions/upload-artifact@c24449f33cd45d4826c6702db7e49f7cdb9b551d
               if: always()
               with:
                   name: test-coverage
-                  path: coverage/
+                  path: ${{ runner.temp }}/patchwork-test-coverage.tar.gz
                   retention-days: 14
 
             - name: Install Playwright browsers
