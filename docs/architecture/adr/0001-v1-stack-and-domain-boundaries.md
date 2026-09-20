@@ -5,7 +5,7 @@
 
 ## Context
 
-Roadmap issue #41 defines v1 as:
+The original v1 scope defined the following boundaries; the [current roadmap](https://git.subcult.tv/subculture-collective/patchwork/issues/10) now tracks delivery:
 
 - Frontend: Vite + React + TypeScript + Tailwind CSS
 - Backend/services: TypeScript (Node.js)

@@ -6,7 +6,19 @@ Patchwork currently uses an atomic, digest-pinned Compose deployment for the
 single staging host. Canary traffic shifting is not available until a real
 traffic-control layer exists; historical simulated rollout jobs have been removed.
 
-## Build-once promotion flow
+## Current Gitea release lineage
+
+Gitea is the review/CI origin. The working integration lineage is
+`codex/chicago-public-resources`; the repository default remains `main`.
+Stacked PRs target their immediate parent branch and eventually integrate into
+the Chicago lineage. Branch consolidation/default-branch changes are separate
+reviewed work in [issue #21](https://git.subcult.tv/subculture-collective/patchwork/issues/21).
+The deployed home-host path accepts scoped-key signed, digest-pinned images.
+The GHCR/OIDC procedure below describes a separate configured promotion path;
+it must not be represented as the current Gitea deployment evidence. See
+[current acceptance](../current-acceptance.md).
+
+## GHCR/OIDC build-once promotion flow
 
 1. `CI` completes quality and PostgreSQL integration gates on `main`.
 2. `deploy-staging.yml` builds each of four runtime targets exactly once.
