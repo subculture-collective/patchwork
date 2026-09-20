@@ -4,6 +4,7 @@
     "ActuatorAPI": true,
     "GtfsGraphQlApi": true,
     "HttpResponseTimeMetrics": true,
+    "CostlyAssertions": false,
     "DebugUi": false
   }
 }
