@@ -26,16 +26,23 @@ const websiteSchema = z.union([
 const rawRowSchema = z.object({
     name: nonempty.optional(),
     name_: nonempty.optional(),
+    branch_: nonempty.optional(),
     address: nonempty,
     city: nonempty,
     state: nonempty,
     zip: z.union([nonempty, z.number().int().transform(String)]),
-    phone: nonempty,
+    phone: nonempty.optional(),
     website: websiteSchema,
-    hours_of_operation: nonempty,
+    hours_of_operation: nonempty.optional(),
+    service_hours: nonempty.optional(),
     location: pointSchema,
 }).passthrough().superRefine((value, context) => {
-    if (!value.name && !value.name_) context.addIssue({ code: 'custom', message: 'Branch name is required.' });
+    if (!value.name && !value.name_ && !value.branch_) {
+        context.addIssue({ code: 'custom', message: 'Branch name is required.' });
+    }
+    if (!value.hours_of_operation && !value.service_hours) {
+        context.addIssue({ code: 'custom', message: 'Service hours are required.' });
+    }
 });
 
 type CplCatalog = PublicResourceCatalogInput;
@@ -89,17 +96,19 @@ export function normalizeCplPublisherBytes(raw: Uint8Array, retrievedAt: Date, b
             || row.location.longitude < -88 || row.location.longitude > -87.4) {
             throw new Error(`CPL branch ${identity.id} has coordinates outside the Chicago boundary.`);
         }
-        const phoneDigits = row.phone.replace(/\D/g, '');
-        if (phoneDigits.length !== 10) throw new Error(`CPL branch ${identity.id} has an invalid public phone number.`);
-        const hours = row.hours_of_operation.replace(/\s+/g, ' ').trim();
+        const phoneDigits = row.phone?.replace(/\D/g, '');
+        if (phoneDigits !== undefined && phoneDigits.length !== 10) {
+            throw new Error(`CPL branch ${identity.id} has an invalid public phone number.`);
+        }
+        const hours = (row.hours_of_operation ?? row.service_hours)!.replace(/\s+/g, ' ').trim();
         if (hours.length > 200) throw new Error(`CPL branch ${identity.id} hours exceed the catalog limit.`);
         return {
             id: `cpl-${identity.id}`,
-            name: `${(row.name ?? row.name_)!.trim()} — Chicago Public Library`,
+            name: `${(row.name ?? row.name_ ?? row.branch_)!.trim()} — Chicago Public Library`,
             category: 'library' as const,
             streetAddress: row.address.trim(), city: 'Chicago', state: 'IL' as const, postalCode,
             latitude: row.location.latitude, longitude: row.location.longitude,
-            phone: row.phone.trim(), website: identity.website, usualHours: hours,
+            ...(row.phone ? { phone: row.phone.trim() } : {}), website: identity.website, usualHours: hours,
             claimStatus: 'unclaimed' as const,
             publicAccess: 'Public library. Check the official branch page for current hours, accessibility and service requirements.',
             sourceId: 'cpl', countyId: '17031', coordinateBasis: 'publisher-address' as const,

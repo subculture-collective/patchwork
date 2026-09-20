@@ -3,6 +3,7 @@ set -Eeuo pipefail
 umask 027
 
 data_dir="${1:?Usage: build-graph.sh DATA_DIRECTORY}"
+build_cpus="${PATCHWORK_ROUTING_BUILD_CPUS:-3}"
 image='opentripplanner/opentripplanner@sha256:8d54e5c589186707ee365417f2202dc878c451fa3001b8edff07019531100933'
 work_dir="$(mktemp -d "${data_dir}/.build.XXXXXX")"
 cleanup() { rm -rf -- "$work_dir"; }
@@ -16,7 +17,7 @@ for file in chicago-cta.gtfs.zip chicago.osm.pbf otp-config.json build-config.js
 done
 
 docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=2g \
-    --memory=8g --cpus=6 -e JAVA_TOOL_OPTIONS='-Xmx6g' \
+    --memory=8g --cpus="$build_cpus" -e JAVA_TOOL_OPTIONS='-Xmx6g' \
     -v "$work_dir:/var/opentripplanner" "$image" --build --save
 test -s "$work_dir/graph.obj"
 (cd "$work_dir" && sha256sum graph.obj >graph.obj.sha256)

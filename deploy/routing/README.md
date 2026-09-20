@@ -17,8 +17,8 @@ sudo ./deploy/routing/build-graph.sh /srv/patchwork-routing
 The fetch limits are 256 MiB each for CTA GTFS and the daily BBBike Chicago OSM
 extract. Each input gets a SHA-256 sidecar and selected publisher response
 headers. Graph publication is atomic; the previous graph is retained for 120
-days. The build container is limited to six CPUs, 8 GiB memory, and a 6 GiB JVM
-heap.
+days. The build container defaults to three CPUs, 8 GiB memory, and a 6 GiB JVM
+heap. Operators can set `PATCHWORK_ROUTING_BUILD_CPUS` for a larger build host.
 
 Start the router without activating app traffic:
 

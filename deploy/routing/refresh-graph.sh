@@ -4,7 +4,7 @@ umask 027
 
 data_dir="${1:-/srv/patchwork-routing}"
 runtime_container="${PATCHWORK_ROUTING_CONTAINER:-patchwork-staging-routing}"
-runtime_health_url="${PATCHWORK_ROUTING_HEALTH_URL:-http://10.0.0.56:3080/otp/actuators/health}"
+runtime_health_url="${PATCHWORK_ROUTING_HEALTH_URL:-http://127.0.0.1:3080/otp/actuators/health}"
 candidate_port="${PATCHWORK_ROUTING_CANDIDATE_PORT:-3081}"
 metrics_file="${PATCHWORK_ROUTING_METRICS_FILE:-/srv/server/monitoring/data/node-exporter-textfile/patchwork-routing-refresh.prom}"
 health_attempts="${PATCHWORK_ROUTING_HEALTH_ATTEMPTS:-120}"
