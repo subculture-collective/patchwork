@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
 import { link, mkdir, open, unlink } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { gzip, gunzip } from 'node:zlib';
 import { promisify } from 'node:util';
 
@@ -15,6 +15,23 @@ export function evidenceByteLimit(value: number) {
     }
     return value;
 }
+async function syncDirectory(path: string) {
+    const directory = await open(path, 'r');
+    try { await directory.sync(); } finally { await directory.close(); }
+}
+
+/** Sync ancestor entries even when another concurrent writer created them first. */
+export async function prepareEvidenceDirectory(path: string) {
+    let current = resolve(path);
+    await mkdir(current, { recursive: true, mode: 0o700 });
+    while (true) {
+        await syncDirectory(current);
+        const parent = dirname(current);
+        if (parent === current) break;
+        current = parent;
+    }
+}
+
 const exists = (error: unknown) => error instanceof Error && 'code' in error && error.code === 'EEXIST';
 
 /** Bounded reads reject symlinks and non-files. The root must be operator-owned. */
@@ -40,7 +57,7 @@ export async function readEvidenceFile(path: string, maxBytes: number): Promise<
 export async function writeImmutableEvidence(path: string, bytes: Uint8Array): Promise<void> {
     evidenceByteLimit(bytes.byteLength);
     const dir = dirname(path);
-    await mkdir(dir, { recursive: true, mode: 0o700 });
+    await prepareEvidenceDirectory(dir);
     const temporary = join(dir, `.pending-${randomUUID()}`);
     try {
         const file = await open(temporary, 'wx', 0o600);
@@ -54,8 +71,7 @@ export async function writeImmutableEvidence(path: string, bytes: Uint8Array): P
             const retained = await readEvidenceFile(path, bytes.byteLength);
             if (!retained.equals(Buffer.from(bytes))) throw new Error('Immutable evidence conflicts with retained bytes.');
         }
-        const directory = await open(dir, 'r');
-        try { await directory.sync(); } finally { await directory.close(); }
+        await syncDirectory(dir);
     } finally { await unlink(temporary).catch(error => {
         if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') throw error;
     }); }
