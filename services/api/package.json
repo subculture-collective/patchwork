@@ -22,7 +22,8 @@
         "resources:refresh:cpl": "tsx src/source-refresh/chicago-public-library-cli.ts",
         "resources:refresh:cpl-run": "tsx src/source-refresh/chicago-public-library-run.ts",
         "resources:refresh:persist": "tsx src/source-refresh/source-refresh-persist-cli.ts",
-        "resources:refresh:apply-contact": "tsx src/source-refresh/source-refresh-apply-cli.ts"
+        "resources:refresh:apply-contact": "tsx src/source-refresh/source-refresh-apply-cli.ts",
+        "resources:refresh:run": "tsx src/source-refresh/source-runner-cli.ts"
     },
     "dependencies": {
         "@atproto/oauth-client-node": "0.4.8",
