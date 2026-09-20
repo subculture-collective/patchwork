@@ -79,7 +79,7 @@ export async function recordSourceRefreshAttempt(
 ) {
     await pool.query(`INSERT INTO source_refresh_operational_status
         (source_id,last_attempt_at,last_attempt_succeeded,last_success_at,updated_at)
-        VALUES ('cpl',$1,$2,CASE WHEN $3 THEN $1 ELSE NULL END,$1)
+        VALUES ('cpl',$1::timestamptz,$2,CASE WHEN $3 THEN $1::timestamptz ELSE NULL END,$1::timestamptz)
         ON CONFLICT (source_id) DO UPDATE SET
             last_attempt_at=EXCLUDED.last_attempt_at,
             last_attempt_succeeded=EXCLUDED.last_attempt_succeeded,
