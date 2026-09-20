@@ -1,9 +1,11 @@
 import { createHash } from 'node:crypto';
-import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CPL_API_URL, fetchCplPublisherEvidence, normalizeCplPublisherBytes, retainCplEvidence } from './chicago-public-library.js';
+
+import { verifyCplEvidence } from './verify-cpl-evidence.js';
 
 const workspaces: string[] = [];
 afterEach(async () => {
@@ -164,4 +166,19 @@ it('does not publish a new manifest after derived evidence conflicts', async () 
     await writeFile(result.paths.catalogPath, 'corrupt');
     await expect(fetchCplPublisherEvidence({ outputDir: dir, baselineIds: baselines(), now: () => now, fetch: fetcher })).rejects.toThrow();
     await expect(readFile(result.paths.manifestPath)).rejects.toThrow();
+});
+
+it('verifies a disposable copied evidence set, including legacy-only manifests, without renewal', async () => {
+    const source = await workspace(); const restored = await workspace();
+    const result = await fetchCplPublisherEvidence({ outputDir: source, baselineIds: baselines(), now: () => now,
+        fetch: async () => new Response(encode(rows()), { headers: { 'content-type': 'application/json' } }) });
+    await cp(source, restored, { recursive: true });
+    const name = basename(result.paths.manifestPath);
+    expect(await verifyCplEvidence(restored, name)).toMatchObject({ status: 'verified', storage: 'gzip-and-legacy', retrievedAt: now.toISOString() });
+    await rm(join(restored, 'runs', basename(result.paths.storagePath)));
+    expect(await verifyCplEvidence(restored, name)).toMatchObject({ storage: 'legacy-only' });
+    await writeFile(join(restored, 'raw', result.manifest.rawSha256 + '.json'), '{}');
+    await expect(verifyCplEvidence(restored, name)).rejects.toThrow('Raw evidence');
+    await expect(verifyCplEvidence(source, '../' + name)).rejects.toThrow('basename');
+    expect(await verifyCplEvidence(source, name)).toMatchObject({ status: 'verified' });
 });

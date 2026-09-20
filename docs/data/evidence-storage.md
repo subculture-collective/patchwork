@@ -11,3 +11,9 @@ The blob primitive alone does not activate sources or change publication policy.
 ## CPL compatibility integration
 
 New CPL runs retain gzip blobs and a `.storage.json` sidecar carrying adapter/schema version and blob references. Existing manifest and raw JSON paths remain unchanged. Before writing, retention verifies the raw hash, normalized hash, counts, source identity and deterministic normalization. The manifest is published last; incomplete runs can leave unreferenced blobs, which are retained for investigation rather than deleted. Disk failures prevent candidate persistence. Existing manifests without sidecars remain readable by existing tooling; replay may add a matching sidecar without changing retrieval times.
+
+## Verify a restored CPL run
+
+Run `npm run resources:evidence:verify-cpl -w @patchwork/api -- /operator/restored/evidence 2026-09-19T180000Z-<12-character-raw-hash>.manifest.json`, substituting a real manifest basename from the restored `runs` directory. The command is read-only and exits nonzero on missing, corrupt, mismatched, oversized, or unsupported artifacts. It verifies raw bytes, deterministic normalization, and compressed references when present; old runs report `legacy-only`. The original retrieval time is returned unchanged.
+
+A successful audit proves one copied artifact set can be read back. It does not prove an independent backup exists, that database references are complete, or that all retained runs were audited. Keep those separate in the recovery ledger. The unit fixture exercises a disposable copy and source isolation, not production disaster recovery.
