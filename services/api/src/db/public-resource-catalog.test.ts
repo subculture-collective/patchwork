@@ -6,16 +6,12 @@ describe('sourced public resource seed', () => {
     it('includes public addresses and official links without claiming ownership', () => {
         expect(new Set(publicResourceSeed.map(resource => resource.countyId))).toEqual(new Set(publicResourceCatalog.scope.countyIds));
         expect(new Set(publicResourceSeed.map(resource => resource.category))).toEqual(new Set(['food-bank', 'clinic', 'library', 'other', 'shelter', 'legal-aid']));
-        for (const resource of publicResourceSeed) {
-            expect(resource.claimStatus).toBe('unclaimed');
-            expect(resource.streetAddress).not.toBe('');
-            expect(resource.source.url).toMatch(/^https:\/\//);
-            expect(resource.operationalStatus).toBe('unknown');
-            expect(resource.latitude).toBeGreaterThan(-90);
-            expect(resource.latitude).toBeLessThan(90);
-            expect(resource.longitude).toBeGreaterThan(-180);
-            expect(resource.longitude).toBeLessThan(180);
-        }
+        expect(publicResourceSeed.find(resource => resource.claimStatus !== 'unclaimed')).toBeUndefined();
+        expect(publicResourceSeed.find(resource => resource.streetAddress === '')).toBeUndefined();
+        expect(publicResourceSeed.find(resource => !/^https:\/\//.test(resource.source.url))).toBeUndefined();
+        expect(publicResourceSeed.find(resource => resource.operationalStatus !== 'unknown')).toBeUndefined();
+        expect(publicResourceSeed.find(resource => resource.latitude <= -90 || resource.latitude >= 90)).toBeUndefined();
+        expect(publicResourceSeed.find(resource => resource.longitude <= -180 || resource.longitude >= 180)).toBeUndefined();
     });
 
     it('covers every state without importing artificial activity', () => {
