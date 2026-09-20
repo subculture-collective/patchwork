@@ -31,7 +31,7 @@
         "capacity:probe": "tsx scripts/run-http-load-probe.ts",
         "capacity:staging:evaluate": "tsx scripts/evaluate-staging-capacity.ts",
         "test:maps": "bash scripts/fetch-us-pmtiles.test.sh && bash scripts/verify-us-pmtiles.test.sh",
-        "test:operations": "bash scripts/verify-release-trust.test.sh && bash scripts/release-state.test.sh && bash scripts/replicate-independent-backup.test.sh",
+        "test:operations": "bash scripts/verify-release-trust.test.sh && bash scripts/release-state.test.sh && bash scripts/replicate-independent-backup.test.sh && bash scripts/routing-refresh.test.sh",
         "check": "npm run typecheck && npm test && npm run test:operations",
         "test:unit": "node scripts/test.mjs unit",
         "test:integration": "node scripts/test-database.mjs",

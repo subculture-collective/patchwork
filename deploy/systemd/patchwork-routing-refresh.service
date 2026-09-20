@@ -1,0 +1,19 @@
+[Unit]
+Description=Refresh and qualify the Patchwork Chicago routing graph
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=PATCHWORK_ROUTING_CONTAINER=patchwork-staging-routing
+Environment=PATCHWORK_ROUTING_HEALTH_URL=http://10.0.0.56:3080/otp/actuators/health
+Environment=PATCHWORK_ROUTING_METRICS_FILE=/srv/server/monitoring/data/node-exporter-textfile/patchwork-routing-refresh.prom
+ExecStart=/usr/local/libexec/patchwork-routing/refresh-graph.sh /srv/patchwork-routing
+TimeoutStartSec=45min
+Nice=15
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+[Install]
+WantedBy=multi-user.target

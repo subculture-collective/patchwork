@@ -32,5 +32,31 @@ export default defineConfig(({ command, mode }) => {
         preview: {
             proxy: apiProxy,
         },
+        build: {
+            // The national ZIP lookup changes independently from application
+            // code. Keep it in a stable cacheable chunk so routine UI releases
+            // do not force browsers to download the 2020 Census index again.
+            chunkSizeWarningLimit: 1500,
+            rollupOptions: {
+                output: {
+                    manualChunks(id) {
+                        if (
+                            id.includes('postal-index.json') ||
+                            id.includes('geography-names.json') ||
+                            id.endsWith('/postal-geography.ts')
+                        ) {
+                            return 'postal-geography-census2020';
+                        }
+                        if (
+                            id.includes('/node_modules/react/') ||
+                            id.includes('/node_modules/react-dom/') ||
+                            id.includes('/node_modules/scheduler/')
+                        ) {
+                            return 'react-vendor';
+                        }
+                    },
+                },
+            },
+        },
     };
 });

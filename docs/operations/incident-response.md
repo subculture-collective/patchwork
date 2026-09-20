@@ -222,6 +222,13 @@ container. Do not treat actuator health as itinerary or accessibility proof.
 Repeated `/travel/plan` failures should disable the API routing URL until the
 router or graph is corrected.
 
+For refresh failures, inspect `systemctl status patchwork-routing-refresh.service`
+and its journal. The job qualifies a candidate in a separate OTP container before
+publication and restores the complete previous release when post-publication
+runtime health fails. Confirm both the actuator and a known itinerary after a
+manual restore. Do not delete failed candidate logs or previous graph releases
+while investigating the publisher, graph build, or runtime failure.
+
 Every game day records UTC timestamps, commands, alert transition and delivery,
 operator decision, recovery observation, and follow-up fixes in the Phase 7
 evidence file. Local simulations do not satisfy the staging alert-delivery gate.

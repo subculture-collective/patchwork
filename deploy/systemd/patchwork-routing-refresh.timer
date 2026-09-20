@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh the Patchwork Chicago routing graph weekly
+
+[Timer]
+OnCalendar=Sun *-*-* 04:45:00 America/Chicago
+Persistent=true
+RandomizedDelaySec=2h
+Unit=patchwork-routing-refresh.service
+
+[Install]
+WantedBy=timers.target

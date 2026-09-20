@@ -40,3 +40,20 @@ and recreate the API container.
 Actuator health, GraphQL schema acceptance, and a successful local itinerary do
 not qualify Chicago coverage or accessibility. The post-activation observation
 window and real itinerary checks in `docs/quality-gates.md` remain required.
+
+## Scheduled maintenance
+
+Install `fetch-inputs.sh`, `build-graph.sh`, `refresh-graph.sh`, and `config/`
+under `/usr/local/libexec/patchwork-routing`, then install and enable
+`patchwork-routing-refresh.timer`. The weekly job fetches bounded current CTA
+and Chicago OSM inputs into an isolated candidate directory. It skips a rebuild
+when both input hashes are unchanged. Changed inputs must build successfully,
+load in an isolated resource-limited OTP container, and return a real Chicago
+transit itinerary before publication. The active input set and graph are backed
+up together, the runtime is restarted only after candidate qualification, and
+a failed runtime health check restores the previous release.
+
+The job writes node-exporter textfile metrics for its last attempt, last safe
+completion, and active GTFS, OSM, and graph hashes. Prometheus warns after a
+failed run or ten days without a safe refresh check. Previous releases are
+retained for 120 days.

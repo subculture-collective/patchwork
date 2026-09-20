@@ -23,6 +23,8 @@ open.
 | `PatchworkSourceRefreshFailed` | warning | latest scheduled CPL refresh failed | Respond within 15 minutes |
 | `PatchworkSourceRefreshStale` | warning | no completed CPL refresh for 36 hours | Respond within 15 minutes |
 | `PatchworkRoutingUnavailable` | warning | OTP metrics target down for 5 minutes | Respond within 15 minutes |
+| `PatchworkRoutingGraphRefreshFailed` | warning | latest scheduled graph refresh failed qualification or activation | Respond within 15 minutes |
+| `PatchworkRoutingGraphRefreshStale` | warning | no safe graph refresh check for 10 days | Respond within 15 minutes |
 | `PatchworkTravelRouteErrors` | warning | more than two travel API errors in 15 minutes | Respond within 15 minutes |
 | `PatchworkBackupFailed` | warning | most recent backup attempt failed | Respond within 15 minutes |
 | `PatchworkBackupStale` | warning | no successful backup for 7.5 hours | Respond within 15 minutes |
