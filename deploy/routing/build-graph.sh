@@ -10,7 +10,7 @@ trap cleanup EXIT
 exec 9>"${data_dir}/.build.lock"
 flock -n 9 || { printf 'Another graph build is active.\n' >&2; exit 75; }
 
-for file in chicago-cta.gtfs.zip illinois.osm.pbf otp-config.json build-config.json router-config.json inputs.manifest.json; do
+for file in chicago-cta.gtfs.zip chicago.osm.pbf otp-config.json build-config.json router-config.json inputs.manifest.json; do
     test -s "$data_dir/$file" || { printf 'Required input is missing: %s\n' "$file" >&2; exit 1; }
     ln "$data_dir/$file" "$work_dir/$file" 2>/dev/null || cp "$data_dir/$file" "$work_dir/$file"
 done

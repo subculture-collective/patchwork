@@ -4,9 +4,9 @@ umask 027
 
 data_dir="${1:?Usage: fetch-inputs.sh DATA_DIRECTORY}"
 cta_url='https://www.transitchicago.com/downloads/sch_data/google_transit.zip'
-osm_url='https://download.geofabrik.de/north-america/us/illinois-latest.osm.pbf'
+osm_url='https://download.bbbike.org/osm/bbbike/Chicago/Chicago.osm.pbf'
 max_gtfs_bytes=268435456
-max_osm_bytes=805306368
+max_osm_bytes=268435456
 lock_file="${data_dir}.fetch.lock"
 mkdir -p "$data_dir"
 exec 9>"$lock_file"
@@ -37,10 +37,10 @@ fetch() {
 }
 
 fetch "$cta_url" "$data_dir/chicago-cta.gtfs.zip" "$max_gtfs_bytes"
-fetch "$osm_url" "$data_dir/illinois.osm.pbf" "$max_osm_bytes"
+fetch "$osm_url" "$data_dir/chicago.osm.pbf" "$max_osm_bytes"
 cp "$(dirname "$0")"/config/*.json "$data_dir/"
 generated_at="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 cat >"$data_dir/inputs.manifest.json.tmp" <<EOF
-{"generatedAt":"$generated_at","sources":{"cta":"$cta_url","osm":"$osm_url"},"files":{"gtfsSha256":"$(awk '{print $1}' "$data_dir/chicago-cta.gtfs.zip.sha256")","osmSha256":"$(awk '{print $1}' "$data_dir/illinois.osm.pbf.sha256")"}}
+{"generatedAt":"$generated_at","sources":{"cta":"$cta_url","osm":"$osm_url"},"files":{"gtfsSha256":"$(awk '{print $1}' "$data_dir/chicago-cta.gtfs.zip.sha256")","osmSha256":"$(awk '{print $1}' "$data_dir/chicago.osm.pbf.sha256")"}}
 EOF
 mv "$data_dir/inputs.manifest.json.tmp" "$data_dir/inputs.manifest.json"
