@@ -442,7 +442,14 @@ describe('durable private attachment pipeline', () => {
                 )
             ).rows[0]?.count,
         ).toBe(2);
-        await service.runDeletionSweep();
+        // The delete trigger uses PostgreSQL microseconds; a same-millisecond
+        // JavaScript Date can precede those jobs even after DELETE completes.
+        const due = await pool.query<{ due: Date }>(
+            `SELECT MAX(next_attempt_at) + INTERVAL '1 millisecond' AS due
+             FROM attachment_deletion_jobs WHERE deleted_at IS NULL`,
+        );
+        await expect(service.runDeletionSweep(due.rows[0]!.due))
+            .resolves.toMatchObject({ deleted: 2, failed: 0 });
         expect(objects.objects.size).toBe(0);
     });
 
