@@ -36,3 +36,5 @@ export * from './resource-services.js';
 export * from './saved-discovery.js';
 export * from './resource-profile.js';
 export * from './resource-map.js';
+export * from './resource-directory.js';
+export * from './resource-directory-legacy.js';
