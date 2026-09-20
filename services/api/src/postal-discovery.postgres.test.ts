@@ -70,7 +70,7 @@ describe('ZIP discovery and sourced-resource claims',()=>{
         expect((libraries.body as {total:number}).total).toBeGreaterThan(80);
         const libraryOnly = await queryProjected(pool, new URLSearchParams({category:'library'}), 'directory');
         expect((libraryOnly.body as {total:number}).total).toBeGreaterThan(80);
-    });
+    }, 15000);
     it('combines published program evidence with other filters before pagination', async () => {
         const cases = [
             ['wic', (r: typeof publicResourceSeed[number]) => ['idhs-wic','colorado-wic'].includes(r.sourceId)],

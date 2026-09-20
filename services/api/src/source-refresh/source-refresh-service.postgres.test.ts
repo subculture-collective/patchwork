@@ -4,7 +4,7 @@ import snapshot from '../db/seed-data/chicago-metro-public-resources.json' with 
 import { hashRefreshValue, planPublicResourceRefresh, type RefreshListing } from '../db/public-resource-refresh.js';
 import { previewPublicResourceRefresh } from '../db/public-resource-refresh-preview.js';
 import { SourceRefreshError, SourceRefreshService } from './source-refresh-service.js';
-import { runCplSourceRefresh } from './chicago-public-library-run.js';
+import { recordSourceRefreshAttempt, runCplSourceRefresh } from './chicago-public-library-run.js';
 
 const pool = new Pool({ connectionString: process.env.TEST_DATABASE_URL });
 const service = new SourceRefreshService(pool);
@@ -69,6 +69,27 @@ async function prepare(key: string, hashCharacter: string) {
 }
 
 describe('persistent source-refresh candidates and guarded contact application', () => {
+    it('records a completed source-refresh heartbeat in PostgreSQL', async () => {
+        const client = await pool.connect();
+        const at = new Date('2026-09-20T08:00:00.000Z');
+        try {
+            await client.query('BEGIN');
+            await recordSourceRefreshAttempt(client as never, true, true, at);
+            const result = await client.query(
+                'SELECT last_attempt_succeeded,last_attempt_at,last_success_at FROM source_refresh_operational_status WHERE source_id=$1',
+                ['cpl'],
+            );
+            expect(result.rows[0]).toMatchObject({
+                last_attempt_succeeded: true,
+                last_attempt_at: at,
+                last_success_at: at,
+            });
+        } finally {
+            await client.query('ROLLBACK');
+            client.release();
+        }
+    });
+
     it('skips a concurrent CPL refresh before contacting the publisher', async () => {
         const blocker = await pool.connect();
         const fetcher = vi.fn<typeof fetch>();
