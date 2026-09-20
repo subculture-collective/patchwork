@@ -157,8 +157,10 @@ archived; no existing application columns or rows need reversal.
    overnight hours, closures and eligibility rules. Demonstrate useful coverage
    before claiming hours/eligibility filtering is qualified.
 2. Qualify real provider journeys separately. The travel API and client are
-   implemented, but routing remains disabled until its graph, coverage, privacy,
-   cancellation, concurrency, real-itinerary and observation gates pass.
+   implemented. A pinned OTP 2.10.0 runtime has passed initial Chicago graph,
+   walk, CTA bus and rail, wheelchair, outside-graph, client-disconnect and
+   eight-request concurrency qualification. API activation, the application-level
+   real journey, and the post-activation observation window remain required.
 
 Verification: the source-refresh unit suite owns classification, input
 preservation and bounded retries; the PostgreSQL suite owns live-state joins,
@@ -167,5 +169,5 @@ cleanup and persisted-row preservation. The browser journey owns evidence
 inspection and the reviewer commands. Run `npm run check`,
 `npm run test:integration`, and the source-refresh reviewer browser scenario.
 These checks do not establish a successful live publisher retrieval, unattended
-production scheduling, Chicago structured service coverage, or live-provider
-qualification.
+production scheduling, Chicago structured service coverage, application routing
+activation, its observation window, or live-provider qualification.
