@@ -1,6 +1,6 @@
 import { PublisherValidationError } from './publisher-validation-error.js';
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { retainEvidenceBlob, writeImmutableEvidence } from './evidence-storage.js';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { parsePublicResourceCatalog, type PublicResourceCatalogInput } from '../db/public-resource-catalog.js';
@@ -136,30 +136,34 @@ export function normalizeCplPublisherBytes(raw: Uint8Array, retrievedAt: Date, b
     return catalog;
 }
 
-async function writeImmutable(path: string, content: Uint8Array | string) {
-    try { await writeFile(path, content, { flag: 'wx' }); }
-    catch (error) {
-        if (!(error instanceof Error) || !('code' in error) || error.code !== 'EEXIST') throw error;
-        const existing = await readFile(path);
-        const expected = typeof content === 'string' ? Buffer.from(content) : Buffer.from(content);
-        if (!existing.equals(expected)) throw new Error(`Evidence path already contains different bytes: ${path}`);
-    }
-}
-
-/** Writes raw evidence and derived artifacts only after the full response validates. */
+/** Manifest publication is last: its presence means every evidence artifact was retained. */
 export async function retainCplEvidence(outputDir: string, raw: Uint8Array, catalog: CplCatalog, manifest: CplEvidenceManifest) {
+    const normalized = normalizeCplPublisherBytes(raw, new Date(manifest.retrievedAt), new Set());
+    if (manifest.version !== 1 || manifest.publisher !== 'City of Chicago' || manifest.datasetId !== CPL_DATASET_ID
+        || manifest.requestUrl !== CPL_API_URL || manifest.responseUrl !== CPL_API_URL
+        || manifest.contentType !== 'application/json' || manifest.rawSha256 !== hash(raw)
+        || manifest.rawBytes !== raw.byteLength || manifest.rowCount !== catalog.resources.length
+        || manifest.normalizedSha256 !== hashRefreshValue(catalog)
+        || hashRefreshValue(normalized) !== manifest.normalizedSha256) {
+        throw new Error('CPL evidence manifest does not match exact raw and normalized evidence.');
+    }
     const evidenceDir = join(outputDir, 'raw');
     const runsDir = join(outputDir, 'runs');
-    await mkdir(evidenceDir, { recursive: true });
-    await mkdir(runsDir, { recursive: true });
     const run = `${safeTimestamp(manifest.retrievedAt)}-${manifest.rawSha256.slice(0, 12)}`;
     const rawPath = join(evidenceDir, `${manifest.rawSha256}.json`);
     const manifestPath = join(runsDir, `${run}.manifest.json`);
     const catalogPath = join(runsDir, `${run}.catalog.json`);
-    await writeImmutable(rawPath, raw);
-    await writeImmutable(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
-    await writeImmutable(catalogPath, `${JSON.stringify(catalog, null, 2)}\n`);
-    return { rawPath, manifestPath, catalogPath };
+    const storagePath = join(runsDir, `${run}.storage.json`);
+    const blob = await retainEvidenceBlob(outputDir, raw, MAX_BYTES);
+    // Preserve old raw paths for existing manifests, backup tooling and rollback readers.
+    await writeImmutableEvidence(rawPath, raw);
+    await writeImmutableEvidence(catalogPath, Buffer.from(`${JSON.stringify(catalog, null, 2)}\n`));
+    await writeImmutableEvidence(storagePath, Buffer.from(`${JSON.stringify({
+        version: 1, adapter: 'chicago-public-library', adapterVersion: '1.0.0', schemaVersion: 1,
+        raw: blob, normalizedSha256: manifest.normalizedSha256,
+    }, null, 2)}\n`));
+    await writeImmutableEvidence(manifestPath, Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`));
+    return { rawPath, manifestPath, catalogPath, storagePath };
 }
 
 async function readBoundedBody(response: Response) {
