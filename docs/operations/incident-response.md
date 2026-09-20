@@ -1,6 +1,6 @@
 # Incident Response Runbook
 
-Tracks: #105 (Incident response runbook and game day), #75 (Epic D -- Reliability & Observability)
+Tracks: [incident qualification #18](https://git.subcult.tv/subculture-collective/patchwork/issues/18) and [current acceptance](../current-acceptance.md).
 
 ---
 
@@ -519,4 +519,4 @@ multiple services.
 
 ---
 
-*Created as part of Wave 3 reliability lane. Tracked by #105, #75, #68.*
+*Maintain this runbook through the current incident-qualification issue.*

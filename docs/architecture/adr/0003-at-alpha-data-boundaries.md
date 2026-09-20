@@ -5,10 +5,11 @@
 - Owners: Patchwork engineering and trust-and-safety
 - Supersedes: data-placement assumptions in the phase plans where they conflict with this decision
 - Amended: 2026-07-28 for the buyer-ready responsive-web target
+- Reconciled: 2026-09-20 with implemented chat, ZIP publication and transient travel; remaining acceptance is tracked in [current acceptance](../../current-acceptance.md)
 
 ## Context
 
-Patchwork currently models five AT record collections and many application workflows, but its runtime is fixture-heavy. Before real integration begins, the project needs an explicit boundary between:
+The original decision separated five AT record schemas and application workflows. The implemented runtime now has real persistence and provider paths, whose qualification is tracked separately. The governing data boundaries remain:
 
 1. public, user-owned AT repository records;
 2. rebuildable Patchwork read projections;
@@ -30,12 +31,14 @@ user-owned AT collections once each collection has its complete authenticated
 CRUD, ingestion, projection, deletion, and moderation path. Reports,
 verification evidence, approvals, offers, connections, inbox state,
 notifications, attachments, consent, and organization membership remain
-private PostgreSQL or private-object-store state. Chat remains unavailable.
+private PostgreSQL or private-object-store state. Bounded text chat is now
+implemented as private PostgreSQL state for authorized connection participants
+and group members; it does not enable public conversation lexicon writes.
 
 Personal exact location is transient input. Patchwork must never persist it in
 PostgreSQL, AT records, object storage, logs, analytics, notifications,
 exports, backups, Playwright artifacts, or any fallback transport. It may be
-sent only over an authenticated encrypted WebRTC data channel between the two
+sent for peer exchange only over an authenticated encrypted WebRTC data channel between the two
 participants of an accepted active connection. Signaling is authenticated and
 authorized against that connection, requires fresh consent from both
 participants, uses a short-lived single-use identifier, contains no
@@ -52,6 +55,19 @@ expiry immediately removes the exact projection and falls back to an approved
 approximate service area or quarantines the listing. Approval and origin
 metadata are immutable server-controlled state; browser and AT payloads cannot
 grant them.
+
+### Transient travel exception
+
+An explicitly requested travel plan may send a precise origin in a non-cacheable
+POST body through the API to the self-hosted OTP router. The origin exists only
+in bounded request memory, never in database/object storage, public AT records,
+URLs, logs, exports, notifications, backups or retained test artifacts. This is
+separate from peer-location signaling and does not relax its consent rules.
+The destination is resolved from an eligible public resource address. Requests
+have bounded time/concurrency and cancellation; responses omit coordinate
+geometry. Chicago application routing and the initial observation are recorded
+as active; a real-device permission journey and sustained natural maintenance
+remain open in the acceptance matrix.
 
 ### 1. Approved public collections
 
@@ -76,6 +92,12 @@ Their schemas and tests remain design inputs. Re-enabling any collection require
 In particular, reports and moderation casework are private. The presence of `app.patchwork.moderation.report` in the repository does not authorize publishing reporter identity, report details, evidence, or case outcomes.
 
 ### 2. Public aid-post record
+
+New version 2 posts publish only a supported US `countryCode` and `postalCode`
+for location. The original coarse-coordinate rules below apply to legacy
+version 1 compatibility, not to new request publication. Records without a
+confirmed ZIP have no public discovery coordinates. The current wire contract
+is described in [postal geography](../postal-geography.md).
 
 An aid-post record may contain only information the author has explicitly agreed to publish:
 
@@ -179,8 +201,8 @@ Geoprivacy is enforced at every boundary:
 
 - The web labels public location as approximate before submission.
 - The command API rejects public `precisionKm < 1` and quantizes coordinates before a repository write.
-- Exact personal inputs use a transient browser-only payload and never share a
-  type with a public record or server signaling payload.
+- Exact personal inputs use a transient peer-exchange or travel-request payload
+  and never share a type with a public record or server signaling payload.
 - The lexicon validator enforces the alpha public minimum.
 - The indexer rejects or quarantines records that violate the public location policy.
 - Query APIs return only quantized/coarse geography.

@@ -1,6 +1,8 @@
 # Mobile Release Checklist
 
-Tracks: #135 (Mobile First Release)
+Tracks: [native implementation #60](https://git.subcult.tv/subculture-collective/patchwork/issues/60) and [native release #61](https://git.subcult.tv/subculture-collective/patchwork/issues/61).
+
+This is a historical checklist, not a supported-device or release-completion claim. Refresh the device/OS matrix and provider-hosted OAuth scenarios before use; Patchwork must not collect an AT account password.
 
 ---
 
@@ -36,7 +38,7 @@ Each check must be executed on both platforms unless marked platform-specific.
 
 | Check ID | Description | iOS | Android |
 |----------|------------|-----|---------|
-| auth-login | User can log in with AT Protocol handle and password | Pending | Pending |
+| auth-login | User completes provider-hosted AT Protocol OAuth without giving Patchwork a password | Pending | Pending |
 | auth-session-refresh | Session refreshes automatically before expiry | Pending | Pending |
 | auth-logout | User can log out and session is cleared | Pending | Pending |
 
@@ -155,4 +157,4 @@ Both stores require disclosure of data collection practices:
 
 ---
 
-*Created as part of Wave 5, Lane 3: Mobile First Release. Tracked by #135.*
+*Historical mobile checklist; current delivery ownership is linked above.*
