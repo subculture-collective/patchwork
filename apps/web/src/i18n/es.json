@@ -44,6 +44,7 @@
         "clinic": "Clínica",
         "legal-aid": "Asistencia legal",
         "hotline": "Línea directa",
+        "library": "Biblioteca",
         "open": "Abierto",
         "unknown": "Disponibilidad sin confirmar",
         "limited": "Limitado",
@@ -476,7 +477,8 @@
         "allPrograms": "Todos los programas",
         "distanceLabel": "Distancia de búsqueda",
         "programHelp": "Todos los filtros se aplican juntos. Los filtros de programa incluyen solo servicios con información publicada del programa. Confirme la elegibilidad y las citas con el proveedor.",
-        "filtersLegend": "Filtrar recursos"
+        "filtersLegend": "Filtrar recursos",
+        "includeLibraries": "Incluir bibliotecas"
     },
     "volunteer": {
         "heading": "Incorporación de voluntarios",
@@ -1736,6 +1738,26 @@
         },
         "refresh": "Actualizar correcciones",
         "saveDecision": "Guardar decisión de corrección"
+    },
+    "travel": {
+        "title": "Planificar un viaje",
+        "privacy": "Tu ubicación precisa se solicita solo cuando eliges planificar. Se usa para esta solicitud de viaje y Patchwork no la guarda.",
+        "mode": "Modo de viaje",
+        "transit": "Transporte público y a pie",
+        "walk": "Solo a pie",
+        "departAt": "Salir a las",
+        "arriveAt": "Llegar a las",
+        "arriveBy": "Planificar para llegar a esta hora",
+        "wheelchair": "Viaje accesible en silla de ruedas",
+        "useLocation": "Usar mi ubicación y planificar",
+        "locating": "Obteniendo tu ubicación…",
+        "planning": "Planificando viaje…",
+        "locationUnavailable": "La ubicación no está disponible en este navegador.",
+        "locationDenied": "No se pudo obtener tu ubicación. Revisa el permiso del navegador e inténtalo de nuevo.",
+        "noTrips": "No se encontraron viajes para esa hora.",
+        "options": "Opciones de viaje",
+        "option": "Opción {{number}}",
+        "minutes": "min"
     },
     "sourceRefresh": {
         "title": "Revisión de actualización de fuentes editoriales",

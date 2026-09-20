@@ -55,6 +55,7 @@ export interface DirectoryQueryInput extends PaginationInput {
     service?: import('./resource-services.js').ResourceService;
     program?: import('./resource-services.js').ResourceProgram;
     category?: string;
+    includeLibraries?: boolean;
     status?: 'unverified' | 'community-verified' | 'partner-verified';
     operationalStatus?: 'open' | 'limited' | 'closed' | 'unknown';
     latitude?: number;
@@ -570,6 +571,14 @@ export class DiscoveryIndexStore {
             );
         }
 
+        if (!input.includeLibraries && input.category !== 'library') {
+            sets.push(new Set(
+                [...this.directoryRecords.values()]
+                    .filter(record => record.category !== 'library')
+                    .map(record => record.uri),
+            ));
+        }
+
         let uriSet: Set<string>;
 
         if (sets.length === 0) {
@@ -772,6 +781,7 @@ const directoryQuerySchema = z
         service: z.enum(resourceServices).optional(),
         program: z.enum(resourcePrograms).optional(),
         category: z.string().min(1).max(64).optional(),
+        includeLibraries: z.boolean().optional(),
         status: z
             .enum(['unverified', 'community-verified', 'partner-verified'])
             .optional(),

@@ -4,6 +4,7 @@ import { SaveDiscoveryButton } from './saved-discovery';
 import { PublicResourceClaim } from './public-resource-claims';
 import { useLocale } from '../i18n';
 import { currentExactPublicAddress, type ResourceDetail } from '../resource-directory-ux';
+import { TravelPlanner } from './travel-planner';
 
 export function resourceContactLinks(resource: ResourceDetail) {
     if (resource.recordOrigin === 'synthetic') return {};
@@ -50,8 +51,9 @@ export function ResourceActions({ resource }: { resource: ResourceDetail }) {
             <a className={linkClass} href={`/posting?${query.toString()}`}>{t('handoff.askCommunity')}</a>
         </div>
         <SaveDiscoveryButton input={{kind:'resource',resourceUri:resource.uri}} />
+        {address && <TravelPlanner key={`travel:${resource.uri}`} resourceUri={resource.uri} />}
         <PublicResourceClaim resource={resource} />
-        <ResourceCorrectionForm key={resource.uri} resourceUri={resource.uri} />
+        <ResourceCorrectionForm key={`correction:${resource.uri}`} resourceUri={resource.uri} />
         {!links.website && !links.telephone && <p className='text-sm'>{t('handoff.contactUnavailable')}</p>}
         {!links.directions && <p className='text-xs'>{t('handoff.approximateResource')}</p>}
     </div>;

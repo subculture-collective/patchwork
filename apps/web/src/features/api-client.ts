@@ -61,6 +61,25 @@ export interface ApiClientFailure {
 
 export type ApiClientResult<TData> = ApiClientSuccess<TData> | ApiClientFailure;
 
+export interface TravelLeg {
+    mode: string;
+    startTime: string;
+    endTime: string;
+    durationSeconds: number;
+    distanceMeters: number;
+    from: string;
+    to: string;
+    route?: string;
+}
+
+export interface TravelItinerary {
+    startTime: string;
+    endTime: string;
+    durationSeconds: number;
+    walkDistanceMeters: number;
+    legs: TravelLeg[];
+}
+
 export interface PagedResult<T> {
     items: T[];
     page: number;
@@ -299,6 +318,7 @@ const buildDirectoryQueryParams = (
     if (state.resourceService) params.set('service', state.resourceService);
     if (state.resourceProgram) params.set('program', state.resourceProgram);
     if (state.resourceCategory) params.set('category', state.resourceCategory);
+    if (state.includeLibraries) params.set('includeLibraries', 'true');
     if (state.text) {
         params.set('searchText', state.text);
     }
@@ -3865,6 +3885,38 @@ export async function fetchResourceViaApi(uri: string, signal?: AbortSignal, dat
     if (!cards || cards.length !== 1 || cards[0]?.uri !== uri) return invalidResponseFailure('Resource details were unavailable.');
     return { ok: true, data: cards[0] };
 }
+
+const validTravelLeg = (value: unknown): value is TravelLeg => isRecord(value)
+    && typeof value['mode'] === 'string'
+    && typeof value['startTime'] === 'string'
+    && typeof value['endTime'] === 'string'
+    && typeof value['durationSeconds'] === 'number'
+    && typeof value['distanceMeters'] === 'number'
+    && typeof value['from'] === 'string'
+    && typeof value['to'] === 'string'
+    && (value['route'] === undefined || typeof value['route'] === 'string');
+
+export const planTravelViaApi = async (input: {
+    resourceUri: string;
+    origin: { latitude: number; longitude: number };
+    dateTime: string;
+    arriveBy: boolean;
+    mode: 'walk' | 'transit';
+    wheelchair: boolean;
+}, signal?: AbortSignal): Promise<ApiClientResult<TravelItinerary[]>> => {
+    const result = await requestJsonPost('/travel/plan', input, signal);
+    if (!result.ok) return result;
+    if (!isRecord(result.data) || !Array.isArray(result.data['itineraries'])
+        || !result.data['itineraries'].every(value => isRecord(value)
+            && typeof value['startTime'] === 'string'
+            && typeof value['endTime'] === 'string'
+            && typeof value['durationSeconds'] === 'number'
+            && typeof value['walkDistanceMeters'] === 'number'
+            && Array.isArray(value['legs']) && value['legs'].every(validTravelLeg))) {
+        return invalidResponseFailure('Travel options were malformed. Try again.');
+    }
+    return { ok: true, data: result.data['itineraries'] as TravelItinerary[] };
+};
 
 export const submitPublicResourceClaimViaApi = (input: { resourceUri: string; organizationId: string; evidence: string }) => requestJsonPost('/organizations/resource-claims',input);
 export const listPublicResourceClaimsViaApi = () => requestJson('/organizations/resource-claims',new URLSearchParams());

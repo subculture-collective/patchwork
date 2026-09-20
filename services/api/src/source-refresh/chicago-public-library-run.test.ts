@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { withBoundedPublisherRetry } from './chicago-public-library-run.js';
+import { recordSourceRefreshAttempt, withBoundedPublisherRetry } from './chicago-public-library-run.js';
 
 describe('bounded publisher retry', () => {
     it('retries transient publisher failures with bounded backoff', async () => {
@@ -35,5 +35,13 @@ describe('bounded publisher retry', () => {
         await expect(withBoundedPublisherRetry(operation, delay)).rejects.toThrow('HTTP 503');
         expect(operation).toHaveBeenCalledTimes(3);
         expect(delay).toHaveBeenCalledTimes(2);
+    });
+
+    it('records operational attempts without treating a concurrent skip as fresh evidence', async () => {
+        const query = vi.fn().mockResolvedValue({ rowCount: 1, rows: [] });
+        const at = new Date('2026-09-20T08:00:00.000Z');
+        await recordSourceRefreshAttempt({ query } as never, true, false, at);
+        expect(query).toHaveBeenCalledWith(expect.stringContaining('source_refresh_operational_status'), [at, true, false]);
+        expect(query.mock.calls[0]![0]).toContain('CASE WHEN $3');
     });
 });

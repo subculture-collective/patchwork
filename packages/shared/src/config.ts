@@ -82,6 +82,7 @@ const apiSchema = baseSchema.merge(atprotoSchema).extend({
         .max(3_600)
         .default(15),
     API_MODERATION_SERVICE_URL: optionalUrlField,
+    API_ROUTING_SERVICE_URL: optionalUrlField,
     MODERATION_SERVICE_TOKEN: optionalSecretField,
     ATTACHMENT_OBJECT_ENDPOINT: optionalUrlField,
     ATTACHMENT_OBJECT_ACCESS_KEY: optionalSecretField,
@@ -290,6 +291,7 @@ export interface ProductionApiConfig extends ProductionConfigBase {
     ATPROTO_SESSION_ENCRYPTION_KEY?: string;
     ATPROTO_ACCOUNT_PDS_ADMIN_PASSWORD?: string;
     API_MODERATION_SERVICE_URL?: string;
+    API_ROUTING_SERVICE_URL?: string;
     MODERATION_SERVICE_TOKEN?: string;
     ATTACHMENT_OBJECT_ENDPOINT?: string;
     ATTACHMENT_OBJECT_ACCESS_KEY?: string;

@@ -50,7 +50,7 @@ export function DiscoveryControls({
         state.category || state.status || state.minUrgency || state.since,
     );
     const showResourceFilters = resourceMode || (resourceFilters && nearbyResourceIntent(state));
-    const resourceFilterCount = [state.resourceService, state.resourceProgram, state.resourceCategory].filter(Boolean).length;
+    const resourceFilterCount = [state.resourceService, state.resourceProgram, state.resourceCategory, state.includeLibraries].filter(Boolean).length;
     const clearPlace = () => {
         location.cancel();
         setZip('');
@@ -164,6 +164,14 @@ export function DiscoveryControls({
                             {directoryCategories.map(category => <option key={category} value={category}>{t(`labels.${category}`)}</option>)}
                         </select>
                     </div>
+                    <label className='flex items-center gap-2 sm:col-span-2'>
+                        <input
+                            type='checkbox'
+                            checked={state.includeLibraries === true}
+                            onChange={event => onPatch({ includeLibraries: event.target.checked || undefined })}
+                        />
+                        {t('resources.includeLibraries')}
+                    </label>
                     {state.center && <div>
                         <label htmlFor={`${idPrefix}-radius`}>{t('resources.distanceLabel')}</label>
                         <select id={`${idPrefix}-radius`} className='mh-input w-full px-3 py-2 text-base'
@@ -174,8 +182,8 @@ export function DiscoveryControls({
                         </select>
                     </div>}
                     <p className='text-sm text-mh-textMuted sm:col-span-2'>{t(state.resourceProgram ? 'resources.programHelp' : 'resources.searchHelp')}</p>
-                    {(state.text || state.resourceService || state.resourceProgram || state.resourceCategory || state.radiusMeters) && <button className='mh-text-button justify-self-start'
-                        onClick={() => { setSearch(''); onPatch({ text: undefined, resourceService: undefined, resourceProgram: undefined, resourceCategory: undefined, radiusMeters: undefined }); }}>
+                    {(state.text || state.resourceService || state.resourceProgram || state.resourceCategory || state.includeLibraries || state.radiusMeters) && <button className='mh-text-button justify-self-start'
+                        onClick={() => { setSearch(''); onPatch({ text: undefined, resourceService: undefined, resourceProgram: undefined, resourceCategory: undefined, includeLibraries: undefined, radiusMeters: undefined }); }}>
                         {t('discovery.resetFilters')}
                     </button>}
                 </fieldset>
@@ -188,6 +196,9 @@ export function DiscoveryControls({
                     ['resourceCategory', state.resourceCategory, state.resourceCategory ? t(`labels.${state.resourceCategory}`) : ''],
                 ] as const).filter(([,value]) => value).map(([field,,label]) => <button key={field} className='mh-nav-chip'
                     aria-label={t('nearby.removeFilter', {filter:label})} onClick={() => onPatch({[field]:undefined})}>{label} <span aria-hidden='true'>×</span></button>)}
+                {state.includeLibraries && <button className='mh-nav-chip'
+                    aria-label={t('nearby.removeFilter', {filter:t('resources.includeLibraries')})}
+                    onClick={() => onPatch({includeLibraries:undefined})}>{t('resources.includeLibraries')} <span aria-hidden='true'>×</span></button>}
             </div>}
             {zipError && (
                 <p role='alert' id={`${idPrefix}-zip-error`}>

@@ -20,6 +20,10 @@ open.
 | `PatchworkUrgentModerationNotificationPending` | critical | urgent moderator notification remains unconsumed for 5 minutes | Page within 5 minutes |
 | `PatchworkMaintenanceModeActive` | warning | safety maintenance remains active for 5 minutes | Confirm incident ownership within 15 minutes |
 | `PatchworkDatabaseUnavailable` | critical | PostgreSQL scrape target down for 1 minute | Page within 5 minutes |
+| `PatchworkSourceRefreshFailed` | warning | latest scheduled CPL refresh failed | Respond within 15 minutes |
+| `PatchworkSourceRefreshStale` | warning | no completed CPL refresh for 36 hours | Respond within 15 minutes |
+| `PatchworkRoutingUnavailable` | warning | OTP metrics target down for 5 minutes | Respond within 15 minutes |
+| `PatchworkTravelRouteErrors` | warning | more than two travel API errors in 15 minutes | Respond within 15 minutes |
 | `PatchworkBackupFailed` | warning | most recent backup attempt failed | Respond within 15 minutes |
 | `PatchworkBackupStale` | warning | no successful backup for 7.5 hours | Respond within 15 minutes |
 | `PatchworkIndependentBackupFailed` | warning | database/private-object replication failed | Respond within 15 minutes |

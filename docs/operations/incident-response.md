@@ -201,6 +201,27 @@ endpoints, subscription keys, notification bodies, exact locations, private
 evidence, moderation notes, or provider credentials in incident notes.
 Provider feedback uses its dedicated bearer-token boundary.
 
+### Source refresh
+
+Check `systemctl status patchwork-source-refresh.service` and the latest journal
+without rerunning the job first. A failed attempt leaves retained evidence and
+review candidates unchanged. Confirm the API container is healthy, the evidence
+bind mount is present, and the retained directory remains below 2 GiB. Retry the
+oneshot service once after correcting the named failure. Do not delete raw,
+manifest, or catalog evidence to clear the capacity guard; expand or archive the
+volume with checksums intact. A stale alert uses the latest completed refresh,
+so a concurrent skip does not renew source evidence.
+
+### Travel routing
+
+Check the OTP actuator health endpoint and `patchwork-staging-routing` logs.
+Keep `API_ROUTING_SERVICE_URL` unset if the graph is absent, expired, or fails a
+known Chicago itinerary. A graph replacement is atomic; restore the most recent
+file under `/srv/patchwork-routing/previous` and restart only the routing
+container. Do not treat actuator health as itinerary or accessibility proof.
+Repeated `/travel/plan` failures should disable the API routing URL until the
+router or graph is corrected.
+
 Every game day records UTC timestamps, commands, alert transition and delivery,
 operator decision, recovery observation, and follow-up fixes in the Phase 7
 evidence file. Local simulations do not satisfy the staging alert-delivery gate.

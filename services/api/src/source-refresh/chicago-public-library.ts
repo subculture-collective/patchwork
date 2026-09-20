@@ -96,7 +96,7 @@ export function normalizeCplPublisherBytes(raw: Uint8Array, retrievedAt: Date, b
         return {
             id: `cpl-${identity.id}`,
             name: `${(row.name ?? row.name_)!.trim()} — Chicago Public Library`,
-            category: 'other' as const,
+            category: 'library' as const,
             streetAddress: row.address.trim(), city: 'Chicago', state: 'IL' as const, postalCode,
             latitude: row.location.latitude, longitude: row.location.longitude,
             phone: row.phone.trim(), website: identity.website, usualHours: hours,

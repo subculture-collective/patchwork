@@ -12,6 +12,7 @@ const queryInput = (params: URLSearchParams) => ({
     latitude: number(params, 'latitude'), longitude: number(params, 'longitude'), radiusKm: number(params, 'radiusKm'),
     service: params.get('service') || undefined, program: params.get('program') || undefined,
     category: params.get('category') || undefined, status: params.get('status') || undefined,
+    includeLibraries: params.has('includeLibraries') ? params.get('includeLibraries') === 'true' ? true : params.get('includeLibraries') === 'false' ? false : params.get('includeLibraries') : undefined,
     urgency: params.get('urgency') || undefined, minimumUrgency: params.get('minimumUrgency') || undefined, operationalStatus: params.get('operationalStatus') || undefined,
     freshnessHours: number(params, 'freshnessHours'), searchText: params.get('searchText') || undefined,
     page: number(params, 'page'), pageSize: number(params, 'pageSize'),
@@ -36,6 +37,7 @@ export async function readProjectionPage<T extends QueryResultRow>(pool: Pick<Po
     }
     if (uri) where.push(`p.uri = ${bind(uri)}`);
     if (input.category) where.push(`p.category = ${bind(input.category)}`);
+    if (kind === 'directory' && !uri && raw.includeLibraries !== true && input.category !== 'library') where.push("p.category <> 'library'");
     if (input.status) where.push(`p.${kind === 'directory' ? 'verification_status' : 'status'} = ${bind(input.status)}`);
     if (kind !== 'directory' && raw.urgency) where.push(`p.urgency = ${bind(raw.urgency)}`);
     if (kind !== 'directory' && raw.minimumUrgency) {

@@ -60,6 +60,7 @@ services:
             API_DATA_SOURCE: postgres
             API_DATABASE_URL: postgresql://patchwork:${PATCHWORK_POSTGRES_PASSWORD:?Set PATCHWORK_POSTGRES_PASSWORD in .env}@patchwork-postgres:5432/patchwork
             API_MODERATION_SERVICE_URL: http://patchwork-thimble:4200
+            API_ROUTING_SERVICE_URL: ${API_ROUTING_SERVICE_URL:-}
             MODERATION_SERVICE_TOKEN: ${MODERATION_SERVICE_TOKEN:?Set MODERATION_SERVICE_TOKEN in .env}
             API_ATTACHMENT_INTERVAL_SECONDS: ${API_ATTACHMENT_INTERVAL_SECONDS:-30}
             ATTACHMENT_OBJECT_ENDPOINT: http://patchwork-objects:9000

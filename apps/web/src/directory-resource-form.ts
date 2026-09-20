@@ -9,6 +9,7 @@ export const directoryResourceCategories = [
     'clinic',
     'legal-aid',
     'hotline',
+    'library',
     'other',
 ] as const;
 

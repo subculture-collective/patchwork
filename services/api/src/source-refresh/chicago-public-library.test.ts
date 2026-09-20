@@ -40,6 +40,7 @@ describe('Chicago Public Library publisher adapter', () => {
             sha256: createHash('sha256').update(raw).digest('hex'),
         });
         expect(catalog.resources[0]).toMatchObject({
+            category: 'library',
             id: 'cpl-1', name: 'Branch 1 — Chicago Public Library', postalCode: '60602',
             website: 'https://www.chipublib.org/locations/1/', usualHours: 'Mon. & Wed., Noon-8; Tue. & Thu., 10-6',
             countyId: '17031', coordinateBasis: 'publisher-address',

@@ -69,6 +69,7 @@ services:
             API_DATA_SOURCE: postgres
             API_DATABASE_URL: postgresql://patchwork:${PATCHWORK_STAGING_POSTGRES_PASSWORD:?Set PATCHWORK_STAGING_POSTGRES_PASSWORD in .env}@patchwork-staging-postgres:5432/patchwork
             API_MODERATION_SERVICE_URL: http://patchwork-staging-thimble:4200
+            API_ROUTING_SERVICE_URL: ${STAGING_API_ROUTING_SERVICE_URL:-}
             MODERATION_SERVICE_TOKEN: ${STAGING_MODERATION_SERVICE_TOKEN:?Set STAGING_MODERATION_SERVICE_TOKEN in .env}
             API_ATTACHMENT_INTERVAL_SECONDS: ${STAGING_API_ATTACHMENT_INTERVAL_SECONDS:-30}
             ATTACHMENT_OBJECT_ENDPOINT: http://patchwork-objects:9000
@@ -86,6 +87,12 @@ services:
             NOTIFICATION_VAPID_PUBLIC_KEY: ${STAGING_NOTIFICATION_VAPID_PUBLIC_KEY:?Set STAGING_NOTIFICATION_VAPID_PUBLIC_KEY in .env}
             NOTIFICATION_VAPID_PRIVATE_KEY: ${STAGING_NOTIFICATION_VAPID_PRIVATE_KEY:?Set STAGING_NOTIFICATION_VAPID_PRIVATE_KEY in .env}
             NOTIFICATION_PROVIDER_WEBHOOK_TOKEN: ${STAGING_NOTIFICATION_PROVIDER_WEBHOOK_TOKEN:?Set STAGING_NOTIFICATION_PROVIDER_WEBHOOK_TOKEN in .env}
+        volumes:
+            - type: bind
+              source: ${STAGING_SOURCE_REFRESH_EVIDENCE_DIRECTORY:-/srv/patchwork-public/source-refresh}
+              target: /var/lib/patchwork/source-refresh
+              bind:
+                  create_host_path: false
         healthcheck:
             test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:4000/health/ready >/dev/null']
             interval: 10s
@@ -96,6 +103,26 @@ services:
             staging-web:
                 aliases:
                     - patchwork-staging-api
+
+    patchwork-routing:
+        image: opentripplanner/opentripplanner@sha256:8d54e5c589186707ee365417f2202dc878c451fa3001b8edff07019531100933
+        container_name: patchwork-staging-routing
+        profiles: ['routing']
+        restart: unless-stopped
+        command: ['--load', '--serve']
+        environment:
+            JAVA_TOOL_OPTIONS: -Xmx4g
+        volumes:
+            - type: bind
+              source: ${STAGING_ROUTING_DATA_DIRECTORY:-/srv/patchwork-routing}
+              target: /var/opentripplanner
+              read_only: true
+              bind:
+                  create_host_path: false
+        ports:
+            - '${STAGING_ROUTING_BIND_ADDRESS:-127.0.0.1}:${STAGING_ROUTING_PORT:-3080}:8080'
+        networks:
+            staging-internal:
 
     patchwork-spool:
         image: ${PATCHWORK_INDEXER_IMAGE:-patchwork-indexer:local}

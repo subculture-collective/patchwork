@@ -13,6 +13,7 @@ export type DirectoryResourceCategory =
     | 'clinic'
     | 'legal-aid'
     | 'hotline'
+    | 'library'
     | 'other';
 
 export interface ResourceDirectoryCard {

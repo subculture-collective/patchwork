@@ -1,0 +1,19 @@
+# Merge these entries into the central Prometheus scrape_configs. Static labels
+# supply the environment label expected by patchwork-alerts.yml.
+- job_name: patchwork-api
+  static_configs:
+    - targets: ['10.0.0.56:3023']
+      labels:
+        project: patchwork
+        service: api
+        environment: staging
+  metrics_path: /metrics
+
+- job_name: patchwork-routing
+  static_configs:
+    - targets: ['10.0.0.56:3080']
+      labels:
+        project: patchwork
+        service: routing
+        environment: staging
+  metrics_path: /otp/actuators/prometheus

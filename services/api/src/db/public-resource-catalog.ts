@@ -63,6 +63,7 @@ export function parsePublicResourceCatalog(input: unknown) {
         ...catalog,
         resources: catalog.resources.map(resource => ({
             ...resource,
+            category: resource.sourceId === 'cpl' ? 'library' as const : resource.category,
             source: catalog.sources[resource.sourceId]!,
             // Source schedules are not a real-time open-now assertion.
             operationalStatus: /closed until further notice/i.test(resource.usualHours)

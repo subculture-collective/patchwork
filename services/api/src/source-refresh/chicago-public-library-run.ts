@@ -71,14 +71,34 @@ export async function runCplSourceRefresh(options: {
     }
 }
 
+export async function recordSourceRefreshAttempt(
+    pool: Pool,
+    succeeded: boolean,
+    completedRefresh: boolean,
+    attemptedAt = new Date(),
+) {
+    await pool.query(`INSERT INTO source_refresh_operational_status
+        (source_id,last_attempt_at,last_attempt_succeeded,last_success_at,updated_at)
+        VALUES ('cpl',$1,$2,CASE WHEN $3 THEN $1 ELSE NULL END,$1)
+        ON CONFLICT (source_id) DO UPDATE SET
+            last_attempt_at=EXCLUDED.last_attempt_at,
+            last_attempt_succeeded=EXCLUDED.last_attempt_succeeded,
+            last_success_at=CASE WHEN $3 THEN EXCLUDED.last_attempt_at ELSE source_refresh_operational_status.last_success_at END,
+            updated_at=EXCLUDED.updated_at`, [attemptedAt, succeeded, completedRefresh]);
+}
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
     const args = process.argv.slice(2);
     if (args.length !== 1 || args[0]!.startsWith('-')) throw new Error('Usage: resources:refresh:cpl-run <evidence-output-directory>');
     if (!process.env.API_DATABASE_URL) throw new Error('API_DATABASE_URL is required.');
     const pool = new Pool({ connectionString: process.env.API_DATABASE_URL });
     try {
-        console.log(JSON.stringify(await runCplSourceRefresh({ pool, outputDir: resolve(args[0]!) }), null, 2));
+        const result = await runCplSourceRefresh({ pool, outputDir: resolve(args[0]!) });
+        await recordSourceRefreshAttempt(pool, true, result.status === 'persisted');
+        console.log(JSON.stringify(result, null, 2));
     } catch (error) {
+        try { await recordSourceRefreshAttempt(pool, false, false); }
+        catch { /* The original failure remains the actionable error. */ }
         console.error(error instanceof Error ? error.message : 'CPL source refresh failed.');
         process.exitCode = 1;
     } finally { await pool.end(); }

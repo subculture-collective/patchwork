@@ -56,6 +56,26 @@ groups:
         for: 1m
         labels: { severity: critical, owner: patchwork-primary-on-call }
         annotations: { runbook_url: "docs/operations/incident-response.md#database-unavailable" }
+      - alert: PatchworkSourceRefreshFailed
+        expr: patchwork_source_refresh_last_attempt_success{source="cpl",environment="staging"} == 0
+        for: 1m
+        labels: { severity: warning, owner: patchwork-primary-on-call }
+        annotations: { runbook_url: "docs/operations/incident-response.md#source-refresh" }
+      - alert: PatchworkSourceRefreshStale
+        expr: time() - patchwork_source_refresh_last_success_timestamp_seconds{source="cpl",environment="staging"} > 129600 or absent(patchwork_source_refresh_last_success_timestamp_seconds{source="cpl",environment="staging"})
+        for: 5m
+        labels: { severity: warning, owner: patchwork-primary-on-call }
+        annotations: { runbook_url: "docs/operations/incident-response.md#source-refresh" }
+      - alert: PatchworkRoutingUnavailable
+        expr: up{job="patchwork-routing",environment="staging"} == 0
+        for: 5m
+        labels: { severity: warning, owner: patchwork-primary-on-call }
+        annotations: { runbook_url: "docs/operations/incident-response.md#travel-routing" }
+      - alert: PatchworkTravelRouteErrors
+        expr: sum(increase(patchwork_http_route_error_total{service="api",environment="staging",endpoint="/travel/plan"}[15m])) > 2
+        for: 2m
+        labels: { severity: warning, owner: patchwork-primary-on-call }
+        annotations: { runbook_url: "docs/operations/incident-response.md#travel-routing" }
       - alert: PatchworkBackupFailed
         expr: patchwork_backup_last_attempt_success{environment="staging"} == 0
         for: 1m

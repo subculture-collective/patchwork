@@ -2,6 +2,8 @@ import { ResourceCorrectionService } from './resource-correction-service.js';
 import { createResourceCorrectionHandler } from './http/resource-correction-handler.js';
 import { SourceRefreshService } from './source-refresh/source-refresh-service.js';
 import { createSourceRefreshHandler } from './http/source-refresh-handler.js';
+import { TravelService } from './travel-service.js';
+import { createTravelHandler } from './http/travel-handler.js';
 import { createResourceMapHandler } from './http/resource-map-handler.js';
 import { SavedDiscoveryService } from './saved-discovery-service.js';
 import { createSavedDiscoveryHandler } from './http/saved-discovery-handler.js';
@@ -524,6 +526,8 @@ const resourceCorrectionService=postgresPool?new ResourceCorrectionService(postg
 const resourceCorrectionHandler = resourceCorrectionService && authenticateApiRequest ? createResourceCorrectionHandler(resourceCorrectionService,authenticateApiRequest) : undefined;
 const sourceRefreshService=postgresPool?new SourceRefreshService(postgresPool):undefined;
 const sourceRefreshHandler=sourceRefreshService&&authenticateApiRequest?createSourceRefreshHandler(sourceRefreshService,authenticateApiRequest):undefined;
+const travelService=postgresPool&&config.API_ROUTING_SERVICE_URL?new TravelService(postgresPool,config.API_ROUTING_SERVICE_URL):undefined;
+const travelHandler=travelService?createTravelHandler(travelService):undefined;
 const savedDiscoveryService=postgresPool?new SavedDiscoveryService(postgresPool):undefined;
 const savedDiscoveryHandler = savedDiscoveryService && authenticateApiRequest ? createSavedDiscoveryHandler(savedDiscoveryService,authenticateApiRequest) : undefined;
 const accountRequestsHandler = authoringReceiptService && authenticateApiRequest
@@ -692,6 +696,15 @@ if (postgresPool) {
         },
     });
 }
+if (config.API_ROUTING_SERVICE_URL) {
+    healthChecks.push({name:'routing',check:async()=>{
+        try {
+            const healthUrl=new URL('/otp/actuators/health',config.API_ROUTING_SERVICE_URL);
+            const response=await fetch(healthUrl,{signal:AbortSignal.timeout(3000)});
+            return response.ok?{status:'ok' as const}:{status:'degraded' as const,message:'Routing service health check failed'};
+        } catch { return {status:'degraded' as const,message:'Routing service unreachable'}; }
+    }});
+}
 
 const buildHealthPayload = async (): Promise<{
     payload: ServiceHealth;
@@ -810,6 +823,38 @@ const renderPrometheusMetrics = (): string => {
     ].join('\n');
 
     return `${baseMetrics}\n${sliMetrics}\n${retentionMetrics.renderPrometheus()}\n${attachmentMetrics}\n${notificationMetrics}\n${maintenanceMetrics}`;
+};
+
+const renderSourceRefreshMetrics = async (): Promise<string> => {
+    if (!postgresPool) return '';
+    try {
+        const result = await postgresPool.query<{
+            source_id: string;
+            last_attempt_succeeded: boolean;
+            last_attempt_timestamp: string;
+            last_success_timestamp: string | null;
+        }>(`SELECT source_id,last_attempt_succeeded,
+            EXTRACT(EPOCH FROM last_attempt_at)::text AS last_attempt_timestamp,
+            EXTRACT(EPOCH FROM last_success_at)::text AS last_success_timestamp
+            FROM source_refresh_operational_status ORDER BY source_id`);
+        const lines = [
+            '# HELP patchwork_source_refresh_last_attempt_success Whether the latest scheduled source refresh completed without error.',
+            '# TYPE patchwork_source_refresh_last_attempt_success gauge',
+            '# HELP patchwork_source_refresh_last_attempt_timestamp_seconds Unix timestamp of the latest scheduled source refresh attempt.',
+            '# TYPE patchwork_source_refresh_last_attempt_timestamp_seconds gauge',
+            '# HELP patchwork_source_refresh_last_success_timestamp_seconds Unix timestamp of the latest completed source refresh.',
+            '# TYPE patchwork_source_refresh_last_success_timestamp_seconds gauge',
+        ];
+        for (const row of result.rows) {
+            const labels = `{project="patchwork",service="api",source="${row.source_id}"}`;
+            lines.push(`patchwork_source_refresh_last_attempt_success${labels} ${row.last_attempt_succeeded ? 1 : 0}`);
+            lines.push(`patchwork_source_refresh_last_attempt_timestamp_seconds${labels} ${Number(row.last_attempt_timestamp)}`);
+            if (row.last_success_timestamp !== null) lines.push(`patchwork_source_refresh_last_success_timestamp_seconds${labels} ${Number(row.last_success_timestamp)}`);
+        }
+        return lines.join('\n');
+    } catch {
+        return '';
+    }
 };
 
 const writeJson = (
@@ -1827,6 +1872,7 @@ const contractRoutes = [
     '/health',
     '/health/ready',
     '/metrics',
+    '/travel/plan',
     '/contracts',
 ] as const;
 
@@ -1839,9 +1885,9 @@ const routeHandlers: Readonly<Record<string, ApiRouteHandler>> = {
         const { payload, httpStatus } = await buildReadinessPayload();
         return { statusCode: httpStatus, body: payload };
     },
-    '/metrics': () => ({
+    '/metrics': async () => ({
         statusCode: 200,
-        body: renderPrometheusMetrics(),
+        body: `${renderPrometheusMetrics()}\n${await renderSourceRefreshMetrics()}`,
         contentType: 'text/plain; version=0.0.4',
     }),
     '/contracts': () => ({
@@ -2061,6 +2107,8 @@ export const createApiServer = () => {
         if (requestUrl.pathname.startsWith('/resource-corrections')) {writeJson(response,503,{error:{code:'CORRECTIONS_UNAVAILABLE',message:'Listing corrections are unavailable.'}});return;}
         if (sourceRefreshHandler?.(request,response,requestUrl)) return;
         if (requestUrl.pathname.startsWith('/admin/source-refresh')) {writeJson(response,503,{error:{code:'SOURCE_REFRESH_UNAVAILABLE',message:'Source-refresh review is unavailable.'}});return;}
+        if (travelHandler?.(request,response,requestUrl)) return;
+        if (requestUrl.pathname==='/travel/plan') {writeJson(response,503,{error:{code:'ROUTING_UNAVAILABLE',message:'Travel planning is unavailable.'}});return;}
         if (savedDiscoveryHandler?.(request, response, requestUrl)) return;
         if (requestUrl.pathname === '/account/saved-discovery'||requestUrl.pathname === '/account/saved-discovery/alerts') { writeJson(response,503,{error:{code:'SAVED_DISCOVERY_UNAVAILABLE',message:'Saved discovery is unavailable.'}});return; }
         if (accountRequestsHandler?.(request, response, requestUrl)) return;

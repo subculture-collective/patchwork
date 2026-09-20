@@ -135,10 +135,14 @@ backoff. Publisher-contract, normalization, partial-feed, and evidence failures
 are not retried. Evidence is written only after the entire publisher response
 validates, and candidate persistence remains transactional and replay-safe.
 
-Operators can schedule this command only with a durable evidence directory and
-the intended database connection. No repository workflow enables it by default,
-because this checkout does not establish the production secret, storage,
-retention, alerting, or deployment ownership needed to activate unattended runs.
+The NUC deployment runs this command through
+`patchwork-source-refresh.timer`. The API container supplies the intended
+database connection and `/srv/patchwork-public/source-refresh` is bind-mounted
+at `/var/lib/patchwork/source-refresh`. The wrapper refuses to run at 2 GiB but
+does not delete evidence. It records last-attempt and last-success timestamps in
+`source_refresh_operational_status`; Prometheus alerts on a failed attempt or no
+completed refresh for 36 hours. The timer runs daily at 03:15 America/Chicago
+with up to 30 minutes of jitter. Patrick Fanella is the named responder.
 
 Rollback is code-first: stop invoking the persist/apply commands and revert the
 application code. The additive tables can remain without affecting older code.
@@ -151,10 +155,9 @@ archived; no existing application columns or rows need reversal.
    confirmation date and expiry. Cover unknown, contradictory and expired evidence,
    overnight hours, closures and eligibility rules. Demonstrate useful coverage
    before claiming hours/eligibility filtering is qualified.
-2. Activate scheduled refreshes only after production storage, retention,
-   monitoring and ownership are configured. Qualify real provider journeys
-   separately. Travel infrastructure follows the existing acceptance contracts
-   and remains disabled until its own gates pass.
+2. Qualify real provider journeys separately. Travel infrastructure follows the
+   existing acceptance contracts and remains disabled until its graph, coverage,
+   privacy, cancellation, concurrency, real-itinerary and observation gates pass.
 
 Verification: the source-refresh unit suite owns classification, input
 preservation and bounded retries; the PostgreSQL suite owns live-state joins,

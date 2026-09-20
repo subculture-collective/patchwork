@@ -83,6 +83,7 @@ export function SaveSearchButton({ state }: { state: DiscoveryFilterState }) {
         resourceCategory: state.resourceCategory,
         resourceService: state.resourceService,
         resourceProgram: state.resourceProgram,
+        includeLibraries: state.includeLibraries === true ? true as const : undefined,
         category: state.category,
         status: state.status,
         minUrgency: state.minUrgency,

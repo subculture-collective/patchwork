@@ -1,0 +1,11 @@
+{
+  "configVersion": "patchwork-chicago-1",
+  "routingDefaults": {
+    "maxJourneyDuration": "4h",
+    "streetRoutingTimeout": "5s"
+  },
+  "transit": {
+    "maxNumberOfTransfers": 6,
+    "maxSearchWindow": "2h"
+  }
+}

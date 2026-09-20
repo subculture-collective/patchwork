@@ -5,7 +5,7 @@ import { parsePublicResourceCatalog, publicResourceCatalog, publicResourceSeed }
 describe('sourced public resource seed', () => {
     it('includes public addresses and official links without claiming ownership', () => {
         expect(new Set(publicResourceSeed.map(resource => resource.countyId))).toEqual(new Set(publicResourceCatalog.scope.countyIds));
-        expect(new Set(publicResourceSeed.map(resource => resource.category))).toEqual(new Set(['food-bank', 'clinic', 'other', 'shelter', 'legal-aid']));
+        expect(new Set(publicResourceSeed.map(resource => resource.category))).toEqual(new Set(['food-bank', 'clinic', 'library', 'other', 'shelter', 'legal-aid']));
         for (const resource of publicResourceSeed) {
             expect(resource.claimStatus).toBe('unclaimed');
             expect(resource.streetAddress).not.toBe('');

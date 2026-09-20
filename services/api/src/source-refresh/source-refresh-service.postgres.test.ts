@@ -31,7 +31,7 @@ afterAll(async () => { await cleanup(); await pool.end(); });
 
 async function seed(key: string) {
     const uri = `${prefix}${key}`;
-    const resource = { ...original, id:`refresh-service-${key}`, phone:'(312) 555-0100' };
+    const resource = { ...original, id:`refresh-service-${key}`, category:'library' as const, phone:'(312) 555-0100' };
     await pool.query(`INSERT INTO public_resource_listings
         (resource_uri,source_name,source_url,source_retrieved_at,source_snapshot,source_expires_at,street_address,postal_code,latitude,longitude,public_access)
         VALUES($1,$2,$3,'2026-09-08',$4,'2026-12-07',$5,$6,$7,$8,$9)`,

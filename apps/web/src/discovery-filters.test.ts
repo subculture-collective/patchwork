@@ -23,6 +23,7 @@ describe('discovery filters', () => {
             resourceCategory: 'legal-aid',
             resourceService: 'housing',
             resourceProgram: 'housing-counseling',
+            includeLibraries: true,
             status: 'open',
             minUrgency: 4,
             center: { lat: 1.3, lng: 103.8 },
@@ -37,7 +38,14 @@ describe('discovery filters', () => {
         );
 
         expect(queryString.includes('tab=nearby')).toBe(true);
+        expect(queryString.includes('libraries=1')).toBe(true);
         expect(parsed).toEqual(initial);
+    });
+
+    it('keeps libraries excluded unless explicitly enabled', () => {
+        expect(parseDiscoveryFilterState('', defaultDiscoveryFilterState).includeLibraries).toBeUndefined();
+        expect(parseDiscoveryFilterState('?libraries=1', defaultDiscoveryFilterState).includeLibraries).toBe(true);
+        expect(serializeDiscoveryFilterState({...defaultDiscoveryFilterState,includeLibraries:true})).toContain('libraries=1');
     });
 
     it('normalizes invalid query values and preserves safe defaults', () => {

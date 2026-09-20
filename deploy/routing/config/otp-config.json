@@ -1,0 +1,9 @@
+{
+  "configVersion": "patchwork-chicago-1",
+  "otpFeatures": {
+    "ActuatorAPI": true,
+    "GtfsGraphQlApi": true,
+    "HttpResponseTimeMetrics": true,
+    "DebugUi": false
+  }
+}

@@ -44,6 +44,7 @@
         "clinic": "Clinic",
         "legal-aid": "Legal aid",
         "hotline": "Hotline",
+        "library": "Library",
         "open": "Open",
         "unknown": "Availability not confirmed",
         "limited": "Limited",
@@ -476,7 +477,8 @@
         "allPrograms": "All programs",
         "distanceLabel": "Search distance",
         "programHelp": "All filters apply together. Program filters include only listings with published program information. Confirm eligibility and appointments with the provider.",
-        "filtersLegend": "Filter resources"
+        "filtersLegend": "Filter resources",
+        "includeLibraries": "Include libraries"
     },
     "volunteer": {
         "heading": "Volunteer onboarding",
@@ -1736,6 +1738,26 @@
         },
         "refresh": "Refresh corrections",
         "saveDecision": "Save correction decision"
+    },
+    "travel": {
+        "title": "Plan a trip",
+        "privacy": "Your precise location is requested only after you choose to plan. It is used for this trip request and is not saved by Patchwork.",
+        "mode": "Travel mode",
+        "transit": "Transit and walking",
+        "walk": "Walking only",
+        "departAt": "Depart at",
+        "arriveAt": "Arrive at",
+        "arriveBy": "Plan to arrive by this time",
+        "wheelchair": "Wheelchair-accessible trip",
+        "useLocation": "Use my location and plan",
+        "locating": "Getting your location…",
+        "planning": "Planning trip…",
+        "locationUnavailable": "Location is not available in this browser.",
+        "locationDenied": "Your location was not available. Check browser permission and try again.",
+        "noTrips": "No matching trips were found for that time.",
+        "options": "Travel options",
+        "option": "Option {{number}}",
+        "minutes": "min"
     },
     "sourceRefresh": {
         "title": "Publisher source refresh review",

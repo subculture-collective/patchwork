@@ -46,9 +46,11 @@ export const savedSearchSchema = z
                 'clinic',
                 'legal-aid',
                 'hotline',
+                'library',
                 'other',
             ])
             .optional(),
+        includeLibraries: z.literal(true).optional(),
         resourceService: z.enum(resourceServices).optional(),
         resourceProgram: z.enum(resourcePrograms).optional(),
     })
