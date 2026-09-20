@@ -3,6 +3,9 @@ import { Pool } from 'pg';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { resolveSource } from './source-registry.js';
 import { recordRegisteredSourceAttempt, runSourceJob } from './source-runner.js';
+import { activeSourceQuarantine, clearSourceQuarantine, quarantineSource } from './source-quarantine.js';
+import { PublisherValidationError } from './publisher-validation-error.js';
+import { renderRegisteredSourceMetrics } from './source-refresh-metrics.js';
 
 const pool = new Pool({ connectionString: process.env.TEST_DATABASE_URL });
 const ids: string[] = [];
@@ -12,6 +15,7 @@ const source = () => {
     return { ...resolveSource('cpl'), id };
 };
 afterAll(async () => {
+    await pool.query('DELETE FROM source_refresh_quarantines WHERE source_id=ANY($1::text[])', [ids]);
     await pool.query('DELETE FROM source_refresh_operational_status WHERE source_id=ANY($1::text[])', [ids]);
     await pool.end();
 });
@@ -20,6 +24,51 @@ const status = async (id: string) => (await pool.query(
 )).rows[0];
 
 describe('registered source operational isolation', () => {
+    it('quarantines only a malformed publisher, allows diagnostic previews, and requires explicit incident clearance', async () => {
+        const definition = source();
+        const persist = vi.fn(async () => ({}));
+        const fetchEvidence = vi.fn(async () => { throw new PublisherValidationError('Incomplete publisher feed'); });
+        const options = { pool, source: definition, mode: 'persist' as const, fetchEvidence, preview: async () => ({}), persist };
+        await expect(runSourceJob(options)).rejects.toThrow('Incomplete');
+        const incident = (await activeSourceQuarantine(pool, definition.id))!;
+        expect(incident.reason_code).toBe('publisher-contract');
+        expect(await runSourceJob(options)).toMatchObject({ status: 'skipped-quarantined', quarantineId: incident.quarantine_id });
+        expect(fetchEvidence).toHaveBeenCalledOnce();
+        expect(persist).not.toHaveBeenCalled();
+        const fixed = { ...options, fetchEvidence: async () => ({}) };
+        expect(await runSourceJob({ ...fixed, mode: 'preview' })).toMatchObject({ status: 'previewed' });
+        expect((await activeSourceQuarantine(pool, definition.id))!.quarantine_id).toBe(incident.quarantine_id);
+        expect(await runSourceJob({ ...fixed, source: source() })).toMatchObject({ status: 'persisted' });
+        expect(await renderRegisteredSourceMetrics(pool)).toContain(`source="${definition.id}"} 1`);
+        await clearSourceQuarantine(pool, definition.id, incident.quarantine_id, 'Reviewed complete bounded publisher preview.');
+        expect(await runSourceJob(fixed)).toMatchObject({ status: 'persisted' });
+        expect(await activeSourceQuarantine(pool, definition.id)).toBeUndefined();
+        await quarantineSource(pool, definition.id, definition.adapterVersion);
+        await expect(clearSourceQuarantine(pool, definition.id, incident.quarantine_id, 'Stale incident cannot clear the newer quarantine.')).rejects.toThrow('changed');
+        expect((await pool.query('SELECT COUNT(*)::int AS count FROM source_refresh_quarantines WHERE source_id=$1', [definition.id])).rows[0].count).toBe(2);
+    });
+
+    it('does not quarantine previews or exhausted transient failures, and serializes clearance with source jobs', async () => {
+        const definition = source();
+        const options = { pool, source: definition, preview: async () => ({}), persist: async () => ({}) };
+        await expect(runSourceJob({ ...options, mode: 'preview', fetchEvidence: async () => { throw new PublisherValidationError('Invalid schema'); } })).rejects.toThrow('schema');
+        expect(await activeSourceQuarantine(pool, definition.id)).toBeUndefined();
+        const fetchEvidence = vi.fn(async () => { throw new Error('HTTP 429'); });
+        await expect(runSourceJob({ ...options, mode: 'persist', fetchEvidence, delay: async () => {} })).rejects.toThrow('429');
+        expect(fetchEvidence).toHaveBeenCalledTimes(3);
+        expect(await activeSourceQuarantine(pool, definition.id)).toBeUndefined();
+        await quarantineSource(pool, definition.id, definition.adapterVersion);
+        const incident = (await activeSourceQuarantine(pool, definition.id))!;
+        const blocker = await pool.connect();
+        try {
+            await blocker.query('SELECT pg_advisory_lock(hashtext($1))', [`source-refresh:${definition.id}`]);
+            await expect(clearSourceQuarantine(pool, definition.id, incident.quarantine_id, 'Reviewed but concurrent job still owns the source.')).rejects.toThrow('running');
+        } finally {
+            await blocker.query('SELECT pg_advisory_unlock(hashtext($1))', [`source-refresh:${definition.id}`]);
+            blocker.release();
+        }
+        expect(await activeSourceQuarantine(pool, definition.id)).toBeDefined();
+    });
     it('skips a locked source but lets another source complete and records only actual work', async () => {
         const first = source();
         const second = source();

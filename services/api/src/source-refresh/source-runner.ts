@@ -1,9 +1,11 @@
 import type { Pool } from 'pg';
 import { sourceKeySchema, type SourceDefinition } from './source-registry.js';
+import { PublisherValidationError } from './publisher-validation-error.js';
+import { activeSourceQuarantine, quarantineSource } from './source-quarantine.js';
 
-const retryable = (error: unknown) => (error instanceof TypeError && /fetch|network|socket|connect/i.test(error.message))
+const retryable = (error: unknown) => !(error instanceof PublisherValidationError) && ((error instanceof TypeError && /fetch|network|socket|connect/i.test(error.message))
     || (error instanceof DOMException && ['AbortError', 'TimeoutError'].includes(error.name))
-    || (error instanceof Error && /HTTP (429|5\d\d)\b/.test(error.message));
+    || (error instanceof Error && /HTTP (429|5\d\d)\b/.test(error.message)));
 
 export async function withBoundedPublisherRetry<T>(
     operation: () => Promise<T>,
@@ -68,12 +70,20 @@ export async function runSourceJob<E, P, R>(options: {
         );
         acquired = result.rows[0]?.acquired === true;
         if (!acquired) return { status: 'skipped-concurrent' as const };
+        const quarantine = await activeSourceQuarantine(client, source.id);
+        if (quarantine && options.mode === 'persist') return {
+            status: 'skipped-quarantined' as const, quarantineId: quarantine.quarantine_id,
+            reasonCode: quarantine.reason_code,
+        };
+        let stage: 'fetch' | 'preview' | 'persist' = 'fetch';
         try {
             const evidence = await withBoundedPublisherRetry(options.fetchEvidence,
                 options.delay ?? (ms => new Promise(resolve => setTimeout(resolve, ms))), source);
+            stage = 'preview';
             const preview = await options.preview(evidence);
             if (options.mode === 'preview') return { status: 'previewed' as const, evidence, preview };
             // Never retry persistence or preview as if they were publisher-network failures.
+            stage = 'persist';
             const persisted = await options.persist(evidence, preview);
             await recordRegisteredSourceAttempt(client, source.id, true, true, options.now?.());
             return { status: 'persisted' as const, evidence, persisted };
@@ -81,6 +91,12 @@ export async function runSourceJob<E, P, R>(options: {
             if (options.mode === 'persist') {
                 try { await recordRegisteredSourceAttempt(client, source.id, false, false, options.now?.()); }
                 catch { /* Preserve the original error; monitoring also detects stale success. */ }
+                if (stage !== 'persist' && error instanceof PublisherValidationError) {
+                    try { await quarantineSource(client, source.id, source.adapterVersion); }
+                    catch (quarantineError) {
+                        throw new AggregateError([error, quarantineError], 'Publisher validation failed and quarantine could not be retained.');
+                    }
+                }
             }
             throw error;
         }

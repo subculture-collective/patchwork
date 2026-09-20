@@ -212,6 +212,13 @@ manifest, or catalog evidence to clear the capacity guard; expand or archive the
 volume with checksums intact. A stale alert uses the latest completed refresh,
 so a concurrent skip does not renew source evidence.
 
+For `PatchworkSourceRefreshQuarantined`, inspect the active source incident and
+follow [publisher quarantine and recovery](../source-refresh.md#publisher-quarantine-and-recovery).
+A preview may diagnose the source without clearing quarantine. Resume only after
+review, using the exact incident ID and a recorded reason; repeated timer starts
+do not clear it. If rolling back to an older runner, pause its timer before the
+rollback because older code does not enforce quarantine.
+
 ### Travel routing
 
 Check the OTP actuator health endpoint and `patchwork-staging-routing` logs.
