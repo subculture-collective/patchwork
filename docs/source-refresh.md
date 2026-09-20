@@ -135,9 +135,9 @@ backoff. Publisher-contract, normalization, partial-feed, and evidence failures
 are not retried. Evidence is written only after the entire publisher response
 validates, and candidate persistence remains transactional and replay-safe.
 
-The NUC deployment is prepared to run this command through
-`patchwork-source-refresh.timer`. Enable the staged timer only after the signed
-API image containing this command and its database migration is deployed. The API container supplies the intended
+The NUC deployment runs this command through the enabled
+`patchwork-source-refresh.timer` after deployment of the signed API image and
+its database migrations. The API container supplies the intended
 database connection and `/srv/patchwork-public/source-refresh` is bind-mounted
 at `/var/lib/patchwork/source-refresh`. The wrapper refuses to run at 2 GiB but
 does not delete evidence. It records last-attempt and last-success timestamps in
@@ -156,11 +156,13 @@ archived; no existing application columns or rows need reversal.
    confirmation date and expiry. Cover unknown, contradictory and expired evidence,
    overnight hours, closures and eligibility rules. Demonstrate useful coverage
    before claiming hours/eligibility filtering is qualified.
-2. Qualify real provider journeys separately. The travel API and client are
-   implemented. A pinned OTP 2.10.0 runtime has passed initial Chicago graph,
-   walk, CTA bus and rail, wheelchair, outside-graph, client-disconnect and
-   eight-request concurrency qualification. API activation, the application-level
-   real journey, and the post-activation observation window remain required.
+2. Qualify real OAuth, PDS, mail and push provider journeys separately with
+   disposable identities. Travel is active through the pinned OTP 2.10.0
+   runtime: Chicago walk, CTA bus and rail, wheelchair, arrive-by,
+   outside-graph, client-disconnect and eight-request concurrency checks passed.
+   The signed API returned real Access Living and Chicago Tool Library
+   itineraries, and its initial 15-minute post-activation window retained
+   API/router availability with zero route errors.
 
 Verification: the source-refresh unit suite owns classification, input
 preservation and bounded retries; the PostgreSQL suite owns live-state joins,
@@ -168,6 +170,7 @@ concurrency, correction conflicts, reviewer decisions, supersession, transaction
 cleanup and persisted-row preservation. The browser journey owns evidence
 inspection and the reviewer commands. Run `npm run check`,
 `npm run test:integration`, and the source-refresh reviewer browser scenario.
-These checks do not establish a successful live publisher retrieval, unattended
-production scheduling, Chicago structured service coverage, application routing
-activation, its observation window, or live-provider qualification.
+The activated NUC timer has completed a successful live publisher retrieval,
+replay-safe persistence and operational heartbeat. These checks still do not
+establish Chicago structured service coverage or unrelated live-provider
+qualification.
