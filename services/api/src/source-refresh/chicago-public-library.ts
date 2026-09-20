@@ -1,3 +1,4 @@
+import { fetchPublisherBytes } from './publisher-transport.js';
 import { PublisherValidationError } from './publisher-validation-error.js';
 import { createHash } from 'node:crypto';
 import { retainEvidenceBlob, writeImmutableEvidence } from './evidence-storage.js';
@@ -166,29 +167,6 @@ export async function retainCplEvidence(outputDir: string, raw: Uint8Array, cata
     return { rawPath, manifestPath, catalogPath, storagePath };
 }
 
-async function readBoundedBody(response: Response) {
-    if (!response.body) return new Uint8Array();
-    const reader = response.body.getReader();
-    const chunks: Uint8Array[] = [];
-    let length = 0;
-    try {
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            length += value.byteLength;
-            if (length > MAX_BYTES) {
-                await reader.cancel();
-                throw new PublisherValidationError('CPL response exceeds the permitted evidence size.');
-            }
-            chunks.push(value);
-        }
-    } finally { reader.releaseLock(); }
-    const raw = new Uint8Array(length);
-    let offset = 0;
-    for (const chunk of chunks) { raw.set(chunk, offset); offset += chunk.byteLength; }
-    return raw;
-}
-
 export async function fetchCplPublisherEvidence(options: {
     outputDir: string;
     baselineIds: ReadonlySet<string>;
@@ -197,21 +175,15 @@ export async function fetchCplPublisherEvidence(options: {
 }) {
     const fetcher = options.fetch ?? globalThis.fetch;
     const retrievedAt = (options.now ?? (() => new Date()))();
-    const response = await fetcher(CPL_API_URL, { redirect: 'error', signal: AbortSignal.timeout(20_000),
-        headers: { accept: 'application/json', 'user-agent': 'Patchwork resource source refresh/0.1' } });
-    if (!response.ok) throw new Error(`CPL publisher request failed with HTTP ${response.status}.`);
-    if (response.url && response.url !== CPL_API_URL) throw new PublisherValidationError('CPL publisher response URL changed unexpectedly.');
-    const contentType = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase() ?? '';
-    if (contentType !== 'application/json') throw new PublisherValidationError('CPL publisher response is not application/json.');
-    const declaredLength = Number(response.headers.get('content-length'));
-    if (Number.isFinite(declaredLength) && declaredLength > MAX_BYTES) throw new PublisherValidationError('CPL response exceeds the permitted evidence size.');
-    const raw = await readBoundedBody(response);
+    const { raw, responseUrl, contentType, etag, lastModified } = await fetchPublisherBytes({
+        url: CPL_API_URL, maxBytes: MAX_BYTES, contentTypes: ['application/json'],
+    }, fetcher);
     const catalog = normalizeCplPublisherBytes(raw, retrievedAt, options.baselineIds);
     const manifest: CplEvidenceManifest = {
         version: 1, publisher: 'City of Chicago', datasetId: CPL_DATASET_ID,
-        requestUrl: CPL_API_URL, responseUrl: response.url || CPL_API_URL,
+        requestUrl: CPL_API_URL, responseUrl,
         retrievedAt: retrievedAt.toISOString(), contentType,
-        etag: response.headers.get('etag'), lastModified: response.headers.get('last-modified'),
+        etag, lastModified,
         rawSha256: hash(raw), rawBytes: raw.byteLength, rowCount: catalog.resources.length,
         normalizedSha256: hashRefreshValue(catalog),
     };
