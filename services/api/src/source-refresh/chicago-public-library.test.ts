@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto';
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { CPL_API_URL, fetchCplPublisherEvidence, normalizeCplPublisherBytes } from './chicago-public-library.js';
+import { CPL_API_URL, fetchCplPublisherEvidence, normalizeCplPublisherBytes, retainCplEvidence } from './chicago-public-library.js';
 
 const workspaces: string[] = [];
 afterEach(async () => {
@@ -143,4 +143,25 @@ describe('Chicago Public Library publisher adapter', () => {
             .rejects.toThrow('size');
         expect(await readdir(outputDir)).toEqual([]);
     });
+});
+
+it('refuses mismatched retention input before publishing a manifest', async () => {
+    const dir = await workspace(); const raw = encode(rows());
+    const result = await fetchCplPublisherEvidence({ outputDir: dir, baselineIds: baselines(), now: () => now,
+        fetch: async () => new Response(raw, { headers: { 'content-type': 'application/json' } }) });
+    const fresh = await workspace();
+    await expect(retainCplEvidence(fresh, raw, result.catalog, { ...result.manifest, rawSha256: '0'.repeat(64) }))
+        .rejects.toThrow('does not match');
+    expect(await readdir(fresh)).toEqual([]);
+    const storage = JSON.parse(await readFile(result.paths.storagePath, 'utf8'));
+    expect(storage).toMatchObject({ adapterVersion: '1.0.0', schemaVersion: 1, raw: { rawSha256: result.manifest.rawSha256 } });
+});
+it('does not publish a new manifest after derived evidence conflicts', async () => {
+    const dir = await workspace(); const raw = encode(rows());
+    const fetcher: typeof fetch = async () => new Response(raw, { headers: { 'content-type': 'application/json' } });
+    const result = await fetchCplPublisherEvidence({ outputDir: dir, baselineIds: baselines(), now: () => now, fetch: fetcher });
+    await rm(result.paths.manifestPath);
+    await writeFile(result.paths.catalogPath, 'corrupt');
+    await expect(fetchCplPublisherEvidence({ outputDir: dir, baselineIds: baselines(), now: () => now, fetch: fetcher })).rejects.toThrow();
+    await expect(readFile(result.paths.manifestPath)).rejects.toThrow();
 });

@@ -7,3 +7,7 @@ Writes use a private temporary file, file sync, atomic no-replace hard link, and
 No deletion or automatic retention is implemented. Keep evidence referenced by any published assertion, review candidate, run, or legal hold. Compression does not authorize deleting legacy raw evidence. Independent backup and database-reference restore qualification, measured national-source budgets, storage capacity alerts, and retention reference indexing remain acceptance work under #27.
 
 The blob primitive alone does not activate sources or change publication policy.
+
+## CPL compatibility integration
+
+New CPL runs retain gzip blobs and a `.storage.json` sidecar carrying adapter/schema version and blob references. Existing manifest and raw JSON paths remain unchanged. Before writing, retention verifies the raw hash, normalized hash, counts, source identity and deterministic normalization. The manifest is published last; incomplete runs can leave unreferenced blobs, which are retained for investigation rather than deleted. Disk failures prevent candidate persistence. Existing manifests without sidecars remain readable by existing tooling; replay may add a matching sidecar without changing retrieval times.
