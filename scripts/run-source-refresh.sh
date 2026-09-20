@@ -23,4 +23,4 @@ mount_source="$(docker inspect "$container" --format '{{range .Mounts}}{{if eq .
 
 log 'Starting bounded Chicago publisher refresh.'
 docker exec "$container" npm run resources:refresh:cpl-run -w @patchwork/api -- "$container_dir"
-log 'Chicago publisher evidence and review candidates were persisted.'
+log 'Chicago refresh command completed; its result status distinguishes persistence from a skipped run.'

@@ -174,3 +174,50 @@ The activated NUC timer has completed a successful live publisher retrieval,
 replay-safe persistence and operational heartbeat. These checks still do not
 establish Chicago structured service coverage or unrelated live-provider
 qualification.
+
+
+## Registered source jobs
+
+`source-registry.ts` is the reviewed runtime allowlist, separate from the
+[publisher inventory](./data/source-onboarding.md). Only CPL has a qualified
+runtime adapter at present. The other 129 inventory identities are not enabled
+by their presence in the catalog. Each definition records adapter version,
+owner, cadence, geography, complete-feed bounds and bounded retry policy.
+Adapter/version metadata is attached to persisted run evidence; retained raw
+publisher artifacts remain unchanged. Old manifests remain readable.
+
+```sh
+npm run resources:refresh:run -w @patchwork/api -- --list
+npm run resources:refresh:run -w @patchwork/api -- --source=cpl --output=/absolute/evidence --mode=preview
+npm run resources:refresh:run -w @patchwork/api -- --source=cpl --output=/absolute/evidence --mode=persist
+```
+
+Preview retains validated evidence and computes database comparisons but writes
+neither candidate state nor operational success. Persist writes review
+candidates, never listing changes. The original `resources:refresh:cpl-run`
+command remains compatible and uses the same job lock and heartbeat path.
+
+Set `PATCHWORK_SOURCE_REFRESH_PAUSED=cpl` in the executing API container's
+environment to pause the job without fetching or writing a success heartbeat.
+Unknown pause IDs fail rather than silently ignore a typo. This is an operator
+kill switch, not permission to enable arbitrary publishers. The existing
+systemd cadence remains authoritative; registering a source does not install a
+schedule. New sources require an explicit adapter, reviewed access contract,
+source-specific validation, schedule and monitoring qualification.
+
+Jobs lock `source-refresh:<source-id>` independently. A concurrent skip leaves
+the active job's outcome untouched. Only transient fetch failures are retried,
+up to the registered three-attempt ceiling; preview/persistence/validation
+failures are not network retries. Failure preserves the last success timestamp.
+Out-of-order heartbeat writes cannot replace newer status. Disabled and preview
+runs deliberately do not renew freshness, so a sustained pause remains visible
+through existing staleness monitoring. Locks are released on failure, and an
+unlock failure destroys the connection rather than returning a held session
+lock to the pool.
+
+The shared runner does not supply pagination or geography validation for a new
+publisher: those remain adapter contracts. CPL continues to enforce its full
+feed, baseline identifier retention, schema, geography and exact-byte bounds.
+Storage limits and the non-JSON/large-publisher manifest evolution remain
+separate work in issues #27 and #28. No new source schedule is activated by this
+change.
