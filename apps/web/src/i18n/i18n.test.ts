@@ -81,34 +81,50 @@ describe('i18n translation key completeness', () => {
     });
 });
 
+// Skip only sources that cannot contain the identifier t. Keep Unicode escapes
+// eligible for parsing, and let the AST distinguish calls from comments/strings.
+const translationKeys = (sourcePath: string, source: string): Set<string> => {
+    const referenced = new Set<string>();
+    if (!/(?:\bt\b|\\u)/.test(source)) return referenced;
+    const visit = (node: ts.Node): void => {
+        if (
+            ts.isCallExpression(node) &&
+            ts.isIdentifier(node.expression) &&
+            node.expression.text === 't' &&
+            node.arguments[0] &&
+            ts.isStringLiteral(node.arguments[0])
+        ) {
+            referenced.add(node.arguments[0].text);
+        }
+        ts.forEachChild(node, visit);
+    };
+    // The visitor never reads parent pointers; avoid allocating them.
+    visit(ts.createSourceFile(sourcePath, source, ts.ScriptTarget.Latest, false, ts.ScriptKind.TSX));
+    return referenced;
+};
+
 describe('production source localization', () => {
+    it.each([
+        ["t('ordinary')", ['ordinary']],
+        ["t /* comment */ \n ('spaced')", ['spaced']],
+        [String.raw`\u0074('escaped')`, ['escaped']],
+        ["const element = <span>{t('tsx')}</span>", ['tsx']],
+        [`// t('comment')\nconst value = "t('string')"; obj.t('member'); translate('other');`, []],
+        ["const value = 'no calls';", []],
+    ])('finds literal translation calls in %s', (source, expected) => {
+        expect([...translationKeys('fixture.tsx', source)]).toEqual(expected);
+    });
+
     it('references only translation keys present in both locales', () => {
         const sourceRoot = new URL('../', import.meta.url);
         const sourcePaths = readdirSync(sourceRoot, { recursive: true, encoding: 'utf8' })
             .filter(path => /\.tsx?$/.test(path) && !/\.test\./.test(path))
             .map(path => fileURLToPath(new URL(path, sourceRoot)));
         const referenced = new Set<string>();
-        const visit = (node: ts.Node): void => {
-            if (
-                ts.isCallExpression(node) &&
-                ts.isIdentifier(node.expression) &&
-                node.expression.text === 't' &&
-                node.arguments[0] &&
-                ts.isStringLiteral(node.arguments[0])
-            ) {
-                referenced.add(node.arguments[0].text);
-            }
-            ts.forEachChild(node, visit);
-        };
         for (const sourcePath of sourcePaths) {
-            const file = ts.createSourceFile(
-                sourcePath,
-                readFileSync(sourcePath, 'utf8'),
-                ts.ScriptTarget.Latest,
-                true,
-                ts.ScriptKind.TSX,
-            );
-            visit(file);
+            for (const key of translationKeys(sourcePath, readFileSync(sourcePath, 'utf8'))) {
+                referenced.add(key);
+            }
         }
         const has = (resource: Record<string, unknown>, key: string): boolean =>
             key
