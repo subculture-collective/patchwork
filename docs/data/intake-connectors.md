@@ -5,3 +5,11 @@ Connectors are format/transport primitives, not approval to fetch or publish a s
 `fetchPublisherBytes` preserves the response bytes and bounded ETag/Last-Modified metadata, enforces declared and streamed byte limits, cancels discarded bodies and uses a bounded timeout. HTTP errors remain compatible with the source runner's bounded 429/5xx retry policy. It does not infer completeness from HTTP 200 or Content-Length (which may describe compressed transfer bytes). Adapters must validate pagination and retain all page evidence before producing review candidates.
 
 CPL uses the shared transport with its existing one-megabyte complete-feed limit. Other publishers remain unqualified. CSV, GeoJSON, ArcGIS, Socrata pagination and HSDS need their own contract fixtures and bounded live qualification under #28.
+
+## CSV primitive
+
+`parsePublisherCsv` uses the quoted-field and escaped-quote rules described in [RFC 4180](https://www.rfc-editor.org/rfc/rfc4180), with explicit UTF-8/BOM and LF support. It requires an exact reviewed header, stable ID column, byte/cell/row budgets and complete-feed minimum. It rejects malformed quoting, wrong-width rows, duplicate or blank identifiers, invalid UTF-8 and unsupported control characters. A malformed row rejects the complete batch; there is no silent row skipping.
+
+Values remain strings: leading-zero postal codes, bilingual names, whitespace and quoted line breaks are preserved. No spreadsheet expressions execute and no geographic coordinates, hours or eligibility are inferred. Adapters must add field semantics and previous-snapshot loss checks. A complete-looking truncated CSV can only be detected using publisher counts, paging metadata or a baseline; syntax alone cannot prove completeness.
+
+Onboarding recipe: review source reuse rights and exact URL; capture bounded official bytes; record expected headers/IDs/encoding and feed bounds in adapter code; retain raw evidence; validate every row and source completeness; normalize deterministically; generate preview candidates; qualify bounded live replay before registering or scheduling the source. CSV fixtures currently qualify the parser, not a national publisher.
