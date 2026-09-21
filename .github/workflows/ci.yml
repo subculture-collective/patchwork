@@ -110,27 +110,31 @@ jobs:
               id: build-images
               run: |
                   docker build --target api-runtime \
+                    --iidfile "$RUNNER_TEMP/patchwork-api-image-id" \
                     --build-arg GIT_SHA=${{ steps.image-tag.outputs.sha }} \
                     --build-arg GIT_BRANCH=${{ github.ref_name }} \
                     --build-arg BUILD_VERSION=${{ steps.image-tag.outputs.version }} \
                     --build-arg CI_RUN_ID=${{ github.run_id }} \
                     -t patchwork-api:${{ steps.image-tag.outputs.tag }} \
                     -t patchwork-api:ci .
+                  echo "api-id=$(cat "$RUNNER_TEMP/patchwork-api-image-id")" >> "$GITHUB_OUTPUT"
                   docker build --target web-runtime \
+                    --iidfile "$RUNNER_TEMP/patchwork-web-image-id" \
                     --build-arg GIT_SHA=${{ steps.image-tag.outputs.sha }} \
                     --build-arg GIT_BRANCH=${{ github.ref_name }} \
                     --build-arg BUILD_VERSION=${{ steps.image-tag.outputs.version }} \
                     --build-arg CI_RUN_ID=${{ github.run_id }} \
                     -t patchwork-web:${{ steps.image-tag.outputs.tag }} \
                     -t patchwork-web:ci .
+                  echo "web-id=$(cat "$RUNNER_TEMP/patchwork-web-image-id")" >> "$GITHUB_OUTPUT"
 
             - name: Trivy container scan — API
               run: |
                   docker run --rm \
                     --volume /var/run/docker.sock:/var/run/docker.sock \
                     aquasec/trivy@sha256:be1190afcb28352bfddc4ddeb71470835d16462af68d310f9f4bca710961a41e \
-                    image --scanners vuln --severity HIGH,CRITICAL --exit-code 1 \
-                    --format table patchwork-api:ci | tee trivy-api-report.txt
+                    image --image-src docker --scanners vuln --severity HIGH,CRITICAL --exit-code 1 \
+                    --format table '${{ steps.build-images.outputs.api-id }}' | tee trivy-api-report.txt
 
             - name: Trivy container scan — Web
               if: steps.build-images.outcome == 'success' && (success() || failure())
@@ -138,8 +142,8 @@ jobs:
                   docker run --rm \
                     --volume /var/run/docker.sock:/var/run/docker.sock \
                     aquasec/trivy@sha256:be1190afcb28352bfddc4ddeb71470835d16462af68d310f9f4bca710961a41e \
-                    image --scanners vuln --severity HIGH,CRITICAL --exit-code 1 \
-                    --format table patchwork-web:ci | tee trivy-web-report.txt
+                    image --image-src docker --scanners vuln --severity HIGH,CRITICAL --exit-code 1 \
+                    --format table '${{ steps.build-images.outputs.web-id }}' | tee trivy-web-report.txt
 
             - name: Upload security scan reports
               uses: https://gitea.com/actions/upload-artifact@c24449f33cd45d4826c6702db7e49f7cdb9b551d
