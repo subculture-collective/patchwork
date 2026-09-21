@@ -71,6 +71,10 @@ checks, browser tests, builds, and dependency/container scans. Its database job
 runs the same automatically discovered PostgreSQL suites after migrations,
 then real attachment-provider integration tests.
 
+Container scans use each Docker build's recorded image ID, not the shared `:ci`
+tags. Concurrent runner jobs can update those tags; the `--iidfile` build receipt
+pins both scans to the images produced by that job. Scan failures still block CI.
+
 Most browser tests mock API transport to isolate web behavior. They do not
 prove a live OAuth provider, actual AT publication, mail/push delivery, or a
 production deployment. The authenticated staging lifecycle suites require
