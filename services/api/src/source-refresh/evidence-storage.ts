@@ -98,7 +98,7 @@ export async function retainEvidenceBlob(root: string, raw: Uint8Array, maxBytes
     evidenceByteLimit(maxBytes);
     if (raw.byteLength < 1 || raw.byteLength > maxBytes) throw new Error('Raw evidence exceeds its source budget.');
     const rawSha256 = evidenceHash(raw);
-    let compressed = await compress(raw, { level: 6 });
+    let compressed: Buffer = await compress(raw, { level: 6 });
     const key = blobKey(rawSha256);
     const path = join(root, key);
     try { await writeImmutableEvidence(path, compressed); }
