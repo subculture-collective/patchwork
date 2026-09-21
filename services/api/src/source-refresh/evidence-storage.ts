@@ -32,6 +32,8 @@ export async function prepareEvidenceDirectory(path: string) {
     }
 }
 
+class EvidenceConflictError extends Error {}
+
 const exists = (error: unknown) => error instanceof Error && 'code' in error && error.code === 'EEXIST';
 
 /** Bounded reads reject symlinks and non-files. The root must be operator-owned. */
@@ -68,8 +70,8 @@ export async function writeImmutableEvidence(path: string, bytes: Uint8Array): P
         try { await link(temporary, path); }
         catch (error) {
             if (!exists(error)) throw error;
-            const retained = await readEvidenceFile(path, bytes.byteLength);
-            if (!retained.equals(Buffer.from(bytes))) throw new Error('Immutable evidence conflicts with retained bytes.');
+            const retained = await readEvidenceFile(path, MAX_EVIDENCE_BYTES);
+            if (!retained.equals(Buffer.from(bytes))) throw new EvidenceConflictError('Immutable evidence conflicts with retained bytes.');
         }
         await syncDirectory(dir);
     } finally { await unlink(temporary).catch(error => {
@@ -96,9 +98,20 @@ export async function retainEvidenceBlob(root: string, raw: Uint8Array, maxBytes
     evidenceByteLimit(maxBytes);
     if (raw.byteLength < 1 || raw.byteLength > maxBytes) throw new Error('Raw evidence exceeds its source budget.');
     const rawSha256 = evidenceHash(raw);
-    const compressed = await compress(raw, { level: 6 });
+    let compressed = await compress(raw, { level: 6 });
     const key = blobKey(rawSha256);
-    await writeImmutableEvidence(join(root, key), compressed);
+    const path = join(root, key);
+    try { await writeImmutableEvidence(path, compressed); }
+    catch (error) {
+        if (!(error instanceof EvidenceConflictError)) throw error;
+        // Gzip versions or compression levels may differ while raw identity is unchanged.
+        // Preserve the original encoding and reference; never overwrite a valid object.
+        const existing = await readEvidenceFile(path, MAX_EVIDENCE_BYTES);
+        const restored = await decompress(existing, { maxOutputLength: maxBytes });
+        if (!restored.equals(Buffer.from(raw))) throw new Error('Retained evidence does not match raw identity.');
+        await syncDirectory(dirname(path));
+        compressed = existing;
+    }
     return { version: 1, encoding: 'gzip', rawSha256, rawBytes: raw.byteLength,
         storedSha256: evidenceHash(compressed), storedBytes: compressed.byteLength, key };
 }
