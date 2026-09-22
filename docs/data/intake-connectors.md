@@ -13,3 +13,9 @@ CPL uses the shared transport with its existing one-megabyte complete-feed limit
 Values remain strings: leading-zero postal codes, bilingual names, whitespace and quoted line breaks are preserved. No spreadsheet expressions execute and no geographic coordinates, hours or eligibility are inferred. Adapters must add field semantics and previous-snapshot loss checks. A complete-looking truncated CSV can only be detected using publisher counts, paging metadata or a baseline; syntax alone cannot prove completeness.
 
 Onboarding recipe: review source reuse rights and exact URL; capture bounded official bytes; record expected headers/IDs/encoding and feed bounds in adapter code; retain raw evidence; validate every row and source completeness; normalize deterministically; generate preview candidates; qualify bounded live replay before registering or scheduling the source. CSV fixtures currently qualify the parser, not a national publisher.
+
+## ArcGIS point-query contract
+
+The first ArcGIS primitive validates count and object-ID responses, then verifies each requested page against its exact ID set. It requires reviewed field names/types and WGS84 point coordinates, rejects transfer-limit flags and malformed or missing records, and returns records in object-ID order. Null geometry is preserved for explicit source-level exclusion; coordinates are never inferred. Object IDs identify rows during collection; adapters must separately qualify durable service identity.
+
+This follows the [Esri query contract](https://developers.arcgis.com/rest/services-reference/enterprise/query-feature-service-layer/) for enumerating IDs and requesting subsets. The primitive does not fetch a source or prove a transactional snapshot. Source counts, before/after ID comparison, page evidence retention, and source-specific normalization remain separate steps. Fixtures are synthetic and contain no provider contact records.
