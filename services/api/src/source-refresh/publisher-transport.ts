@@ -7,6 +7,7 @@ export interface PublisherRequest {
     maxBytes: number;
     contentTypes: readonly string[];
     timeoutMs?: number;
+    signal?: AbortSignal;
 }
 
 /** Transport only: adapters still prove complete-feed, stable-ID and geography contracts. */
@@ -19,7 +20,8 @@ export async function fetchPublisherBytes(request: PublisherRequest, fetcher = g
         || request.contentTypes.length < 1 || request.contentTypes.some(type => !/^[a-z0-9.+-]+\/[a-z0-9.+-]+$/.test(type))) {
         throw new Error('Invalid publisher transport policy.');
     }
-    const response = await fetcher(request.url, { redirect: 'error', signal: AbortSignal.timeout(timeoutMs),
+    const timeout = AbortSignal.timeout(timeoutMs);
+    const response = await fetcher(request.url, { redirect: 'error', signal: request.signal ? AbortSignal.any([timeout, request.signal]) : timeout,
         headers: { accept: request.contentTypes.join(', '), 'user-agent': 'Patchwork resource source refresh/0.1' } });
     try {
         if (!response.ok) throw new Error(`Publisher request failed with HTTP ${response.status}.`);
