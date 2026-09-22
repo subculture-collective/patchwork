@@ -17,3 +17,9 @@ New CPL runs retain gzip blobs and a `.storage.json` sidecar carrying adapter/sc
 Run `npm run resources:evidence:verify-cpl -w @patchwork/api -- /operator/restored/evidence 2026-09-19T180000Z-<12-character-raw-hash>.manifest.json`, substituting a real manifest basename from the restored `runs` directory. The command is read-only and exits nonzero on missing, corrupt, mismatched, oversized, or unsupported artifacts. It verifies raw bytes, deterministic normalization, and compressed references when present; old runs report `legacy-only`. The original retrieval time is returned unchanged.
 
 A successful audit proves one copied artifact set can be read back. It does not prove an independent backup exists, that database references are complete, or that all retained runs were audited. Keep those separate in the recovery ledger. The unit fixture exercises a disposable copy and source isolation, not production disaster recovery.
+
+## Multi-page ArcGIS evidence
+
+`retainArcgisCollection` stores each raw response and a source/policy-bound capture envelope before parsing. Rejected responses remain available under `arcgis-captures`; they do not produce a complete-run manifest. Successful collections write a hash-addressed manifest under `arcgis-runs` last. Each page keeps its own raw hash; the manifest hash identifies the evidence set and is never presented as the hash of a single publisher response.
+
+`replayArcgisEvidence` reads only retained files, validates source and reviewed policy identity, verifies each compressed/raw hash, and repeats the complete collection checks offline. It returns the original first and last retrieval times. Budgets are at most 64 MiB cumulative publisher bytes and 8 MiB for the manifest. This verifies copied artifacts; independent backup, database-reference recovery and publisher authenticity still need their own evidence.

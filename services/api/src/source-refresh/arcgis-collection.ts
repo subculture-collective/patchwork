@@ -39,7 +39,7 @@ export function arcgisRequestUrl(policy: ArcgisCollectionPolicy, role: ArcgisCap
     url.searchParams.set('f', 'json');
     if (role === 'features') {
         url.searchParams.set('objectIds', ids.join(','));
-        url.searchParams.set('outFields', Object.keys(policy.contract.fields).join(','));
+        url.searchParams.set('outFields', Object.keys(policy.contract.fields).sort().join(','));
         url.searchParams.set('outSR', '4326');
         url.searchParams.set('returnGeometry', 'true');
     } else {
