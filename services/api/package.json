@@ -26,7 +26,8 @@
         "resources:refresh:run": "tsx src/source-refresh/source-runner-cli.ts",
         "resources:directory:backfill": "tsx src/db/backfill-resource-directory.ts",
         "resources:refresh:quarantine": "tsx src/source-refresh/source-quarantine-cli.ts",
-        "resources:evidence:verify-cpl": "tsx src/source-refresh/verify-cpl-evidence.ts"
+        "resources:evidence:verify-cpl": "tsx src/source-refresh/verify-cpl-evidence.ts",
+        "resources:refresh:hrsa-preview": "tsx src/source-refresh/hrsa-preview.ts"
     },
     "dependencies": {
         "@atproto/oauth-client-node": "0.4.8",
