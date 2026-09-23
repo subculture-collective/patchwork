@@ -30,6 +30,8 @@ test('authenticated group owner creates a durable group, room, and privacy-safe 
             groups = [group];
             return fulfill({ group }, 201);
         }
+        if (path === '/identity/resolve') return fulfill({ identity: { did: 'did:plc:groups-browser-member', handle: 'member.example' } });
+        if (path === '/groups/linkable-requests') return fulfill({ requests: [] });
         if (path === '/groups/invitations') {
             const input = route.request().postDataJSON() as Record<string, string>;
             const invitation = { id: '41111111-1111-4111-8111-111111111113', groupId, inviteeDid: input.inviteeDid, role: input.role, token, expiresAt: '2026-08-12T12:00:00Z' };
@@ -55,7 +57,8 @@ test('authenticated group owner creates a durable group, room, and privacy-safe 
     await page.getByRole('button', { name: 'Create group', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Neighborhood deliveries' })).toBeVisible();
 
-    await page.getByLabel('Member DID').fill('did:plc:groups-browser-member');
+    await page.getByLabel('Person to invite').fill('member.example');
+    await expect(page.getByText('Found @member.example.')).toBeVisible();
     await page.getByRole('button', { name: 'Create secure invitation' }).click();
     await expect(page.getByText(token)).toBeVisible();
     expect(page.url()).not.toContain(token);

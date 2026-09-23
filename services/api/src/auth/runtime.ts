@@ -29,6 +29,11 @@ export interface AtAuthRuntime {
     volunteerProfileClient(
         sessionToken: string,
     ): Promise<VolunteerProfileRecordClient>;
+    /** Resolve a handle or DID to a DID and verified handle. */
+    resolveIdentity(
+        identifier: string,
+        signal: AbortSignal,
+    ): Promise<{ did: string; handle?: string }>;
 }
 
 export const createAtAuthRuntime = (
@@ -71,6 +76,20 @@ export const createAtAuthRuntime = (
     return {
         service,
         clientMetadata: client.clientMetadata,
+        resolveIdentity: async (identifier, signal) => {
+            const identity = await client.identityResolver.resolve(
+                identifier,
+                { signal },
+            );
+            return {
+                did: identity.did,
+                // 'handle.invalid' marks a handle whose DID document does not
+                // point back to it; never show it as verified.
+                ...(identity.handle && identity.handle !== 'handle.invalid' ?
+                    { handle: identity.handle }
+                :   {}),
+            };
+        },
         aidPostClient: async sessionToken => {
             const session = await service.restoreSession(sessionToken);
             return new AidPostRecordClient(createAgentRecordTransport(session));

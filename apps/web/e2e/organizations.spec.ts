@@ -168,6 +168,41 @@ test('owner creates an organization, invites a real DID, assigns stewardship, an
             });
             return;
         }
+        if (pathname === '/identity/resolve') {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    identity: { did: stewardDid, handle: 'steward.example' },
+                }),
+            });
+            return;
+        }
+        if (pathname === '/organizations/resources') {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({
+                    resources: [
+                        {
+                            uri: resourceUri,
+                            name: 'Northside Community Pantry',
+                            category: 'food-bank',
+                            authorDid: stewardDid,
+                            stewardship:
+                                stewardship ?
+                                    {
+                                        id: stewardship.id,
+                                        stewardDid: stewardship.stewardDid,
+                                        status: stewardship.status,
+                                    }
+                                :   null,
+                        },
+                    ],
+                }),
+            });
+            return;
+        }
         if (pathname === '/organizations/invitations') {
             const body = request.postDataJSON() as Record<string, unknown>;
             commandBodies.push(body);
@@ -261,17 +296,22 @@ test('owner creates an organization, invites a real DID, assigns stewardship, an
     await expect(page.getByText(/does not endorse/)).toBeVisible();
     await expect(page.getByText('Your role: Owner')).toBeVisible();
 
-    await page.getByLabel('Invitee AT DID').fill(stewardDid);
+    await page.getByLabel('Person to invite').fill('@steward.example');
+    await expect(page.getByText('Found @steward.example.')).toBeVisible();
     await page.getByLabel('Organization role').selectOption('steward');
     await page.getByRole('button', { name: 'Create invitation' }).click();
     await expect(
         page.getByLabel('One-time invitation token'),
     ).toHaveValue('private-one-time-organization-invitation-token');
 
-    await page.getByLabel('Public resource AT URI').fill(resourceUri);
-    await page.getByLabel('Steward AT DID').fill(stewardDid);
+    await page
+        .getByLabel('Resource', { exact: true })
+        .selectOption(resourceUri);
+    await page.getByLabel('Steward', { exact: true }).selectOption(stewardDid);
     await page.getByRole('button', { name: 'Assign stewardship' }).click();
-    await expect(page.getByText(resourceUri)).toBeVisible();
+    await expect(
+        page.getByRole('heading', { name: 'Northside Community Pantry' }),
+    ).toBeVisible();
     await page.getByRole('button', { name: 'Reconfirm resource' }).click();
     await expect(
         page.getByText('Resource reconfirmed for 90 days.'),

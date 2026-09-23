@@ -25,13 +25,18 @@ import {
     reconfirmOrganizationStewardshipViaApi,
     removeOrganizationMemberViaApi,
     updateOrganizationMemberRoleViaApi,
+    fetchOrganizationResourcesViaApi,
+    type OrganizationResource,
+    type ResolvedIdentity,
 } from '../features/api-client';
+import { IdentityField } from '../features/identity/IdentityField';
 import { useLocale } from '../i18n';
 import {
     formatLocalizedLabel,
 } from '../features/shell-shared';
 
 const organizationAdminRoles = new Set(['owner', 'admin']);
+const stewardCapableRoles = new Set(['owner', 'admin', 'steward']);
 
 export const OrganizationsRoute = ({ did }: { did: string }) => {
     const { t, fmt } = useLocale();
@@ -49,7 +54,9 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
     const [actionStatus, setActionStatus] = useState<string>();
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
-    const [inviteeDid, setInviteeDid] = useState('');
+    const [invitee, setInvitee] = useState<ResolvedIdentity>();
+    const [inviteResetKey, setInviteResetKey] = useState(0);
+    const [resources, setResources] = useState<OrganizationResource[]>([]);
     const [inviteRole, setInviteRole] = useState<
         'admin' | 'steward' | 'member'
     >('steward');
@@ -78,6 +85,7 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
             setMine([]);
             setMembers([]);
             setStewardships([]);
+            setResources([]);
             return;
         }
         const result = await fetchMyOrganizationsViaApi();
@@ -95,14 +103,19 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
         if (!nextSelected) {
             setMembers([]);
             setStewardships([]);
+            setResources([]);
             return;
         }
-        const [memberResult, stewardshipResult] = await Promise.all([
-            fetchOrganizationMembersViaApi(nextSelected),
-            fetchOrganizationStewardshipsViaApi(nextSelected),
-        ]);
+        const [memberResult, stewardshipResult, resourceResult] =
+            await Promise.all([
+                fetchOrganizationMembersViaApi(nextSelected),
+                fetchOrganizationStewardshipsViaApi(nextSelected),
+                fetchOrganizationResourcesViaApi(nextSelected),
+            ]);
         if (memberResult.ok) setMembers(memberResult.data);
         if (stewardshipResult.ok) setStewardships(stewardshipResult.data);
+        // Members below steward cannot list resources; the picker stays empty.
+        setResources(resourceResult.ok ? resourceResult.data : []);
     }, [did, selectedId, t]);
 
     useEffect(() => {
@@ -114,6 +127,9 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
     }, [loadPrivate]);
 
     const selected = mine.find((item) => item.id === selectedId);
+    const resourceNames = new Map(
+        resources.map((resource) => [resource.uri, resource.name]),
+    );
     const canAdmin = selected
         ? organizationAdminRoles.has(selected.membership.role)
         : false;
@@ -137,11 +153,11 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
 
     const invite = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        if (!selected) return;
+        if (!selected || !invitee) return;
         setActionStatus(t('organizations.creatingInvitation'));
         const result = await inviteOrganizationMemberViaApi({
             organizationId: selected.id,
-            inviteeDid,
+            inviteeDid: invitee.did,
             role: inviteRole,
         });
         if (!result.ok) {
@@ -151,8 +167,10 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
             return;
         }
         setInvitationToken(result.data.token);
-        setInviteeDid('');
+        setInvitee(undefined);
+        setInviteResetKey((key) => key + 1);
         setActionStatus(t('organizations.invitationCreated'));
+        await loadPrivate();
     };
 
     const acceptInvitation = async (event: FormEvent<HTMLFormElement>) => {
@@ -488,18 +506,11 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
                                                 <h3 className='font-bold'>
                                                     {t('organizations.invite')}
                                                 </h3>
-                                                <label className='block text-sm font-bold'>
-                                                    {t('organizations.invitee')}
-                                                    <Input
-                                                        value={inviteeDid}
-                                                        onChange={(event) =>
-                                                            setInviteeDid(
-                                                                event.target
-                                                                    .value,
-                                                            )
-                                                        }
-                                                    />
-                                                </label>
+                                                <IdentityField
+                                                    label={t('organizations.invitee')}
+                                                    onResolved={setInvitee}
+                                                    resetKey={inviteResetKey}
+                                                />
                                                 <label className='block text-sm font-bold'>
                                                     {t(
                                                         'organizations.organizationRole',
@@ -531,7 +542,10 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
                                                         </option>
                                                     </select>
                                                 </label>
-                                                <Button type='submit'>
+                                                <Button
+                                                    type='submit'
+                                                    disabled={!invitee}
+                                                >
                                                     {t(
                                                         'organizations.createInvitation',
                                                     )}
@@ -558,11 +572,18 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
                                                 <h3 className='font-bold'>
                                                     {t('organizations.assign')}
                                                 </h3>
-                                                <label className='block text-sm font-bold'>
+                                                <label
+                                                    htmlFor='stewardship-resource'
+                                                    className='mh-field-label'
+                                                >
                                                     {t(
                                                         'organizations.resourceUri',
                                                     )}
-                                                    <Input
+                                                </label>
+                                                    <select
+                                                        id='stewardship-resource'
+                                                        className='mh-input w-full px-3 py-2'
+                                                        required
                                                         value={resourceUri}
                                                         onChange={(event) =>
                                                             setResourceUri(
@@ -570,13 +591,48 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
                                                                     .value,
                                                             )
                                                         }
-                                                    />
-                                                </label>
-                                                <label className='block text-sm font-bold'>
+                                                    >
+                                                        <option value=''>
+                                                            {t(
+                                                                'organizations.chooseResource',
+                                                            )}
+                                                        </option>
+                                                        {resources.map(
+                                                            (resource) => (
+                                                                <option
+                                                                    key={
+                                                                        resource.uri
+                                                                    }
+                                                                    value={
+                                                                        resource.uri
+                                                                    }
+                                                                >
+                                                                    {resource.stewardship
+                                                                        ? `${resource.name} (${t('organizations.alreadyStewarded')})`
+                                                                        : resource.name}
+                                                                </option>
+                                                            ),
+                                                        )}
+                                                    </select>
+                                                {resources.length === 0 ? (
+                                                    <p className='mh-field-hint'>
+                                                        {t(
+                                                            'organizations.noResources',
+                                                        )}
+                                                    </p>
+                                                ) : null}
+                                                <label
+                                                    htmlFor='stewardship-steward'
+                                                    className='mh-field-label'
+                                                >
                                                     {t(
                                                         'organizations.stewardDid',
                                                     )}
-                                                    <Input
+                                                </label>
+                                                    <select
+                                                        id='stewardship-steward'
+                                                        className='mh-input w-full px-3 py-2'
+                                                        required
                                                         value={stewardDid}
                                                         onChange={(event) =>
                                                             setStewardDid(
@@ -584,9 +640,49 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
                                                                     .value,
                                                             )
                                                         }
-                                                    />
-                                                </label>
-                                                <Button type='submit'>
+                                                    >
+                                                        <option value=''>
+                                                            {t(
+                                                                'organizations.chooseSteward',
+                                                            )}
+                                                        </option>
+                                                        {members
+                                                            .filter((member) =>
+                                                                stewardCapableRoles.has(
+                                                                    member.role,
+                                                                ),
+                                                            )
+                                                            .map((member) => (
+                                                                <option
+                                                                    key={
+                                                                        member.memberDid
+                                                                    }
+                                                                    value={
+                                                                        member.memberDid
+                                                                    }
+                                                                >
+                                                                    {member.memberDid ===
+                                                                    did
+                                                                        ? t(
+                                                                              'organizations.you',
+                                                                              {
+                                                                                  role: formatLocalizedLabel(
+                                                                                      t,
+                                                                                      member.role,
+                                                                                  ),
+                                                                              },
+                                                                          )
+                                                                        : `${member.memberDid} · ${formatLocalizedLabel(t, member.role)}`}
+                                                                </option>
+                                                            ))}
+                                                    </select>
+                                                <Button
+                                                    type='submit'
+                                                    disabled={
+                                                        !resourceUri ||
+                                                        !stewardDid
+                                                    }
+                                                >
                                                     {t(
                                                         'organizations.assignAction',
                                                     )}
@@ -610,10 +706,19 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
                                                 return (
                                                     <Card
                                                         key={item.id}
-                                                        title={item.resourceUri}
+                                                        title={
+                                                            resourceNames.get(
+                                                                item.resourceUri,
+                                                            ) ??
+                                                            item.resourceUri
+                                                        }
                                                     >
                                                         <p className='text-xs'>
-                                                            {item.status} ·{' '}
+                                                            {formatLocalizedLabel(
+                                                                t,
+                                                                item.status,
+                                                            )}{' '}
+                                                            ·{' '}
                                                             {t(
                                                                 'organizations.due',
                                                                 {

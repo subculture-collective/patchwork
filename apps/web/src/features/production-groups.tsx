@@ -15,7 +15,12 @@ import {
     transferGroupOwnershipViaApi,
     type ProductionGroup,
     type ProductionGroupInvitation,
+    fetchLinkableRequestsViaApi,
+    type LinkableRequest,
+    type ResolvedIdentity,
 } from './api-client';
+import { LinkedRequestSelect } from './groups/LinkedRequestSelect';
+import { IdentityField } from './identity/IdentityField';
 
 interface GroupState {
     groups: ProductionGroup[];
@@ -40,6 +45,15 @@ export const ProductionGroups = () => {
     const [purpose, setPurpose] = useState('');
     const [visibility, setVisibility] = useState<'private' | 'public'>('private');
     const [linkedRequestUri, setLinkedRequestUri] = useState('');
+    const [linkable, setLinkable] = useState<LinkableRequest[]>();
+
+    useEffect(() => {
+        const controller = new AbortController();
+        void fetchLinkableRequestsViaApi(controller.signal).then((result) => {
+            if (!controller.signal.aborted) setLinkable(result.ok ? result.data : []);
+        });
+        return () => controller.abort();
+    }, []);
     const [invitationToken, setInvitationToken] = useState('');
 
     const load = useCallback(async () => {
@@ -117,10 +131,14 @@ export const ProductionGroups = () => {
                         <option value='public'>{t('groups.public')}</option>
                     </select>
                 </label>
-                <label className='grid gap-1 font-bold'>{t('groups.linkedRequest')}
-                    <input className='mh-input px-3 py-2' maxLength={2048} value={linkedRequestUri} onChange={(event) => setLinkedRequestUri(event.target.value)} disabled={busy} />
-                    <span className='text-sm font-normal text-mh-textMuted'>{t('groups.linkedRequestHelp')}</span>
-                </label>
+                <LinkedRequestSelect
+                    label={t('groups.linkedRequest')}
+                    help={t('groups.linkedRequestHelp')}
+                    value={linkedRequestUri}
+                    onChange={setLinkedRequestUri}
+                    requests={linkable}
+                    disabled={busy}
+                />
                 <button className='mh-button mh-button--primary mh-button--md' disabled={busy}>{busy ? t('groups.creating') : t('groups.create')}</button>
             </form>
 
@@ -149,7 +167,7 @@ export const ProductionGroups = () => {
                     <button type='button' className='mh-button mh-button--secondary mh-button--md' onClick={() => void load()} disabled={busy}>{t('groups.refresh')}</button>
                 </div>
                 {data.groups.length === 0 ? <p className='mh-card p-5'>{t('groups.noGroups')}</p> :
-                    data.groups.map((group) => <GroupCard key={group.id} group={group}
+                    data.groups.map((group) => <GroupCard key={group.id} group={group} linkable={linkable}
                         outgoing={data.outgoingInvitations.filter((invitation) => invitation.groupId === group.id)}
                         busy={busy} run={run} />)}
             </section>
@@ -157,14 +175,16 @@ export const ProductionGroups = () => {
     );
 };
 
-const GroupCard = ({ group, outgoing, busy, run }: {
+const GroupCard = ({ group, outgoing, busy, run, linkable }: {
+    linkable: LinkableRequest[] | undefined;
     group: ProductionGroup;
     outgoing: ProductionGroupInvitation[];
     busy: boolean;
     run: (operation: () => Promise<{ ok: boolean }>) => Promise<boolean>;
 }) => {
     const { t } = useLocale();
-    const [inviteeDid, setInviteeDid] = useState('');
+    const [invitee, setInvitee] = useState<ResolvedIdentity>();
+    const [inviteResetKey, setInviteResetKey] = useState(0);
     const [inviteRole, setInviteRole] = useState<'moderator' | 'member'>('member');
     const [issuedToken, setIssuedToken] = useState('');
     const [roomName, setRoomName] = useState('');
@@ -173,10 +193,12 @@ const GroupCard = ({ group, outgoing, busy, run }: {
 
     const invite = async (event: FormEvent) => {
         event.preventDefault();
-        const result = await inviteGroupMemberViaApi({ groupId: group.id, inviteeDid: inviteeDid.trim(), role: inviteRole });
+        if (!invitee) return;
+        const result = await inviteGroupMemberViaApi({ groupId: group.id, inviteeDid: invitee.did, role: inviteRole });
         if (result.ok) {
             setIssuedToken(result.data.invitation.token);
-            setInviteeDid('');
+            setInvitee(undefined);
+            setInviteResetKey((key) => key + 1);
         }
         await run(async () => ({ ok: result.ok }));
     };
@@ -218,15 +240,15 @@ const GroupCard = ({ group, outgoing, busy, run }: {
             {canModerate && <>
                 <form onSubmit={invite} className='grid gap-2 rounded-md border border-mh-border p-3'>
                     <h4 className='font-bold'>{t('groups.inviteMember')}</h4>
-                    <label className='grid gap-1 font-bold'>{t('groups.memberDid')}<input className='mh-input px-3 py-2' required value={inviteeDid} onChange={(event) => setInviteeDid(event.target.value)} disabled={busy} /></label>
+                    <IdentityField label={t('groups.memberDid')} onResolved={setInvitee} resetKey={inviteResetKey} disabled={busy} />
                     <label className='grid gap-1 font-bold'>{t('groups.memberRole')}<select className='mh-input px-3 py-2' value={inviteRole} onChange={(event) => setInviteRole(event.target.value as 'moderator' | 'member')} disabled={busy}><option value='member'>{t('groups.member')}</option>{group.actorRole === 'owner' && <option value='moderator'>{t('groups.moderator')}</option>}</select></label>
-                    <button className='mh-button mh-button--primary mh-button--md' disabled={busy}>{t('groups.invite')}</button>
+                    <button className='mh-button mh-button--primary mh-button--md' disabled={busy || !invitee}>{t('groups.invite')}</button>
                     {issuedToken && <div role='status' className='break-all rounded-md bg-mh-surfaceAlt p-3'><p>{t('groups.tokenOnce')}</p><code>{issuedToken}</code><button type='button' className='mh-button mh-button--secondary mh-button--md' onClick={() => void navigator.clipboard.writeText(issuedToken)}>{t('groups.copyToken')}</button></div>}
                 </form>
                 <form onSubmit={addRoom} className='grid gap-2 rounded-md border border-mh-border p-3'>
                     <h4 className='font-bold'>{t('groups.createRoom')}</h4>
                     <label className='grid gap-1 font-bold'>{t('groups.roomName')}<input className='mh-input px-3 py-2' required maxLength={80} value={roomName} onChange={(event) => setRoomName(event.target.value)} disabled={busy} /></label>
-                    <label className='grid gap-1 font-bold'>{t('groups.roomLinkedRequest')}<input className='mh-input px-3 py-2' maxLength={2048} value={roomRequest} onChange={(event) => setRoomRequest(event.target.value)} disabled={busy} /></label>
+                    <LinkedRequestSelect label={t('groups.roomLinkedRequest')} value={roomRequest} onChange={setRoomRequest} requests={linkable} disabled={busy} />
                     <button className='mh-button mh-button--primary mh-button--md' disabled={busy}>{t('groups.addRoom')}</button>
                 </form>
                 {outgoing.length > 0 && <section><h4 className='font-bold'>{t('groups.outgoing')}</h4><ul>{outgoing.map((invitation) => <li key={invitation.id} className='break-words'>{invitation.inviteeDid}<button type='button' className='mh-button mh-button--secondary mh-button--sm' disabled={busy} onClick={() => void run(() => revokeGroupInvitationViaApi({ groupId: group.id, invitationId: invitation.id }))}>{t('groups.revoke')}</button></li>)}</ul></section>}

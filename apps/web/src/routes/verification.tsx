@@ -38,6 +38,10 @@ import { useLocale } from '../i18n';
 import {
     formatLocalizedLabel,
 } from '../features/shell-shared';
+import {
+    StewardshipScopePicker,
+    type StewardshipScope,
+} from '../features/organizations/StewardshipScopePicker';
 
 export const VerificationRoute = ({ did }: { did: string }) => {
     const { t, fmt } = useLocale();
@@ -50,8 +54,15 @@ export const VerificationRoute = ({ did }: { did: string }) => {
     const [status, setStatus] = useState(t('verification.loading'));
     const [subjectType, setSubjectType] =
         useState<VerificationSubjectType>('volunteer');
-    const [organizationId, setOrganizationId] = useState('');
-    const [resourceUri, setResourceUri] = useState('');
+    // Separate scopes: the application and exact-address forms are
+    // independent tasks and must not overwrite each other's selection.
+    const [applicationScope, setApplicationScope] = useState<StewardshipScope>(
+        { organizationId: '', resourceUri: '' },
+    );
+    const [exactScope, setExactScope] = useState<StewardshipScope>({
+        organizationId: '',
+        resourceUri: '',
+    });
     const [evidenceLabel, setEvidenceLabel] = useState('');
     const [evidenceIssuer, setEvidenceIssuer] = useState('');
     const [privateNotes, setPrivateNotes] = useState('');
@@ -120,8 +131,12 @@ export const VerificationRoute = ({ did }: { did: string }) => {
         setStatus(t('verification.submittingApplication'));
         const result = await submitVerificationApplicationViaApi({
             subjectType,
-            ...(subjectType !== 'volunteer' ? { organizationId } : {}),
-            ...(subjectType === 'resource' ? { resourceUri } : {}),
+            ...(subjectType !== 'volunteer'
+                ? { organizationId: applicationScope.organizationId }
+                : {}),
+            ...(subjectType === 'resource'
+                ? { resourceUri: applicationScope.resourceUri }
+                : {}),
             evidence: [
                 {
                     kind:
@@ -245,8 +260,8 @@ export const VerificationRoute = ({ did }: { did: string }) => {
         event.preventDefault();
         setStatus(t('verification.submittingAddress'));
         const result = await requestExactPublicAddressViaApi({
-            organizationId,
-            resourceUri,
+            organizationId: exactScope.organizationId,
+            resourceUri: exactScope.resourceUri,
             streetAddress,
             latitude: Number(latitude),
             longitude: Number(longitude),
@@ -358,30 +373,19 @@ export const VerificationRoute = ({ did }: { did: string }) => {
                         </select>
                     </label>
                     {subjectType !== 'volunteer' ? (
-                        <label className='block text-sm font-bold'>
-                            {t('verification.organizationId')}
-                            <Input
-                                className='mt-1'
-                                required
-                                value={organizationId}
-                                onChange={(event) =>
-                                    setOrganizationId(event.target.value)
-                                }
-                            />
-                        </label>
-                    ) : null}
-                    {subjectType === 'resource' ? (
-                        <label className='block text-sm font-bold'>
-                            {t('verification.resourceUri')}
-                            <Input
-                                className='mt-1'
-                                required
-                                value={resourceUri}
-                                onChange={(event) =>
-                                    setResourceUri(event.target.value)
-                                }
-                            />
-                        </label>
+                        <StewardshipScopePicker
+                            did={did}
+                            value={applicationScope}
+                            onChange={setApplicationScope}
+                            includeResource={subjectType === 'resource'}
+                            minimumRole={
+                                subjectType === 'organization'
+                                    ? 'admin'
+                                    : 'steward'
+                            }
+                            organizationLabel={t('verification.organizationId')}
+                            resourceLabel={t('verification.resourceUri')}
+                        />
                     ) : null}
                     <label className='block text-sm font-bold'>
                         {t('verification.evidenceLabel')}
@@ -645,28 +649,15 @@ export const VerificationRoute = ({ did }: { did: string }) => {
                     {t('verification.exactHelp')}
                 </p>
                 <form className='space-y-3' onSubmit={submitExactAddress}>
-                    <label className='block text-sm font-bold'>
-                        {t('verification.organizationId')}
-                        <Input
-                            className='mt-1'
-                            required
-                            value={organizationId}
-                            onChange={(event) =>
-                                setOrganizationId(event.target.value)
-                            }
-                        />
-                    </label>
-                    <label className='block text-sm font-bold'>
-                        {t('verification.resourceUri')}
-                        <Input
-                            className='mt-1'
-                            required
-                            value={resourceUri}
-                            onChange={(event) =>
-                                setResourceUri(event.target.value)
-                            }
-                        />
-                    </label>
+                    <StewardshipScopePicker
+                        did={did}
+                        value={exactScope}
+                        onChange={setExactScope}
+                        includeResource
+                        minimumRole='steward'
+                        organizationLabel={t('verification.organizationId')}
+                        resourceLabel={t('verification.resourceUri')}
+                    />
                     <label className='block text-sm font-bold'>
                         {t('verification.street')}
                         <Input

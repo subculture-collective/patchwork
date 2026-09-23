@@ -301,5 +301,5 @@ test('non-moderators receive an access-denied console', async ({ page }) => {
     await expect(
         page.getByRole('region', { name: 'Moderator access required' }),
     ).toBeVisible();
-    await expect(page.getByText(/durable content-moderation capability/)).toBeVisible();
+    await expect(page.getByText('You need moderator access to use this console.')).toBeVisible();
 });

@@ -8,11 +8,16 @@ export const webDataMode = resolveWebDataMode(import.meta.env, {
 
 export const nowIso = (): string => new Date().toISOString();
 
-export const dataOriginLabel = (origin: ApiDataOrigin): string =>
-    origin === 'api'
-        ? 'DB-backed API'
-        : origin === 'fixture'
-          ? 'Local fixture demo'
-          : origin === 'idle'
-            ? 'Requesting location'
-            : 'API unavailable';
+type Translate = (key: string) => string;
+
+/** Short, localised label for where discovery data came from. */
+export const dataOriginLabel = (origin: ApiDataOrigin, t: Translate): string =>
+    t(
+        origin === 'api'
+            ? 'runtime.origin.api'
+            : origin === 'fixture'
+              ? 'runtime.origin.fixture'
+              : origin === 'idle'
+                ? 'runtime.origin.idle'
+                : 'runtime.origin.unavailable',
+    );

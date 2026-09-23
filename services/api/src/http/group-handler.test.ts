@@ -10,7 +10,8 @@ describe('group HTTP identity and idempotency boundary', () => {
     const list = vi.fn();
     const create = vi.fn();
     const invite = vi.fn();
-    const service = { list, create, invite } as unknown as DurableGroupService;
+    const listLinkableRequests = vi.fn();
+    const service = { list, create, invite, listLinkableRequests } as unknown as DurableGroupService;
     const executeIdempotent = vi.fn(async (_request, _actorDid, body, effect) =>
         effect(body as Record<string, unknown>, 'server-key'));
     const handler = createGroupHandler({
@@ -76,5 +77,17 @@ describe('group HTTP identity and idempotency boundary', () => {
         });
         expect(response.status).toBe(201);
         expect(invite).toHaveBeenCalledWith(actorDid, body);
+    });
+
+    it('lists linkable requests for the session actor without idempotency', async () => {
+        listLinkableRequests.mockResolvedValueOnce({
+            requests: [{ uri: 'at://did:plc:a/app.patchwork.aid.post/1', title: 'Groceries', status: 'open', role: 'requester' }],
+        });
+        const response = await fetch(`${origin}/groups/linkable-requests?actorDid=did:plc:forged`);
+        expect(response.status).toBe(200);
+        expect(listLinkableRequests).toHaveBeenCalledWith(actorDid);
+        expect(list).not.toHaveBeenCalledWith('did:plc:forged');
+        const body = (await response.json()) as { requests: unknown[] };
+        expect(body.requests).toHaveLength(1);
     });
 });
