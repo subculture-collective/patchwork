@@ -821,6 +821,59 @@ export class OrganizationService {
         return { stewardships: result.rows.map(stewardship) };
     }
 
+    /**
+     * Indexed directory resources an organization can assign stewards to:
+     * records authored by its active members, with any current stewardship.
+     * Used by the web pickers so stewards never type AT URIs.
+     */
+    async listResources(
+        actorDid: string,
+        organizationId: string,
+    ): Promise<Record<string, unknown>> {
+        const id = parseOrganizationId(organizationId);
+        await this.requireRole(id, actorDid, 'steward');
+        const result = await this.pool.query<{
+            uri: string;
+            name: string;
+            category: string;
+            author_did: string;
+            stewardship_id: string | null;
+            steward_did: string | null;
+            stewardship_status: string | null;
+        }>(
+            `SELECT p.uri, p.name, p.category, m.member_did AS author_did,
+                    s.stewardship_id, s.steward_did,
+                    s.status AS stewardship_status
+             FROM indexer_directory_resource_projections p
+             JOIN organization_memberships m
+               ON m.organization_id = $1
+              AND m.status = 'active'
+              AND p.uri LIKE 'at://' || m.member_did
+                    || '/app.patchwork.directory.resource/%'
+             LEFT JOIN organization_resource_stewardships s
+               ON s.organization_id = $1 AND s.resource_uri = p.uri
+             ORDER BY lower(p.name), p.uri
+             LIMIT 500`,
+            [id],
+        );
+        return {
+            resources: result.rows.map(row => ({
+                uri: row.uri,
+                name: row.name,
+                category: row.category,
+                authorDid: row.author_did,
+                stewardship:
+                    row.stewardship_id ?
+                        {
+                            id: row.stewardship_id,
+                            stewardDid: row.steward_did,
+                            status: row.stewardship_status,
+                        }
+                    :   null,
+            })),
+        };
+    }
+
     async reconfirmStewardship(
         actorDid: string,
         input: unknown,

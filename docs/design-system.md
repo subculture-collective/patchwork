@@ -139,3 +139,18 @@ globally.
 - Uppercase letter-spaced form labels.
 - Decorative shapes that overlap content (the old route-header ring).
 - Raw hex values or blurred shadows in feature code.
+
+## 7. Visual baselines
+
+`apps/web/e2e/visual.spec.ts` captures the home, map, requests, resources,
+login, sign-up and posting pages at 390px and 1280px. It is opt-in so the
+default e2e run does not depend on rendering details:
+
+```sh
+cd apps/web
+PATCHWORK_VISUAL=1 npx playwright test e2e/visual.spec.ts                      # compare
+PATCHWORK_VISUAL=1 npx playwright test e2e/visual.spec.ts --update-snapshots   # after an intended change
+```
+
+Web fonts are blocked and API data is mocked, so the baselines use fallback
+fonts and fixed content. Snapshots are platform-specific (`-linux.png`).

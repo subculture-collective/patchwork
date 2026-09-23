@@ -114,7 +114,7 @@ test('API failure stays visible and never substitutes fixture discovery data', a
         'The service could not complete this request.',
     );
     await expect(page.getByText('NETWORK_ERROR')).toHaveCount(0);
-    await expect(page.getByText('API unavailable')).toBeVisible();
+    await expect(page.getByText('Service unavailable')).toBeVisible();
     await expect(page.getByText('Need groceries before 21:00')).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Retry discovery' }).click();
@@ -203,7 +203,7 @@ test('map requests location and loads an approximate nearby area automatically',
     await expect(
         page.getByRole('button', { name: 'Confirm approximate area' }),
     ).toHaveCount(0);
-    await expect(page.getByText('API unavailable')).toHaveCount(0);
+    await expect(page.getByText('Service unavailable')).toHaveCount(0);
     await expect(page.getByText(/^API sync issue:/)).toHaveCount(0);
     await expect(page.getByText(/^Public-place sync issue:/)).toHaveCount(0);
     expect(discoveryRequests).toBeGreaterThan(0);

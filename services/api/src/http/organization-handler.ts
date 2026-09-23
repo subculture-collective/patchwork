@@ -16,6 +16,7 @@ const routes = new Map<string, readonly string[]>([
     ['/organizations/members', ['GET', 'DELETE']],
     ['/organizations/members/role', ['PUT']],
     ['/organizations/stewardships', ['GET', 'POST']],
+    ['/organizations/resources', ['GET']],
     ['/organizations/stewardships/reconfirm', ['POST']],
     ['/organizations/audit', ['GET']],
 ]);
@@ -94,6 +95,11 @@ export const createOrganizationHandler = (
                         await dependencies.service.listInvitations(actorDid)
                     : requestUrl.pathname === '/organizations/members' ?
                         await dependencies.service.listMembers(
+                            actorDid,
+                            organizationId(requestUrl),
+                        )
+                    : requestUrl.pathname === '/organizations/resources' ?
+                        await dependencies.service.listResources(
                             actorDid,
                             organizationId(requestUrl),
                         )

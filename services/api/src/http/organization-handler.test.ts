@@ -9,11 +9,13 @@ describe('organization HTTP boundary', () => {
     const getPublic = vi.fn();
     const create = vi.fn();
     const invite = vi.fn();
+    const listResources = vi.fn();
     const service = {
         listPublic,
         getPublic,
         create,
         invite,
+        listResources,
     } as unknown as OrganizationService;
     const authenticate = vi.fn(async () => ({
         sessionToken: 'opaque-session',
@@ -116,5 +118,31 @@ describe('organization HTTP boundary', () => {
             'did:plc:session-owner',
             invitationBody,
         );
+    });
+
+    it('lists assignable resources for the session actor only', async () => {
+        listResources.mockResolvedValueOnce({
+            resources: [
+                {
+                    uri: 'at://did:plc:member/app.patchwork.directory.resource/one',
+                    name: 'Pilsen Community Pantry',
+                    category: 'food-bank',
+                    authorDid: 'did:plc:member',
+                    stewardship: null,
+                },
+            ],
+        });
+        const organizationId = 'b7b8b206-c3c3-4ae7-8f29-6877b5a93531';
+        const response = await fetch(
+            `${origin}/organizations/resources?organizationId=${organizationId}&actorDid=did:plc:hostile-browser`,
+        );
+        expect(response.status).toBe(200);
+        expect(response.headers.get('cache-control')).toBe('no-store');
+        expect(listResources).toHaveBeenCalledWith(
+            'did:plc:session-owner',
+            organizationId,
+        );
+        const body = (await response.json()) as { resources: unknown[] };
+        expect(body.resources).toHaveLength(1);
     });
 });

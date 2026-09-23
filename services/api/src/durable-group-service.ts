@@ -109,6 +109,47 @@ const invalid = (code: string, message: string): never => {
 export class DurableGroupService {
     constructor(private readonly pool: Pool) {}
 
+    /**
+     * Requests the actor may link to a group or room: ones they posted, or
+     * ones where they hold an active connection. Mirrors assertRequestVisible
+     * so the picker never offers a request that linking would reject.
+     */
+    async listLinkableRequests(actorDid: string): Promise<Record<string, unknown>> {
+        const result = await this.pool.query<{
+            uri: string; title: string | null; status: string; role: 'requester' | 'helper';
+        }>(
+            `SELECT w.post_uri AS uri, p.title, w.current_status AS status,
+                    CASE WHEN w.requester_did = $1 THEN 'requester' ELSE 'helper' END AS role
+             FROM request_workflows w
+             LEFT JOIN indexer_aid_post_projections p ON p.uri = w.post_uri
+             WHERE w.current_status <> 'archived'
+               AND (w.requester_did = $1 OR EXISTS (
+                    SELECT 1 FROM coordination_connections c
+                    WHERE c.request_uri = w.post_uri AND c.status = 'active'
+                      AND $1 IN (c.requester_did, c.helper_did)))
+               AND NOT EXISTS (
+                    SELECT 1 FROM user_blocks b
+                    WHERE b.deleted_at IS NULL AND w.requester_did <> $1
+                      AND ((b.blocker_did = w.requester_did AND b.subject_did = $1)
+                        OR (b.blocker_did = $1 AND b.subject_did = w.requester_did)))
+               AND NOT EXISTS (
+                    SELECT 1 FROM moderation_queue_items q
+                    WHERE q.subject_uri = w.post_uri
+                      AND (q.visibility <> 'visible' OR q.queue_status = 'queued'
+                        OR q.appeal_state IN ('pending', 'under-review')))
+             ORDER BY w.updated_at DESC, w.post_uri
+             LIMIT 100`,
+            [actorDid]);
+        return {
+            requests: result.rows.map(row => ({
+                uri: row.uri,
+                title: row.title ?? null,
+                status: row.status,
+                role: row.role,
+            })),
+        };
+    }
+
     async list(actorDid: string, now = new Date()): Promise<Record<string, unknown>> {
         await this.assertAccountActive(this.pool, actorDid);
         const groups = await this.pool.query<GroupRow & { actor_role: GroupRole }>(

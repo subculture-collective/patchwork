@@ -750,7 +750,7 @@ export const ResourceRoute = ({
                 description={t('resources.description')}
                 meta={
                     dataOrigin !== 'api' ? (
-                        <Badge tone='info'>{dataOriginLabel(dataOrigin)}</Badge>
+                        <Badge tone='info'>{dataOriginLabel(dataOrigin, t)}</Badge>
                     ) : null
                 }
             />
