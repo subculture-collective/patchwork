@@ -1,5 +1,20 @@
 /* App shell: masthead, desktop nav, mobile menu sheet, tab bar, footer. */
 
+/*
+ * Keep scrolled-to and focused elements clear of the sticky header and the
+ * fixed mobile tab bar (WCAG 2.4.11 focus not obscured).
+ */
+html {
+    scroll-padding-top: calc(var(--mh-header-height) + var(--mh-space-4));
+    scroll-padding-bottom: calc(var(--mh-tabbar-height) + var(--mh-space-4));
+}
+
+@media (min-width: 1024px) {
+    html {
+        scroll-padding-bottom: 0;
+    }
+}
+
 .mh-app {
     min-height: 100vh;
     overflow-x: clip;
