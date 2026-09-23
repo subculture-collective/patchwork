@@ -4,6 +4,8 @@ import type { FeedBadge } from '../../feed-ux';
 import { useLocale } from '../../i18n';
 import { formatLocalizedLabel } from '../shell-shared';
 
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
 interface RequestCardProps {
     title: string;
     description: string;
@@ -51,9 +53,16 @@ export const RequestCard = ({
                 <span className='mh-eyebrow'>
                     {formatLocalizedLabel(t, category)}
                 </span>
-                <span className='mh-request-card__time'>
-                    {t('feed.updatedAt', { date: fmt.longDate(updatedAt) })}
-                </span>
+                <time
+                    className='mh-request-card__time'
+                    dateTime={updatedAt}
+                    title={fmt.longDate(updatedAt)}
+                >
+                    {Math.abs(Date.now() - new Date(updatedAt).getTime()) <
+                    WEEK_MS
+                        ? fmt.relativeTime(updatedAt)
+                        : fmt.shortDate(updatedAt)}
+                </time>
             </div>
             <Heading className='mh-request-card__title'>{title}</Heading>
             <p className='mh-request-card__description'>{description}</p>
