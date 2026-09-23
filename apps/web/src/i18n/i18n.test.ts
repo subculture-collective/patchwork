@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 import en from './en.json';
@@ -99,20 +99,30 @@ describe('i18n translation key completeness', () => {
     });
 });
 
+const productionSourcePaths = (): string[] => {
+    const routesDir = fileURLToPath(new URL('../routes/', import.meta.url));
+    const routeFiles = readdirSync(routesDir)
+        .filter((name) => name.endsWith('.tsx') && !name.endsWith('.test.tsx'))
+        .map((name) => `../routes/${name}`);
+    return [
+        '../features/frontend-shell.tsx',
+        '../features/shell-shared.tsx',
+        ...routeFiles,
+        '../auth/LoginPage.tsx',
+        '../auth/SignupPage.tsx',
+        '../auth/AuthCallbackPage.tsx',
+        '../components/Badge.tsx',
+        '../components/TextLink.tsx',
+        '../components/map/InteractiveMap.tsx',
+        '../features/exact-location-exchange.tsx',
+        '../features/production-chat.tsx',
+        '../features/production-groups.tsx',
+    ].map((relative) => fileURLToPath(new URL(relative, import.meta.url)));
+};
+
 describe('production source localization', () => {
     it('contains no untranslated JSX copy outside explicit fixture-only routes', () => {
-        const sourcePaths = [
-            '../features/frontend-shell.tsx',
-            '../auth/LoginPage.tsx',
-            '../auth/SignupPage.tsx',
-            '../auth/AuthCallbackPage.tsx',
-            '../components/Badge.tsx',
-            '../components/TextLink.tsx',
-            '../components/map/InteractiveMap.tsx',
-            '../features/exact-location-exchange.tsx',
-            '../features/production-chat.tsx',
-            '../features/production-groups.tsx',
-        ].map((relative) => fileURLToPath(new URL(relative, import.meta.url)));
+        const sourcePaths = productionSourcePaths();
         const fixtureOnly = new Set([
             'LegacyFixtureVolunteerRoute',
             'ChatRoute',
@@ -182,18 +192,7 @@ describe('production source localization', () => {
     });
 
     it('references only translation keys present in both locales', () => {
-        const sourcePaths = [
-            '../features/frontend-shell.tsx',
-            '../auth/LoginPage.tsx',
-            '../auth/SignupPage.tsx',
-            '../auth/AuthCallbackPage.tsx',
-            '../components/Badge.tsx',
-            '../components/TextLink.tsx',
-            '../components/map/InteractiveMap.tsx',
-            '../features/exact-location-exchange.tsx',
-            '../features/production-chat.tsx',
-            '../features/production-groups.tsx',
-        ].map((relative) => fileURLToPath(new URL(relative, import.meta.url)));
+        const sourcePaths = productionSourcePaths();
         const referenced = new Set<string>();
         const visit = (node: ts.Node): void => {
             if (
