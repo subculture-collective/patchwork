@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
+import { ToggleChip } from '../components/ToggleChip';
 import { Card } from '../components/Card';
 import { Panel } from '../components/Panel';
 import {
@@ -189,16 +190,13 @@ export const SettingsRoute = ({ currentUserDid }: SettingsRouteProps) => {
             {/* Section tabs */}
             <div className='flex flex-wrap gap-2'>
                 {settingsSections.map((section) => (
-                    <Button
+                    <ToggleChip
                         key={section}
-                        variant={
-                            activeSection === section ? 'secondary' : 'neutral'
-                        }
-                        className='px-3 py-1 text-xs'
+                        pressed={activeSection === section}
                         onClick={() => setActiveSection(section)}
                     >
                         {settingsSectionLabels[section]}
-                    </Button>
+                    </ToggleChip>
                 ))}
             </div>
 
@@ -226,14 +224,9 @@ export const SettingsRoute = ({ currentUserDid }: SettingsRouteProps) => {
                             </p>
                             <div className='flex flex-wrap gap-2'>
                                 {privacyLevels.map((level) => (
-                                    <Button
+                                    <ToggleChip
                                         key={level}
-                                        variant={
-                                            settings.privacyLevel === level
-                                                ? 'secondary'
-                                                : 'neutral'
-                                        }
-                                        className='px-3 py-1 text-xs'
+                                        pressed={settings.privacyLevel === level}
                                         onClick={() =>
                                             handlePatch({
                                                 section: 'privacy',
@@ -243,7 +236,7 @@ export const SettingsRoute = ({ currentUserDid }: SettingsRouteProps) => {
                                         }
                                     >
                                         {level === 'authenticated' ? 'Signed-in' : formatCategoryLabel(level)}
-                                    </Button>
+                                    </ToggleChip>
                                 ))}
                             </div>
                         </div>
@@ -254,15 +247,9 @@ export const SettingsRoute = ({ currentUserDid }: SettingsRouteProps) => {
                             </p>
                             <div className='flex flex-wrap gap-2'>
                                 {geoSharingPrecisions.map((precision) => (
-                                    <Button
+                                    <ToggleChip
                                         key={precision}
-                                        variant={
-                                            settings.locationVisibility ===
-                                            precision
-                                                ? 'secondary'
-                                                : 'neutral'
-                                        }
-                                        className='px-3 py-1 text-xs'
+                                        pressed={settings.locationVisibility === precision}
                                         onClick={() =>
                                             handlePatch({
                                                 section: 'privacy',
@@ -272,7 +259,7 @@ export const SettingsRoute = ({ currentUserDid }: SettingsRouteProps) => {
                                         }
                                     >
                                         {precision === 'approximate' ? 'Approximate area' : 'Hidden'}
-                                    </Button>
+                                    </ToggleChip>
                                 ))}
                             </div>
                         </div>
@@ -436,7 +423,7 @@ export const SettingsRoute = ({ currentUserDid }: SettingsRouteProps) => {
                             <div className='mt-3'>
                                 <Button
                                     variant='secondary'
-                                    className='px-3 py-1 text-xs'
+                                    size='sm'
                                     onClick={handleExport}
                                 >
                                     Download data export
@@ -456,7 +443,7 @@ export const SettingsRoute = ({ currentUserDid }: SettingsRouteProps) => {
                             <div className='mt-3'>
                                 <Button
                                     variant='neutral'
-                                    className='px-3 py-1 text-xs'
+                                    size='sm'
                                     onClick={handleDeactivate}
                                 >
                                     Deactivate account
@@ -478,7 +465,7 @@ export const SettingsRoute = ({ currentUserDid }: SettingsRouteProps) => {
                             <div className='mt-3'>
                                 <Button
                                     variant='neutral'
-                                    className='px-3 py-1 text-xs'
+                                    size='sm'
                                     onClick={handleLoadAudit}
                                     disabled={isLoadingAudit}
                                 >

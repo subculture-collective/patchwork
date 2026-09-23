@@ -253,7 +253,7 @@ export const MapRoute = ({
                     </p>
                     <span className='sr-only' role='status' aria-live='polite'>{paginationFocus.announcement}</span>
                     {hasNextPage ? (
-                        <Button ref={paginationFocus.loadMoreRef} type='button' variant='neutral' className='px-3 py-1 text-xs' onClick={() => paginationFocus.loadMore(onLoadMore)} disabled={isLoading}>
+                        <Button size='sm' ref={paginationFocus.loadMoreRef} type='button' variant='neutral' onClick={() => paginationFocus.loadMore(onLoadMore)} disabled={isLoading}>
                             {t('discovery.loadMore')}
                         </Button>
                     ) : null}
@@ -285,7 +285,7 @@ export const MapRoute = ({
                                 <Button
                                     type='button'
                                     variant='neutral'
-                                    className='px-3 py-1 text-xs'
+                                    size='sm'
                                     onClick={onRetry}
                                 >
                                     {t('map.retryDiscovery')}
@@ -295,7 +295,7 @@ export const MapRoute = ({
                                 <Button
                                     type='button'
                                     variant='neutral'
-                                    className='px-3 py-1 text-xs'
+                                    size='sm'
                                     onClick={onRetryResources}
                                 >
                                     {t('map.retryPlaces')}
@@ -346,7 +346,7 @@ export const MapRoute = ({
                             <Button
                                 type='button'
                                 variant='neutral'
-                                className='px-3 py-1 text-xs'
+                                size='sm'
                                 onClick={() => leaveFocusedArea('previous')}
                             >
                                 {t('map.returnArea')}
@@ -355,7 +355,7 @@ export const MapRoute = ({
                         <Button
                             type='button'
                             variant='neutral'
-                            className='px-3 py-1 text-xs'
+                            size='sm'
                             onClick={() => leaveFocusedArea('clear')}
                         >
                             {t('map.clearArea')}
@@ -487,7 +487,7 @@ export const MapRoute = ({
                                     <div className='mt-3'>
                                         <Button
                                             variant='neutral'
-                                            className='px-3 py-1 text-xs'
+                                            size='sm'
                                             aria-label={t('map.openTriageDrawerFor', {
                                                 title: card.title,
                                                 id: card.id,
@@ -544,7 +544,7 @@ export const MapRoute = ({
                                             ? 'primary'
                                             : 'neutral'
                                     }
-                                    className='px-3 py-1 text-xs'
+                                    size='sm'
                                     aria-label={action.ariaLabel}
                                     onClick={() => {
                                         if (
@@ -565,7 +565,7 @@ export const MapRoute = ({
                             ))}
                         <Button
                             variant='neutral'
-                            className='px-3 py-1 text-xs'
+                            size='sm'
                             onClick={() => onSelectPost(undefined)}
                         >
                             {t('map.closeDrawer')}

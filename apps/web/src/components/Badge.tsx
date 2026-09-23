@@ -27,10 +27,9 @@ export const Badge = ({
 }: PropsWithChildren<BadgeProps>) => {
     return (
         <span
-            role='status'
             aria-label={ariaLabel}
             className={[
-                'inline-flex min-w-0 max-w-full break-all whitespace-normal rounded-full border border-mh-border px-2.5 py-1 text-xs font-semibold tracking-[0.01em]',
+                'inline-flex min-w-0 max-w-full items-center gap-1 break-words whitespace-normal rounded-full border border-mh-border px-2.5 py-0.5 text-xs font-bold leading-5',
                 toneMap[tone],
             ].join(' ')}
         >
@@ -85,7 +84,7 @@ export const VerificationBadge = ({
                 role='status'
                 aria-label={t('shared.verificationExpired', { tier: label })}
                 className={[
-                    'inline-flex min-w-0 max-w-full items-center gap-1 break-all whitespace-normal rounded-full border border-mh-border px-2.5 py-1 text-xs font-semibold tracking-[0.01em]',
+                    'inline-flex min-w-0 max-w-full items-center gap-1 break-words whitespace-normal rounded-full border border-mh-border px-2.5 py-0.5 text-xs font-bold leading-5',
                     toneMap.danger,
                 ].join(' ')}
             >
@@ -103,7 +102,7 @@ export const VerificationBadge = ({
                 warning: expiryWarning ? t('shared.renewWarning') : '',
             })}
             className={[
-                'inline-flex min-w-0 max-w-full items-center gap-1 break-all whitespace-normal rounded-full border border-mh-border px-2.5 py-1 text-xs font-semibold tracking-[0.01em]',
+                'inline-flex min-w-0 max-w-full items-center gap-1 break-words whitespace-normal rounded-full border border-mh-border px-2.5 py-0.5 text-xs font-bold leading-5',
                 toneMap[config.tone],
             ].join(' ')}
         >
@@ -112,7 +111,7 @@ export const VerificationBadge = ({
             {expiryWarning && (
                 <span
                     aria-hidden='true'
-                    className='ml-1 text-yellow-500'
+                    className='ml-1 text-mh-warning'
                     title={t('shared.renewSoon')}
                 >
                     {'\u23F0'}

@@ -17,6 +17,7 @@ import {
 } from '../volunteer-onboarding';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
+import { ToggleChip } from '../components/ToggleChip';
 import { Card } from '../components/Card';
 import { Input } from '../components/Input';
 import { Panel } from '../components/Panel';
@@ -247,14 +248,9 @@ export const LegacyFixtureVolunteerRoute = ({ did }: { did: string }) => {
                         </p>
                         <div className='flex flex-wrap gap-2'>
                             {volunteerCapabilityOptions.map((capability) => (
-                                <Button
+                                <ToggleChip
                                     key={capability}
-                                    variant={
-                                        draft.capabilities.includes(capability)
-                                            ? 'secondary'
-                                            : 'neutral'
-                                    }
-                                    className='px-3 py-1 text-xs'
+                                    pressed={draft.capabilities.includes(capability)}
                                     onClick={() =>
                                         setDraft((current) => ({
                                             ...current,
@@ -266,7 +262,7 @@ export const LegacyFixtureVolunteerRoute = ({ did }: { did: string }) => {
                                     }
                                 >
                                     {formatCategoryLabel(capability)}
-                                </Button>
+                                </ToggleChip>
                             ))}
                         </div>
                     </div>
@@ -310,16 +306,9 @@ export const LegacyFixtureVolunteerRoute = ({ did }: { did: string }) => {
                         </p>
                         <div className='flex flex-wrap gap-2'>
                             {aidCategories.map((category) => (
-                                <Button
+                                <ToggleChip
                                     key={category}
-                                    variant={
-                                        draft.preferredCategories.includes(
-                                            category,
-                                        )
-                                            ? 'secondary'
-                                            : 'neutral'
-                                    }
-                                    className='px-3 py-1 text-xs'
+                                    pressed={draft.preferredCategories.includes( category, )}
                                     onClick={() =>
                                         setDraft((current) => ({
                                             ...current,
@@ -331,7 +320,7 @@ export const LegacyFixtureVolunteerRoute = ({ did }: { did: string }) => {
                                     }
                                 >
                                     {formatCategoryLabel(category)}
-                                </Button>
+                                </ToggleChip>
                             ))}
                         </div>
                     </div>
@@ -342,16 +331,9 @@ export const LegacyFixtureVolunteerRoute = ({ did }: { did: string }) => {
                         </p>
                         <div className='flex flex-wrap gap-2'>
                             {urgencyPreferenceOptions.map((urgency) => (
-                                <Button
+                                <ToggleChip
                                     key={urgency}
-                                    variant={
-                                        draft.preferredUrgencies.includes(
-                                            urgency,
-                                        )
-                                            ? 'secondary'
-                                            : 'neutral'
-                                    }
-                                    className='px-3 py-1 text-xs'
+                                    pressed={draft.preferredUrgencies.includes( urgency, )}
                                     onClick={() =>
                                         setDraft((current) => ({
                                             ...current,
@@ -363,7 +345,7 @@ export const LegacyFixtureVolunteerRoute = ({ did }: { did: string }) => {
                                     }
                                 >
                                     {formatCategoryLabel(urgency)}
-                                </Button>
+                                </ToggleChip>
                             ))}
                         </div>
                     </div>

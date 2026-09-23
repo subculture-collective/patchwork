@@ -476,9 +476,10 @@ export const PostingRoute = ({
                             <p>{projectionNotice}</p>
                             {projectionFailed ? (
                                 <Button
+                                    size='sm'
                                     type='button'
                                     variant='neutral'
-                                    className='mt-2 px-3 py-1 text-xs'
+                                    className='mt-2'
                                     onClick={() => projectionPostUri && void pollProjection(projectionPostUri)}
                                 >
                                     {t('discovery.retryProjection')}

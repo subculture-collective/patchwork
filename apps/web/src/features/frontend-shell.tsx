@@ -30,8 +30,11 @@ import {
     type ChatInitiationIntent,
     type ChatLaunchState,
 } from '../chat-ux';
-import { Button } from '../components/Button';
+import { Button, ButtonLink } from '../components/Button';
+import { EmptyState } from '../components/EmptyState';
 import { Panel } from '../components/Panel';
+import { Banner } from '../components/Banner';
+import { AppShell } from '../app/AppShell';
 import {
     type ApiDataOrigin,
     type AtAidPostResult,
@@ -182,9 +185,6 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
     const auth = useAuth();
     const { locale, changeLocale, t } = useLocale();
     const mainContentRef = useRef<HTMLDivElement>(null);
-    const mobileNavToggleRef = useRef<HTMLButtonElement>(null);
-    const secondaryNavRef = useRef<HTMLDivElement>(null);
-    const secondaryNavToggleRef = useRef<HTMLButtonElement>(null);
     const [currentRoute, setCurrentRoute] = useState<AppRoute>(() =>
         readCurrentRoute(),
     );
@@ -237,8 +237,6 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
     const [isOnline, setIsOnline] = useState(
         typeof navigator === 'undefined' ? true : navigator.onLine,
     );
-    const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
-    const [isSecondaryNavOpen, setIsSecondaryNavOpen] = useState(false);
     const [historyVersion, setHistoryVersion] = useState(0);
 
     const currentUserDid = auth.session?.did ?? '';
@@ -246,38 +244,6 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
     useEffect(() => {
         document.title = `${t(routeLabelKeys[currentRoute])} · ${appTitle}`;
     }, [appTitle, currentRoute, locale, t]);
-
-    useEffect(() => {
-        if (!isMobileNavOpen && !isSecondaryNavOpen) return undefined;
-        const onKeyDown = (event: KeyboardEvent) => {
-            if (event.key !== 'Escape') return;
-            if (isSecondaryNavOpen) {
-                setIsSecondaryNavOpen(false);
-                secondaryNavToggleRef.current?.focus();
-                return;
-            }
-            if (isMobileNavOpen) {
-                setIsMobileNavOpen(false);
-                mobileNavToggleRef.current?.focus();
-            }
-        };
-        document.addEventListener('keydown', onKeyDown);
-        return () => document.removeEventListener('keydown', onKeyDown);
-    }, [isMobileNavOpen, isSecondaryNavOpen]);
-
-    useEffect(() => {
-        if (!isSecondaryNavOpen) return undefined;
-        const onPointerDown = (event: PointerEvent) => {
-            if (
-                event.target instanceof Node &&
-                !secondaryNavRef.current?.contains(event.target)
-            ) {
-                setIsSecondaryNavOpen(false);
-            }
-        };
-        document.addEventListener('pointerdown', onPointerDown);
-        return () => document.removeEventListener('pointerdown', onPointerDown);
-    }, [isSecondaryNavOpen]);
 
     useEffect(() => {
         if (!auth.session || webDataMode === 'fixture') return;
@@ -377,8 +343,6 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         }
 
         const handlePopState = () => {
-            setIsMobileNavOpen(false);
-            setIsSecondaryNavOpen(false);
             setCurrentRoute(readCurrentRoute());
             setHistoryVersion((version) => version + 1);
             const page = readPaginationPageFromUrl();
@@ -618,8 +582,6 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         route: AppRoute,
     ) => {
         event.preventDefault();
-        setIsMobileNavOpen(false);
-        setIsSecondaryNavOpen(false);
         navigate(route);
     };
 
@@ -791,15 +753,18 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         }
         if (requiresAuthentication && !auth.session) {
             return (
-                <Panel title={t('runtime.signInRequired')}>
+                <EmptyState
+                    title={t('runtime.signInRequired')}
+                    actions={
+                        <ButtonLink
+                            href={`/login?returnTo=${encodeURIComponent(currentRoute)}`}
+                        >
+                            {t('runtime.signInContinue')}
+                        </ButtonLink>
+                    }
+                >
                     <p>{t('runtime.signInHelp')}</p>
-                    <a
-                        className='mt-3 inline-block font-bold underline'
-                        href={`/login?returnTo=${encodeURIComponent(currentRoute)}`}
-                    >
-                        {t('runtime.signInContinue')}
-                    </a>
-                </Panel>
+                </EmptyState>
             );
         }
         if (auth.session && webDataMode !== 'fixture' && onboardingError) {
@@ -1109,232 +1074,38 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
     const content = renderContent();
 
     return (
-        <main className='mh-grain min-h-screen overflow-x-clip bg-mh-bg text-mh-text'>
-            <a
-                href='#main-content'
-                className='mh-skip-link sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-mh-accent focus:px-4 focus:py-2 focus:text-white focus:outline-2 focus:outline-offset-2'
-            >
-                {t('app.skipToContent')}
-            </a>
-            <div className='mh-grid-pattern mx-auto min-h-screen max-w-7xl px-3 pb-16 sm:px-6 lg:px-10'>
-                <header className='mh-masthead'>
-                    <a
-                        href='/'
-                        className='mh-brand'
-                        onClick={(event) => handleRouteClick(event, '/')}
-                    >
-                        <span className='mh-brand-mark' aria-hidden='true'>
-                            P
-                        </span>
-                        <span>
-                            <strong>{appTitle}</strong>
-                            <small>{t('runtime.tagline')}</small>
-                        </span>
-                    </a>
-                    <div className='mh-network-status' role='status'>
-                        <span aria-hidden='true' /> {t('runtime.environment')}
-                    </div>
-                    <label className='text-xs font-bold'>
-                        {t('a11y.languageSwitcher')}
-                        <select
-                            className='mh-input ml-2 px-2 py-1'
-                            aria-label={String(t('a11y.languageSwitcher'))}
-                            value={locale}
-                            onChange={(event) =>
-                                changeLocale(event.target.value as 'en' | 'es')
-                            }
-                        >
-                            <option value='en'>{t('account.english')}</option>
-                            <option value='es'>{t('account.spanish')}</option>
-                        </select>
-                    </label>
-                </header>
-
-                <nav aria-label={t('nav.ariaLabel')} className='mh-primary-nav'>
-                    <button
-                        ref={mobileNavToggleRef}
-                        type='button'
-                        className='mh-mobile-nav-toggle'
-                        aria-expanded={isMobileNavOpen}
-                        aria-controls='primary-navigation-links'
-                        onClick={() => setIsMobileNavOpen((open) => !open)}
-                    >
-                        {t('nav.menu')}
-                    </button>
-                    <div
-                        id='primary-navigation-links'
-                        className={`mh-nav-collapse${isMobileNavOpen ? ' is-open' : ''}`}
-                    >
-                    <div className='mh-nav-main'>
-                        <p className='mh-nav-group-label'>{t('nav.discoverGroup')}</p>
-                        {navRoutes.primary.map((route) => (
-                            <a
-                                key={route}
-                                href={route}
-                                className='mh-nav-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mh-accent'
-                                aria-current={
-                                    currentRoute === route ? 'page' : undefined
-                                }
-                                onClick={(event) =>
-                                    handleRouteClick(event, route)
-                                }
-                            >
-                                {t(routeLabelKeys[route])}
-                            </a>
-                        ))}
-                    </div>
-                    <div className='mh-nav-tools'>
-                        <p className='mh-nav-group-label'>{t('nav.accountGroup')}</p>
-                        {navRoutes.account.map((route) => (
-                            <a
-                                key={route}
-                                href={route}
-                                className='mh-nav-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mh-accent'
-                                aria-current={
-                                    currentRoute === route ? 'page' : undefined
-                                }
-                                onClick={(event) =>
-                                    handleRouteClick(event, route)
-                                }
-                            >
-                                {t(routeLabelKeys[route])}
-                            </a>
-                        ))}
-                        <div className='mh-secondary-nav' ref={secondaryNavRef}>
-                            <p className='mh-nav-group-label'>{t('nav.secondaryGroup')}</p>
-                            <button
-                                ref={secondaryNavToggleRef}
-                                type='button'
-                                className='mh-nav-chip mh-secondary-nav-toggle'
-                                aria-expanded={isSecondaryNavOpen}
-                                aria-controls='secondary-navigation-links'
-                                onClick={() =>
-                                    setIsSecondaryNavOpen((open) => !open)
-                                }
-                            >
-                                {t('runtime.more')}
-                            </button>
-                            <div
-                                id='secondary-navigation-links'
-                                className={`mh-more-menu-panel${isSecondaryNavOpen ? ' is-open' : ''}`}
-                            >
-                                {navRoutes.secondary.map((route) => (
-                                    <a
-                                        key={route}
-                                        href={route}
-                                        aria-current={
-                                            currentRoute === route
-                                                ? 'page'
-                                                : undefined
-                                        }
-                                        onClick={(event) =>
-                                            handleRouteClick(event, route)
-                                        }
-                                    >
-                                        {t(routeLabelKeys[route])}
-                                    </a>
-                                ))}
-                            </div>
-                        </div>
-                        <div className='mh-auth-control' aria-live='polite'>
-                            {auth.status === 'booting' ? (
-                                <span>{t('runtime.checkingSession')}</span>
-                            ) : auth.session ? (
-                                <>
-                                    <span className='max-w-48 truncate text-xs font-bold'>
-                                        {auth.session.handle
-                                            ? `@${auth.session.handle.replace(/^@/, '')}`
-                                            : t('nav.accountFallback')}
-                                    </span>
-                                    {auth.session.canManageSignupInvitations ? (
-                                        <a className='mh-nav-chip' href='/admin/invites'>
-                                            {t('route.invites')}
-                                        </a>
-                                    ) : null}
-                                    <Button
-                                        variant='neutral'
-                                        className='px-3 py-1 text-xs'
-                                        onClick={() => void auth.logout()}
-                                    >
-                                        {t('runtime.signOut')}
-                                    </Button>
-                                </>
-                            ) : (
-                                <a
-                                    className='mh-nav-chip focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mh-accent'
-                                    href={`/login?returnTo=${encodeURIComponent(currentRoute)}`}
-                                >
-                                    {t('runtime.signIn')}
-                                </a>
-                            )}
-                        </div>
-                    </div>
-                    </div>
-                </nav>
-
-                {maintenanceStatus?.active ? (
-                    <div
-                        role='alert'
-                        className='mb-4 border-4 border-mh-danger bg-mh-surfaceElev p-4'
-                    >
-                        <strong>{t('runtime.readOnly')}</strong>{' '}
-                        {maintenanceStatus.publicMessage}{' '}
-                        {t('runtime.readOnlyHelp')}
-                    </div>
-                ) : null}
-
-                {!isOnline ? (
-                    <div
-                        role='alert'
-                        className='mb-4 border-4 border-mh-danger bg-mh-surfaceElev p-4'
-                    >
-                        <strong>{t('runtime.offline')}</strong>{' '}
-                        {t('runtime.offlineHelp')}
-                    </div>
-                ) : null}
-
-                <div
-                    id='main-content'
-                    ref={mainContentRef}
-                    tabIndex={-1}
-                    className='focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-mh-accent'
-                >
-                    {content}
-                </div>
-
-                <footer className='mh-footer'>
-                    <p>{t('runtime.footer')}</p>
-                    <div role='navigation' aria-label={t('runtime.legalLabel')}>
-                        <a
-                            href='/legal/terms'
-                            onClick={(event) =>
-                                handleRouteClick(event, '/legal/terms')
-                            }
-                        >
-                            {t('legal.termsNav')}
-                        </a>
-                        <a
-                            href='/legal/privacy'
-                            onClick={(event) =>
-                                handleRouteClick(event, '/legal/privacy')
-                            }
-                        >
-                            {t('legal.privacyNav')}
-                        </a>
-                        <a
-                            href='/legal/community-guidelines'
-                            onClick={(event) =>
-                                handleRouteClick(
-                                    event,
-                                    '/legal/community-guidelines',
-                                )
-                            }
-                        >
-                            {t('legal.guidelinesNav')}
-                        </a>
-                    </div>
-                </footer>
-            </div>
-        </main>
+        <AppShell
+            appTitle={appTitle}
+            currentRoute={currentRoute}
+            navRoutes={navRoutes}
+            auth={{
+                status: auth.status,
+                session: auth.session,
+                onLogout: () => void auth.logout(),
+            }}
+            locale={locale}
+            onChangeLocale={changeLocale}
+            onRouteClick={handleRouteClick}
+            mainContentRef={mainContentRef}
+            notices={
+                maintenanceStatus?.active || !isOnline ? (
+                    <>
+                        {maintenanceStatus?.active ? (
+                            <Banner tone='danger' title={t('runtime.readOnly')}>
+                                {maintenanceStatus.publicMessage}{' '}
+                                {t('runtime.readOnlyHelp')}
+                            </Banner>
+                        ) : null}
+                        {!isOnline ? (
+                            <Banner tone='warning' live='alert' title={t('runtime.offline')}>
+                                {t('runtime.offlineHelp')}
+                            </Banner>
+                        ) : null}
+                    </>
+                ) : undefined
+            }
+        >
+            {content}
+        </AppShell>
     );
 };

@@ -1,167 +1,141 @@
-# Patchwork Design System
+# Patchwork design system
 
-## Style Selection: 28 Organic (earthy overhaul)
+Patchwork's interface is editorial and hand-assembled. It uses a heavy serif
+display face, ink outlines, flat hard shadows and a small set of saturated
+"patch" colours on warm paper. The look should read as a printed neighbourhood
+bulletin: confident headlines, plain working text, and colour used to mark
+meaning.
 
-Selected strategy: **Preset replacement (Option 2)**
+This document describes the system that ships in `apps/web`. The source of
+truth for values is `apps/web/src/styles/tokens.css`. Components live in
+`apps/web/src/components/`.
 
-- Primary preset: **28 Organic**
-- Supporting influence: **22 Botanical** (tone restraint), **8 Swiss** (information hierarchy)
+> History: until September 2026 this file described a soft "organic" preset
+> (moss/sage, diffuse shadows) that the code no longer used. The owner chose
+> to keep the shipped editorial direction and make it consistent.
 
-Design intent: **earthy, warm, trustworthy mutual-aid interface** that feels humane and grounded while staying crisp for operational workflows.
+## 1. Principles
 
-## UI/UX lookup synthesis (Feb 2026)
+1. **One container per idea.** A section is one surface. Do not nest a
+   bordered box inside a title-barred box inside a panel.
+2. **Colour carries meaning.** Pine means act or selected. Mustard marks
+   emphasis. Terracotta is the "ask for help" call to action. Red means
+   danger, destructive actions and errors, and nothing else.
+3. **Results before controls.** On discovery pages, the thing people came for
+   (requests, places, the map) comes before the filters. Rarely used filters
+   collapse.
+4. **Mobile first.** Most people asking for or offering help use a phone.
+   Design each surface at 360px first, then add columns.
+5. **Plain language.** Headings describe what the person can do ("Requests
+   near you"), not the system ("Feed operations"). Protocol terms such as DID,
+   PDS and CID stay out of primary UI.
 
-- Typography direction: calm serif + readable sans pairings for natural trust.
-- Palette direction: moss + sage + clay + parchment neutrals.
-- Accessibility constraints: $4.5{:}1$ minimum text contrast, machine-readable errors, visible focus.
-- Motion constraints: short `150–250ms` easing, no decorative infinite animations, respect `prefers-reduced-motion`.
+## 2. Tokens
 
----
+All colours, shadows and radii come from CSS custom properties in
+`tokens.css`. Tailwind exposes them as `mh-*` colours. Feature code must not
+introduce raw hex values or one-off shadows.
 
-## 1) Core principles
+### Colour
 
-1. **Grounded warmth**: surfaces should feel tactile, natural, and low-glare.
-2. **Calm hierarchy**: typography leads with gentle scale contrast (not shouting).
-3. **Soft structure**: rounded geometry and layered depth over hard borders.
-4. **Operational clarity**: actionable elements remain unmistakable and fast to scan.
-5. **Token discipline**: no one-off hex/pixel style drift at page level.
+| Token | Value | Use |
+| --- | --- | --- |
+| `--mh-bg` | `#f2efe7` | Page paper |
+| `--mh-surface` | `#fffdf7` | Cards, inputs |
+| `--mh-surface-elev` | `#e8e2d4` | Neutral buttons, quiet fills |
+| `--mh-panel` | `#d9d1c0` | Rare: grouped tool areas |
+| `--mh-text` | `#172019` | Ink: text and outlines |
+| `--mh-text-muted` | `#4f5a51` | Secondary text (AA on paper) |
+| `--mh-text-soft` | `#626a62` | Placeholders, metadata only |
+| `--mh-accent` | `#12664f` | Pine: primary action, selected state, links |
+| `--mh-accent-2` | `#9ec5ad` | Sage: info badges, quiet highlights |
+| `--mh-accent-3` | `#f2c14e` | Mustard: emphasis, underlines, markers |
+| `--mh-cta` | `#e85d3f` | Terracotta: brand mark and illustration |
+| `--mh-cta-strong` | `#c2462b` | Terracotta fill for the "Ask for help" button (4.9:1 with light text) |
+| `--mh-success` | `#287c52` | Success status |
+| `--mh-warning` | `#8a5f00` | Warning text and borders |
+| `--mh-danger` | `#b93b2c` | Errors and destructive actions |
+| `--mh-border` | `#172019` | Ink outline |
+| `--mh-border-soft` | `#aaa99f` | Input borders, dividers |
+| `--mh-border-subtle` | `#d4cec1` | Hairlines inside cards |
+| `--mh-focus` | `#0b62d6` | Focus ring (distinct from every brand colour) |
 
----
+Text on pine, strong terracotta and red uses `--mh-on-accent` (`#fffdf7`).
 
-## 2) Token system (source of truth)
+### Type
 
-### Color tokens
+| Role | Family | Notes |
+| --- | --- | --- |
+| Display and headings | Fraunces 600–900 | Tight tracking (`-0.03em` to `-0.05em`), line-height ≤ 1.05 |
+| Body, labels, controls | Public Sans 400/500/700 | 16px minimum for body and inputs, line-height 1.5 |
+| Eyebrows, metadata | JetBrains Mono 400/700 | Uppercase, `0.12em` tracking, one per section at most |
 
-```txt
---mh-bg:               #F3EEE2;
---mh-surface:          #FBF7EE;
---mh-surface-elev:     #EFE5D3;
---mh-panel:            #E7D8C1;
+Form labels, button text and chips use Public Sans in sentence case. Uppercase
+mono is reserved for eyebrows above section headings and compact metadata such
+as timestamps.
 
---mh-text:             #2F2A22;
---mh-text-muted:       #5D5446;
---mh-text-soft:        #7B705E;
+### Shape and depth
 
---mh-accent:           #5D7A47;   // moss
---mh-accent-2:         #7F9B65;   // sage
---mh-accent-3:         #B99361;   // clay-gold
---mh-cta:              #C96B3E;   // terracotta
---mh-organic-moss:     #4C663B;
+- Radius: the "patch" corner, `--mh-radius-patch` (`2px 14px 2px 14px`), for
+  cards, buttons and inputs. Pills (`999px`) for chips and badges only.
+- Outline: `1.5px` ink on cards and buttons; `1px` soft border on inputs.
+- Shadow: flat offset only, in three steps: `--mh-shadow-sm` (2px),
+  `--mh-shadow` (4px) and `--mh-shadow-lg` (7px, hover and floating
+  surfaces). No blurred shadows.
+- Spacing: 4px base (`--mh-space-*`). Touch targets are at least 44px.
 
---mh-success:          #3F7A48;
---mh-danger:           #9E4A3D;
+### Motion
 
---mh-border:           #8A765B;
---mh-border-subtle:    #D8C9B1;
---mh-border-soft:      #BEAB8F;
+Transitions last 150ms (`--mh-transition-standard`). Hover lifts a button by
+1px and grows its shadow; pressing removes the shadow. There are no infinite
+decorative animations. `prefers-reduced-motion: reduce` disables transitions
+globally.
 
---mh-link:             #4F6B3F;
---mh-link-visited:     #6F5C45;
+## 3. Components
 
---mh-focus:            #3E6A34;
---mh-focus-offset:     #FFFCF6;
-```
+| Component | Purpose |
+| --- | --- |
+| `Button` | Variants `primary` (pine), `accent` (terracotta), `neutral`, `danger`, `ghost`; sizes `sm`/`md` |
+| `ToggleChip`, `ChipGroup` | Multi-select filters (`aria-pressed`); selected = pine fill |
+| `SegmentedControl` | One-of-few choices (radio group), e.g. Latest / Nearby |
+| `Field` | Label, hint, error and control wiring for `Input`, `Select`, `Textarea` |
+| `Surface` | The single card container, with an optional heading and actions |
+| `PageHeader` | Eyebrow, title, description, actions and status for each route |
+| `Banner` | Page-level `info`, `success`, `warning` and `danger` messages |
+| `EmptyState` | No results / not signed in, with a next action |
+| `Sheet` | Mobile drawer and dialog for navigation and filters |
+| `Badge` | Status and category labels |
 
-### Typography tokens
+`Panel` and `Card` remain as thin wrappers during migration. New code uses
+`Surface`.
 
-- **Heading**: `Fraunces`, `Inter Tight`, serif fallback
-- **Body**: `Public Sans`, `Inter`, sans fallback
-- **Mono**: `JetBrains Mono`
+## 4. Layout
 
-Rules:
+- Content width: `max-w-7xl` with `px-4 sm:px-6 lg:px-10`.
+- App shell: a single header bar with the brand, primary destinations and the
+  account menu. Below 900px, a top bar with a menu button opens a sheet, and a
+  bottom tab bar gives one-tap access to Home, Map, Requests and Resources.
+- Discovery pages: results and map first. Filters appear as a compact bar
+  (search, Latest/Nearby, a "Filters" button with an active-count badge), and
+  the full set opens in a sheet.
+- The paper grid texture belongs to the page background only; surfaces are
+  flat.
 
-- Headings: `600–800`, moderate tracking (`-0.01em` to `-0.02em`)
-- Labels/actions: sentence case preferred, avoid forced all-caps
-- Body text: `16px+`, line-height `1.55+`
+## 5. Accessibility
 
-### Spacing/radius/shadow
+1. Text contrast is at least 4.5:1. `--mh-text-soft` is not used for
+   sentence text.
+2. Focus is always visible, using `--mh-focus` with a paper-coloured offset.
+3. Status never relies on colour alone; badges carry text.
+4. Errors use `role="alert"` and are linked to their field with
+   `aria-describedby`.
+5. Every route has one `h1`, rendered by `PageHeader`.
 
-- Base spacing: `4px`
-- Touch targets: `44px+`
-- Radius scale: `12px / 16px / 24px`
-- Shadow style: soft diffuse depth (`rgba(83, 62, 40, 0.18)`), no hard-offset brutal shadows
+## 6. Anti-patterns
 
----
-
-## 3) Texture + layout
-
-- Use soft grain and low-contrast mesh backgrounds (`3%–8%` opacity).
-- Prefer warm section contrast over thick frame borders.
-- Keep responsive rhythm stable: `px-4 sm:px-6 lg:px-8`.
-
----
-
-## 4) Component contracts
-
-Keep primitive contracts stable:
-
-- `mh-button`
-- `mh-card`
-- `mh-panel`
-- `mh-input`
-- `mh-link`
-
-### Buttons
-
-- Rounded pill/soft rectangle (`9999px` or `14px` depending context)
-- Primary: moss background + light foreground
-- Secondary: sage background + dark foreground
-- Neutral: elevated surface + soft border
-- Hover/active: subtle brightness + shadow shift only (no layout shift)
-
-### Cards / Panels
-
-- Soft rounded corners and layered depth
-- Thin warm borders (`--mh-border-soft`)
-- Optional organic background gradients for hero/decorative zones only
-
-### Inputs
-
-- High legibility on warm light backgrounds
-- Soft corners and visible focus ring
-- Error copy must remain `role="alert"`
-
-### Links
-
-- Underline-first affordance remains mandatory
-- Hover increases underline thickness and color emphasis
-
----
-
-## 5) Motion and accessibility guardrails
-
-1. Keep transitions `150–250ms`.
-2. Respect `prefers-reduced-motion: reduce` globally.
-3. Avoid decorative infinite motion loops.
-4. Maintain minimum text contrast of $4.5{:}1$.
-5. Never rely on color alone for statuses or errors.
-
----
-
-## 6) UI transformation plan (executed)
-
-### Scope
-
-1. Replace dark convergence tokens with earthy-organic tokens in `tokens.css`.
-2. Retune primitive component visuals (`Button`, `Card`, `Panel`) to organic geometry.
-3. Preserve information architecture and route behavior while updating visual language.
-
-### Acceptance criteria
-
-- [x] Theme reads earthy/organic across all major routes (`/`, `/map`, `/feed`, `/resources`, `/posting`).
-- [x] No hard-coded feature-level colors introduced.
-- [x] Focus visibility and reduced-motion handling remain intact.
-- [x] Existing test/build/e2e suites remain green.
-
-### Rollback plan
-
-- Revert `design-system.md`, `tokens.css`, and primitive component files in one commit.
-
----
-
-## 7) Anti-patterns
-
-- Reintroducing stark neo-brutalist hard-shadow framing globally.
-- Mixing cold neon accents with earthy palette tokens.
-- Returning to widespread forced-uppercase labels.
-- Adding page-local style overrides that bypass shared tokens.
+- Red for selected or neutral states.
+- Nested containers: panel → title bar → inner box.
+- Filters that push results below the fold on a phone.
+- Uppercase letter-spaced form labels.
+- Decorative shapes that overlap content (the old route-header ring).
+- Raw hex values or blurred shadows in feature code.

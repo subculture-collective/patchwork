@@ -1,44 +1,96 @@
-import { forwardRef, type ButtonHTMLAttributes, type PropsWithChildren } from 'react';
+import {
+    forwardRef,
+    type AnchorHTMLAttributes,
+    type ButtonHTMLAttributes,
+    type PropsWithChildren,
+} from 'react';
 
-type ButtonVariant = 'primary' | 'secondary' | 'neutral';
+export type ButtonVariant =
+    | 'primary'
+    | 'accent'
+    | 'secondary'
+    | 'neutral'
+    | 'danger'
+    | 'ghost';
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+export type ButtonSize = 'sm' | 'md';
+
+interface ButtonStyleProps {
     variant?: ButtonVariant;
+    size?: ButtonSize;
+    /** Stretch to the container width (useful for mobile action rows). */
+    block?: boolean;
 }
 
-const variantClassMap: Record<ButtonVariant, string> = {
-    primary: 'mh-button--primary',
-    secondary: 'mh-button--secondary',
-    neutral: 'mh-button--neutral',
-};
-
-export const Button = forwardRef<HTMLButtonElement, PropsWithChildren<ButtonProps>>(({
-    children,
-    className = '',
+export const buttonClassName = ({
     variant = 'primary',
-    type = 'button',
-    disabled,
-    'aria-label': ariaLabel,
-    ...props
-}, ref) => {
-    return (
+    size = 'md',
+    block = false,
+    className = '',
+}: ButtonStyleProps & { className?: string }): string =>
+    [
+        'mh-button',
+        `mh-button--${variant}`,
+        `mh-button--${size}`,
+        block ? 'w-full' : '',
+        className,
+    ]
+        .filter(Boolean)
+        .join(' ');
+
+interface ButtonProps
+    extends ButtonHTMLAttributes<HTMLButtonElement>,
+        ButtonStyleProps {}
+
+export const Button = forwardRef<
+    HTMLButtonElement,
+    PropsWithChildren<ButtonProps>
+>(
+    (
+        {
+            children,
+            className = '',
+            variant = 'primary',
+            size = 'md',
+            block,
+            type = 'button',
+            disabled,
+            ...props
+        },
+        ref,
+    ) => (
         <button
             ref={ref}
             type={type}
-            className={[
-                'mh-button inline-flex items-center justify-center px-4 py-2 text-sm font-semibold tracking-[0.01em] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-mh-accent',
-                variantClassMap[variant],
-                disabled ? 'opacity-50 cursor-not-allowed' : '',
-                className,
-            ].join(' ')}
+            className={buttonClassName({ variant, size, block, className })}
             disabled={disabled}
             aria-disabled={disabled || undefined}
-            aria-label={ariaLabel}
             {...props}
         >
             {children}
         </button>
-    );
-});
+    ),
+);
 
 Button.displayName = 'Button';
+
+interface ButtonLinkProps
+    extends AnchorHTMLAttributes<HTMLAnchorElement>,
+        ButtonStyleProps {}
+
+/** An anchor styled as a button, for navigation that should look like an action. */
+export const ButtonLink = ({
+    children,
+    className = '',
+    variant = 'primary',
+    size = 'md',
+    block,
+    ...props
+}: PropsWithChildren<ButtonLinkProps>) => (
+    <a
+        className={buttonClassName({ variant, size, block, className })}
+        {...props}
+    >
+        {children}
+    </a>
+);

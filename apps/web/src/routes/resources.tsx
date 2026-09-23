@@ -23,6 +23,7 @@ import {
 } from '../directory-resource-form';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
+import { ToggleChip } from '../components/ToggleChip';
 import { Card } from '../components/Card';
 import { Input } from '../components/Input';
 import { Panel } from '../components/Panel';
@@ -228,9 +229,9 @@ const DirectoryResourceManager = ({
                             </p>
                         </div>
                         <Button
+                            size='sm'
                             type='button'
                             variant='secondary'
-                            className='px-3 py-2 text-xs'
                             onClick={beginCreate}
                         >
                             {t('directoryManager.add')}
@@ -753,9 +754,10 @@ export const ResourceRoute = ({
                             <p>{t('resources.staleResults')}</p>
                         ) : null}
                         <Button
+                            size='sm'
                             type='button'
                             variant='neutral'
-                            className='mt-2 px-3 py-1 text-xs'
+                            className='mt-2'
                             onClick={onRetry}
                         >
                             {t('resources.retryDirectory')}
@@ -796,22 +798,16 @@ export const ResourceRoute = ({
 
             <Card title={String(t('resources.directoryFiltersTitle'))}>
                 <div className='flex flex-wrap gap-2'>
-                    <Button
-                        variant={activeCategory ? 'neutral' : 'secondary'}
-                        className='px-3 py-1 text-xs'
+                    <ToggleChip
+                        pressed={!activeCategory}
                         onClick={() => setActiveCategory(undefined)}
                     >
                         {t('resources.allCategories')}
-                    </Button>
+                    </ToggleChip>
                     {resourceCategoryOptions.map((category) => (
-                        <Button
+                        <ToggleChip
                             key={category}
-                            variant={
-                                activeCategory === category
-                                    ? 'secondary'
-                                    : 'neutral'
-                            }
-                            className='px-3 py-1 text-xs'
+                            pressed={activeCategory === category}
                             onClick={() =>
                                 setActiveCategory((current) =>
                                     current === category ? undefined : category,
@@ -819,7 +815,7 @@ export const ResourceRoute = ({
                             }
                         >
                             {formatLocalizedLabel(t, category)}
-                        </Button>
+                        </ToggleChip>
                     ))}
                 </div>
             </Card>
@@ -856,7 +852,7 @@ export const ResourceRoute = ({
                         </p>
                         <Button
                             variant='neutral'
-                            className='px-3 py-1 text-xs'
+                            size='sm'
                             onClick={() => setActiveCategory(undefined)}
                         >
                             {t('resources.clearDirectoryCategory')}
@@ -898,7 +894,7 @@ export const ResourceRoute = ({
                                 <div className='mt-3 flex flex-wrap gap-2'>
                                     <Button
                                         variant='neutral'
-                                        className='px-3 py-1 text-xs'
+                                        size='sm'
                                         aria-label={t(
                                             'resources.openDetailsFor',
                                             { name: card.name },
@@ -908,8 +904,8 @@ export const ResourceRoute = ({
                                         {t('resources.openDetails')}
                                     </Button>
                                     <Button
-                                        variant='secondary'
-                                        className='px-3 py-1 text-xs'
+                                        variant='accent'
+                                        size='sm'
                                         aria-label={t(
                                             'resources.startIntakeFor',
                                             { name: card.name },
@@ -925,7 +921,7 @@ export const ResourceRoute = ({
                                         )) ? (
                                         <Button
                                             variant='neutral'
-                                            className='px-3 py-1 text-xs'
+                                            size='sm'
                                             aria-label={t(
                                                 'resources.manageListingFor',
                                                 { name: card.name },
@@ -980,7 +976,7 @@ export const ResourceRoute = ({
                                         ? 'primary'
                                         : 'neutral'
                                 }
-                                className='px-3 py-1 text-xs'
+                                size='sm'
                                 onClick={() => {
                                     if (action.id === 'request_intake') {
                                         onNavigate('/posting');
@@ -998,7 +994,7 @@ export const ResourceRoute = ({
                         ))}
                         <Button
                             variant='neutral'
-                            className='px-3 py-1 text-xs'
+                            size='sm'
                             onClick={() => setSelectedUri(undefined)}
                         >
                             {t('resources.close')}
