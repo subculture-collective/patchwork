@@ -61,10 +61,12 @@ export const useApproximateLocation = (
         );
     }, [onPatch, t]);
 
+    // Ask only when the page first opens without an area. If the visitor
+    // later clears the area, respect that instead of re-applying one.
     useEffect(() => {
-        if (state.center || requestedRef.current) return;
+        if (requestedRef.current) return;
         requestedRef.current = true;
-        request();
+        if (!state.center) request();
     }, [request, state.center]);
 
     return { access, request };
