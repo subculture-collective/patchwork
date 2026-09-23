@@ -4,6 +4,7 @@ import {
     useState,
     type FormEvent,
 } from 'react';
+import { StatusMessage } from '../components/StatusMessage';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { Input } from '../components/Input';
@@ -273,12 +274,7 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
                         {t('organizations.submitSearch')}
                     </Button>
                 </form>
-                <p
-                    className='mt-3 text-sm text-mh-textMuted'
-                    role={status.startsWith('Error:') ? 'alert' : 'status'}
-                >
-                    {status}
-                </p>
+                <StatusMessage message={status} className='mt-3' />
                 <div className='mt-4 grid gap-3 sm:grid-cols-2'>
                     {organizations.map((organization) => (
                         <Card key={organization.id} title={organization.name}>
@@ -658,16 +654,7 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
                         </Panel>
                     ) : null}
                     {actionStatus ? (
-                        <p
-                            role={
-                                actionStatus.startsWith('Error:')
-                                    ? 'alert'
-                                    : 'status'
-                            }
-                            className='text-sm'
-                        >
-                            {actionStatus}
-                        </p>
+                        <StatusMessage message={actionStatus} />
                     ) : null}
                 </>
             ) : (

@@ -15,6 +15,7 @@ import {
     type VolunteerOnboardingDraft,
     type VolunteerOnboardingValidationIssue,
 } from '../volunteer-onboarding';
+import { StatusMessage } from '../components/StatusMessage';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { ToggleChip } from '../components/ToggleChip';
@@ -743,16 +744,7 @@ export const VolunteerRoute = ({
                     </label>
                     <Button type='submit'>{t('volunteer.search')}</Button>
                 </form>
-                <p
-                    className='mt-3 text-sm text-mh-textMuted'
-                    role={
-                        discoveryStatus.startsWith('Error:')
-                            ? 'alert'
-                            : 'status'
-                    }
-                >
-                    {discoveryStatus}
-                </p>
+                <StatusMessage message={discoveryStatus} className='mt-3' />
                 <p ref={paginationFocus.loadedCountRef} tabIndex={-1} className='mt-2 text-xs text-mh-textMuted' role='status'>
                     {t('discovery.loadedCount', { loaded: profiles.length, total: volunteerTotal })}
                 </p>
@@ -1088,16 +1080,7 @@ export const VolunteerRoute = ({
                                 </Button>
                             ) : null}
                             {formStatus ? (
-                                <span
-                                    role={
-                                        formStatus.startsWith('Error:')
-                                            ? 'alert'
-                                            : 'status'
-                                    }
-                                    className='text-sm'
-                                >
-                                    {formStatus}
-                                </span>
+                                <StatusMessage message={formStatus} />
                             ) : null}
                         </div>
                     </form>

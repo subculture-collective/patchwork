@@ -4,6 +4,7 @@ import {
     useState,
     type FormEvent,
 } from 'react';
+import { StatusMessage } from '../components/StatusMessage';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
@@ -469,12 +470,7 @@ export const NotificationCenterRoute = () => {
                     </p>
                 ) : null}
             </Panel>
-            <p
-                role={status.startsWith('Error:') ? 'alert' : 'status'}
-                className='text-sm'
-            >
-                {status}
-            </p>
+            <StatusMessage message={status} />
         </section>
     );
 };

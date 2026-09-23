@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { defaultDiscoveryFilterState } from '../discovery-filters';
+import { StatusMessage } from '../components/StatusMessage';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
@@ -142,12 +143,7 @@ export const CoordinationInboxRoute = ({ did }: { did: string }) => {
                 <p className='mt-2 text-sm text-mh-textMuted'>
                     {t('inbox.description')}
                 </p>
-                <p
-                    className='mt-2 text-sm font-bold'
-                    role={status.startsWith('Error:') ? 'alert' : 'status'}
-                >
-                    {status}
-                </p>
+                <StatusMessage message={status} className='mt-2' />
                 <a
                     className='mt-3 inline-block font-bold underline'
                     href='/scheduling'

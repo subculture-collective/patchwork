@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { StatusMessage } from '../components/StatusMessage';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { Panel } from '../components/Panel';
@@ -248,16 +249,7 @@ export const AccountPrivacyRoute = ({ onDeactivated }: AccountPrivacyRouteProps)
                                 {t('account.save')}
                             </Button>
                             {preferencesStatus ? (
-                                <span
-                                    role={
-                                        preferencesStatus.startsWith('Error:')
-                                            ? 'alert'
-                                            : 'status'
-                                    }
-                                    className='text-xs'
-                                >
-                                    {preferencesStatus}
-                                </span>
+                                <StatusMessage message={preferencesStatus} />
                             ) : null}
                         </div>
                     </Card>
@@ -334,16 +326,7 @@ export const AccountPrivacyRoute = ({ onDeactivated }: AccountPrivacyRouteProps)
                     </Card>
 
                     {accountActionResult ? (
-                        <p
-                            role={
-                                accountActionResult.startsWith('Error:')
-                                    ? 'alert'
-                                    : 'status'
-                            }
-                            className='rounded-none border-2 border-mh-border bg-mh-surfaceElev px-3 py-2 text-xs font-bold'
-                        >
-                            {accountActionResult}
-                        </p>
+                        <StatusMessage message={accountActionResult} />
                     ) : null}
                 </div>
             </Panel>

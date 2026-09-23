@@ -181,21 +181,22 @@ export const ProductionChat = ({ currentUserDid }: { currentUserDid: string }) =
     };
 
     return <section aria-labelledby='production-chat-heading' className='space-y-5'>
-        <header>
-            <h1 id='production-chat-heading' className='font-heading text-3xl font-black'>{t('chat.heading')}</h1>
+        <header className='mh-route-header'>
+            <h1 id='production-chat-heading' className='mh-route-title'>{t('chat.heading')}</h1>
             <p className='mt-2 text-mh-textMuted'>{t('chat.description')}</p>
-            <p className='mt-2 rounded-md border border-mh-border p-3 text-sm'>{t('chat.trust')}</p>
+            <p className='mh-banner mh-banner--info mt-3'>{t('chat.trust')}</p>
         </header>
-        {!online && <p role='alert' className='rounded-md bg-mh-warning/20 p-3'>{t('chat.offline')}</p>}
+        {!online && <p role='alert' className='mh-banner mh-banner--warning'>{t('chat.offline')}</p>}
         <div role='status' aria-live='polite'>{busy ? t('chat.loading') : status}</div>
-        {error && <p role='alert' className='text-mh-danger'>{error}</p>}
+        {error && <p role='alert' className='mh-banner mh-banner--danger'>{error}</p>}
         {Object.entries(workspaceErrors).map(([resource, message]) => (
-            <div key={resource} role='alert' className='flex flex-wrap items-center gap-2 rounded-md border border-mh-danger p-3 text-sm'>
+            <div key={resource} role='alert' className='mh-banner mh-banner--danger flex-wrap items-center'>
                 <span>{t('chat.workspaceResourceUnavailable', {
                     resource: t(workspaceResourceKeys[resource as WorkspaceResource]),
-                    message,
+                    // The template adds its own full stop.
+                    message: message.replace(/[.\s]+$/, ''),
                 })}</span>
-                <button type='button' className='mh-button px-2 py-1 text-sm' disabled={busy}
+                <button type='button' className='mh-button mh-button--secondary mh-button--sm' disabled={busy}
                     onClick={() => void loadWorkspace(resource as WorkspaceResource)}>
                     {t('chat.retryResource', { resource: t(workspaceResourceKeys[resource as WorkspaceResource]) })}
                 </button>
@@ -211,19 +212,19 @@ export const ProductionChat = ({ currentUserDid }: { currentUserDid: string }) =
                 </select>
             </label>
             <p className='text-sm text-mh-textMuted'>{t('chat.scopeHelp')}</p>
-            <button type='button' className='mh-button mh-button--primary px-3 py-2 font-bold' disabled={busy || !scopeKey} onClick={() => void createConversation()}>{t('chat.openConversation')}</button>
+            <button type='button' className='mh-button mh-button--primary mh-button--md' disabled={busy || !scopeKey} onClick={() => void createConversation()}>{t('chat.openConversation')}</button>
         </section>
 
         <div className='grid gap-5 lg:grid-cols-[minmax(15rem,1fr)_minmax(0,2fr)]'>
             <nav className='mh-card p-4' aria-labelledby='conversation-list-heading'>
                 <div className='flex items-center justify-between gap-2'>
                     <h2 id='conversation-list-heading' className='font-heading text-xl font-bold'>{t('chat.conversations')}</h2>
-                    <button type='button' className='mh-button px-2 py-1 text-sm' onClick={() => void loadWorkspace()} disabled={busy}>{t('chat.refresh')}</button>
+                    <button type='button' className='mh-button mh-button--secondary mh-button--sm' onClick={() => void loadWorkspace()} disabled={busy}>{t('chat.refresh')}</button>
                 </div>
                 {conversations.length === 0 ? <p className='mt-3'>{t('chat.noConversations')}</p> :
                     <ul className='mt-3 space-y-2'>{conversations.map((conversation) => <li key={conversation.id}>
                         <button type='button' aria-current={selectedId === conversation.id ? 'page' : undefined}
-                            className='mh-button w-full px-3 py-2 text-left' onClick={() => setSelectedId(conversation.id)}>
+                            className='mh-button mh-button--secondary mh-button--md w-full justify-start text-left' onClick={() => setSelectedId(conversation.id)}>
                             <strong className='block break-words'>{conversation.title}</strong>
                             <span className='block text-sm text-mh-textMuted'>{conversation.kind === 'direct' ? t('chat.direct') : t('chat.group')}</span>
                             {conversation.unreadCount > 0 && <span className='block text-sm font-bold'>{t('chat.unread', { count: conversation.unreadCount })}</span>}
@@ -235,7 +236,7 @@ export const ProductionChat = ({ currentUserDid }: { currentUserDid: string }) =
             <section className='mh-card space-y-4 p-4' aria-labelledby='messages-heading'>
                 <h2 id='messages-heading' className='font-heading text-xl font-bold'>{conversations.find((conversation) => conversation.id === selectedId)?.title ?? t('chat.messages')}</h2>
                 {!selectedId ? <p>{t('chat.chooseConversation')}</p> : <>
-                    {nextCursor !== null && <button type='button' className='mh-button px-3 py-2' disabled={busy} onClick={() => void loadMessages(selectedId, nextCursor)}>{t('chat.older')}</button>}
+                    {nextCursor !== null && <button type='button' className='mh-button mh-button--secondary mh-button--md' disabled={busy} onClick={() => void loadMessages(selectedId, nextCursor)}>{t('chat.older')}</button>}
                     <ol className='space-y-3' aria-label={t('chat.messages')}>
                         {messages.length === 0 ? <li>{t('chat.noMessages')}</li> : messages.map((message) => {
                             const own = message.authorDid === currentUserDid;
@@ -243,8 +244,8 @@ export const ProductionChat = ({ currentUserDid }: { currentUserDid: string }) =
                                 <p className='break-words'>{message.status === 'redacted' ? t('chat.messageRedacted') : message.body}</p>
                                 <p className='mt-1 text-xs text-mh-textMuted'>{own ? t('chat.you') : message.authorDid} · {fmt.longDate(message.createdAt)}{own && message.deliveryState ? ` · ${message.deliveryState === 'read' ? t('chat.read') : t('chat.delivered')}` : ''}</p>
                                 {message.status === 'active' && <div className='mt-2 flex gap-2'>
-                                    {own ? <button type='button' className='mh-button px-2 py-1 text-sm' onClick={() => void redact(message)}>{t('chat.redact')}</button> :
-                                        <button type='button' className='mh-button px-2 py-1 text-sm' onClick={() => void report(message)}>{t('chat.report')}</button>}
+                                    {own ? <button type='button' className='mh-button mh-button--secondary mh-button--sm' onClick={() => void redact(message)}>{t('chat.redact')}</button> :
+                                        <button type='button' className='mh-button mh-button--secondary mh-button--sm' onClick={() => void report(message)}>{t('chat.report')}</button>}
                                 </div>}
                             </li>;
                         })}
@@ -254,7 +255,7 @@ export const ProductionChat = ({ currentUserDid }: { currentUserDid: string }) =
                             <textarea className='mh-input min-h-24 px-3 py-2' maxLength={2000} required value={draft} onChange={(event) => { setDraft(event.target.value); setRetryId(''); }} disabled={busy || !online} />
                         </label>
                         <span className='text-sm text-mh-textMuted'>{t('chat.characters', { count: draft.length })}</span>
-                        <button className='mh-button mh-button--primary px-3 py-2 font-bold' disabled={busy || !online || !draft.trim()}>{retryId ? t('chat.retry') : t('chat.send')}</button>
+                        <button className='mh-button mh-button--primary mh-button--md' disabled={busy || !online || !draft.trim()}>{retryId ? t('chat.retry') : t('chat.send')}</button>
                     </form>
                 </>}
             </section>
