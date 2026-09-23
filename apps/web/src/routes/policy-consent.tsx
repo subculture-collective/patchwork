@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { StatusMessage } from '../components/StatusMessage';
 import { Button } from '../components/Button';
 import { Panel } from '../components/Panel';
 import { acceptCurrentPoliciesViaApi } from '../features/api-client';
@@ -83,12 +84,7 @@ export const PolicyConsentGate = ({ onAccepted }: PolicyConsentGateProps) => {
                     {t('consent.continue')}
                 </Button>
                 {status ? (
-                    <span
-                        role={status.startsWith('Error:') ? 'alert' : 'status'}
-                        className='text-xs'
-                    >
-                        {status}
-                    </span>
+                    <StatusMessage message={status} />
                 ) : null}
             </div>
         </Panel>

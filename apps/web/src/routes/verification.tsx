@@ -5,6 +5,7 @@ import {
     useState,
     type FormEvent,
 } from 'react';
+import { StatusMessage } from '../components/StatusMessage';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
@@ -328,12 +329,7 @@ export const VerificationRoute = ({ did }: { did: string }) => {
                 <p className='mt-2 text-sm text-mh-textMuted'>
                     {t('verification.description')}
                 </p>
-                <p
-                    role={status.startsWith('Error:') ? 'alert' : 'status'}
-                    className='mt-3 text-sm font-bold'
-                >
-                    {status}
-                </p>
+                <StatusMessage message={status} className='mt-3' />
             </header>
 
             <Panel title={t('verification.apply')}>
