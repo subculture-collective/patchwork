@@ -72,10 +72,10 @@ test('feed pagination announces appended records, preserves focus, and restores 
     await loadMore.click();
     await expect(page).toHaveURL(/(?:\?|&)page=2(?:&|$)/);
     await expect(page.getByText('Loaded items 21 through 21.')).toBeVisible();
-    await expect(page.getByText('21 / 21 loaded')).toBeFocused();
+    await expect(page.getByText('21 results', { exact: true })).toBeFocused();
 
     await page.goBack();
     await expect(page).not.toHaveURL(/(?:\?|&)page=2(?:&|$)/);
     await expect.poll(() => requestedPages.filter(value => value === 1).length).toBeGreaterThan(1);
-    await expect(page.getByText('20 / 21 loaded')).toBeVisible();
+    await expect(page.getByText('Showing 20 of 21', { exact: true })).toBeVisible();
 });

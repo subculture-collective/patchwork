@@ -14,7 +14,11 @@ import {
 import { type ChatEntrySurface } from '../chat-ux';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
-import { Card } from '../components/Card';
+import { Banner } from '../components/Banner';
+import { EmptyState } from '../components/EmptyState';
+import { PageHeader } from '../components/PageHeader';
+import { DiscoveryToolbar } from '../features/discovery/DiscoveryToolbar';
+import { RequestCard } from '../features/discovery/RequestCard';
 import {
     type AidPostReportReason,
     type ApiDataOrigin,
@@ -34,7 +38,6 @@ import {
     webDataMode,
 } from '../app/runtime';
 import {
-    DiscoveryFiltersPanel,
     PublicSyncFailure,
     usePaginationFocus,
 } from '../features/shell-shared';
@@ -510,13 +513,12 @@ export const FeedRoute = ({
     onRetryPublicSync,
     onNavigate,
     onOpenChat,
-    onUpdateCard,
     onReplaceRecord,
     onDeleteRecord,
     onTransition,
     currentUserDid,
 }: FeedRouteProps) => {
-    const { t, fmt } = useLocale();
+    const { t } = useLocale();
     const paginationFocus = usePaginationFocus({
         itemCount: feedRecords.length,
         isLoading,
@@ -550,359 +552,370 @@ export const FeedRoute = ({
         [feedView.presentations],
     );
 
+    const countLabel =
+        total > feedRecords.length
+            ? t('discovery.showingCount', {
+                  loaded: feedRecords.length,
+                  total,
+              })
+            : t('discovery.resultCount', { count: feedView.cards.length });
+
     return (
-        <section className='space-y-6'>
-            <header className='mh-route-header'>
-                <h1 className='mh-route-title'>{t('feed.heading')}</h1>
-                <p className='mt-2 text-sm text-mh-textMuted'>
-                    {t('feed.description')}
-                </p>
-                <div className='mt-3 flex flex-wrap gap-2'>
-                    <Badge tone={dataOrigin === 'api' ? 'success' : 'info'}>
-                        {dataOriginLabel(dataOrigin)}
-                    </Badge>
-                </div>
-                {errorMessage ? (
-                    <div
-                        role='alert'
-                        className='mh-alert mt-3 text-xs font-bold'
+        <section>
+            <PageHeader
+                title={t('feed.heading')}
+                description={t('feed.description')}
+                meta={
+                    dataOrigin !== 'api' ? (
+                        <Badge tone='info'>{dataOriginLabel(dataOrigin)}</Badge>
+                    ) : null
+                }
+                actions={
+                    <Button
+                        variant='accent'
+                        onClick={() => onNavigate('/posting')}
                     >
-                        <p>
-                            {t('map.apiSyncIssue', { message: errorMessage })}
-                        </p>
-                        {feedRecords.length > 0 ? (
-                            <p>{t('feed.staleResults')}</p>
-                        ) : null}
-                        <Button
-                            size='sm'
-                            type='button'
-                            variant='neutral'
-                            className='mt-2'
-                            onClick={onRetry}
+                        {t('dashboard.askForHelp')}
+                    </Button>
+                }
+            />
+
+            {errorMessage || publicSyncFailure ? (
+                <div className='mb-6 grid gap-3'>
+                    {errorMessage ? (
+                        <Banner
+                            tone='danger'
+                            title={t('map.apiSyncIssue', {
+                                message: errorMessage,
+                            })}
+                            actions={
+                                <Button
+                                    size='sm'
+                                    variant='secondary'
+                                    onClick={onRetry}
+                                >
+                                    {t('feed.retryDiscovery')}
+                                </Button>
+                            }
                         >
-                            {t('feed.retryDiscovery')}
-                        </Button>
-                    </div>
-                ) : null}
-                {publicSyncFailure ? (
-                    <div
-                        role='alert'
-                        className='mh-alert mt-3 text-xs font-bold'
-                    >
-                        <p>
-                            {t('feed.privateSyncIssue', {
+                            {feedRecords.length > 0 ? (
+                                <p>{t('feed.staleResults')}</p>
+                            ) : null}
+                        </Banner>
+                    ) : null}
+                    {publicSyncFailure ? (
+                        <Banner
+                            tone='danger'
+                            title={t('feed.privateSyncIssue', {
                                 message: publicSyncFailure.message,
                             })}
-                        </p>
-                        <Button
-                            size='sm'
-                            type='button'
-                            variant='neutral'
-                            className='mt-2'
-                            disabled={publicSyncRetrying}
-                            onClick={onRetryPublicSync}
-                        >
-                            {publicSyncRetrying
-                                ? t('feed.retryingSync')
-                                : t('feed.retrySync')}
-                        </Button>
-                    </div>
-                ) : null}
-            </header>
+                            actions={
+                                <Button
+                                    size='sm'
+                                    variant='secondary'
+                                    disabled={publicSyncRetrying}
+                                    onClick={onRetryPublicSync}
+                                >
+                                    {publicSyncRetrying
+                                        ? t('feed.retryingSync')
+                                        : t('feed.retrySync')}
+                                </Button>
+                            }
+                        />
+                    ) : null}
+                </div>
+            ) : null}
 
-            <DiscoveryFiltersPanel
+            <DiscoveryToolbar
                 idPrefix='feed'
                 state={discoveryState}
                 onPatch={onPatchDiscovery}
             />
 
-            <Card title={String(t('feed.liveRequestFeedTitle'))}>
-                {isLoading ? (
-                    <ul className='space-y-4' aria-live='polite'>
-                        {Array.from({ length: 3 }).map((_, index) => (
+            <section aria-labelledby='feed-results-heading'>
+                <div className='mh-results-header'>
+                    <h2 id='feed-results-heading' className='sr-only'>
+                        {t('feed.liveRequestFeedTitle')}
+                    </h2>
+                    <p
+                        ref={paginationFocus.loadedCountRef}
+                        tabIndex={-1}
+                        className='mh-results-count'
+                        role='status'
+                    >
+                        {isLoading && feedRecords.length === 0
+                            ? t('a11y.loadingContent')
+                            : countLabel}
+                    </p>
+                </div>
+                <span className='sr-only' role='status' aria-live='polite'>
+                    {paginationFocus.announcement}
+                </span>
+                {isLoading && feedView.cards.length === 0 ? (
+                    <ul className='mh-request-list mh-request-list--grid' aria-hidden='true'>
+                        {Array.from({ length: 4 }).map((_, index) => (
                             <li
                                 key={`feed-skeleton-${index}`}
-                                className='mh-record-card p-4'
+                                className='mh-request-card'
                             >
-                                <div className='mh-skeleton h-5 w-2/3' />
-                                <div className='mh-skeleton mt-2 h-3 w-full' />
-                                <div className='mh-skeleton mt-2 h-3 w-5/6' />
-                                <div className='mt-4 flex gap-2'>
-                                    <div className='mh-skeleton h-8 w-28' />
-                                    <div className='mh-skeleton h-8 w-32' />
-                                </div>
+                                <div className='mh-skeleton h-3 w-1/4' />
+                                <div className='mh-skeleton h-6 w-2/3' />
+                                <div className='mh-skeleton h-3 w-full' />
+                                <div className='mh-skeleton h-3 w-5/6' />
                             </li>
                         ))}
                     </ul>
                 ) : feedView.cards.length === 0 ? (
-                    <div className='space-y-3'>
+                    <EmptyState
+                        title={t('feed.noRequestsTitle')}
+                        actions={
+                            <>
+                                <Button
+                                    variant='secondary'
+                                    onClick={() => {
+                                        onPatchDiscovery({
+                                            feedTab: 'latest',
+                                            text: undefined,
+                                            category: undefined,
+                                            status: undefined,
+                                            minUrgency: undefined,
+                                            center: undefined,
+                                            radiusMeters: undefined,
+                                            since: undefined,
+                                        });
+                                    }}
+                                >
+                                    {t('feed.resetFeedFilters')}
+                                </Button>
+                                <Button
+                                    variant='accent'
+                                    onClick={() => onNavigate('/posting')}
+                                >
+                                    {t('feed.createRequest')}
+                                </Button>
+                            </>
+                        }
+                    >
                         <p>{t('feed.noRequestsMatch')}</p>
-                        <div className='flex flex-wrap gap-2'>
-                            <Button
-                                variant='neutral'
-                                size='sm'
-                                onClick={() => {
-                                    onPatchDiscovery({
-                                        feedTab: 'latest',
-                                        text: undefined,
-                                        category: undefined,
-                                        status: undefined,
-                                        minUrgency: undefined,
-                                        center: undefined,
-                                        radiusMeters: undefined,
-                                        since: undefined,
-                                    });
-                                }}
-                            >
-                                {t('feed.resetFeedFilters')}
-                            </Button>
-                            <Button
-                                size='sm'
-                                onClick={() => onNavigate('/posting')}
-                            >
-                                {t('feed.createRequest')}
-                            </Button>
-                        </div>
-                    </div>
+                    </EmptyState>
                 ) : (
-                    <ul className='space-y-4'>
+                    <ul className='mh-request-list mh-request-list--grid'>
                         {feedView.cards.map((card, index) => {
                             const record = feedRecords.find(
                                 (candidate) => candidate.card.id === card.id,
                             );
                             const presentation = presentationById.get(card.id);
+                            const isOwner =
+                                Boolean(record) &&
+                                currentUserDid === record?.recipientDid;
+                            const canTransition =
+                                presentation &&
+                                presentation.transitionActions.length > 0 &&
+                                onTransition &&
+                                record &&
+                                isOwner;
 
                             return (
-                                <li
-                                    key={card.id}
-                                    className='mh-record-card p-4'
-                                >
-                                    <div className='flex flex-wrap items-start justify-between gap-2'>
-                                        <p className='text-base font-bold text-mh-text'>
-                                            {card.title}
-                                        </p>
-                                        <div className='flex flex-wrap gap-2'>
-                                            {presentation ? (
+                                <li key={card.id}>
+                                    <RequestCard
+                                        title={card.title}
+                                        description={card.description}
+                                        category={card.category}
+                                        updatedAt={card.updatedAt}
+                                        urgency={card.urgency}
+                                        badges={
+                                            presentation
+                                                ? [
+                                                      presentation.statusBadge,
+                                                      presentation.urgencyBadge,
+                                                      presentation.lifecycleBadge,
+                                                  ]
+                                                : []
+                                        }
+                                        extraBadges={
+                                            record?.recordOrigin ===
+                                            'synthetic' ? (
+                                                <Badge tone='info'>
+                                                    {t('feed.synthetic')}
+                                                </Badge>
+                                            ) : record?.recordOrigin ===
+                                              'sourced-public' ? (
+                                                <Badge tone='info'>
+                                                    {t('feed.publicSource')}
+                                                </Badge>
+                                            ) : null
+                                        }
+                                        actions={
+                                            (record &&
+                                                webDataMode === 'fixture') ||
+                                            canTransition ||
+                                            (card.timeline &&
+                                                card.timeline.length > 0) ? (
                                                 <>
-                                                    <Badge
-                                                        tone={
-                                                            presentation
-                                                                .statusBadge
-                                                                .tone
-                                                        }
-                                                    >
-                                                        {
-                                                            presentation
-                                                                .statusBadge
-                                                                .label
-                                                        }
-                                                    </Badge>
-                                                    <Badge
-                                                        tone={
-                                                            presentation
-                                                                .urgencyBadge
-                                                                .tone
-                                                        }
-                                                    >
-                                                        {
-                                                            presentation
-                                                                .urgencyBadge
-                                                                .label
-                                                        }
-                                                    </Badge>
-                                                    {presentation.lifecycleBadge ? (
-                                                        <Badge
-                                                            tone={
-                                                                presentation
-                                                                    .lifecycleBadge
-                                                                    .tone
+                                                    {record &&
+                                                    webDataMode ===
+                                                        'fixture' &&
+                                                    !isOwner &&
+                                                    (card.status === 'open' ||
+                                                        card.status ===
+                                                            'in-progress') ? (
+                                                        <Button
+                                                            size='sm'
+                                                            onClick={() =>
+                                                                onOpenChat(
+                                                                    record,
+                                                                    'feed',
+                                                                )
                                                             }
                                                         >
-                                                            {
-                                                                presentation
-                                                                    .lifecycleBadge
-                                                                    .label
-                                                            }
-                                                        </Badge>
+                                                            {t(
+                                                                'feed.contactHelper',
+                                                            )}
+                                                        </Button>
                                                     ) : null}
-                                                    {record?.recordOrigin ===
-                                                    'synthetic' ? (
-                                                        <Badge tone='info'>
-                                                            {t(
-                                                                'feed.synthetic',
+                                                    {canTransition
+                                                        ? presentation.transitionActions.map(
+                                                              (action) => (
+                                                                  <Button
+                                                                      key={
+                                                                          action.targetStatus
+                                                                      }
+                                                                      variant='secondary'
+                                                                      size='sm'
+                                                                      aria-label={t(
+                                                                          'safety.positionedAction',
+                                                                          {
+                                                                              action: action.ariaLabel,
+                                                                              position:
+                                                                                  index +
+                                                                                  1,
+                                                                              total: feedView
+                                                                                  .cards
+                                                                                  .length,
+                                                                          },
+                                                                      )}
+                                                                      onClick={() =>
+                                                                          onTransition(
+                                                                              card.id,
+                                                                              record.aidPostUri,
+                                                                              action.targetStatus,
+                                                                          )
+                                                                      }
+                                                                  >
+                                                                      {
+                                                                          action.label
+                                                                      }
+                                                                  </Button>
+                                                              ),
+                                                          )
+                                                        : null}
+                                                    {card.timeline &&
+                                                    card.timeline.length > 0 ? (
+                                                        <Button
+                                                            variant='ghost'
+                                                            size='sm'
+                                                            aria-expanded={
+                                                                expandedTimelineId ===
+                                                                card.id
+                                                            }
+                                                            aria-label={t(
+                                                                'safety.positionedAction',
+                                                                {
+                                                                    action: t(
+                                                                        'feed.timelineFor',
+                                                                        {
+                                                                            title: card.title,
+                                                                            count: card
+                                                                                .timeline
+                                                                                .length,
+                                                                        },
+                                                                    ),
+                                                                    position:
+                                                                        index + 1,
+                                                                    total: feedView
+                                                                        .cards
+                                                                        .length,
+                                                                },
                                                             )}
-                                                        </Badge>
-                                                    ) : record?.recordOrigin ===
-                                                      'sourced-public' ? (
-                                                        <Badge tone='info'>
-                                                            {t(
-                                                                'feed.publicSource',
-                                                            )}
-                                                        </Badge>
+                                                            onClick={() =>
+                                                                setExpandedTimelineId(
+                                                                    (current) =>
+                                                                        current ===
+                                                                        card.id
+                                                                            ? undefined
+                                                                            : card.id,
+                                                                )
+                                                            }
+                                                        >
+                                                            {expandedTimelineId ===
+                                                            card.id
+                                                                ? t(
+                                                                      'feed.hideTimeline',
+                                                                  )
+                                                                : t(
+                                                                      'feed.timeline',
+                                                                      {
+                                                                          count: card
+                                                                              .timeline
+                                                                              .length,
+                                                                      },
+                                                                  )}
+                                                        </Button>
                                                     ) : null}
                                                 </>
-                                            ) : null}
-                                        </div>
-                                    </div>
-
-                                    <p className='mt-2 text-sm text-mh-textMuted'>
-                                        {card.description}
-                                    </p>
-                                    <p className='mt-1 text-xs text-mh-textSoft'>
-                                        {t('feed.updatedAt', {
-                                            date: fmt.longDate(card.updatedAt),
-                                        })}
-                                    </p>
-
-                                    {/* Lifecycle transition actions */}
-                                    {presentation &&
-                                    presentation.transitionActions.length > 0 &&
-                                    onTransition &&
-                                    record &&
-                                    currentUserDid === record.recipientDid ? (
-                                        <div className='mt-3 flex flex-wrap gap-2'>
-                                            <span className='text-xs font-bold uppercase tracking-[0.12em] text-mh-textMuted'>
-                                                {t('feed.lifecycle')}
-                                            </span>
-                                            {presentation.transitionActions.map(
-                                                (action) => (
-                                                    <Button
-                                                        key={
-                                                            action.targetStatus
-                                                        }
-                                                        variant='neutral'
-                                                        size='sm'
-                                                        aria-label={t('safety.positionedAction', {
-                                                            action: action.ariaLabel,
-                                                            position: index + 1,
-                                                            total: feedView.cards.length,
-                                                        })}
-                                                        onClick={() =>
-                                                            onTransition(
-                                                                card.id,
-                                                                record.aidPostUri,
-                                                                action.targetStatus,
-                                                            )
-                                                        }
-                                                    >
-                                                        {action.label}
-                                                    </Button>
-                                                ),
-                                            )}
-                                        </div>
-                                    ) : null}
-
-                                    <div className='mt-4 flex flex-wrap gap-2'>
-                                        {record && webDataMode === 'fixture' ? (
-                                            <Button
-                                                size='sm'
-                                                onClick={() =>
-                                                    onOpenChat(record, 'feed')
-                                                }
-                                            >
-                                                {t('feed.contactHelper')}
-                                            </Button>
-                                        ) : null}
-
-                                        {dataOrigin === 'fixture' ? (
-                                            <Button
-                                                variant='secondary'
-                                                size='sm'
-                                                onClick={() =>
-                                                    onUpdateCard(card.id, {
-                                                        urgency: Math.min(
-                                                            5,
-                                                            card.urgency + 1,
-                                                        ) as 1 | 2 | 3 | 4 | 5,
-                                                        updatedAt: nowIso(),
-                                                    })
-                                                }
-                                                disabled={card.urgency >= 5}
-                                            >
-                                                {t('feed.escalateUrgency')}
-                                            </Button>
-                                        ) : null}
-
-                                        {/* Timeline toggle */}
-                                        {card.timeline &&
-                                        card.timeline.length > 0 ? (
-                                            <Button
-                                                variant='neutral'
-                                                size='sm'
-                                                aria-label={t('safety.positionedAction', {
-                                                    action: t('feed.timelineFor', {
-                                                        title: card.title,
-                                                        count: card.timeline.length,
-                                                    }),
-                                                    position: index + 1,
-                                                    total: feedView.cards.length,
-                                                })}
-                                                onClick={() =>
-                                                    setExpandedTimelineId(
-                                                        (current) =>
-                                                            current === card.id
-                                                                ? undefined
-                                                                : card.id,
-                                                    )
-                                                }
-                                            >
-                                                {expandedTimelineId === card.id
-                                                    ? t('feed.hideTimeline')
-                                                    : t('feed.timeline', {
-                                                          count: card.timeline
-                                                              .length,
-                                                      })}
-                                            </Button>
-                                        ) : null}
-                                    </div>
-
-                                    {record &&
-                                    currentUserDid &&
-                                    currentUserDid !== record.recipientDid ? (
-                                        <SafetyActions
-                                            record={record}
-                                            position={index + 1}
-                                            total={feedView.cards.length}
-                                        />
-                                    ) : null}
-                                    {record &&
-                                    currentUserDid === record.recipientDid ? (
-                                        <OwnerRecordActions
-                                            record={record}
-                                            position={index + 1}
-                                            total={feedView.cards.length}
-                                            onReplaceRecord={onReplaceRecord}
-                                            onDeleteRecord={onDeleteRecord}
-                                        />
-                                    ) : null}
-
-                                    {/* Expanded timeline panel */}
-                                    {expandedTimelineId === card.id &&
-                                    card.timeline ? (
-                                        <div className='mt-4 border-t-2 border-mh-borderSoft pt-4'>
-                                            <p className='mb-3 text-xs font-bold uppercase tracking-[0.12em] text-mh-textMuted'>
-                                                {t('feed.auditTimeline')}
-                                            </p>
-                                            <StatusTimeline
-                                                timeline={card.timeline}
+                                            ) : null
+                                        }
+                                    >
+                                        {record &&
+                                        currentUserDid &&
+                                        !isOwner ? (
+                                            <SafetyActions
+                                                record={record}
+                                                position={index + 1}
+                                                total={feedView.cards.length}
                                             />
-                                        </div>
-                                    ) : null}
+                                        ) : null}
+                                        {record && isOwner ? (
+                                            <OwnerRecordActions
+                                                record={record}
+                                                position={index + 1}
+                                                total={feedView.cards.length}
+                                                onReplaceRecord={
+                                                    onReplaceRecord
+                                                }
+                                                onDeleteRecord={onDeleteRecord}
+                                            />
+                                        ) : null}
+                                        {expandedTimelineId === card.id &&
+                                        card.timeline ? (
+                                            <div className='mt-2 border-t border-mh-borderSubtle pt-3'>
+                                                <p className='mh-eyebrow mb-3'>
+                                                    {t('feed.auditTimeline')}
+                                                </p>
+                                                <StatusTimeline
+                                                    timeline={card.timeline}
+                                                />
+                                            </div>
+                                        ) : null}
+                                    </RequestCard>
                                 </li>
                             );
                         })}
                     </ul>
                 )}
-                <p ref={paginationFocus.loadedCountRef} tabIndex={-1} className='mt-3 text-sm text-mh-textMuted' role='status'>
-                    {t('discovery.loadedCount', { loaded: feedRecords.length, total })}
-                </p>
-                <span className='sr-only' role='status' aria-live='polite'>{paginationFocus.announcement}</span>
                 {hasNextPage ? (
-                    <Button ref={paginationFocus.loadMoreRef} className='mt-3' onClick={() => paginationFocus.loadMore(onLoadMore)} disabled={isLoading}>
-                        {t('discovery.loadMore')}
-                    </Button>
+                    <div className='mt-6 flex justify-center'>
+                        <Button
+                            ref={paginationFocus.loadMoreRef}
+                            variant='secondary'
+                            onClick={() => paginationFocus.loadMore(onLoadMore)}
+                            disabled={isLoading}
+                        >
+                            {t('discovery.loadMore')}
+                        </Button>
+                    </div>
                 ) : null}
-            </Card>
+            </section>
         </section>
     );
 };

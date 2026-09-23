@@ -108,6 +108,7 @@ const productionSourcePaths = (): string[] => {
         '../features/frontend-shell.tsx',
         '../features/shell-shared.tsx',
         '../app/AppShell.tsx',
+        '../features/discovery/DiscoveryToolbar.tsx',
         ...routeFiles,
         '../auth/LoginPage.tsx',
         '../auth/SignupPage.tsx',

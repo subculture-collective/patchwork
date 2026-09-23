@@ -38,8 +38,8 @@ export const feedSurfacePreview = buildFeedViewModel(
 );
 
 export const toFeedSurfaceTone = (
-    tone: 'neutral' | 'info' | 'success' | 'danger',
-): 'neutral' | 'info' | 'success' | 'danger' => tone;
+    tone: 'default' | 'neutral' | 'info' | 'success' | 'danger',
+): 'default' | 'neutral' | 'info' | 'success' | 'danger' => tone;
 
 export const postingSurfaceValidation = validatePostingDraft({
     title: 'Need urgent grocery support',

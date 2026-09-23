@@ -18,8 +18,12 @@ import { buildResourceOverlayViewModel, type ResourceDirectoryCard } from '../re
 import { type ChatEntrySurface } from '../chat-ux';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
-import { Card } from '../components/Card';
-import { Panel } from '../components/Panel';
+import { Banner } from '../components/Banner';
+import { EmptyState } from '../components/EmptyState';
+import { PageHeader } from '../components/PageHeader';
+import { Sheet } from '../components/Sheet';
+import { DiscoveryToolbar } from '../features/discovery/DiscoveryToolbar';
+import { RequestCard } from '../features/discovery/RequestCard';
 import { type ApiDataOrigin } from '../features/api-client';
 import { useLocale } from '../i18n';
 import { type FeedRecordEnvelope } from '../features/discovery-runtime';
@@ -28,15 +32,15 @@ import {
     webDataMode,
 } from '../app/runtime';
 import {
-    DiscoveryFiltersPanel,
+    formatLocalizedLabel,
     usePaginationFocus,
 } from '../features/shell-shared';
 
 const toSeverityTone = (
     status: AidStatus,
-): 'neutral' | 'info' | 'success' | 'danger' => {
+): 'default' | 'neutral' | 'info' | 'success' | 'danger' => {
     if (status === 'open') {
-        return 'danger';
+        return 'default';
     }
     if (status === 'in-progress') {
         return 'info';
@@ -237,342 +241,331 @@ export const MapRoute = ({
         ? openMapDetailDrawer(mapView.filteredCards, selectedPostId)
         : closeMapDetailDrawer();
 
+    const statusLabel = (status: string) => formatLocalizedLabel(t, status);
+    const countLabel =
+        total > feedRecords.length
+            ? t('discovery.showingCount', { loaded: feedRecords.length, total })
+            : t('discovery.resultCount', { count: mapView.filteredCards.length });
+
     return (
-        <section className='space-y-6'>
-            <header className='mh-route-header'>
-                <h1 className='mh-route-title'>{t('map.heading')}</h1>
-                <p className='mt-2 text-sm text-mh-textMuted'>
-                    {t('map.description')}
-                </p>
-                <div className='mt-3 flex flex-wrap gap-2'>
-                    <Badge tone={dataOrigin === 'api' ? 'success' : 'info'}>
-                        {dataOriginLabel(dataOrigin)}
-                    </Badge>
-                    <p ref={paginationFocus.loadedCountRef} tabIndex={-1} className='text-sm text-mh-textMuted' role='status'>
-                        {t('discovery.loadedCount', { loaded: feedRecords.length, total })}
-                    </p>
-                    <span className='sr-only' role='status' aria-live='polite'>{paginationFocus.announcement}</span>
-                    {hasNextPage ? (
-                        <Button size='sm' ref={paginationFocus.loadMoreRef} type='button' variant='neutral' onClick={() => paginationFocus.loadMore(onLoadMore)} disabled={isLoading}>
-                            {t('discovery.loadMore')}
-                        </Button>
-                    ) : null}
-                </div>
-                {errorMessage || resourceErrorMessage ? (
-                    <div
-                        role='alert'
-                        className='mh-alert mt-3 text-xs font-bold'
-                    >
-                        {errorMessage ? (
-                            <p>
-                                {t('map.apiSyncIssue', {
-                                    message: errorMessage,
-                                })}
-                            </p>
-                        ) : null}
-                        {errorMessage && feedRecords.length > 0 ? (
-                            <p>{t('map.staleResults')}</p>
-                        ) : null}
-                        {resourceErrorMessage ? (
-                            <p>
-                                {t('map.publicPlaceIssue', {
-                                    message: resourceErrorMessage,
-                                })}
-                            </p>
-                        ) : null}
-                        <div className='mt-2 flex flex-wrap gap-2'>
-                            {errorMessage ? (
+        <section>
+            <PageHeader
+                title={t('map.heading')}
+                description={t('map.description')}
+                meta={
+                    dataOrigin !== 'api' ? (
+                        <Badge tone='info'>{dataOriginLabel(dataOrigin)}</Badge>
+                    ) : null
+                }
+            />
+
+            {errorMessage || resourceErrorMessage || tileError ? (
+                <div className='mb-6 grid gap-3'>
+                    {errorMessage ? (
+                        <Banner
+                            tone='danger'
+                            title={t('map.apiSyncIssue', {
+                                message: errorMessage,
+                            })}
+                            actions={
                                 <Button
-                                    type='button'
-                                    variant='neutral'
                                     size='sm'
+                                    variant='secondary'
                                     onClick={onRetry}
                                 >
                                     {t('map.retryDiscovery')}
                                 </Button>
+                            }
+                        >
+                            {feedRecords.length > 0 ? (
+                                <p>{t('map.staleResults')}</p>
                             ) : null}
-                            {resourceErrorMessage ? (
+                        </Banner>
+                    ) : null}
+                    {resourceErrorMessage ? (
+                        <Banner
+                            tone='danger'
+                            title={t('map.publicPlaceIssue', {
+                                message: resourceErrorMessage,
+                            })}
+                            actions={
                                 <Button
-                                    type='button'
-                                    variant='neutral'
                                     size='sm'
+                                    variant='secondary'
                                     onClick={onRetryResources}
                                 >
                                     {t('map.retryPlaces')}
                                 </Button>
-                            ) : null}
-                        </div>
-                    </div>
-                ) : null}
-            </header>
-
-            <section className='rounded-none border-2 border-mh-borderSoft bg-mh-surfaceElev p-3'>
-                {tileError ? (
-                    <div
-                        role='alert'
-                        className='mh-alert mb-3 text-xs font-bold'
-                    >
-                        <p>{tileError}</p>
-                    </div>
-                ) : null}
-                {activeArea ? (
-                    <div
-                        className='mb-3 flex flex-wrap items-center gap-2 border-2 border-mh-borderSoft bg-mh-surface p-3'
-                        role='status'
-                        aria-live='polite'
-                    >
-                        <Badge tone='info'>{t('map.filteredArea')}</Badge>
-                        <p className='mr-auto text-sm text-mh-textMuted'>
-                            <strong className='text-mh-text'>
-                                {activeArea.label}
-                            </strong>{' '}
-                            ·{' '}
-                            {t('map.areaSummary', {
-                                requests: fmt.number(
-                                    mapView.filteredCards.length,
-                                ),
-                                places: fmt.number(
-                                    mapResourceView.cards.length,
-                                ),
-                                distance: fmt.number(
-                                    activeArea.radiusMeters / 1000,
-                                    {
-                                        maximumFractionDigits: 1,
-                                    },
-                                ),
-                            })}
-                        </p>
-                        {focusedArea ? (
-                            <Button
-                                type='button'
-                                variant='neutral'
-                                size='sm'
-                                onClick={() => leaveFocusedArea('previous')}
-                            >
-                                {t('map.returnArea')}
-                            </Button>
-                        ) : null}
-                        <Button
-                            type='button'
-                            variant='neutral'
-                            size='sm'
-                            onClick={() => leaveFocusedArea('clear')}
-                        >
-                            {t('map.clearArea')}
-                        </Button>
-                    </div>
-                ) : null}
-                {discoveryState.center ? (
-                    <Suspense
-                        fallback={<div className='mh-skeleton h-96 w-full' />}
-                    >
-                        <LazyInteractiveMap
-                            cards={mapView.filteredCards}
-                            resources={mapResourceView.cards}
-                            selectedPostId={selectedPostId}
-                            center={discoveryState.center}
-                            onSelectPostId={onSelectPost}
-                            focusedArea={activeArea}
-                            onFocusArea={focusMapArea}
-                            onTilesFailed={setTileError}
+                            }
                         />
-                    </Suspense>
-                ) : (
-                    <div className='mh-alert p-4' role='status'>
-                        {t('map.areaRequired')}
-                    </div>
-                )}
-            </section>
+                    ) : null}
+                    {tileError ? (
+                        <Banner tone='warning' live='alert'>
+                            {tileError}
+                        </Banner>
+                    ) : null}
+                </div>
+            ) : null}
 
-            <DiscoveryFiltersPanel
+            <DiscoveryToolbar
                 idPrefix='map'
                 state={discoveryState}
                 onPatch={onPatchDiscovery}
             />
 
-            <div className='grid gap-6 xl:grid-cols-2'>
-                <Card title={String(t('map.clusterOverviewTitle'))}>
-                    {isLoading ? (
-                        <ul className='space-y-3' aria-live='polite'>
-                            {Array.from({ length: 3 }).map((_, index) => (
-                                <li
-                                    key={`cluster-skeleton-${index}`}
-                                    className='mh-record-card'
+            <div className='mh-map-layout'>
+                <div className='mh-map-layout__map'>
+                    {activeArea ? (
+                        <div
+                            className='mh-map-areabar'
+                            role='status'
+                            aria-live='polite'
+                        >
+                            <p className='min-w-0 flex-1 text-sm text-mh-textMuted'>
+                                <strong className='text-mh-text'>
+                                    {activeArea.label}
+                                </strong>{' '}
+                                ·{' '}
+                                {t('map.areaSummary', {
+                                    requests: fmt.number(
+                                        mapView.filteredCards.length,
+                                    ),
+                                    places: fmt.number(
+                                        mapResourceView.cards.length,
+                                    ),
+                                    distance: fmt.number(
+                                        activeArea.radiusMeters / 1000,
+                                        {
+                                            maximumFractionDigits: 1,
+                                        },
+                                    ),
+                                })}
+                            </p>
+                            {focusedArea ? (
+                                <Button
+                                    variant='secondary'
+                                    size='sm'
+                                    onClick={() => leaveFocusedArea('previous')}
                                 >
-                                    <div className='mh-skeleton h-4 w-3/4' />
-                                    <div className='mh-skeleton mt-2 h-3 w-1/2' />
-                                    <div className='mh-skeleton mt-3 h-6 w-24' />
-                                </li>
-                            ))}
-                        </ul>
-                    ) : mapView.clusters.length === 0 ? (
-                        <p>{t('map.noClusters')}</p>
+                                    {t('map.returnArea')}
+                                </Button>
+                            ) : null}
+                            <Button
+                                variant='ghost'
+                                size='sm'
+                                onClick={() => leaveFocusedArea('clear')}
+                            >
+                                {t('map.clearArea')}
+                            </Button>
+                        </div>
+                    ) : null}
+                    {discoveryState.center ? (
+                        <Suspense
+                            fallback={
+                                <div className='mh-skeleton h-96 w-full' />
+                            }
+                        >
+                            <LazyInteractiveMap
+                                cards={mapView.filteredCards}
+                                resources={mapResourceView.cards}
+                                selectedPostId={selectedPostId}
+                                center={discoveryState.center}
+                                onSelectPostId={onSelectPost}
+                                focusedArea={activeArea}
+                                onFocusArea={focusMapArea}
+                                onTilesFailed={setTileError}
+                            />
+                        </Suspense>
                     ) : (
-                        <ul className='space-y-3'>
-                            {mapView.clusters.map((cluster) => (
-                                <li key={cluster.id} className='mh-record-card'>
-                                    <p className='text-sm font-bold text-mh-text'>
-                                        {t('map.requestsInArea', {
-                                            count: cluster.count,
-                                        })}
-                                    </p>
-                                    <p className='mt-1 text-xs text-mh-textSoft'>
-                                        {t('map.clusterRequests', {
-                                            count: cluster.count,
-                                            urgency: cluster.urgencyMax,
-                                        })}
-                                    </p>
-                                    <div className='mt-2'>
-                                        <Badge
-                                            tone={toSeverityTone(
-                                                cluster.status,
-                                            )}
-                                        >
-                                            {cluster.status}
-                                        </Badge>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
+                        <EmptyState title={t('discovery.areaRequiredTitle')}>
+                            <p>{t('map.areaRequired')}</p>
+                        </EmptyState>
                     )}
-                </Card>
+                </div>
 
-                <Card title={String(t('map.requestMarkersTitle'))}>
-                    {isLoading ? (
-                        <ul className='space-y-3' aria-live='polite'>
+                <section
+                    className='mh-map-layout__list'
+                    aria-labelledby='map-results-heading'
+                >
+                    <div className='mh-results-header'>
+                        <h2
+                            id='map-results-heading'
+                            className='mh-surface__title'
+                        >
+                            {t('map.requestMarkersTitle')}
+                        </h2>
+                        <p
+                            ref={paginationFocus.loadedCountRef}
+                            tabIndex={-1}
+                            className='mh-results-count'
+                            role='status'
+                        >
+                            {countLabel}
+                        </p>
+                    </div>
+                    <span className='sr-only' role='status' aria-live='polite'>
+                        {paginationFocus.announcement}
+                    </span>
+                    {isLoading && mapView.filteredCards.length === 0 ? (
+                        <ul className='mh-request-list' aria-hidden='true'>
                             {Array.from({ length: 3 }).map((_, index) => (
                                 <li
                                     key={`marker-skeleton-${index}`}
-                                    className='mh-record-card'
+                                    className='mh-request-card'
                                 >
-                                    <div className='mh-skeleton h-4 w-2/3' />
-                                    <div className='mh-skeleton mt-2 h-3 w-full' />
-                                    <div className='mh-skeleton mt-2 h-3 w-4/5' />
-                                    <div className='mh-skeleton mt-3 h-8 w-32' />
+                                    <div className='mh-skeleton h-3 w-1/4' />
+                                    <div className='mh-skeleton h-5 w-2/3' />
+                                    <div className='mh-skeleton h-3 w-full' />
                                 </li>
                             ))}
                         </ul>
                     ) : mapView.filteredCards.length === 0 ? (
-                        <p>{t('map.noRequests')}</p>
+                        <EmptyState title={t('feed.noRequestsTitle')}>
+                            <p>{t('map.noRequests')}</p>
+                        </EmptyState>
                     ) : (
-                        <ul className='space-y-3'>
+                        <ul className='mh-request-list'>
                             {mapView.filteredCards.map((card) => (
-                                <li key={card.id} className='mh-record-card'>
-                                    <div className='flex flex-wrap items-start justify-between gap-2'>
-                                        <p className='text-sm font-bold text-mh-text'>
-                                            {card.title}
-                                        </p>
-                                        <div className='flex flex-wrap gap-2'>
-                                            <Badge
-                                                tone={toUrgencyTone(
-                                                    card.urgency,
-                                                )}
-                                            >
-                                                {t('map.urgencyLabel', {
-                                                    level: card.urgency,
-                                                })}
-                                            </Badge>
-                                            <Badge
-                                                tone={toSeverityTone(
+                                <li key={card.id}>
+                                    <RequestCard
+                                        title={card.title}
+                                        description={card.summary}
+                                        category={card.category}
+                                        updatedAt={card.updatedAt}
+                                        urgency={card.urgency}
+                                        selected={selectedPostId === card.id}
+                                        badges={[
+                                            {
+                                                label: card.status,
+                                                tone: toSeverityTone(
                                                     card.status,
+                                                ),
+                                            },
+                                            {
+                                                label: String(
+                                                    t('map.urgencyLabel', {
+                                                        level: card.urgency,
+                                                    }),
+                                                ),
+                                                tone: toUrgencyTone(
+                                                    card.urgency,
+                                                ),
+                                            },
+                                        ]}
+                                        actions={
+                                            <Button
+                                                variant='secondary'
+                                                size='sm'
+                                                aria-label={t(
+                                                    'map.openTriageDrawerFor',
+                                                    {
+                                                        title: card.title,
+                                                        id: card.id,
+                                                    },
                                                 )}
+                                                onClick={() =>
+                                                    onSelectPost(card.id)
+                                                }
                                             >
-                                                {card.status}
-                                            </Badge>
-                                        </div>
-                                    </div>
-                                    <p className='mt-2 text-xs text-mh-textSoft'>
-                                        {card.summary}
-                                    </p>
-                                    <div className='mt-3'>
-                                        <Button
-                                            variant='neutral'
-                                            size='sm'
-                                            aria-label={t('map.openTriageDrawerFor', {
-                                                title: card.title,
-                                                id: card.id,
-                                            })}
-                                            onClick={() =>
-                                                onSelectPost(card.id)
-                                            }
-                                        >
-                                            {t('map.openTriageDrawer')}
-                                        </Button>
-                                    </div>
+                                                {t('map.openTriageDrawer')}
+                                            </Button>
+                                        }
+                                    />
                                 </li>
                             ))}
                         </ul>
                     )}
-                </Card>
+                    {hasNextPage ? (
+                        <div className='mt-4 flex justify-center'>
+                            <Button
+                                ref={paginationFocus.loadMoreRef}
+                                variant='secondary'
+                                onClick={() =>
+                                    paginationFocus.loadMore(onLoadMore)
+                                }
+                                disabled={isLoading}
+                            >
+                                {t('discovery.loadMore')}
+                            </Button>
+                        </div>
+                    ) : null}
+                </section>
             </div>
 
-            {drawer.open && selectedRecord ? (
-                <Panel
-                    title={String(t('map.mapDetailDrawerTitle'))}
-                    aria-label={String(
-                        t('map.detailsFor', {
-                            title: drawer.title ?? t('map.selectedRequest'),
-                        }),
-                    )}
-                >
-                    <p className='text-lg font-bold text-mh-text'>
-                        {drawer.title}
-                    </p>
-                    <p className='mt-1 text-sm text-mh-textMuted'>
-                        {drawer.summary}
-                    </p>
-                    <div className='mt-3 flex flex-wrap gap-2'>
-                        {drawer.status ? (
-                            <Badge tone={toSeverityTone(drawer.status)}>
-                                {drawer.status}
-                            </Badge>
-                        ) : null}
-                        <Badge tone='info'>{selectedRecord.recipientDid}</Badge>
-                    </div>
-                    <div className='mt-4 flex flex-wrap gap-2'>
-                        {drawer.actions
-                            .filter(
-                                (action) =>
-                                    webDataMode === 'fixture' ||
-                                    action.action !== 'contact_helper',
-                            )
-                            .map((action) => (
-                                <Button
-                                    key={action.action}
-                                    variant={
-                                        action.action === 'contact_helper'
-                                            ? 'primary'
-                                            : 'neutral'
-                                    }
-                                    size='sm'
-                                    aria-label={action.ariaLabel}
-                                    onClick={() => {
-                                        if (
+            <Sheet
+                open={Boolean(drawer.open && selectedRecord)}
+                onClose={() => onSelectPost(undefined)}
+                title={t('map.mapDetailDrawerTitle')}
+                closeLabel={t('map.closeDrawer')}
+                footer={
+                    drawer.open && selectedRecord ? (
+                        <>
+                            {drawer.actions
+                                .filter(
+                                    (action) =>
+                                        webDataMode === 'fixture' ||
+                                        action.action !== 'contact_helper',
+                                )
+                                .map((action) => (
+                                    <Button
+                                        key={action.action}
+                                        variant={
                                             action.action === 'contact_helper'
-                                        ) {
-                                            onOpenChat(selectedRecord, 'map');
-                                            return;
+                                                ? 'primary'
+                                                : 'secondary'
                                         }
-
-                                        onTriageAction(
-                                            selectedRecord.card.id,
-                                            action.action,
-                                        );
-                                    }}
-                                >
-                                    {action.label}
-                                </Button>
-                            ))}
-                        <Button
-                            variant='neutral'
-                            size='sm'
-                            onClick={() => onSelectPost(undefined)}
-                        >
-                            {t('map.closeDrawer')}
-                        </Button>
+                                        size='sm'
+                                        aria-label={action.ariaLabel}
+                                        onClick={() => {
+                                            if (
+                                                action.action ===
+                                                'contact_helper'
+                                            ) {
+                                                onOpenChat(
+                                                    selectedRecord,
+                                                    'map',
+                                                );
+                                                return;
+                                            }
+                                            onTriageAction(
+                                                selectedRecord.card.id,
+                                                action.action,
+                                            );
+                                        }}
+                                    >
+                                        {action.label}
+                                    </Button>
+                                ))}
+                        </>
+                    ) : null
+                }
+            >
+                {drawer.open && selectedRecord ? (
+                    <div
+                        className='grid gap-3'
+                        aria-label={String(
+                            t('map.detailsFor', {
+                                title:
+                                    drawer.title ?? t('map.selectedRequest'),
+                            }),
+                        )}
+                        role='region'
+                    >
+                        <p className='mh-eyebrow'>
+                            {formatLocalizedLabel(t, selectedRecord.card.category)}
+                        </p>
+                        <p className='mh-request-card__title'>{drawer.title}</p>
+                        <p className='text-mh-textMuted'>{drawer.summary}</p>
+                        {drawer.status ? (
+                            <div>
+                                <Badge tone={toSeverityTone(drawer.status)}>
+                                    {statusLabel(drawer.status)}
+                                </Badge>
+                            </div>
+                        ) : null}
                     </div>
-                </Panel>
-            ) : null}
+                ) : null}
+            </Sheet>
         </section>
     );
 };

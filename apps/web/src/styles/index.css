@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import './tokens.css';
 @import './shell.css';
+@import './discovery.css';
 
 /*
  * Tailwind v4 reads theme values from CSS. These map the design tokens to
