@@ -60,6 +60,10 @@ import {
     createOrganizationHandler,
     isOrganizationRoute,
 } from './http/organization-handler.js';
+import {
+    createIdentityHandler,
+    isIdentityRoute,
+} from './http/identity-handler.js';
 import { OrganizationService } from './organization-service.js';
 import {
     createVerificationHandler,
@@ -558,6 +562,15 @@ const accountOnboardingHandler =
             service: accountOnboardingService,
             authenticate: authenticateSessionRequest,
             executeIdempotent: executeIdempotentMutation,
+        })
+    :   undefined;
+const identityHandler =
+    authenticateApiRequest ?
+        createIdentityHandler({
+            authenticate: authenticateApiRequest,
+            ...(atAuthRuntime ?
+                { resolve: atAuthRuntime.resolveIdentity }
+            :   {}),
         })
     :   undefined;
 const organizationHandler =
@@ -1781,6 +1794,9 @@ const contractRoutes = [
     '/organizations/members',
     '/organizations/members/role',
     '/organizations/stewardships',
+    '/organizations/resources',
+    '/identity/resolve',
+    '/groups/linkable-requests',
     '/organizations/stewardships/reconfirm',
     '/organizations/audit',
     '/verification/mine',
@@ -2089,6 +2105,10 @@ export const createApiServer = () => {
             return;
         }
 
+        if (identityHandler?.(request, response, requestUrl)) {
+            return;
+        }
+
         if (organizationHandler?.(request, response, requestUrl)) {
             return;
         }
@@ -2187,6 +2207,15 @@ export const createApiServer = () => {
                 error: {
                     code: 'VERIFICATION_SERVICE_UNAVAILABLE',
                     message: 'Verification services are unavailable.',
+                },
+            });
+            return;
+        }
+        if (isIdentityRoute(request, requestUrl)) {
+            writeJson(response, 503, {
+                error: {
+                    code: 'IDENTITY_RESOLUTION_UNAVAILABLE',
+                    message: 'Account lookup is temporarily unavailable.',
                 },
             });
             return;

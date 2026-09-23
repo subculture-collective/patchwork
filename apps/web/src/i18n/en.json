@@ -862,13 +862,13 @@
         "member": "Member",
         "remove": "Remove",
         "invite": "Invite a member",
-        "invitee": "Invitee AT DID",
+        "invitee": "Person to invite",
         "organizationRole": "Organization role",
         "createInvitation": "Create invitation",
         "oneTimeToken": "One-time invitation token",
         "assign": "Assign resource stewardship",
-        "resourceUri": "Public resource AT URI",
-        "stewardDid": "Steward AT DID",
+        "resourceUri": "Resource",
+        "stewardDid": "Steward",
         "assignAction": "Assign stewardship",
         "stewarded": "Stewarded resources",
         "due": "due {{date}}",
@@ -893,7 +893,12 @@
         "updatingRole": "Updating member role…",
         "roleUpdated": "Organization member role updated.",
         "removingMember": "Removing organization member…",
-        "memberRemoved": "Organization member removed."
+        "memberRemoved": "Organization member removed.",
+        "chooseResource": "Choose a resource",
+        "chooseSteward": "Choose a steward",
+        "noResources": "No directory listings by members of this organization yet.",
+        "alreadyStewarded": "stewarded",
+        "you": "You · {{role}}"
     },
     "auth": {
         "tagline": "Mutual aid, block by block",
@@ -1193,8 +1198,8 @@
         "volunteer": "My volunteer identity",
         "organization": "Organization",
         "resource": "Organization resource",
-        "organizationId": "Organization ID",
-        "resourceUri": "Resource AT URI",
+        "organizationId": "Organization",
+        "resourceUri": "Resource",
         "evidenceLabel": "Evidence label",
         "issuer": "Issuer (optional)",
         "privateFile": "Private evidence file",
@@ -1275,7 +1280,7 @@
         "visibility": "Visibility",
         "private": "Private",
         "public": "Public to authenticated members",
-        "linkedRequest": "Linked request AT URI (optional)",
+        "linkedRequest": "Linked request (optional)",
         "linkedRequestHelp": "Every member must already be authorized for a linked request.",
         "creating": "Creating group…",
         "created": "Group created.",
@@ -1296,7 +1301,7 @@
         "rooms": "Rooms",
         "linked": "Linked request",
         "inviteMember": "Invite member",
-        "memberDid": "Member DID",
+        "memberDid": "Person to invite",
         "memberRole": "Invitation role",
         "member": "Member",
         "moderator": "Moderator",
@@ -1312,7 +1317,7 @@
         "close": "Close group",
         "createRoom": "Create room",
         "roomName": "Room name",
-        "roomLinkedRequest": "Linked request AT URI (optional)",
+        "roomLinkedRequest": "Linked request (optional)",
         "addRoom": "Add room",
         "closeRoom": "Close room",
         "confirmClose": "Close this group and all of its rooms? This immediately ends chat access.",
@@ -1322,7 +1327,11 @@
         "error": "The group operation could not be completed safely.",
         "copyToken": "Copy invitation token",
         "tokenCopied": "Invitation token copied.",
-        "refresh": "Refresh groups"
+        "refresh": "Refresh groups",
+        "noLinkedRequest": "Not linked to a request",
+        "untitledRequest": "Untitled request",
+        "yourRequest": "your request",
+        "helpingWith": "you're helping"
     },
     "a11y": {
         "languageSwitcher": "Language",
@@ -1331,5 +1340,20 @@
         "navigationLandmark": "Primary navigation",
         "mainContent": "Main content",
         "filterResults": "Filter results updated"
+    },
+    "identity": {
+        "hint": "Their Bluesky handle, like alice.bsky.social.",
+        "checking": "Looking up account…",
+        "found": "Found {{account}}.",
+        "notFound": "No account found for that handle. Check the spelling.",
+        "unavailable": "Account lookup isn't available right now. Try again shortly."
+    },
+    "scopePicker": {
+        "loading": "Loading…",
+        "chooseOrganization": "Choose an organization",
+        "chooseResource": "Choose a resource",
+        "noAdminOrganizations": "You need to be an owner or admin of an organization to do this.",
+        "noStewardOrganizations": "You need to be a steward, admin or owner of an organization to do this.",
+        "noStewardedResources": "No resources with an active stewardship you can act on. An admin can assign one on the Organizations page."
     }
 }
