@@ -567,7 +567,7 @@ export const FeedRoute = ({
                 description={t('feed.description')}
                 meta={
                     dataOrigin !== 'api' ? (
-                        <Badge tone='info'>{dataOriginLabel(dataOrigin)}</Badge>
+                        <Badge tone='info'>{dataOriginLabel(dataOrigin, t)}</Badge>
                     ) : null
                 }
                 actions={

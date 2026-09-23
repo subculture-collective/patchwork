@@ -310,7 +310,7 @@ test('notification center persists state and requests push permission only after
         name: 'Enable browser push',
     }).click();
     await expect(
-        page.getByText('Browser push enabled by explicit opt-in.'),
+        page.getByText('Browser notifications are on.'),
     ).toBeVisible();
     await expect(revokePush).toBeEnabled();
     await expect.poll(() =>

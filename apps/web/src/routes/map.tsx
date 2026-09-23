@@ -254,7 +254,7 @@ export const MapRoute = ({
                 description={t('map.description')}
                 meta={
                     dataOrigin !== 'api' ? (
-                        <Badge tone='info'>{dataOriginLabel(dataOrigin)}</Badge>
+                        <Badge tone='info'>{dataOriginLabel(dataOrigin, t)}</Badge>
                     ) : null
                 }
             />

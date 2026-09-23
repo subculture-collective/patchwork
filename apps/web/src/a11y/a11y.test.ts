@@ -479,38 +479,7 @@ describe('component ARIA patterns', () => {
         });
     });
 
-    describe('FrontendShell accessibility', () => {
-        it('should have skip-to-content link as first focusable element', () => {
-            // Verified via component source: frontend-shell.tsx includes
-            // <a href="#main-content" className="...sr-only focus:not-sr-only...">
-            //   Skip to main content
-            // </a>
-            expect(true).toBe(true);
-        });
-
-        it('should use nav element with aria-label', () => {
-            // Verified via component source: frontend-shell.tsx includes
-            // <nav aria-label="Primary flows">
-            expect(true).toBe(true);
-        });
-
-        it('should use aria-current="page" for active nav link', () => {
-            // Verified via component source: frontend-shell.tsx uses
-            // aria-current={currentRoute === route ? 'page' : undefined}
-            expect(true).toBe(true);
-        });
-
-        it('should have main content target with tabIndex for skip-link', () => {
-            // Verified via component source: frontend-shell.tsx includes
-            // <div id="main-content" tabIndex={-1}>
-            expect(true).toBe(true);
-        });
-
-        it('should announce route changes for screen readers', () => {
-            // Verified via component source: navigate() calls ariaLive.routeChange()
-            expect(true).toBe(true);
-        });
-    });
+    // Shell landmarks and navigation are covered by app/AppShell.test.tsx.
 });
 
 // ─── keyboard navigation patterns ────────────────────────────────────
