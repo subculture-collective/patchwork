@@ -321,10 +321,7 @@
     color: var(--mh-on-accent);
 }
 
-.mh-chip[aria-pressed='true']::before {
-    content: '✓';
-    font-weight: 800;
-}
+
 
 .mh-segmented {
     display: inline-flex;

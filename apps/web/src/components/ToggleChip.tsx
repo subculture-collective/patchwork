@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, PropsWithChildren, ReactNode } from 'react';
+import { Icon } from './Icon';
 
 interface ToggleChipProps
     extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'aria-pressed'> {
@@ -19,6 +20,7 @@ export const ToggleChip = ({
         className={['mh-chip', className].filter(Boolean).join(' ')}
         {...props}
     >
+        {pressed ? <Icon name='check' size={16} /> : null}
         {children}
     </button>
 );

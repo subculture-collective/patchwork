@@ -320,6 +320,7 @@ export const AppShell = ({
                                 }
                             >
                                 {t('runtime.more')}
+                                <Icon name='chevronDown' size={16} />
                             </button>
                             <div
                                 id='secondary-navigation-links'

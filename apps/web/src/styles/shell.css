@@ -208,10 +208,13 @@
     position: relative;
 }
 
-.mh-more__toggle::after {
-    margin-left: 6px;
-    content: '▾';
-    font-size: 0.75em;
+.mh-more__toggle svg {
+    margin-left: 4px;
+    transition: transform var(--mh-transition-standard);
+}
+
+.mh-more__toggle[aria-expanded='true'] svg {
+    transform: rotate(180deg);
 }
 
 .mh-more__panel {
