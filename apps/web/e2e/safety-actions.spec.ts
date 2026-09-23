@@ -1,5 +1,14 @@
 import { expect, test } from '@playwright/test';
 
+// Discovery asks for the device location on first load. Grant a fixed,
+// already-approximate point so the feed loads the nearby area
+// deterministically, and keep mocked records inside it: real aid-post
+// projections always carry an approximate location.
+test.use({
+    geolocation: { latitude: 41.88, longitude: -87.63 },
+    permissions: ['geolocation'],
+});
+
 const subjectUri =
     'at://did:plc:subject/app.patchwork.aid.post/browser-safety-1';
 
@@ -59,6 +68,7 @@ test.beforeEach(async ({ page, baseURL }) => {
                             status: 'open',
                             category: 'food',
                             urgency: 'medium',
+                            approximateGeo: { latitude: 41.88, longitude: -87.63, precisionKm: 1 },
                             updatedAt: '2026-07-11T00:00:00.000Z',
                         },
                     ],
@@ -190,6 +200,7 @@ test('record owner closes with compare-and-swap then deletes the AT record', asy
                             status: 'open',
                             category: 'food',
                             urgency: 'medium',
+                            approximateGeo: { latitude: 41.88, longitude: -87.63, precisionKm: 1 },
                             updatedAt: '2026-07-11T00:00:00.000Z',
                         },
                     ],
@@ -308,6 +319,7 @@ test('owner can recover when private lifecycle transition outpaces public AT syn
                             status: 'open',
                             category: 'food',
                             urgency: 'medium',
+                            approximateGeo: { latitude: 41.88, longitude: -87.63, precisionKm: 1 },
                             updatedAt: '2026-07-11T00:00:00.000Z',
                         },
                     ],
