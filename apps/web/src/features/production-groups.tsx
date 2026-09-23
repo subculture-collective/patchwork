@@ -21,6 +21,8 @@ import {
 } from './api-client';
 import { LinkedRequestSelect } from './groups/LinkedRequestSelect';
 import { IdentityField } from './identity/IdentityField';
+import { AccountName, accountLabel } from './identity/AccountName';
+import { useHandles } from './identity/useHandles';
 
 interface GroupState {
     groups: ProductionGroup[];
@@ -46,6 +48,7 @@ export const ProductionGroups = () => {
     const [visibility, setVisibility] = useState<'private' | 'public'>('private');
     const [linkedRequestUri, setLinkedRequestUri] = useState('');
     const [linkable, setLinkable] = useState<LinkableRequest[]>();
+    const invitedByHandles = useHandles(data.invitations.map((invitation) => invitation.invitedByDid));
 
     useEffect(() => {
         const controller = new AbortController();
@@ -157,7 +160,7 @@ export const ProductionGroups = () => {
                     <ul className='space-y-2'>{data.invitations.map((invitation) =>
                         <li key={invitation.id} className='rounded-md border border-mh-border p-3'>
                             <strong>{invitation.groupName}</strong>
-                            <p className='text-sm text-mh-textMuted'>{t('groups.invitedBy', { did: invitation.invitedByDid, role: invitation.role, date: fmt.longDate(invitation.expiresAt) })}</p>
+                            <p className='text-sm text-mh-textMuted'>{t('groups.invitedBy', { did: accountLabel(invitation.invitedByDid, invitedByHandles), role: invitation.role, date: fmt.longDate(invitation.expiresAt) })}</p>
                         </li>)}</ul>}
             </section>
 
@@ -190,6 +193,7 @@ const GroupCard = ({ group, outgoing, busy, run, linkable }: {
     const [roomName, setRoomName] = useState('');
     const [roomRequest, setRoomRequest] = useState('');
     const canModerate = group.actorRole === 'owner' || group.actorRole === 'moderator';
+    const handles = useHandles([...group.members.map((member) => member.did), ...outgoing.flatMap((invitation) => invitation.inviteeDid ? [invitation.inviteeDid] : [])]);
 
     const invite = async (event: FormEvent) => {
         event.preventDefault();
@@ -227,7 +231,7 @@ const GroupCard = ({ group, outgoing, busy, run, linkable }: {
                 <h4 className='font-bold'>{t('groups.members')}</h4>
                 <ul className='space-y-2'>{group.members.map((member) =>
                     <li key={member.did} className='break-words rounded-md border border-mh-border p-2'>
-                        <span>{member.did} — {roleLabel(member.role)}</span>
+                        <span><AccountName did={member.did} handles={handles} /> — {roleLabel(member.role)}</span>
                         {group.actorRole === 'owner' && member.role !== 'owner' && <div className='mt-2 flex flex-wrap gap-2'>
                             <button type='button' className='mh-button mh-button--secondary mh-button--sm' disabled={busy} onClick={() => void run(() => changeGroupMemberRoleViaApi({ groupId: group.id, memberDid: member.did, role: member.role === 'moderator' ? 'member' : 'moderator' }))}>{member.role === 'moderator' ? t('groups.demote') : t('groups.promote')}</button>
                             <button type='button' className='mh-button mh-button--secondary mh-button--sm' disabled={busy} onClick={() => window.confirm(t('groups.confirmTransfer')) && void run(() => transferGroupOwnershipViaApi({ groupId: group.id, memberDid: member.did }))}>{t('groups.transfer')}</button>
@@ -251,7 +255,7 @@ const GroupCard = ({ group, outgoing, busy, run, linkable }: {
                     <LinkedRequestSelect label={t('groups.roomLinkedRequest')} value={roomRequest} onChange={setRoomRequest} requests={linkable} disabled={busy} />
                     <button className='mh-button mh-button--primary mh-button--md' disabled={busy}>{t('groups.addRoom')}</button>
                 </form>
-                {outgoing.length > 0 && <section><h4 className='font-bold'>{t('groups.outgoing')}</h4><ul>{outgoing.map((invitation) => <li key={invitation.id} className='break-words'>{invitation.inviteeDid}<button type='button' className='mh-button mh-button--secondary mh-button--sm' disabled={busy} onClick={() => void run(() => revokeGroupInvitationViaApi({ groupId: group.id, invitationId: invitation.id }))}>{t('groups.revoke')}</button></li>)}</ul></section>}
+                {outgoing.length > 0 && <section><h4 className='font-bold'>{t('groups.outgoing')}</h4><ul>{outgoing.map((invitation) => <li key={invitation.id} className='break-words'>{invitation.inviteeDid ? <AccountName did={invitation.inviteeDid} handles={handles} /> : null}<button type='button' className='mh-button mh-button--secondary mh-button--sm' disabled={busy} onClick={() => void run(() => revokeGroupInvitationViaApi({ groupId: group.id, invitationId: invitation.id }))}>{t('groups.revoke')}</button></li>)}</ul></section>}
             </>}
 
             <div className='flex flex-wrap gap-2'>

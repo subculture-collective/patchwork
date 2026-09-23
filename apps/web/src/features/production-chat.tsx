@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useLocale } from '../i18n';
+import { accountLabel } from './identity/AccountName';
+import { useHandles } from './identity/useHandles';
 import {
     createChatConversationViaApi,
     fetchChatConversationsViaApi,
@@ -50,17 +52,18 @@ export const ProductionChat = ({ currentUserDid }: { currentUserDid: string }) =
     const [status, setStatus] = useState('');
     const [online, setOnline] = useState(() => navigator.onLine);
 
+    const handles = useHandles(connections.map((connection) => connection.counterpartDid));
     const scopes = useMemo<ScopeOption[]>(() => [
         ...connections.filter((connection) => connection.status === 'active').map((connection) => ({
             key: `direct:${connection.id}`, kind: 'direct' as const, id: connection.id,
-            label: t('chat.directScope', { did: connection.counterpartDid }),
+            label: t('chat.directScope', { did: accountLabel(connection.counterpartDid, handles) }),
         })),
         ...groups.filter((group) => group.status === 'active').flatMap((group) =>
             group.rooms.filter((room) => room.status === 'active').map((room) => ({
                 key: `group:${room.id}`, kind: 'group' as const, id: room.id,
                 label: t('chat.groupScope', { group: group.name, room: room.name }),
             }))),
-    ], [connections, groups, t]);
+    ], [connections, groups, handles, t]);
 
     const loadWorkspace = useCallback(async (only?: WorkspaceResource) => {
         setBusy(true);

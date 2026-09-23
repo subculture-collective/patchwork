@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { AuthenticatedRequest } from './authenticated-request.js';
+import type { HandleLookup } from './identity-handle-cache.js';
 import {
     PublicHttpError,
     writeJsonResponse,
@@ -21,6 +22,8 @@ const handlePattern =
     /^(?=.{3,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]([a-z0-9-]{0,61}[a-z0-9])?$/;
 const didPattern = /^did:(plc|web):[a-z0-9._:%-]{1,2000}$/i;
 const RESOLVE_TIMEOUT_MS = 5000;
+/** Largest DID batch accepted by /identity/handles. */
+export const MAX_HANDLE_BATCH = 50;
 
 /** Accepts "@alice.bsky.social", "alice.bsky.social" or a did:plc / did:web. */
 export const normalizeIdentifier = (raw: string): string | undefined => {
@@ -34,10 +37,14 @@ export const isIdentityRoute = (
     request: IncomingMessage,
     requestUrl: URL,
 ): boolean =>
-    requestUrl.pathname === '/identity/resolve' && request.method === 'GET';
+    (requestUrl.pathname === '/identity/resolve' ||
+        requestUrl.pathname === '/identity/handles') &&
+    request.method === 'GET';
 
 interface Dependencies {
     resolve?: IdentityResolverFn;
+    /** Cached batch lookup for /identity/handles. */
+    lookupHandles?: HandleLookup;
     authenticate: (request: IncomingMessage) => Promise<AuthenticatedRequest>;
 }
 
@@ -58,6 +65,34 @@ export const createIdentityHandler =
             try {
                 response.setHeader('cache-control', 'no-store');
                 await dependencies.authenticate(request);
+                if (requestUrl.pathname === '/identity/handles') {
+                    if (!dependencies.lookupHandles) {
+                        throw new PublicHttpError(
+                            503,
+                            'IDENTITY_RESOLUTION_UNAVAILABLE',
+                            'Account lookup is temporarily unavailable.',
+                        );
+                    }
+                    const dids = (requestUrl.searchParams.get('dids') ?? '')
+                        .split(',')
+                        .map((did) => did.trim())
+                        .filter(Boolean);
+                    if (
+                        dids.length === 0 ||
+                        dids.length > MAX_HANDLE_BATCH ||
+                        dids.some((did) => !didPattern.test(did))
+                    ) {
+                        throw new PublicHttpError(
+                            400,
+                            'INVALID_DID_BATCH',
+                            `Send between 1 and ${MAX_HANDLE_BATCH} DIDs.`,
+                        );
+                    }
+                    writeJsonResponse(response, 200, {
+                        handles: await dependencies.lookupHandles(dids),
+                    });
+                    return;
+                }
                 if (!dependencies.resolve) {
                     throw new PublicHttpError(
                         503,

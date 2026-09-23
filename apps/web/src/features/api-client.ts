@@ -1281,6 +1281,28 @@ export const resolveIdentityViaApi = async (
         :   invalidResponseFailure('Identity response was malformed.');
 };
 
+/** Verified handles for up to 50 DIDs; unknown DIDs are omitted. */
+export const fetchHandlesViaApi = async (
+    dids: readonly string[],
+    signal?: AbortSignal,
+): Promise<ApiClientResult<Record<string, string>>> => {
+    const result = await requestJson(
+        '/identity/handles',
+        new URLSearchParams({ dids: dids.join(',') }),
+        signal,
+    );
+    if (!result.ok) return result;
+    const handles = isRecord(result.data) ? result.data['handles'] : undefined;
+    if (!isRecord(handles)) {
+        return invalidResponseFailure('Handle response was malformed.');
+    }
+    const parsed: Record<string, string> = {};
+    for (const [did, handle] of Object.entries(handles)) {
+        if (typeof handle === 'string') parsed[did] = handle;
+    }
+    return { ok: true, data: parsed };
+};
+
 export interface LinkableRequest {
     uri: string;
     title: string | null;

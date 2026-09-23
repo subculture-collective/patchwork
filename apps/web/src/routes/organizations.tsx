@@ -30,6 +30,8 @@ import {
     type ResolvedIdentity,
 } from '../features/api-client';
 import { IdentityField } from '../features/identity/IdentityField';
+import { AccountName, accountLabel } from '../features/identity/AccountName';
+import { useHandles } from '../features/identity/useHandles';
 import { useLocale } from '../i18n';
 import {
     formatLocalizedLabel,
@@ -127,6 +129,7 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
     }, [loadPrivate]);
 
     const selected = mine.find((item) => item.id === selectedId);
+    const handles = useHandles(members.map((member) => member.memberDid));
     const resourceNames = new Map(
         resources.map((resource) => [resource.uri, resource.name]),
     );
@@ -426,8 +429,15 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
                                                     className='flex flex-wrap items-center gap-2'
                                                 >
                                                     <span>
-                                                        {member.memberDid} ·{' '}
-                                                        {member.role}
+                                                        <AccountName
+                                                            did={member.memberDid}
+                                                            handles={handles}
+                                                        />{' '}
+                                                        ·{' '}
+                                                        {formatLocalizedLabel(
+                                                            t,
+                                                            member.role,
+                                                        )}
                                                     </span>
                                                     {canManageMember ? (
                                                         <>
@@ -435,7 +445,10 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
                                                                 {t(
                                                                     'organizations.roleFor',
                                                                     {
-                                                                        did: member.memberDid,
+                                                                        did: accountLabel(
+                                                                            member.memberDid,
+                                                                            handles,
+                                                                        ),
                                                                     },
                                                                 )}
                                                                 <select
@@ -672,7 +685,7 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
                                                                                   ),
                                                                               },
                                                                           )
-                                                                        : `${member.memberDid} · ${formatLocalizedLabel(t, member.role)}`}
+                                                                        : `${accountLabel(member.memberDid, handles)} · ${formatLocalizedLabel(t, member.role)}`}
                                                                 </option>
                                                             ))}
                                                     </select>

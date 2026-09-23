@@ -12,6 +12,8 @@ import {
     decideCoordinationWindowViaApi,
 } from '../features/api-client';
 import { useLocale } from '../i18n';
+import { accountLabel } from '../features/identity/AccountName';
+import { useHandles } from '../features/identity/useHandles';
 
 const localDateTimeWithOffset = (value: string): string => {
     const date = new Date(value);
@@ -26,6 +28,9 @@ export const CoordinationSchedulingRoute = ({ did }: { did: string }) => {
     const { t, fmt } = useLocale();
     const [connections, setConnections] = useState<CoordinationConnection[]>(
         [],
+    );
+    const handles = useHandles(
+        connections.map((connection) => connection.counterpartDid),
     );
     const [windows, setWindows] = useState<CoordinationWindow[]>([]);
     const [connectionId, setConnectionId] = useState('');
@@ -145,7 +150,10 @@ export const CoordinationSchedulingRoute = ({ did }: { did: string }) => {
                                         key={connection.id}
                                         value={connection.id}
                                     >
-                                        {connection.counterpartDid}
+                                        {accountLabel(
+                                            connection.counterpartDid,
+                                            handles,
+                                        )}
                                     </option>
                                 ))}
                             </select>
