@@ -24,6 +24,8 @@ import {
     submitOutcomeFeedbackViaApi,
 } from '../features/api-client';
 import { useLocale } from '../i18n';
+import { accountLabel } from '../features/identity/AccountName';
+import { useHandles } from '../features/identity/useHandles';
 import { ExactLocationExchange } from '../features/exact-location-exchange';
 import { type FeedRecordEnvelope } from '../features/discovery-runtime';
 import {
@@ -45,6 +47,10 @@ export const CoordinationInboxRoute = ({ did }: { did: string }) => {
     const [connections, setConnections] = useState<CoordinationConnection[]>(
         [],
     );
+    const handles = useHandles([
+        ...offers.flatMap((offer) => [offer.requesterDid, offer.helperDid]),
+        ...connections.map((connection) => connection.counterpartDid),
+    ].filter((did): did is string => Boolean(did)));
     const [items, setItems] = useState<ActivityInboxItem[]>([]);
     const [feedback, setFeedback] = useState<OutcomeFeedback[]>([]);
     const [requests, setRequests] = useState<FeedRecordEnvelope[]>([]);
@@ -292,11 +298,15 @@ export const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                 {offer.status === 'accepted' ? (
                                     <p className='mt-2 break-all text-xs'>
                                         {t('inbox.requester', {
-                                            did: offer.requesterDid,
+                                            did: offer.requesterDid
+                                                ? accountLabel(offer.requesterDid, handles)
+                                                : '',
                                         })}
                                         <br />
                                         {t('inbox.helper', {
-                                            did: offer.helperDid,
+                                            did: offer.helperDid
+                                                ? accountLabel(offer.helperDid, handles)
+                                                : '',
                                         })}
                                     </p>
                                 ) : (
@@ -527,7 +537,10 @@ export const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                 >
                                     <p className='break-all text-xs'>
                                         {t('inbox.connected', {
-                                            did: connection.counterpartDid,
+                                            did: accountLabel(
+                                                connection.counterpartDid,
+                                                handles,
+                                            ),
                                         })}
                                     </p>
                                     {connection.status === 'active' ? (

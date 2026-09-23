@@ -64,6 +64,7 @@ import {
     createIdentityHandler,
     isIdentityRoute,
 } from './http/identity-handler.js';
+import { createHandleCache } from './http/identity-handle-cache.js';
 import { OrganizationService } from './organization-service.js';
 import {
     createVerificationHandler,
@@ -569,7 +570,12 @@ const identityHandler =
         createIdentityHandler({
             authenticate: authenticateApiRequest,
             ...(atAuthRuntime ?
-                { resolve: atAuthRuntime.resolveIdentity }
+                {
+                    resolve: atAuthRuntime.resolveIdentity,
+                    lookupHandles: createHandleCache(
+                        atAuthRuntime.resolveIdentity,
+                    ),
+                }
             :   {}),
         })
     :   undefined;
@@ -1796,6 +1802,7 @@ const contractRoutes = [
     '/organizations/stewardships',
     '/organizations/resources',
     '/identity/resolve',
+    '/identity/handles',
     '/groups/linkable-requests',
     '/organizations/stewardships/reconfirm',
     '/organizations/audit',

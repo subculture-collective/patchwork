@@ -92,6 +92,15 @@ test('two accounts offer, accept, hand off, and record an outcome without fixtur
                     contentType: 'application/json',
                     body: JSON.stringify(body),
                 });
+            if (path === '/identity/handles') {
+                await fulfill({
+                    handles: {
+                        [requesterDid]: 'requester.example',
+                        [helperDid]: 'helper.example',
+                    },
+                });
+                return;
+            }
             if (path === '/auth/session') {
                 await fulfill({
                     session: {
@@ -379,7 +388,7 @@ test('two accounts offer, accept, hand off, and record an outcome without fixtur
         .filter({ hasText: 'Pending' });
     await pendingOffer.getByRole('button', { name: 'Accept' }).click();
     await expect(
-        requesterPage.getByText(`Connected with ${helperDid}`),
+        requesterPage.getByText('Connected with @helper.example'),
     ).toBeVisible();
 
     await requesterPage.getByRole('button', {
@@ -393,7 +402,7 @@ test('two accounts offer, accept, hand off, and record an outcome without fixtur
 
     await refreshWorkspace(helperPage);
     await expect(
-        helperPage.getByText(`Connected with ${requesterDid}`),
+        helperPage.getByText('Connected with @requester.example'),
     ).toBeVisible();
     await helperPage
         .getByRole('button', { name: 'Complete handoff' })

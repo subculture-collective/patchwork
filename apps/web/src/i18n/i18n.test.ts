@@ -112,6 +112,7 @@ const productionSourcePaths = (): string[] => {
         '../features/discovery/RequestCard.tsx',
         '../features/discovery/PostingAreaGate.tsx',
         '../features/identity/IdentityField.tsx',
+        '../features/identity/AccountName.tsx',
         '../features/organizations/StewardshipScopePicker.tsx',
         '../features/groups/LinkedRequestSelect.tsx',
         ...routeFiles,

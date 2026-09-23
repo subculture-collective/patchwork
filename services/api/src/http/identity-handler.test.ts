@@ -25,10 +25,12 @@ const servers: ReturnType<typeof createServer>[] = [];
 
 const start = async (options: {
     resolve?: IdentityResolverFn;
+    lookupHandles?: (dids: readonly string[]) => Promise<Record<string, string>>;
     authenticate?: () => Promise<typeof principal>;
 }) => {
     const handler = createIdentityHandler({
         ...(options.resolve ? { resolve: options.resolve } : {}),
+        ...(options.lookupHandles ? { lookupHandles: options.lookupHandles } : {}),
         authenticate: options.authenticate ?? (async () => principal),
     });
     const server = createServer((request, response) => {
@@ -110,5 +112,24 @@ describe('identity resolution boundary', () => {
         const origin = await start({});
         const response = await fetch(`${origin}/identity/resolve?q=alice.bsky.social`);
         expect(response.status).toBe(503);
+    });
+
+    it('returns handles for a DID batch and validates the batch', async () => {
+        const lookupHandles = vi.fn(async () => ({ 'did:plc:a': 'alice.example' }));
+        const origin = await start({ lookupHandles });
+        const ok = await fetch(`${origin}/identity/handles?dids=did:plc:a,did:plc:b`);
+        expect(ok.status).toBe(200);
+        expect(await ok.json()).toEqual({ handles: { 'did:plc:a': 'alice.example' } });
+        expect(lookupHandles).toHaveBeenCalledWith(['did:plc:a', 'did:plc:b']);
+
+        const tooMany = Array.from({ length: 51 }, (_, index) => `did:plc:x${index}`).join(',');
+        expect((await fetch(`${origin}/identity/handles?dids=${tooMany}`)).status).toBe(400);
+        expect((await fetch(`${origin}/identity/handles?dids=did:key:nope`)).status).toBe(400);
+        expect((await fetch(`${origin}/identity/handles`)).status).toBe(400);
+    });
+
+    it('returns 503 for handle batches without a resolver', async () => {
+        const origin = await start({});
+        expect((await fetch(`${origin}/identity/handles?dids=did:plc:a`)).status).toBe(503);
     });
 });
