@@ -1,5 +1,14 @@
 import { expect, test } from '@playwright/test';
 
+// Discovery asks for the device location on first load. Grant a fixed,
+// already-approximate point so the feed loads the nearby area
+// deterministically, and keep mocked records inside it: real aid-post
+// projections always carry an approximate location.
+test.use({
+    geolocation: { latitude: 41.88, longitude: -87.63 },
+    permissions: ['geolocation'],
+});
+
 test('feed pagination announces appended records, preserves focus, and restores page one', async ({
     page,
 }) => {
@@ -48,6 +57,7 @@ test('feed pagination announces appended records, preserves focus, and restores 
                     category: 'food',
                     status: 'open',
                     urgency: 'medium',
+                    approximateGeo: { latitude: 41.88, longitude: -87.63, precisionKm: 1 },
                     createdAt: '2026-08-08T00:00:00.000Z',
                     updatedAt: '2026-08-08T00:00:00.000Z',
                     recordOrigin: 'sourced-public',
