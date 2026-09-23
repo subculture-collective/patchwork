@@ -754,6 +754,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         if (requiresAuthentication && !auth.session) {
             return (
                 <EmptyState
+                    region
                     title={t('runtime.signInRequired')}
                     actions={
                         <ButtonLink
