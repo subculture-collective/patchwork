@@ -8,6 +8,7 @@ import { readJsonBody } from './json-body.js';
 
 const routes = new Map<string, readonly string[]>([
     ['/groups', ['GET', 'POST']],
+    ['/groups/linkable-requests', ['GET']],
     ['/groups/invitations', ['POST']],
     ['/groups/invitation-responses', ['POST']],
     ['/groups/invitation-revocations', ['POST']],
@@ -45,7 +46,9 @@ export const createGroupHandler = (dependencies: Dependencies) =>
                 response.setHeader('cache-control', 'no-store');
                 const actorDid = (await dependencies.authenticate(request)).principal.did;
                 if (request.method === 'GET') {
-                    writeJsonResponse(response, 200, await dependencies.service.list(actorDid));
+                    writeJsonResponse(response, 200, url.pathname === '/groups/linkable-requests'
+                        ? await dependencies.service.listLinkableRequests(actorDid)
+                        : await dependencies.service.list(actorDid));
                     return;
                 }
                 const body = await readJsonBody(request);

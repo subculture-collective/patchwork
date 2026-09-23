@@ -58,6 +58,51 @@ test('authenticated verification, appeal, renewal, and exact-address approval re
             });
             return;
         }
+        if (pathname === '/organizations/mine') {
+            await fulfill({
+                organizations: [
+                    {
+                        id: organizationId,
+                        slug: 'northside',
+                        name: 'Northside Mutual Aid',
+                        description: '',
+                        origin: 'visitor-created',
+                        provenance: null,
+                        nonEndorsementLabel: 'Patchwork does not endorse listings.',
+                        createdAt: '2026-07-28T12:00:00.000Z',
+                        updatedAt: '2026-07-28T12:00:00.000Z',
+                        membership: {
+                            organizationId,
+                            memberDid: reviewerDid,
+                            role: 'steward',
+                            status: 'active',
+                            invitedByDid: reviewerDid,
+                            joinedAt: '2026-07-28T12:00:00.000Z',
+                            updatedAt: '2026-07-28T12:00:00.000Z',
+                        },
+                    },
+                ],
+            });
+            return;
+        }
+        if (pathname === '/organizations/resources') {
+            await fulfill({
+                resources: [
+                    {
+                        uri: resourceUri,
+                        name: 'Public Pantry',
+                        category: 'food-bank',
+                        authorDid: reviewerDid,
+                        stewardship: {
+                            id: 'e7b8b206-c3c3-4ae7-8f29-6877b5a93531',
+                            stewardDid: reviewerDid,
+                            status: 'active',
+                        },
+                    },
+                ],
+            });
+            return;
+        }
         if (pathname === '/verification/mine') {
             await fulfill({
                 applications,
@@ -382,8 +427,12 @@ test('authenticated verification, appeal, renewal, and exact-address approval re
     const exactPanel = page.getByRole('region', {
         name: 'Request an exact public-resource address',
     });
-    await exactPanel.getByLabel('Organization ID').fill(organizationId);
-    await exactPanel.getByLabel('Resource AT URI').fill(resourceUri);
+    await exactPanel
+        .getByLabel('Organization', { exact: true })
+        .selectOption(organizationId);
+    await exactPanel
+        .getByLabel('Resource', { exact: true })
+        .selectOption(resourceUri);
     await exactPanel.getByLabel('Street address').fill('123 Public Pantry Way');
     await exactPanel.getByLabel('Latitude').fill('41.921');
     await exactPanel.getByLabel('Longitude').fill('-87.681');

@@ -862,13 +862,13 @@
         "member": "Miembro",
         "remove": "Eliminar",
         "invite": "Invitar a un miembro",
-        "invitee": "DID AT de la persona invitada",
+        "invitee": "Persona a invitar",
         "organizationRole": "Rol en la organización",
         "createInvitation": "Crear invitación",
         "oneTimeToken": "Token de invitación de un solo uso",
         "assign": "Asignar gestión de recurso",
-        "resourceUri": "URI AT del recurso público",
-        "stewardDid": "DID AT del gestor",
+        "resourceUri": "Recurso",
+        "stewardDid": "Responsable",
         "assignAction": "Asignar gestión",
         "stewarded": "Recursos gestionados",
         "due": "vence {{date}}",
@@ -893,7 +893,12 @@
         "updatingRole": "Actualizando rol del miembro…",
         "roleUpdated": "Rol del miembro de la organización actualizado.",
         "removingMember": "Eliminando miembro de la organización…",
-        "memberRemoved": "Miembro de la organización eliminado."
+        "memberRemoved": "Miembro de la organización eliminado.",
+        "chooseResource": "Elige un recurso",
+        "chooseSteward": "Elige un responsable",
+        "noResources": "Todavía no hay fichas del directorio creadas por miembros de esta organización.",
+        "alreadyStewarded": "con responsable",
+        "you": "Tú · {{role}}"
     },
     "auth": {
         "tagline": "Ayuda mutua, cuadra por cuadra",
@@ -1193,8 +1198,8 @@
         "volunteer": "Mi identidad de voluntariado",
         "organization": "Organización",
         "resource": "Recurso de organización",
-        "organizationId": "ID de organización",
-        "resourceUri": "URI AT del recurso",
+        "organizationId": "Organización",
+        "resourceUri": "Recurso",
         "evidenceLabel": "Etiqueta de evidencia",
         "issuer": "Emisor (opcional)",
         "privateFile": "Archivo de evidencia privado",
@@ -1275,7 +1280,7 @@
         "visibility": "Visibilidad",
         "private": "Privado",
         "public": "Público para miembros autenticados",
-        "linkedRequest": "URI AT de solicitud vinculada (opcional)",
+        "linkedRequest": "Solicitud vinculada (opcional)",
         "linkedRequestHelp": "Cada miembro ya debe tener autorización para una solicitud vinculada.",
         "creating": "Creando grupo…",
         "created": "Grupo creado.",
@@ -1296,7 +1301,7 @@
         "rooms": "Salas",
         "linked": "Solicitud vinculada",
         "inviteMember": "Invitar miembro",
-        "memberDid": "DID del miembro",
+        "memberDid": "Persona a invitar",
         "memberRole": "Rol de invitación",
         "member": "Miembro",
         "moderator": "Moderador",
@@ -1312,7 +1317,7 @@
         "close": "Cerrar grupo",
         "createRoom": "Crear sala",
         "roomName": "Nombre de la sala",
-        "roomLinkedRequest": "URI AT de solicitud vinculada (opcional)",
+        "roomLinkedRequest": "Solicitud vinculada (opcional)",
         "addRoom": "Añadir sala",
         "closeRoom": "Cerrar sala",
         "confirmClose": "¿Cerrar este grupo y todas sus salas? Esto termina inmediatamente el acceso al chat.",
@@ -1322,7 +1327,11 @@
         "error": "No se pudo completar la operación del grupo de forma segura.",
         "copyToken": "Copiar token de invitación",
         "tokenCopied": "Token de invitación copiado.",
-        "refresh": "Actualizar grupos"
+        "refresh": "Actualizar grupos",
+        "noLinkedRequest": "Sin vincular a una solicitud",
+        "untitledRequest": "Solicitud sin título",
+        "yourRequest": "tu solicitud",
+        "helpingWith": "estás ayudando"
     },
     "a11y": {
         "languageSwitcher": "Idioma",
@@ -1331,5 +1340,20 @@
         "navigationLandmark": "Navegación principal",
         "mainContent": "Contenido principal",
         "filterResults": "Resultados de filtro actualizados"
+    },
+    "identity": {
+        "hint": "Su identificador de Bluesky, como alicia.bsky.social.",
+        "checking": "Buscando la cuenta…",
+        "found": "Cuenta encontrada: {{account}}.",
+        "notFound": "No se encontró ninguna cuenta con ese identificador. Revisa la ortografía.",
+        "unavailable": "La búsqueda de cuentas no está disponible ahora. Inténtalo de nuevo en un momento."
+    },
+    "scopePicker": {
+        "loading": "Cargando…",
+        "chooseOrganization": "Elige una organización",
+        "chooseResource": "Elige un recurso",
+        "noAdminOrganizations": "Necesitas ser propietario o administrador de una organización para hacer esto.",
+        "noStewardOrganizations": "Necesitas ser responsable, administrador o propietario de una organización para hacer esto.",
+        "noStewardedResources": "No hay recursos con una responsabilidad activa sobre los que puedas actuar. Un administrador puede asignar uno en la página Organizaciones."
     }
 }

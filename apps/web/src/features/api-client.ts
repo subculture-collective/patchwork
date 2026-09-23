@@ -1215,6 +1215,97 @@ export const acceptOrganizationInvitationViaApi = async (
         :   result;
 };
 
+export interface OrganizationResource {
+    uri: string;
+    name: string;
+    category: string;
+    authorDid: string;
+    stewardship: {
+        id: string;
+        stewardDid: string;
+        status: OrganizationStewardship['status'];
+    } | null;
+}
+
+/** Directory resources authored by an organization's active members. */
+export const fetchOrganizationResourcesViaApi = async (
+    organizationId: string,
+    signal?: AbortSignal,
+): Promise<ApiClientResult<OrganizationResource[]>> => {
+    const result = await requestJson(
+        '/organizations/resources',
+        new URLSearchParams({ organizationId }),
+        signal,
+    );
+    return result.ok ?
+            parseArrayProperty<OrganizationResource>(
+                result.data,
+                'resources',
+                'Organization resource response was malformed.',
+            )
+        :   result;
+};
+
+export interface ResolvedIdentity {
+    did: string;
+    handle?: string;
+}
+
+/** Resolve "@alice.bsky.social" (or a DID) to a DID for invitations. */
+export const resolveIdentityViaApi = async (
+    identifier: string,
+    signal?: AbortSignal,
+): Promise<ApiClientResult<ResolvedIdentity>> => {
+    const result = await requestJson(
+        '/identity/resolve',
+        new URLSearchParams({ q: identifier }),
+        signal,
+    );
+    if (!result.ok) return result;
+    const identity = isRecord(result.data) ? result.data['identity'] : undefined;
+    return (
+            isRecord(identity) &&
+                typeof identity['did'] === 'string' &&
+                (identity['handle'] === undefined ||
+                    typeof identity['handle'] === 'string')
+        ) ?
+            {
+                ok: true,
+                data: {
+                    did: identity['did'],
+                    ...(typeof identity['handle'] === 'string' ?
+                        { handle: identity['handle'] }
+                    :   {}),
+                },
+            }
+        :   invalidResponseFailure('Identity response was malformed.');
+};
+
+export interface LinkableRequest {
+    uri: string;
+    title: string | null;
+    status: string;
+    role: 'requester' | 'helper';
+}
+
+/** Requests the signed-in user may link to a group or room. */
+export const fetchLinkableRequestsViaApi = async (
+    signal?: AbortSignal,
+): Promise<ApiClientResult<LinkableRequest[]>> => {
+    const result = await requestJson(
+        '/groups/linkable-requests',
+        new URLSearchParams(),
+        signal,
+    );
+    return result.ok ?
+            parseArrayProperty<LinkableRequest>(
+                result.data,
+                'requests',
+                'Linkable request response was malformed.',
+            )
+        :   result;
+};
+
 export const fetchOrganizationMembersViaApi = async (
     organizationId: string,
     signal?: AbortSignal,
