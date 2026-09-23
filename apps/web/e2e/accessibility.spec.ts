@@ -129,7 +129,7 @@ test.describe('Keyboard navigation', () => {
 
         // Try to open a triage drawer if request markers are present
         const openDrawerButton = page.locator(
-            'button:has-text("Open triage drawer")',
+            'button:has-text("View details")',
         );
         const drawerButtonCount = await openDrawerButton.count();
 
@@ -137,7 +137,7 @@ test.describe('Keyboard navigation', () => {
             await openDrawerButton.first().click();
 
             // Verify drawer opened
-            const drawerPanel = page.locator('text=Map detail drawer');
+            const drawerPanel = page.getByRole('heading', { name: 'Request details' });
             await expect(drawerPanel).toBeVisible();
 
             // Press Escape to close

@@ -109,7 +109,7 @@ export interface FeedAidCard {
 
 export interface FeedBadge {
     label: string;
-    tone: 'neutral' | 'info' | 'success' | 'danger';
+    tone: 'default' | 'neutral' | 'info' | 'success' | 'danger';
 }
 
 /**
@@ -224,7 +224,7 @@ const toUrgencyBadge = (urgency: FeedAidCard['urgency']): FeedBadge => {
 
 const toStatusBadge = (status: AidStatus): FeedBadge => {
     if (status === 'open') {
-        return { label: 'Open', tone: 'danger' };
+        return { label: 'Open', tone: 'default' };
     }
     if (status === 'in-progress') {
         return { label: 'In progress', tone: 'info' };
@@ -236,7 +236,7 @@ const toStatusBadge = (status: AidStatus): FeedBadge => {
 };
 
 const LIFECYCLE_BADGE_MAP: Record<LifecycleStatus, FeedBadge> = {
-    open: { label: 'Open', tone: 'danger' },
+    open: { label: 'Open', tone: 'default' },
     triaged: { label: 'Triaged', tone: 'info' },
     assigned: { label: 'Assigned', tone: 'info' },
     in_progress: { label: 'In Progress', tone: 'info' },

@@ -23,10 +23,15 @@ import {
 } from '../directory-resource-form';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
-import { ToggleChip } from '../components/ToggleChip';
+import { ChipGroup, ToggleChip } from '../components/ToggleChip';
 import { Card } from '../components/Card';
 import { Input } from '../components/Input';
-import { Panel } from '../components/Panel';
+import { Banner } from '../components/Banner';
+import { EmptyState } from '../components/EmptyState';
+import { Icon } from '../components/Icon';
+import { PageHeader } from '../components/PageHeader';
+import { Sheet } from '../components/Sheet';
+import { DiscoveryToolbar } from '../features/discovery/DiscoveryToolbar';
 import {
     type ApiDataOrigin,
     type AtDirectoryResourceResult,
@@ -44,7 +49,6 @@ import {
     nowIso,
 } from '../app/runtime';
 import {
-    DiscoveryFiltersPanel,
     formatLocalizedLabel,
     usePaginationFocus,
 } from '../features/shell-shared';
@@ -730,278 +734,324 @@ export const ResourceRoute = ({
         ? openResourceDetailPanel(viewModel.cards, selectedUri)
         : closeResourceDetailPanel();
 
+    const countLabel =
+        total > resourceCards.length
+            ? t('discovery.showingCount', { loaded: resourceCards.length, total })
+            : t('discovery.resultCount', { count: viewModel.cards.length });
+    const isOwnListing = (card: ResourceDirectoryCard) =>
+        Boolean(currentUserDid) &&
+        (card.authorDid === currentUserDid ||
+            card.uri.startsWith(`at://${currentUserDid}/`));
+
     return (
-        <section className='space-y-6'>
-            <header className='mh-route-header'>
-                <h1 className='mh-route-title'>{t('resources.heading')}</h1>
-                <p className='mt-2 text-sm text-mh-textMuted'>
-                    {t('resources.description')}
-                </p>
-                <div className='mt-3 flex flex-wrap gap-2'>
-                    <Badge tone={dataOrigin === 'api' ? 'success' : 'info'}>
-                        {dataOriginLabel(dataOrigin)}
-                    </Badge>
-                </div>
-                {errorMessage ? (
-                    <div
-                        role='alert'
-                        className='mh-alert mt-3 text-xs font-bold'
-                    >
-                        <p>
-                            {t('map.apiSyncIssue', { message: errorMessage })}
-                        </p>
-                        {resourceCards.length > 0 ? (
-                            <p>{t('resources.staleResults')}</p>
-                        ) : null}
-                        <Button
-                            size='sm'
-                            type='button'
-                            variant='neutral'
-                            className='mt-2'
-                            onClick={onRetry}
-                        >
+        <section>
+            <PageHeader
+                title={t('resources.heading')}
+                description={t('resources.description')}
+                meta={
+                    dataOrigin !== 'api' ? (
+                        <Badge tone='info'>{dataOriginLabel(dataOrigin)}</Badge>
+                    ) : null
+                }
+            />
+
+            {errorMessage ? (
+                <Banner
+                    className='mb-6'
+                    tone='danger'
+                    title={t('map.apiSyncIssue', { message: errorMessage })}
+                    actions={
+                        <Button size='sm' variant='secondary' onClick={onRetry}>
                             {t('resources.retryDirectory')}
                         </Button>
-                    </div>
-                ) : null}
-            </header>
+                    }
+                >
+                    {resourceCards.length > 0 ? (
+                        <p>{t('resources.staleResults')}</p>
+                    ) : null}
+                </Banner>
+            ) : null}
 
-            {discoveryState.center ? (
-                <DirectoryResourceManager
-                    currentUserDid={currentUserDid}
-                    center={discoveryState.center}
-                    onChanged={onRetry}
-                    editUri={manageUri}
-                    onEditHandled={() => setManageUri(undefined)}
-                />
-            ) : (
-                <div className='mh-alert p-4' role='status'>
-                    {t('discovery.demoAreaHelp')}
-                </div>
-            )}
-
-            <DiscoveryFiltersPanel
+            <DiscoveryToolbar
                 idPrefix='resources'
                 state={discoveryState}
                 onPatch={onPatchDiscovery}
+                mode='places'
             />
 
-            <p ref={paginationFocus.loadedCountRef} tabIndex={-1} className='text-sm text-mh-textMuted' role='status'>
-                {t('discovery.loadedCount', { loaded: resourceCards.length, total })}
-            </p>
-            <span className='sr-only' role='status' aria-live='polite'>{paginationFocus.announcement}</span>
-            {hasNextPage ? (
-                <Button ref={paginationFocus.loadMoreRef} type='button' variant='neutral' onClick={() => paginationFocus.loadMore(onLoadMore)} disabled={isLoading}>
-                    {t('discovery.loadMore')}
-                </Button>
-            ) : null}
-
-            <Card title={String(t('resources.directoryFiltersTitle'))}>
-                <div className='flex flex-wrap gap-2'>
+            <ChipGroup
+                legend={t('resources.directoryFiltersTitle')}
+                hideLegend
+                className='mb-5 -mt-2'
+            >
+                <ToggleChip
+                    pressed={!activeCategory}
+                    onClick={() => setActiveCategory(undefined)}
+                >
+                    {t('resources.allCategories')}
+                </ToggleChip>
+                {resourceCategoryOptions.map((category) => (
                     <ToggleChip
-                        pressed={!activeCategory}
-                        onClick={() => setActiveCategory(undefined)}
+                        key={category}
+                        pressed={activeCategory === category}
+                        onClick={() =>
+                            setActiveCategory((current) =>
+                                current === category ? undefined : category,
+                            )
+                        }
                     >
-                        {t('resources.allCategories')}
+                        {formatLocalizedLabel(t, category)}
                     </ToggleChip>
-                    {resourceCategoryOptions.map((category) => (
-                        <ToggleChip
-                            key={category}
-                            pressed={activeCategory === category}
-                            onClick={() =>
-                                setActiveCategory((current) =>
-                                    current === category ? undefined : category,
-                                )
-                            }
-                        >
-                            {formatLocalizedLabel(t, category)}
-                        </ToggleChip>
-                    ))}
-                </div>
-            </Card>
+                ))}
+            </ChipGroup>
 
-            <Card title={String(t('resources.overlayCardsTitle'))}>
-                <p className='mb-3 text-sm text-mh-textMuted'>
-                    {uiState.message}
-                </p>
+            <section aria-labelledby='resources-results-heading'>
+                <div className='mh-results-header'>
+                    <h2
+                        id='resources-results-heading'
+                        className='mh-surface__title'
+                    >
+                        {t('resources.overlayCardsTitle')}
+                    </h2>
+                    <p
+                        ref={paginationFocus.loadedCountRef}
+                        tabIndex={-1}
+                        className='mh-results-count'
+                        role='status'
+                    >
+                        {countLabel}
+                    </p>
+                </div>
+                <span className='sr-only' role='status' aria-live='polite'>
+                    {paginationFocus.announcement}
+                </span>
                 <div aria-live='polite' className='sr-only'>
                     {uiState.ariaLiveMessage}
                 </div>
 
-                {isLoading ? (
-                    <ul className='space-y-3' aria-live='polite'>
-                        {Array.from({ length: 3 }).map((_, index) => (
+                {isLoading && viewModel.cards.length === 0 ? (
+                    <ul className='mh-request-list mh-request-list--grid' aria-hidden='true'>
+                        {Array.from({ length: 4 }).map((_, index) => (
                             <li
                                 key={`resource-skeleton-${index}`}
-                                className='mh-record-card'
+                                className='mh-request-card'
                             >
-                                <div className='mh-skeleton h-4 w-1/2' />
-                                <div className='mh-skeleton mt-2 h-3 w-2/3' />
-                                <div className='mh-skeleton mt-2 h-3 w-full' />
-                                <div className='mt-3 flex gap-2'>
-                                    <div className='mh-skeleton h-8 w-28' />
-                                    <div className='mh-skeleton h-8 w-24' />
-                                </div>
+                                <div className='mh-skeleton h-3 w-1/4' />
+                                <div className='mh-skeleton h-6 w-1/2' />
+                                <div className='mh-skeleton h-3 w-full' />
                             </li>
                         ))}
                     </ul>
                 ) : viewModel.cards.length === 0 ? (
-                    <div className='space-y-3'>
-                        <p className='text-xs text-mh-textSoft'>
-                            {t('resources.tryBroadening')}
-                        </p>
-                        <Button
-                            variant='neutral'
-                            size='sm'
-                            onClick={() => setActiveCategory(undefined)}
-                        >
-                            {t('resources.clearDirectoryCategory')}
-                        </Button>
-                    </div>
+                    <EmptyState
+                        title={t('resources.noResultsTitle')}
+                        actions={
+                            activeCategory ? (
+                                <Button
+                                    variant='secondary'
+                                    onClick={() => setActiveCategory(undefined)}
+                                >
+                                    {t('resources.clearDirectoryCategory')}
+                                </Button>
+                            ) : null
+                        }
+                    >
+                        <p>{uiState.message}</p>
+                        <p>{t('resources.tryBroadening')}</p>
+                    </EmptyState>
                 ) : (
-                    <ul className='space-y-3'>
+                    <ul className='mh-request-list mh-request-list--grid'>
                         {viewModel.cards.map((card) => (
-                            <li key={card.uri} className='mh-record-card'>
-                                <div className='flex flex-wrap items-start justify-between gap-2'>
-                                    <p className='text-sm font-bold text-mh-text'>
+                            <li key={card.uri}>
+                                <article className='mh-place-card'>
+                                    <div className='mh-request-card__meta'>
+                                        <span className='mh-eyebrow'>
+                                            {formatLocalizedLabel(
+                                                t,
+                                                card.category,
+                                            )}
+                                        </span>
+                                        {card.recordOrigin === 'synthetic' ? (
+                                            <Badge tone='info'>
+                                                {t('resources.synthetic')}
+                                            </Badge>
+                                        ) : card.recordOrigin ===
+                                          'sourced-public' ? (
+                                            <Badge tone='info'>
+                                                {t('resources.publicSource')}
+                                            </Badge>
+                                        ) : null}
+                                    </div>
+                                    <h3 className='mh-request-card__title'>
                                         {card.name}
+                                    </h3>
+                                    <dl className='mh-place-card__facts'>
+                                        <div>
+                                            <dt className='sr-only'>
+                                                {t('resources.areaLabel')}
+                                            </dt>
+                                            <dd>
+                                                <Icon name='pin' size={16} />
+                                                {card.location.areaLabel ??
+                                                    t('resources.areaPending')}
+                                            </dd>
+                                        </div>
+                                        <div>
+                                            <dt className='sr-only'>
+                                                {t('resources.hoursLabel')}
+                                            </dt>
+                                            <dd>
+                                                {card.openHours ??
+                                                    t(
+                                                        'resources.hoursUnavailable',
+                                                    )}
+                                            </dd>
+                                        </div>
+                                    </dl>
+                                    <p className='mh-request-card__description'>
+                                        {card.eligibilityNotes ??
+                                            t(
+                                                'resources.eligibilityUnavailable',
+                                            )}
                                     </p>
-                                    <Badge tone='info'>
-                                        {formatLocalizedLabel(t, card.category)}
-                                    </Badge>
-                                    {card.recordOrigin === 'synthetic' ? (
-                                        <Badge tone='info'>
-                                            {t('resources.synthetic')}
-                                        </Badge>
-                                    ) : card.recordOrigin ===
-                                      'sourced-public' ? (
-                                        <Badge tone='info'>
-                                            {t('resources.publicSource')}
-                                        </Badge>
-                                    ) : null}
-                                </div>
-                                <p className='mt-1 text-xs text-mh-textSoft'>
-                                    {card.location.areaLabel ??
-                                        t('resources.areaPending')}{' '}
-                                    ·{' '}
-                                    {card.openHours ??
-                                        t('resources.hoursUnavailable')}
-                                </p>
-                                <p className='mt-2 text-sm text-mh-textMuted'>
-                                    {card.eligibilityNotes ??
-                                        t('resources.eligibilityUnavailable')}
-                                </p>
-                                <div className='mt-3 flex flex-wrap gap-2'>
-                                    <Button
-                                        variant='neutral'
-                                        size='sm'
-                                        aria-label={t(
-                                            'resources.openDetailsFor',
-                                            { name: card.name },
-                                        )}
-                                        onClick={() => setSelectedUri(card.uri)}
-                                    >
-                                        {t('resources.openDetails')}
-                                    </Button>
-                                    <Button
-                                        variant='accent'
-                                        size='sm'
-                                        aria-label={t(
-                                            'resources.startIntakeFor',
-                                            { name: card.name },
-                                        )}
-                                        onClick={() => onNavigate('/posting')}
-                                    >
-                                        {t('resources.startIntake')}
-                                    </Button>
-                                    {currentUserDid &&
-                                    (card.authorDid === currentUserDid ||
-                                        card.uri.startsWith(
-                                            `at://${currentUserDid}/`,
-                                        )) ? (
+                                    <div className='mh-request-card__actions'>
                                         <Button
-                                            variant='neutral'
+                                            variant='secondary'
                                             size='sm'
                                             aria-label={t(
-                                                'resources.manageListingFor',
+                                                'resources.openDetailsFor',
                                                 { name: card.name },
                                             )}
                                             onClick={() =>
-                                                setManageUri(card.uri)
+                                                setSelectedUri(card.uri)
                                             }
                                         >
-                                            {t('resources.manageListing')}
+                                            {t('resources.openDetails')}
                                         </Button>
-                                    ) : null}
-                                </div>
+                                        <Button
+                                            variant='accent'
+                                            size='sm'
+                                            aria-label={t(
+                                                'resources.startIntakeFor',
+                                                { name: card.name },
+                                            )}
+                                            onClick={() =>
+                                                onNavigate('/posting')
+                                            }
+                                        >
+                                            {t('resources.startIntake')}
+                                        </Button>
+                                        {isOwnListing(card) ? (
+                                            <Button
+                                                variant='ghost'
+                                                size='sm'
+                                                aria-label={t(
+                                                    'resources.manageListingFor',
+                                                    { name: card.name },
+                                                )}
+                                                onClick={() =>
+                                                    setManageUri(card.uri)
+                                                }
+                                            >
+                                                {t('resources.manageListing')}
+                                            </Button>
+                                        ) : null}
+                                    </div>
+                                </article>
                             </li>
                         ))}
                     </ul>
                 )}
-            </Card>
-
-            {detailPanel.open ? (
-                <Panel title={String(t('resources.resourceDetailTitle'))}>
-                    <p className='text-lg font-bold text-mh-text'>
-                        {detailPanel.title}
-                    </p>
-                    <p className='mt-1 text-sm text-mh-textMuted'>
-                        {detailPanel.categoryLabel} · {detailPanel.openHours}
-                    </p>
-                    <p className='mt-2 text-sm text-mh-textSoft'>
-                        {detailPanel.eligibilityNotes}
-                    </p>
-                    {detailPanel.exactPublicAddress ? (
-                        <div className='mh-alert mt-3 text-sm'>
-                            <p className='font-bold'>
-                                {t('resources.approvedAddress')}
-                            </p>
-                            <p>{detailPanel.exactPublicAddress}</p>
-                            <p className='mt-1 text-xs text-mh-textSoft'>
-                                {t('resources.approvalExpires', {
-                                    date: fmt.longDate(
-                                        detailPanel.exactAddressApprovalExpiresAt ??
-                                            '',
-                                    ),
-                                })}
-                            </p>
-                        </div>
-                    ) : null}
-                    <div className='mt-4 flex flex-wrap gap-2'>
-                        {detailPanel.actions.map((action) => (
-                            <Button
-                                key={action.id}
-                                variant={
-                                    action.id === 'request_intake'
-                                        ? 'primary'
-                                        : 'neutral'
-                                }
-                                size='sm'
-                                onClick={() => {
-                                    if (action.id === 'request_intake') {
-                                        onNavigate('/posting');
-                                        return;
-                                    }
-
-                                    if (action.id === 'open_map') {
-                                        onNavigate('/map');
-                                        return;
-                                    }
-                                }}
-                            >
-                                {action.label}
-                            </Button>
-                        ))}
+                {hasNextPage ? (
+                    <div className='mt-6 flex justify-center'>
                         <Button
-                            variant='neutral'
-                            size='sm'
-                            onClick={() => setSelectedUri(undefined)}
+                            ref={paginationFocus.loadMoreRef}
+                            variant='secondary'
+                            onClick={() => paginationFocus.loadMore(onLoadMore)}
+                            disabled={isLoading}
                         >
-                            {t('resources.close')}
+                            {t('discovery.loadMore')}
                         </Button>
                     </div>
-                </Panel>
-            ) : null}
+                ) : null}
+            </section>
+
+            <div className='mt-10'>
+                {discoveryState.center ? (
+                    <DirectoryResourceManager
+                        currentUserDid={currentUserDid}
+                        center={discoveryState.center}
+                        onChanged={onRetry}
+                        editUri={manageUri}
+                        onEditHandled={() => setManageUri(undefined)}
+                    />
+                ) : null}
+            </div>
+
+            <Sheet
+                open={detailPanel.open}
+                onClose={() => setSelectedUri(undefined)}
+                title={t('resources.resourceDetailTitle')}
+                closeLabel={t('resources.close')}
+                footer={
+                    detailPanel.open ? (
+                        <>
+                            {detailPanel.actions.map((action) => (
+                                <Button
+                                    key={action.id}
+                                    variant={
+                                        action.id === 'request_intake'
+                                            ? 'accent'
+                                            : 'secondary'
+                                    }
+                                    size='sm'
+                                    onClick={() => {
+                                        if (action.id === 'request_intake') {
+                                            onNavigate('/posting');
+                                            return;
+                                        }
+                                        if (action.id === 'open_map') {
+                                            onNavigate('/map');
+                                        }
+                                    }}
+                                >
+                                    {action.label}
+                                </Button>
+                            ))}
+                        </>
+                    ) : null
+                }
+            >
+                {detailPanel.open ? (
+                    <div className='grid gap-3'>
+                        <p className='mh-eyebrow'>{detailPanel.categoryLabel}</p>
+                        <p className='mh-request-card__title'>
+                            {detailPanel.title}
+                        </p>
+                        <p className='text-mh-textMuted'>
+                            {detailPanel.openHours}
+                        </p>
+                        <p>{detailPanel.eligibilityNotes}</p>
+                        {detailPanel.exactPublicAddress ? (
+                            <Banner
+                                tone='info'
+                                live='none'
+                                title={t('resources.approvedAddress')}
+                            >
+                                <p>{detailPanel.exactPublicAddress}</p>
+                                <p className='mt-1 text-sm text-mh-textMuted'>
+                                    {t('resources.approvalExpires', {
+                                        date: fmt.longDate(
+                                            detailPanel.exactAddressApprovalExpiresAt ??
+                                                '',
+                                        ),
+                                    })}
+                                </p>
+                            </Banner>
+                        ) : null}
+                    </div>
+                ) : null}
+            </Sheet>
         </section>
     );
 };
