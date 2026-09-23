@@ -408,7 +408,7 @@
     },
     "posting": {
         "heading": "Create request",
-        "description": "Shared posting form with taxonomy, accessibility tags, and geoprivacy enforcement.",
+        "description": "Say what you need and when. Neighbors see the request and a broad area; private details stay private until you choose to share them.",
         "areaRequired": "Choose an approximate area before creating a request. Patchwork will not use a default city or your precise location.",
         "formTitle": "Posting form",
         "titleLabel": "Title",
@@ -434,7 +434,14 @@
         "publicationPending": "Source accepted post {{id}} and added a local Feed preview. Public discovery remains pending until the index confirms the record.",
         "attachments": "Private attachments (optional)",
         "attachmentHelp": "Up to five images or PDFs, 10 MB each. Files remain private, are scanned and transformed, and are available only to authenticated people.",
-        "kilobytes": "KB"
+        "kilobytes": "KB",
+        "areaStepTitle": "First, where do you need help?",
+        "areaStepHelp": "Neighbors see only a broad area, never your address.",
+        "useMyArea": "Use my approximate location",
+        "chooseOnMap": "Choose an area on the map",
+        "locationDenied": "Your browser didn't share a location. Choose an area on the map instead.",
+        "urgencyHint": "1 means it can wait a few days; 5 means today.",
+        "fixErrors": "Please fix these before publishing:"
     },
     "resources": {
         "heading": "Resource directory",
@@ -898,7 +905,7 @@
         "signedIn": "Signed in as {{did}}",
         "retry": "Retry",
         "createSubcult": "Create an account on Subcult’s PDS",
-        "newNetwork": "New to the network? Get your own portable AT Protocol handle, hosted on our community PDS.",
+        "newNetwork": "Get a portable handle hosted on Subcult's community server (PDS). You can take it with you later.",
         "pdsUnavailable": "Your AT Protocol server is temporarily unavailable. Check its status and retry.",
         "denied": "Authorization was denied. You can try again when you are ready.",
         "stateInvalid": "This login callback is stale or invalid. Start a new login.",
@@ -961,7 +968,12 @@
         "verifyFailed": "Patchwork could not verify the new session.",
         "verified": "Session verified. Continuing…",
         "checkingCookie": "Checking your cookie-backed session…",
-        "retrySession": "Retry session check"
+        "retrySession": "Retry session check",
+        "signedInAs": "You're signed in as {{handle}}.",
+        "continueToPatchwork": "Continue to Patchwork",
+        "handleHint": "For example you.bsky.social. No password is entered here.",
+        "newHeading": "New to Bluesky and the AT Protocol?",
+        "handlePlaceholder": "you.bsky.social"
     },
     "adminInvites": {
         "checking": "Checking administrator access…",

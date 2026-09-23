@@ -425,32 +425,60 @@ code {
 .mh-login-shell {
     display: grid;
     min-height: 100vh;
-    grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
-    align-items: center;
-    gap: clamp(40px, 8vw, 120px);
-    background:
-        linear-gradient(90deg, transparent 68%, rgb(18 102 79 / 8%) 68%),
-        var(--mh-bg);
-    padding: clamp(24px, 7vw, 96px);
-}
-
-.mh-login-intro {
-    position: relative;
+    align-content: center;
+    gap: var(--mh-space-8);
+    background-color: var(--mh-bg);
+    background-image:
+        linear-gradient(to right, rgb(90 76 57 / 6%) 1px, transparent 1px),
+        linear-gradient(to bottom, rgb(90 76 57 / 6%) 1px, transparent 1px);
+    background-size: 30px 30px;
+    padding: var(--mh-space-6) var(--mh-space-4) var(--mh-space-10);
 }
 
 .mh-login-intro::after {
     display: block;
     width: 38%;
+    max-width: 220px;
     height: 12px;
-    margin-top: 38px;
+    margin-top: var(--mh-space-8);
     background: var(--mh-accent-3);
     content: '';
     transform: rotate(-1deg);
 }
 
-.mh-login-status,
-.mh-login-error {
-    grid-column: 2;
+.mh-login-title {
+    margin-top: var(--mh-space-3);
+    font-family: var(--mh-font-heading);
+    font-size: clamp(2.5rem, 9vw, 4.25rem);
+    font-weight: 900;
+    line-height: 0.98;
+    letter-spacing: -0.045em;
+    text-wrap: balance;
+}
+
+.mh-login-panel {
+    display: grid;
+    gap: var(--mh-space-6);
+    width: 100%;
+    max-width: 440px;
+}
+
+.mh-login-signup {
+    display: grid;
+    justify-items: start;
+    gap: var(--mh-space-2);
+    border-top: var(--mh-outline);
+    padding-top: var(--mh-space-5);
+}
+
+@media (min-width: 900px) {
+    .mh-login-shell {
+        grid-template-columns: minmax(0, 1.1fr) minmax(360px, 440px);
+        align-items: center;
+        justify-content: center;
+        gap: clamp(48px, 8vw, 120px);
+        padding: var(--mh-space-12) clamp(24px, 6vw, 96px);
+    }
 }
 
 .mh-auth-state-shell {
@@ -481,18 +509,6 @@ code {
     padding: clamp(24px, 6vw, 48px);
 }
 
-@media (max-width: 760px) {
-    .mh-login-shell {
-        grid-template-columns: 1fr;
-        align-content: center;
-        background: var(--mh-bg);
-    }
-
-    .mh-login-status,
-    .mh-login-error {
-        grid-column: 1;
-    }
-}
 
 /* Interactive map styles */
 .mh-map-container {

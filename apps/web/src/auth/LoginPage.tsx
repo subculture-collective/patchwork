@@ -59,73 +59,98 @@ export const LoginPage = () => {
                         <small>{t('auth.tagline')}</small>
                     </span>
                 </a>
-                <p className='mh-kicker mt-12'>{t('auth.safer')}</p>
-                <h1
-                    id='login-heading'
-                    className='font-heading mt-3 text-5xl font-black leading-none tracking-[-0.045em] sm:text-6xl'
-                >
+                <p className='mh-eyebrow mt-10 sm:mt-16'>{t('auth.safer')}</p>
+                <h1 id='login-heading' className='mh-login-title'>
                     {t('auth.loginHeading')}
                 </h1>
-                <p className='mt-5 max-w-md text-mh-textMuted'>
+                <p className='mh-page-header__description max-w-md'>
                     {t('auth.loginHelp')}
                 </p>
             </section>
-            <form className='mh-card space-y-4 p-6 sm:p-8' onSubmit={submit}>
-                <p className='mh-kicker'>{t('auth.connect')}</p>
-                <label htmlFor='at-handle' className='block font-bold'>
-                    {t('auth.handle')}
-                </label>
-                <input
-                    id='at-handle'
-                    name='handle'
-                    autoComplete='username'
-                    spellCheck={false}
-                    required
-                    value={handle}
-                    onChange={(event) => setHandle(event.target.value)}
-                    className='mh-input w-full px-3 py-2'
-                />
-                <button
-                    type='submit'
-                    disabled={auth.status === 'redirecting'}
-                    className='mh-button mh-button--primary px-4 py-2 font-bold'
-                >
-                    {auth.status === 'redirecting'
-                        ? t('auth.opening')
-                        : t('auth.continue')}
-                </button>
-                <p className='text-xs leading-relaxed text-mh-textSoft'>
-                    {t('auth.providerHelp')}
-                </p>
-            </form>
-            <div aria-live='polite' className='mh-login-status'>
-                {auth.status === 'booting' ? t('auth.checkingSession') : null}
-                {auth.status === 'refreshing'
-                    ? t('auth.refreshingSession')
-                    : null}
-                {auth.status === 'authenticated' && auth.session ? (
-                    <p>{t('auth.signedIn', { did: auth.session.did })}</p>
-                ) : null}
-            </div>
-            {auth.error ? (
-                <div role='alert' className='mh-alert mh-login-error p-4'>
-                    <p>{auth.error.message}</p>
-                    <p>{recoveryMessage(auth.error.code, t)}</p>
-                    <button type='button' onClick={() => void auth.restore()}>
-                        {t('auth.retry')}
+
+            <div className='mh-login-panel'>
+                <form className='mh-surface grid gap-4 p-6 sm:p-8' onSubmit={submit}>
+                    <p className='mh-eyebrow'>{t('auth.connect')}</p>
+                    {auth.error ? (
+                        <div role='alert' className='mh-banner mh-banner--danger'>
+                            <div className='min-w-0 flex-1'>
+                                <p className='font-bold'>{auth.error.message}</p>
+                                <p className='mt-1'>
+                                    {recoveryMessage(auth.error.code, t)}
+                                </p>
+                            </div>
+                            <button
+                                type='button'
+                                className='mh-button mh-button--secondary mh-button--sm'
+                                onClick={() => void auth.restore()}
+                            >
+                                {t('auth.retry')}
+                            </button>
+                        </div>
+                    ) : null}
+                    <div className='grid gap-1.5'>
+                        <label htmlFor='at-handle' className='mh-field-label'>
+                            {t('auth.handle')}
+                        </label>
+                        <p id='at-handle-hint' className='mh-field-hint'>
+                            {t('auth.handleHint')}
+                        </p>
+                        <input
+                            id='at-handle'
+                            name='handle'
+                            autoComplete='username'
+                            autoCapitalize='none'
+                            spellCheck={false}
+                            required
+                            aria-describedby='at-handle-hint'
+                            placeholder={String(t('auth.handlePlaceholder'))}
+                            value={handle}
+                            onChange={(event) => setHandle(event.target.value)}
+                            className='mh-input w-full px-3 py-2'
+                        />
+                    </div>
+                    <button
+                        type='submit'
+                        disabled={auth.status === 'redirecting'}
+                        className='mh-button mh-button--primary mh-button--md w-full'
+                    >
+                        {auth.status === 'redirecting'
+                            ? t('auth.opening')
+                            : t('auth.continue')}
                     </button>
+                    <p className='mh-field-hint'>{t('auth.providerHelp')}</p>
+                    <div aria-live='polite' className='text-sm text-mh-textMuted'>
+                        {auth.status === 'booting'
+                            ? t('auth.checkingSession')
+                            : null}
+                        {auth.status === 'refreshing'
+                            ? t('auth.refreshingSession')
+                            : null}
+                        {auth.status === 'authenticated' && auth.session ? (
+                            <p>
+                                {t('auth.signedInAs', {
+                                    handle: auth.session.handle
+                                        ? `@${auth.session.handle.replace(/^@/, '')}`
+                                        : t('nav.accountFallback'),
+                                })}{' '}
+                                <a className='mh-link' href={returnTo}>
+                                    {t('auth.continueToPatchwork')}
+                                </a>
+                            </p>
+                        ) : null}
+                    </div>
+                </form>
+
+                <div className='mh-login-signup'>
+                    <p className='mh-field-label'>{t('auth.newHeading')}</p>
+                    <p className='mh-field-hint'>{t('auth.newNetwork')}</p>
+                    <a
+                        href={`/signup${returnTo !== '/' ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`}
+                        className='mh-button mh-button--secondary mh-button--md'
+                    >
+                        {t('auth.createSubcult')}
+                    </a>
                 </div>
-            ) : null}
-            <div className='mt-6 text-center sm:mt-8'>
-                <a
-                    href={`/signup${returnTo !== '/' ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`}
-                    className='mh-button mh-button--secondary inline-block px-6 py-3 text-base font-bold'
-                >
-                    {t('auth.createSubcult')}
-                </a>
-                <p className='mt-3 text-xs text-mh-textMuted'>
-                    {t('auth.newNetwork')}
-                </p>
             </div>
         </main>
     );

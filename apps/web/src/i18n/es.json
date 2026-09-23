@@ -408,7 +408,7 @@
     },
     "posting": {
         "heading": "Crear solicitud",
-        "description": "Formulario de publicación compartido con taxonomía, etiquetas de accesibilidad y cumplimiento de geoprivacidad.",
+        "description": "Di qué necesitas y cuándo. Los vecinos ven la solicitud y una zona amplia; los detalles privados siguen privados hasta que decidas compartirlos.",
         "areaRequired": "Elige un área aproximada antes de crear una solicitud. Patchwork no usará una ciudad predeterminada ni tu ubicación precisa.",
         "formTitle": "Formulario de publicación",
         "titleLabel": "Título",
@@ -434,7 +434,14 @@
         "publicationPending": "La fuente aceptó la publicación {{id}} y agregó una vista previa local en Noticias. El descubrimiento público sigue pendiente hasta que el índice confirme el registro.",
         "attachments": "Archivos adjuntos privados (opcionales)",
         "attachmentHelp": "Hasta cinco imágenes o PDF de 10 MB cada uno. Los archivos permanecen privados, se analizan y transforman, y solo están disponibles para personas autenticadas.",
-        "kilobytes": "KB"
+        "kilobytes": "KB",
+        "areaStepTitle": "Primero, ¿dónde necesitas ayuda?",
+        "areaStepHelp": "Los vecinos solo ven una zona amplia, nunca tu dirección.",
+        "useMyArea": "Usar mi ubicación aproximada",
+        "chooseOnMap": "Elegir una zona en el mapa",
+        "locationDenied": "Tu navegador no compartió una ubicación. Elige una zona en el mapa.",
+        "urgencyHint": "1 significa que puede esperar unos días; 5 significa hoy.",
+        "fixErrors": "Corrige esto antes de publicar:"
     },
     "resources": {
         "heading": "Directorio de recursos",
@@ -898,7 +905,7 @@
         "signedIn": "Sesión iniciada como {{did}}",
         "retry": "Reintentar",
         "createSubcult": "Crear una cuenta en el PDS de Subcult",
-        "newNetwork": "¿Eres nuevo en la red? Obtén tu propio identificador portátil de AT Protocol, alojado en nuestro PDS comunitario.",
+        "newNetwork": "Obtén un identificador portátil alojado en el servidor comunitario de Subcult (PDS). Puedes llevártelo más adelante.",
         "pdsUnavailable": "Tu servidor de AT Protocol no está disponible temporalmente. Comprueba su estado y vuelve a intentarlo.",
         "denied": "Se rechazó la autorización. Puedes volver a intentarlo cuando quieras.",
         "stateInvalid": "Esta devolución de inicio de sesión está vencida o no es válida. Inicia una sesión nueva.",
@@ -961,7 +968,12 @@
         "verifyFailed": "Patchwork no pudo verificar la nueva sesión.",
         "verified": "Sesión verificada. Continuando…",
         "checkingCookie": "Comprobando tu sesión basada en cookies…",
-        "retrySession": "Reintentar comprobación de sesión"
+        "retrySession": "Reintentar comprobación de sesión",
+        "signedInAs": "Iniciaste sesión como {{handle}}.",
+        "continueToPatchwork": "Continuar a Patchwork",
+        "handleHint": "Por ejemplo tu.bsky.social. Aquí no se introduce ninguna contraseña.",
+        "newHeading": "¿Nuevo en Bluesky y el Protocolo AT?",
+        "handlePlaceholder": "tu.bsky.social"
     },
     "adminInvites": {
         "checking": "Comprobando el acceso de administración…",

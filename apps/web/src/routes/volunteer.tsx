@@ -79,7 +79,9 @@ const toggleInList = <TValue extends string>(
 
 export const LegacyFixtureVolunteerRoute = ({ did }: { did: string }) => {
     const [draft, setDraft] = useState<VolunteerOnboardingDraft>(() => ({
-        did,
+        // The fixture demo has no session; use a demo identity instead of
+        // asking visitors to type a DID.
+        did: did || 'did:example:demo-volunteer',
         displayName: '',
         capabilities: [],
         availability: 'within-24h',
@@ -140,37 +142,18 @@ export const LegacyFixtureVolunteerRoute = ({ did }: { did: string }) => {
         <section className='space-y-6'>
             <header className='mh-route-header'>
                 <h1 className='mh-route-title'>Volunteer onboarding</h1>
-                <p className='mt-2 text-sm text-mh-textMuted'>
-                    Capture capabilities, availability, and verification
-                    checkpoints for safe matching.
+                <p className='mt-2 text-mh-textMuted'>
+                    Tell neighbors what you can help with and when.
                 </p>
             </header>
 
             <Panel title='Volunteer profile draft'>
                 <form className='space-y-4' onSubmit={handleSubmit}>
-                    <div className='grid gap-4 sm:grid-cols-2'>
-                        <div>
-                            <label
-                                htmlFor='volunteer-did'
-                                className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
-                            >
-                                DID
-                            </label>
-                            <Input
-                                id='volunteer-did'
-                                value={draft.did}
-                                onChange={(event) =>
-                                    setDraft((current) => ({
-                                        ...current,
-                                        did: event.target.value,
-                                    }))
-                                }
-                            />
-                        </div>
+                    <div>
                         <div>
                             <label
                                 htmlFor='volunteer-display-name'
-                                className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
+                                className='mb-1.5 block mh-field-label'
                             >
                                 Display name
                             </label>
@@ -191,7 +174,7 @@ export const LegacyFixtureVolunteerRoute = ({ did }: { did: string }) => {
                         <div>
                             <label
                                 htmlFor='volunteer-availability'
-                                className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
+                                className='mb-1.5 block mh-field-label'
                             >
                                 Availability
                             </label>
@@ -217,7 +200,7 @@ export const LegacyFixtureVolunteerRoute = ({ did }: { did: string }) => {
                         <div>
                             <label
                                 htmlFor='volunteer-contact-preference'
-                                className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
+                                className='mb-1.5 block mh-field-label'
                             >
                                 Contact preference
                             </label>
@@ -243,7 +226,7 @@ export const LegacyFixtureVolunteerRoute = ({ did }: { did: string }) => {
                     </div>
 
                     <div>
-                        <p className='mb-2 text-xs font-bold uppercase tracking-[0.12em] text-mh-text'>
+                        <p className='mb-1.5 mh-field-label'>
                             Capabilities
                         </p>
                         <div className='flex flex-wrap gap-2'>
@@ -271,7 +254,7 @@ export const LegacyFixtureVolunteerRoute = ({ did }: { did: string }) => {
                         <div>
                             <label
                                 htmlFor='volunteer-skills'
-                                className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
+                                className='mb-1.5 block mh-field-label'
                             >
                                 Skills (comma-separated)
                             </label>
@@ -286,7 +269,7 @@ export const LegacyFixtureVolunteerRoute = ({ did }: { did: string }) => {
                         <div>
                             <label
                                 htmlFor='volunteer-windows'
-                                className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
+                                className='mb-1.5 block mh-field-label'
                             >
                                 Availability windows
                             </label>
@@ -301,7 +284,7 @@ export const LegacyFixtureVolunteerRoute = ({ did }: { did: string }) => {
                     </div>
 
                     <div>
-                        <p className='mb-2 text-xs font-bold uppercase tracking-[0.12em] text-mh-text'>
+                        <p className='mb-1.5 mh-field-label'>
                             Preferred categories
                         </p>
                         <div className='flex flex-wrap gap-2'>
@@ -326,7 +309,7 @@ export const LegacyFixtureVolunteerRoute = ({ did }: { did: string }) => {
                     </div>
 
                     <div>
-                        <p className='mb-2 text-xs font-bold uppercase tracking-[0.12em] text-mh-text'>
+                        <p className='mb-1.5 mh-field-label'>
                             Preferred urgencies
                         </p>
                         <div className='flex flex-wrap gap-2'>
@@ -354,7 +337,7 @@ export const LegacyFixtureVolunteerRoute = ({ did }: { did: string }) => {
                         <div>
                             <label
                                 htmlFor='volunteer-distance'
-                                className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
+                                className='mb-1.5 block mh-field-label'
                             >
                                 Max distance (km)
                             </label>
@@ -402,7 +385,7 @@ export const LegacyFixtureVolunteerRoute = ({ did }: { did: string }) => {
                         <div>
                             <label
                                 htmlFor='checkpoint-identity'
-                                className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
+                                className='mb-1.5 block mh-field-label'
                             >
                                 Identity check
                             </label>
@@ -431,7 +414,7 @@ export const LegacyFixtureVolunteerRoute = ({ did }: { did: string }) => {
                         <div>
                             <label
                                 htmlFor='checkpoint-safety'
-                                className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
+                                className='mb-1.5 block mh-field-label'
                             >
                                 Safety training
                             </label>
@@ -460,7 +443,7 @@ export const LegacyFixtureVolunteerRoute = ({ did }: { did: string }) => {
                         <div>
                             <label
                                 htmlFor='checkpoint-reference'
-                                className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
+                                className='mb-1.5 block mh-field-label'
                             >
                                 Community reference
                             </label>

@@ -30,11 +30,12 @@ import {
     type ChatInitiationIntent,
     type ChatLaunchState,
 } from '../chat-ux';
-import { Button, ButtonLink } from '../components/Button';
+import { ButtonLink } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
 import { Panel } from '../components/Panel';
 import { Banner } from '../components/Banner';
 import { AppShell } from '../app/AppShell';
+import { PostingAreaGate } from './discovery/PostingAreaGate';
 import {
     type ApiDataOrigin,
     type AtAidPostResult,
@@ -959,15 +960,11 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                             onCreateViaApi={createAidPostViaApi}
                         />
                     ) : (
-                        <section className='mh-route-header'>
-                            <h1 className='mh-route-title'>{t('posting.heading')}</h1>
-                            <p className='mt-2 mh-alert p-4' role='status'>
-                                {t('posting.areaRequired')}
-                            </p>
-                            <Button className='mt-3' onClick={() => navigate('/map')}>
-                                {t('route.map')}
-                            </Button>
-                        </section>
+                        <PostingAreaGate
+                            state={discoveryState}
+                            onPatch={patchDiscoveryState}
+                            onChooseOnMap={() => navigate('/map')}
+                        />
                     )
                 );
             case '/resources':

@@ -219,7 +219,7 @@ export const SettingsRoute = ({ currentUserDid }: SettingsRouteProps) => {
                 <Panel title='Privacy controls'>
                     <div className='space-y-4'>
                         <div>
-                            <p className='mb-2 text-xs font-bold uppercase tracking-[0.12em] text-mh-text'>
+                            <p className='mb-1.5 mh-field-label'>
                                 Audience
                             </p>
                             <div className='flex flex-wrap gap-2'>
@@ -242,7 +242,7 @@ export const SettingsRoute = ({ currentUserDid }: SettingsRouteProps) => {
                         </div>
 
                         <div>
-                            <p className='mb-2 text-xs font-bold uppercase tracking-[0.12em] text-mh-text'>
+                            <p className='mb-1.5 mh-field-label'>
                                 Location
                             </p>
                             <div className='flex flex-wrap gap-2'>

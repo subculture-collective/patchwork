@@ -254,7 +254,7 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
 
             <Panel title={String(t('organizations.find'))}>
                 <form
-                    className='flex flex-wrap gap-2'
+                    className='flex flex-wrap items-end gap-2'
                     onSubmit={(event) => {
                         event.preventDefault();
                         void loadPublic();
@@ -322,7 +322,7 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
                 <>
                     <Panel title={String(t('organizations.join'))}>
                         <form
-                            className='flex flex-wrap gap-2'
+                            className='flex flex-wrap items-end gap-2'
                             onSubmit={acceptInvitation}
                         >
                             <label className='grow text-sm font-bold'>

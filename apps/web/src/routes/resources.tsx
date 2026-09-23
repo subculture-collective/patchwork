@@ -281,7 +281,7 @@ const DirectoryResourceManager = ({
                                 <div>
                                     <label
                                         htmlFor='directory-name'
-                                        className='mb-2 block text-xs font-bold uppercase tracking-[0.12em]'
+                                        className='mb-1.5 block mh-field-label'
                                     >
                                         {t('directoryManager.name')}
                                     </label>
@@ -299,7 +299,7 @@ const DirectoryResourceManager = ({
                                 <div>
                                     <label
                                         htmlFor='directory-category'
-                                        className='mb-2 block text-xs font-bold uppercase tracking-[0.12em]'
+                                        className='mb-1.5 block mh-field-label'
                                     >
                                         {t('directoryManager.category')}
                                     </label>
@@ -334,7 +334,7 @@ const DirectoryResourceManager = ({
                             <div>
                                 <label
                                     htmlFor='directory-service-area'
-                                    className='mb-2 block text-xs font-bold uppercase tracking-[0.12em]'
+                                    className='mb-1.5 block mh-field-label'
                                 >
                                     {t('directoryManager.serviceArea')}
                                 </label>
@@ -353,7 +353,7 @@ const DirectoryResourceManager = ({
                                 <div>
                                     <label
                                         htmlFor='directory-url'
-                                        className='mb-2 block text-xs font-bold uppercase tracking-[0.12em]'
+                                        className='mb-1.5 block mh-field-label'
                                     >
                                         {t('directoryManager.website')}
                                     </label>
@@ -372,7 +372,7 @@ const DirectoryResourceManager = ({
                                 <div>
                                     <label
                                         htmlFor='directory-phone'
-                                        className='mb-2 block text-xs font-bold uppercase tracking-[0.12em]'
+                                        className='mb-1.5 block mh-field-label'
                                     >
                                         {t('directoryManager.phone')}
                                     </label>
@@ -394,7 +394,7 @@ const DirectoryResourceManager = ({
                                 <div>
                                     <label
                                         htmlFor='directory-latitude'
-                                        className='mb-2 block text-xs font-bold uppercase tracking-[0.12em]'
+                                        className='mb-1.5 block mh-field-label'
                                     >
                                         {t('directoryManager.latitude')}
                                     </label>
@@ -414,7 +414,7 @@ const DirectoryResourceManager = ({
                                 <div>
                                     <label
                                         htmlFor='directory-longitude'
-                                        className='mb-2 block text-xs font-bold uppercase tracking-[0.12em]'
+                                        className='mb-1.5 block mh-field-label'
                                     >
                                         {t('directoryManager.longitude')}
                                     </label>
@@ -434,7 +434,7 @@ const DirectoryResourceManager = ({
                                 <div>
                                     <label
                                         htmlFor='directory-precision'
-                                        className='mb-2 block text-xs font-bold uppercase tracking-[0.12em]'
+                                        className='mb-1.5 block mh-field-label'
                                     >
                                         {t('directoryManager.precision')}
                                     </label>
@@ -461,7 +461,7 @@ const DirectoryResourceManager = ({
                                 <div>
                                     <label
                                         htmlFor='directory-hours'
-                                        className='mb-2 block text-xs font-bold uppercase tracking-[0.12em]'
+                                        className='mb-1.5 block mh-field-label'
                                     >
                                         {t('directoryManager.hours')}
                                     </label>
@@ -480,7 +480,7 @@ const DirectoryResourceManager = ({
                                 <div>
                                     <label
                                         htmlFor='directory-eligibility'
-                                        className='mb-2 block text-xs font-bold uppercase tracking-[0.12em]'
+                                        className='mb-1.5 block mh-field-label'
                                     >
                                         {t('directoryManager.eligibility')}
                                     </label>
@@ -501,7 +501,7 @@ const DirectoryResourceManager = ({
                             <div>
                                 <label
                                     htmlFor='directory-operational-status'
-                                    className='mb-2 block text-xs font-bold uppercase tracking-[0.12em]'
+                                    className='mb-1.5 block mh-field-label'
                                 >
                                     {t('directoryManager.operationalStatus')}
                                 </label>
