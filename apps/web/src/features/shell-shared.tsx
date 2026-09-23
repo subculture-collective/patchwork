@@ -8,6 +8,7 @@ import {
 import { type DiscoveryFilterState } from '../discovery-filters';
 import { buildDiscoveryFilterChipModel } from '../discovery-primitives';
 import { Button } from '../components/Button';
+import { ToggleChip } from '../components/ToggleChip';
 import { Input } from '../components/Input';
 import { Panel } from '../components/Panel';
 import { useLocale } from '../i18n';
@@ -129,8 +130,9 @@ export const DiscoveryFiltersPanel = ({
                         : t('discovery.locationPermissionHelp')}
                     <div>
                         <Button
+                            size='sm'
                             type='button'
-                            className='mt-3 px-3 py-2 text-xs'
+                            className='mt-3'
                             disabled={locationAccess === 'requesting'}
                             onClick={requestLocation}
                         >
@@ -153,7 +155,7 @@ export const DiscoveryFiltersPanel = ({
                     <Button
                         type='button'
                         variant='neutral'
-                        className='px-3 py-1 text-xs'
+                        size='sm'
                         disabled={locationAccess === 'requesting'}
                         onClick={requestLocation}
                     >
@@ -188,14 +190,13 @@ export const DiscoveryFiltersPanel = ({
                     </p>
                     <div className='flex flex-wrap gap-2'>
                         {chipModel.tabs.map((tab) => (
-                            <Button
+                            <ToggleChip
                                 key={tab.id}
-                                variant={tab.active ? 'secondary' : 'neutral'}
-                                className='px-3 py-1 text-xs'
+                                pressed={tab.active}
                                 onClick={() => onPatch({ feedTab: tab.value })}
                             >
                                 {tab.label}
-                            </Button>
+                            </ToggleChip>
                         ))}
                     </div>
                 </div>
@@ -206,12 +207,9 @@ export const DiscoveryFiltersPanel = ({
                     </p>
                     <div className='flex flex-wrap gap-2'>
                         {chipModel.categories.map((category) => (
-                            <Button
+                            <ToggleChip
                                 key={category.id}
-                                variant={
-                                    category.active ? 'secondary' : 'neutral'
-                                }
-                                className='px-3 py-1 text-xs'
+                                pressed={category.active}
                                 onClick={() => {
                                     onPatch({
                                         category: category.active
@@ -221,7 +219,7 @@ export const DiscoveryFiltersPanel = ({
                                 }}
                             >
                                 {category.label}
-                            </Button>
+                            </ToggleChip>
                         ))}
                     </div>
                 </div>
@@ -232,12 +230,9 @@ export const DiscoveryFiltersPanel = ({
                     </p>
                     <div className='flex flex-wrap gap-2'>
                         {chipModel.statuses.map((status) => (
-                            <Button
+                            <ToggleChip
                                 key={status.id}
-                                variant={
-                                    status.active ? 'secondary' : 'neutral'
-                                }
-                                className='px-3 py-1 text-xs'
+                                pressed={status.active}
                                 onClick={() => {
                                     onPatch({
                                         status: status.active
@@ -247,7 +242,7 @@ export const DiscoveryFiltersPanel = ({
                                 }}
                             >
                                 {status.label}
-                            </Button>
+                            </ToggleChip>
                         ))}
                     </div>
                 </div>
@@ -258,10 +253,9 @@ export const DiscoveryFiltersPanel = ({
                     </p>
                     <div className='flex flex-wrap gap-2'>
                         {chipModel.urgency.map((level) => (
-                            <Button
+                            <ToggleChip
                                 key={level.id}
-                                variant={level.active ? 'secondary' : 'neutral'}
-                                className='px-3 py-1 text-xs'
+                                pressed={level.active}
                                 onClick={() => {
                                     onPatch({
                                         minUrgency: level.active
@@ -271,7 +265,7 @@ export const DiscoveryFiltersPanel = ({
                                 }}
                             >
                                 {level.label}
-                            </Button>
+                            </ToggleChip>
                         ))}
                     </div>
                 </div>
@@ -279,7 +273,7 @@ export const DiscoveryFiltersPanel = ({
                 <div className='flex flex-wrap items-center justify-between gap-3 border-t-2 border-mh-borderSoft pt-4'>
                     <Button
                         variant='neutral'
-                        className='px-3 py-1 text-xs'
+                        size='sm'
                         onClick={() => {
                             onPatch({
                                 feedTab: state.center ? 'nearby' : 'latest',

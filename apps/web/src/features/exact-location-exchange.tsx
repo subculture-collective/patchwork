@@ -469,7 +469,7 @@ export const ExactLocationExchange = ({
                     <Button onClick={share}>{t('exactLocation.share')}</Button>
                 ) : null}
                 {!['idle', 'stopped'].includes(phase) ? (
-                    <Button variant='secondary' onClick={() => void stop()}>
+                    <Button variant='danger' onClick={() => void stop()}>
                         {t('exactLocation.stop')}
                     </Button>
                 ) : null}

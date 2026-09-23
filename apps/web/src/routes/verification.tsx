@@ -459,9 +459,9 @@ export const VerificationRoute = ({ did }: { did: string }) => {
                                                 {attachment.status ===
                                                 'clean' ? (
                                                     <Button
+                                                        size='sm'
                                                         type='button'
                                                         variant='neutral'
-                                                        className='px-2 py-1 text-xs'
                                                         onClick={() =>
                                                             void prepareAccess(
                                                                 attachment.id,
@@ -474,9 +474,9 @@ export const VerificationRoute = ({ did }: { did: string }) => {
                                                     </Button>
                                                 ) : null}
                                                 <Button
+                                                    size='sm'
                                                     type='button'
                                                     variant='neutral'
-                                                    className='px-2 py-1 text-xs'
                                                     onClick={() =>
                                                         void deleteAttachment(
                                                             attachment.id,
@@ -781,9 +781,9 @@ export const VerificationRoute = ({ did }: { did: string }) => {
                                                             .status ===
                                                         'clean' ? (
                                                             <Button
+                                                                size='sm'
                                                                 type='button'
                                                                 variant='neutral'
-                                                                className='px-2 py-1 text-xs'
                                                                 onClick={() =>
                                                                     void prepareAccess(
                                                                         item
@@ -798,9 +798,9 @@ export const VerificationRoute = ({ did }: { did: string }) => {
                                                             </Button>
                                                         ) : null}
                                                         <Button
+                                                            size='sm'
                                                             type='button'
                                                             variant='neutral'
-                                                            className='px-2 py-1 text-xs'
                                                             onClick={() =>
                                                                 void moderateAttachment(
                                                                     item
@@ -815,9 +815,9 @@ export const VerificationRoute = ({ did }: { did: string }) => {
                                                             )}
                                                         </Button>
                                                         <Button
+                                                            size='sm'
                                                             type='button'
                                                             variant='neutral'
-                                                            className='px-2 py-1 text-xs'
                                                             onClick={() =>
                                                                 void moderateAttachment(
                                                                     item
@@ -832,9 +832,9 @@ export const VerificationRoute = ({ did }: { did: string }) => {
                                                             )}
                                                         </Button>
                                                         <Button
+                                                            size='sm'
                                                             type='button'
                                                             variant='neutral'
-                                                            className='px-2 py-1 text-xs'
                                                             onClick={() =>
                                                                 void moderateAttachment(
                                                                     item

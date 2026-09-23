@@ -47,7 +47,7 @@ export const DashboardRoute = ({
                             {t('dashboard.browseNeeds')}
                         </Button>
                         <Button
-                            variant='secondary'
+                            variant='accent'
                             onClick={() => onNavigate('/posting')}
                         >
                             {t('dashboard.askForHelp')}

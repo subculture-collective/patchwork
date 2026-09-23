@@ -242,7 +242,7 @@ export const AccountPrivacyRoute = ({ onDeactivated }: AccountPrivacyRouteProps)
                         </div>
                         <div className='mt-3 flex items-center gap-3'>
                             <Button
-                                className='px-3 py-1 text-xs'
+                                size='sm'
                                 onClick={() => void savePreferences()}
                             >
                                 {t('account.save')}
@@ -268,7 +268,7 @@ export const AccountPrivacyRoute = ({ onDeactivated }: AccountPrivacyRouteProps)
                         <div className='mt-3'>
                             <Button
                                 variant='secondary'
-                                className='px-3 py-1 text-xs'
+                                size='sm'
                                 disabled={pendingAction !== undefined}
                                 onClick={() => void handleExport()}
                             >
@@ -286,7 +286,7 @@ export const AccountPrivacyRoute = ({ onDeactivated }: AccountPrivacyRouteProps)
                         <div className='mt-3'>
                             <Button
                                 variant='neutral'
-                                className='px-3 py-1 text-xs'
+                                size='sm'
                                 disabled={pendingAction !== undefined}
                                 onClick={() => setConfirmDeactivation(true)}
                             >
@@ -310,6 +310,7 @@ export const AccountPrivacyRoute = ({ onDeactivated }: AccountPrivacyRouteProps)
                                 <div className='mt-2 flex flex-wrap gap-2'>
                                     <Button
                                         type='button'
+                                        variant='danger'
                                         disabled={pendingAction !== undefined}
                                         onClick={() => void handleDeactivate()}
                                     >

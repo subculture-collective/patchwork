@@ -1,4 +1,5 @@
-import { useId, type PropsWithChildren } from 'react';
+import type { PropsWithChildren } from 'react';
+import { Surface } from './Surface';
 
 interface PanelProps {
     title: string;
@@ -6,29 +7,16 @@ interface PanelProps {
     'aria-label'?: string;
 }
 
+/**
+ * Legacy titled section. Renders a single Surface; kept so existing routes
+ * migrate without markup churn. New code should use Surface directly.
+ */
 export const Panel = ({
     title,
     children,
     'aria-label': ariaLabel,
-}: PropsWithChildren<PanelProps>) => {
-    const headingId = useId();
-
-    return (
-        <section
-            className='mh-panel-shell p-3 sm:p-4'
-            role='region'
-            aria-label={ariaLabel}
-            aria-labelledby={ariaLabel ? undefined : headingId}
-        >
-            <header
-                id={headingId}
-                className='mh-panel-titlebar mb-3 px-3 py-2 text-sm font-semibold tracking-[0.01em] text-mh-text'
-            >
-                {title}
-            </header>
-            <div className='mh-grid-pattern rounded-2xl border border-mh-borderSoft bg-mh-surface p-4'>
-                {children}
-            </div>
-        </section>
-    );
-};
+}: PropsWithChildren<PanelProps>) => (
+    <Surface title={title} aria-label={ariaLabel}>
+        <div className='text-mh-text'>{children}</div>
+    </Surface>
+);

@@ -218,7 +218,7 @@ const SafetyActions = ({
                 <Button
                     type='button'
                     variant='neutral'
-                    className='px-3 py-1 text-xs'
+                    size='sm'
                     aria-label={t('safety.positionedAction', {
                         action: t('safety.reportLabel', { title: record.card.title }),
                         position,
@@ -231,7 +231,7 @@ const SafetyActions = ({
                 <Button
                     type='button'
                     variant='neutral'
-                    className='px-3 py-1 text-xs'
+                    size='sm'
                     aria-label={t('safety.positionedAction', {
                         action: t('safety.blockLabel', { title: record.card.title }),
                         position,
@@ -304,6 +304,7 @@ const SafetyActions = ({
                     <div className='mt-2 flex flex-wrap gap-2'>
                         <Button
                             type='button'
+                            variant='danger'
                             onClick={() => void confirmBlock()}
                             disabled={pending}
                         >
@@ -457,6 +458,7 @@ const OwnerRecordActions = ({
                     <div className='mt-2 flex flex-wrap gap-2'>
                         <Button
                             type='button'
+                            variant='danger'
                             onClick={() => void deleteRecord()}
                             disabled={pending !== undefined}
                         >
@@ -572,9 +574,10 @@ export const FeedRoute = ({
                             <p>{t('feed.staleResults')}</p>
                         ) : null}
                         <Button
+                            size='sm'
                             type='button'
                             variant='neutral'
-                            className='mt-2 px-3 py-1 text-xs'
+                            className='mt-2'
                             onClick={onRetry}
                         >
                             {t('feed.retryDiscovery')}
@@ -592,9 +595,10 @@ export const FeedRoute = ({
                             })}
                         </p>
                         <Button
+                            size='sm'
                             type='button'
                             variant='neutral'
-                            className='mt-2 px-3 py-1 text-xs'
+                            className='mt-2'
                             disabled={publicSyncRetrying}
                             onClick={onRetryPublicSync}
                         >
@@ -636,7 +640,7 @@ export const FeedRoute = ({
                         <div className='flex flex-wrap gap-2'>
                             <Button
                                 variant='neutral'
-                                className='px-3 py-1 text-xs'
+                                size='sm'
                                 onClick={() => {
                                     onPatchDiscovery({
                                         feedTab: 'latest',
@@ -653,7 +657,7 @@ export const FeedRoute = ({
                                 {t('feed.resetFeedFilters')}
                             </Button>
                             <Button
-                                className='px-3 py-1 text-xs'
+                                size='sm'
                                 onClick={() => onNavigate('/posting')}
                             >
                                 {t('feed.createRequest')}
@@ -767,7 +771,7 @@ export const FeedRoute = ({
                                                             action.targetStatus
                                                         }
                                                         variant='neutral'
-                                                        className='px-3 py-1 text-xs'
+                                                        size='sm'
                                                         aria-label={t('safety.positionedAction', {
                                                             action: action.ariaLabel,
                                                             position: index + 1,
@@ -791,7 +795,7 @@ export const FeedRoute = ({
                                     <div className='mt-4 flex flex-wrap gap-2'>
                                         {record && webDataMode === 'fixture' ? (
                                             <Button
-                                                className='px-3 py-1 text-xs'
+                                                size='sm'
                                                 onClick={() =>
                                                     onOpenChat(record, 'feed')
                                                 }
@@ -803,7 +807,7 @@ export const FeedRoute = ({
                                         {dataOrigin === 'fixture' ? (
                                             <Button
                                                 variant='secondary'
-                                                className='px-3 py-1 text-xs'
+                                                size='sm'
                                                 onClick={() =>
                                                     onUpdateCard(card.id, {
                                                         urgency: Math.min(
@@ -824,7 +828,7 @@ export const FeedRoute = ({
                                         card.timeline.length > 0 ? (
                                             <Button
                                                 variant='neutral'
-                                                className='px-3 py-1 text-xs'
+                                                size='sm'
                                                 aria-label={t('safety.positionedAction', {
                                                     action: t('feed.timelineFor', {
                                                         title: card.title,

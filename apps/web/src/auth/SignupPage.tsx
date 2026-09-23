@@ -432,7 +432,7 @@ export const SignupPage = () => {
                             href='https://subcult.tv/terms'
                             target='_blank'
                             rel='noopener noreferrer'
-                            className='text-mh-link hover:underline'
+                            className='mh-link'
                         >
                             {t('legal.termsNav')}
                         </a>{' '}
@@ -441,7 +441,7 @@ export const SignupPage = () => {
                             href='https://subcult.tv/privacy'
                             target='_blank'
                             rel='noopener noreferrer'
-                            className='text-mh-link hover:underline'
+                            className='mh-link'
                         >
                             {t('legal.privacyNav')}
                         </a>
@@ -487,7 +487,7 @@ export const SignupPage = () => {
                     {t('auth.already')}{' '}
                     <a
                         href={`/login${returnTo !== '/' ? `?returnTo=${encodeURIComponent(returnTo)}` : ''}`}
-                        className='text-mh-link hover:underline'
+                        className='mh-link'
                     >
                         {t('auth.signIn')}
                     </a>

@@ -1,3 +1,8 @@
+/*
+ * Patchwork design tokens. See docs/design-system.md for usage rules.
+ * Feature code consumes these through Tailwind `mh-*` colours or the
+ * component classes below; it must not introduce raw colours or shadows.
+ */
 :root {
     --mh-bg: #f2efe7;
     --mh-surface: #fffdf7;
@@ -5,68 +10,137 @@
     --mh-panel: #d9d1c0;
     --mh-text: #172019;
     --mh-text-muted: #4f5a51;
-    --mh-text-soft: #6b746c;
+    --mh-text-soft: #626a62;
     --mh-accent: #12664f;
+    --mh-accent-hover: #0d5341;
+    --mh-accent-tint: #dcebe2;
     --mh-accent-2: #9ec5ad;
     --mh-accent-3: #f2c14e;
+    --mh-accent-3-tint: #fbefc9;
     --mh-cta: #e85d3f;
+    --mh-cta-strong: #c2462b;
+    --mh-cta-strong-hover: #a93a22;
+    --mh-on-accent: #fffdf7;
     --mh-organic-moss: #12664f;
     --mh-link: #075b48;
     --mh-link-visited: #624b77;
     --mh-success: #287c52;
+    --mh-success-tint: #e1efe4;
+    --mh-warning: #8a5f00;
+    --mh-warning-tint: #fbefc9;
     --mh-danger: #b93b2c;
+    --mh-danger-hover: #922f24;
+    --mh-danger-tint: #f6e1dc;
+    --mh-info-tint: #e3eee7;
     --mh-border: #172019;
     --mh-border-subtle: #d4cec1;
     --mh-border-soft: #aaa99f;
     --mh-focus: #0b62d6;
     --mh-focus-offset: #fffdf7;
 
-    --mh-font-heading:
-        'Fraunces', 'Inter Tight', 'Iowan Old Style', 'Georgia', serif;
-    --mh-font-body: 'Public Sans', Inter, 'Segoe UI', sans-serif;
+    --mh-font-heading: 'Fraunces', 'Iowan Old Style', 'Georgia', serif;
+    --mh-font-body: 'Public Sans', 'Segoe UI', system-ui, sans-serif;
     --mh-font-mono:
         'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-
-    --mh-community-primary: #5d7a47;
-    --mh-community-secondary: #7f9b65;
-    --mh-community-cta: #c96b3e;
 
     --mh-space-1: 4px;
     --mh-space-2: 8px;
     --mh-space-3: 12px;
     --mh-space-4: 16px;
+    --mh-space-5: 20px;
     --mh-space-6: 24px;
     --mh-space-8: 32px;
+    --mh-space-10: 40px;
+    --mh-space-12: 48px;
 
-    --mh-shadow-hard: 4px 4px 0 rgb(23 32 25 / 16%);
-    --mh-shadow-hard-hover: 7px 7px 0 rgb(23 32 25 / 18%);
+    --mh-radius-patch: 2px 14px 2px 14px;
+    --mh-radius-patch-sm: 2px 10px 2px 10px;
+    --mh-radius-pill: 999px;
+    --mh-outline: 1.5px solid var(--mh-border);
+
+    --mh-shadow-sm: 2px 2px 0 rgb(23 32 25 / 22%);
+    --mh-shadow: 4px 4px 0 rgb(23 32 25 / 16%);
+    --mh-shadow-lg: 7px 7px 0 rgb(23 32 25 / 18%);
+    /* Legacy aliases kept for existing callers. */
+    --mh-shadow-hard: var(--mh-shadow);
+    --mh-shadow-hard-hover: var(--mh-shadow-lg);
+
+    /* Map marker palette (InteractiveMap). */
+    --mh-community-primary: #5d7a47;
+    --mh-community-secondary: #7f9b65;
+    --mh-community-cta: #c96b3e;
+
     --mh-transition-standard: 150ms cubic-bezier(0.2, 0.8, 0.2, 1);
+
+    --mh-header-height: 64px;
+    --mh-tabbar-height: 64px;
 }
 
 .font-heading {
     font-family: var(--mh-font-heading);
 }
 
-.mh-card {
-    border: 1.5px solid var(--mh-border);
-    border-radius: 2px 18px 2px 18px;
+/* ---------- Surfaces ---------- */
+
+.mh-card,
+.mh-surface {
+    border: var(--mh-outline);
+    border-radius: var(--mh-radius-patch);
     background: var(--mh-surface);
-    box-shadow: var(--mh-shadow-hard);
+    box-shadow: var(--mh-shadow);
     color: var(--mh-text);
 }
 
+.mh-surface--flat {
+    box-shadow: none;
+}
+
+.mh-surface--quiet {
+    border-color: var(--mh-border-subtle);
+    background: var(--mh-surface);
+    box-shadow: none;
+}
+
+.mh-surface--tinted {
+    background: var(--mh-surface-elev);
+}
+
+.mh-surface__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--mh-space-3);
+}
+
+.mh-surface__title {
+    font-family: var(--mh-font-heading);
+    font-size: 1.375rem;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+}
+
+.mh-surface__description {
+    margin-top: var(--mh-space-1);
+    color: var(--mh-text-muted);
+    font-size: 0.9375rem;
+}
+
+/* Legacy Panel shell: now a single surface with an inline heading. */
 .mh-panel-shell {
-    border: 1.5px solid var(--mh-border);
-    border-radius: 2px 20px 2px 20px;
-    background: var(--mh-panel);
-    box-shadow: var(--mh-shadow-hard);
+    border: var(--mh-outline);
+    border-radius: var(--mh-radius-patch);
+    background: var(--mh-surface);
+    box-shadow: var(--mh-shadow);
 }
 
 .mh-panel-titlebar {
-    border-bottom: 1px solid var(--mh-border-soft);
-    border-top-left-radius: 0;
-    border-top-right-radius: 18px;
-    background: var(--mh-accent-3);
+    font-family: var(--mh-font-heading);
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
     color: var(--mh-text);
 }
 
@@ -82,22 +156,8 @@
 .mh-grid-pattern {
     background-image:
         linear-gradient(to right, rgb(90 76 57 / 7%) 1px, transparent 1px),
-        linear-gradient(to bottom, rgb(90 76 57 / 7%) 1px, transparent 1px),
-        radial-gradient(
-            circle at 15% 18%,
-            rgb(120 103 74 / 6%) 0,
-            transparent 40%
-        ),
-        radial-gradient(
-            circle at 85% 82%,
-            rgb(99 125 76 / 8%) 0,
-            transparent 45%
-        );
-    background-size:
-        30px 30px,
-        30px 30px,
-        100% 100%,
-        100% 100%;
+        linear-gradient(to bottom, rgb(90 76 57 / 7%) 1px, transparent 1px);
+    background-size: 30px 30px;
 }
 
 .mh-grain {
@@ -120,37 +180,66 @@
         100% 100%;
 }
 
+/* ---------- Buttons ---------- */
+
 .mh-button {
+    display: inline-flex;
     min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: var(--mh-space-2);
     cursor: pointer;
-    border: 1px solid var(--mh-border);
-    border-radius: 3px 12px 3px 12px;
-    box-shadow: 2px 2px 0 rgb(23 32 25 / 22%);
+    border: var(--mh-outline);
+    border-radius: var(--mh-radius-patch-sm);
+    box-shadow: var(--mh-shadow-sm);
+    font-family: var(--mh-font-body);
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+    text-decoration: none;
     transition:
         box-shadow var(--mh-transition-standard),
         background-color var(--mh-transition-standard),
         color var(--mh-transition-standard),
-        opacity var(--mh-transition-standard),
-        filter var(--mh-transition-standard),
         transform var(--mh-transition-standard);
 }
 
+.mh-button--md {
+    padding: 0.625rem 1.125rem;
+    font-size: 0.9375rem;
+}
+
+.mh-button--sm {
+    min-height: 36px;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+}
+
 .mh-button--primary {
-    background: var(--mh-organic-moss);
-    color: var(--mh-bg);
+    background: var(--mh-accent);
+    color: var(--mh-on-accent);
 }
 
 .mh-button--primary:hover {
-    background: var(--mh-organic-moss);
+    background: var(--mh-accent-hover);
+}
+
+.mh-button--accent {
+    background: var(--mh-cta-strong);
+    color: var(--mh-on-accent);
+}
+
+.mh-button--accent:hover {
+    background: var(--mh-cta-strong-hover);
 }
 
 .mh-button--secondary {
-    background: var(--mh-danger);
-    color: #fffdf7;
+    background: var(--mh-surface);
+    color: var(--mh-text);
 }
 
 .mh-button--secondary:hover {
-    background: #922f24;
+    background: var(--mh-accent-tint);
 }
 
 .mh-button--neutral {
@@ -159,8 +248,132 @@
 }
 
 .mh-button--neutral:hover {
-    background: var(--mh-surface-elev);
+    background: var(--mh-accent-tint);
 }
+
+.mh-button--danger {
+    background: var(--mh-danger);
+    color: var(--mh-on-accent);
+}
+
+.mh-button--danger:hover {
+    background: var(--mh-danger-hover);
+}
+
+.mh-button--ghost {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+    color: var(--mh-text);
+}
+
+.mh-button--ghost:hover {
+    background: var(--mh-accent-tint);
+}
+
+.mh-button:not(.mh-button--ghost):hover {
+    box-shadow: var(--mh-shadow);
+    transform: translate(-1px, -1px);
+}
+
+.mh-button:not(.mh-button--ghost):active {
+    box-shadow: none;
+    transform: translate(1px, 1px);
+}
+
+.mh-button:disabled,
+.mh-button[aria-disabled='true'] {
+    cursor: not-allowed;
+    opacity: 0.55;
+    box-shadow: none;
+    transform: none;
+}
+
+/* ---------- Chips & segmented controls ---------- */
+
+.mh-chip {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    gap: var(--mh-space-2);
+    cursor: pointer;
+    border: 1.5px solid var(--mh-border-soft);
+    border-radius: var(--mh-radius-pill);
+    background: var(--mh-surface);
+    color: var(--mh-text);
+    padding: 0.375rem 0.875rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.2;
+    transition:
+        background-color var(--mh-transition-standard),
+        border-color var(--mh-transition-standard),
+        color var(--mh-transition-standard);
+}
+
+.mh-chip:hover {
+    border-color: var(--mh-border);
+}
+
+.mh-chip[aria-pressed='true'] {
+    border-color: var(--mh-accent);
+    background: var(--mh-accent);
+    color: var(--mh-on-accent);
+}
+
+
+
+.mh-segmented {
+    display: inline-flex;
+    max-width: 100%;
+    overflow-x: auto;
+    border: var(--mh-outline);
+    border-radius: var(--mh-radius-patch-sm);
+    background: var(--mh-surface);
+    padding: 3px;
+    gap: 3px;
+}
+
+.mh-segmented label {
+    position: relative;
+    display: inline-flex;
+}
+
+.mh-segmented input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.mh-segmented span {
+    display: inline-flex;
+    min-height: 38px;
+    align-items: center;
+    cursor: pointer;
+    border-radius: 2px 8px 2px 8px;
+    padding: 0 0.875rem;
+    color: var(--mh-text);
+    font-size: 0.875rem;
+    font-weight: 700;
+    white-space: nowrap;
+    transition: background-color var(--mh-transition-standard);
+}
+
+.mh-segmented span:hover {
+    background: var(--mh-accent-tint);
+}
+
+.mh-segmented input:checked + span {
+    background: var(--mh-text);
+    color: var(--mh-on-accent);
+}
+
+.mh-segmented input:focus-visible + span {
+    outline: 2px solid var(--mh-focus);
+    outline-offset: 2px;
+}
+
+/* ---------- Badges ---------- */
 
 .mh-badge--default {
     background: var(--mh-accent-3);
@@ -179,75 +392,98 @@
 
 .mh-badge--danger {
     background: var(--mh-danger);
-    color: white;
+    color: var(--mh-on-accent);
 }
 
 .mh-badge--success {
     background: var(--mh-success);
-    color: white;
+    color: var(--mh-on-accent);
 }
 
-.mh-button:hover {
-    box-shadow: 4px 4px 0 rgb(23 32 25 / 22%);
-    filter: saturate(1.08);
-    transform: translate(-1px, -1px);
-}
-
-.mh-button:active {
-    box-shadow: 0 8px 16px -12px rgb(83 62 40 / 45%);
-    transform: translateY(0);
-    filter: brightness(0.96);
-}
-
-.mh-button:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-    filter: none;
-    transform: none;
-    box-shadow: 0 6px 12px -10px rgb(83 62 40 / 35%);
-}
-
-.mh-button:disabled:hover {
-    transform: none;
-    filter: none;
-    box-shadow: 0 6px 12px -10px rgb(83 62 40 / 35%);
-}
+/* ---------- Form controls ---------- */
 
 .mh-input {
     min-height: 44px;
     border: 1px solid var(--mh-border-soft);
-    border-radius: 2px 12px 2px 12px;
+    border-radius: var(--mh-radius-patch-sm);
     background: var(--mh-surface);
     color: var(--mh-text);
+    font-size: 1rem;
     transition:
         border-color var(--mh-transition-standard),
-        box-shadow var(--mh-transition-standard),
-        background-color var(--mh-transition-standard);
+        box-shadow var(--mh-transition-standard);
+}
+
+.mh-input:hover {
+    border-color: var(--mh-text-muted);
 }
 
 .mh-input:focus-visible {
     border-color: var(--mh-focus);
-    background: #fffcf6;
     box-shadow:
         0 0 0 2px var(--mh-focus-offset),
-        0 0 0 4px rgb(62 106 52 / 28%);
+        0 0 0 4px rgb(11 98 214 / 28%);
+}
+
+.mh-input[aria-invalid='true'] {
+    border-color: var(--mh-danger);
 }
 
 .mh-input::placeholder {
     color: var(--mh-text-soft);
 }
 
+select.mh-input {
+    appearance: none;
+    background-image:
+        linear-gradient(45deg, transparent 50%, var(--mh-text) 50%),
+        linear-gradient(135deg, var(--mh-text) 50%, transparent 50%);
+    background-position:
+        calc(100% - 18px) 50%,
+        calc(100% - 13px) 50%;
+    background-repeat: no-repeat;
+    background-size:
+        5px 5px,
+        5px 5px;
+    padding-right: 2.25rem;
+}
+
+textarea.mh-input {
+    min-height: 112px;
+    line-height: 1.5;
+}
+
+.mh-field-label {
+    display: block;
+    color: var(--mh-text);
+    font-size: 0.9375rem;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.mh-field-hint {
+    color: var(--mh-text-muted);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+}
+
+.mh-field-error {
+    color: var(--mh-danger);
+    font-size: 0.8125rem;
+    font-weight: 700;
+}
+
+/* ---------- Links ---------- */
+
 .mh-link {
     cursor: pointer;
     color: var(--mh-link);
     text-decoration: underline;
-    text-decoration-color: rgb(79 107 63 / 42%);
+    text-decoration-color: rgb(7 91 72 / 45%);
     text-decoration-thickness: 1px;
     text-underline-offset: 3px;
     transition:
         color var(--mh-transition-standard),
-        text-decoration-thickness var(--mh-transition-standard),
-        text-underline-offset var(--mh-transition-standard),
         text-decoration-color var(--mh-transition-standard);
 }
 
@@ -256,60 +492,108 @@
 }
 
 .mh-link:hover {
-    color: var(--mh-organic-moss);
+    color: var(--mh-accent-hover);
     text-decoration-thickness: 2px;
-    text-decoration-color: rgb(76 102 59 / 72%);
-    text-underline-offset: 4px;
+    text-decoration-color: currentcolor;
 }
+
+/* ---------- Feedback ---------- */
 
 .mh-alert {
     border-left: 4px solid var(--mh-danger);
+    border-radius: 0 10px 10px 0;
+    background: var(--mh-danger-tint);
     color: #7f2e22;
-    background: rgb(201 107 62 / 10%);
-    padding-left: var(--mh-space-2);
+    padding: var(--mh-space-2) var(--mh-space-3);
 }
+
+.mh-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--mh-space-3);
+    border: var(--mh-outline);
+    border-left-width: 6px;
+    border-radius: var(--mh-radius-patch-sm);
+    padding: var(--mh-space-3) var(--mh-space-4);
+    color: var(--mh-text);
+    font-size: 0.9375rem;
+}
+
+.mh-banner--info {
+    border-color: var(--mh-accent);
+    background: var(--mh-info-tint);
+}
+
+.mh-banner--success {
+    border-color: var(--mh-success);
+    background: var(--mh-success-tint);
+}
+
+.mh-banner--warning {
+    border-color: var(--mh-warning);
+    background: var(--mh-warning-tint);
+}
+
+.mh-banner--danger {
+    border-color: var(--mh-danger);
+    background: var(--mh-danger-tint);
+}
+
+.mh-empty {
+    display: grid;
+    justify-items: start;
+    gap: var(--mh-space-2);
+    border: 1.5px dashed var(--mh-border-soft);
+    border-radius: var(--mh-radius-patch);
+    padding: var(--mh-space-6);
+    color: var(--mh-text-muted);
+}
+
+.mh-empty__title {
+    color: var(--mh-text);
+    font-family: var(--mh-font-heading);
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+/* ---------- Navigation ---------- */
 
 .mh-nav-chip {
     display: inline-flex;
     min-height: 44px;
     align-items: center;
     border: 0;
-    border-radius: 0;
+    border-radius: var(--mh-radius-patch-sm);
     background: transparent;
     color: var(--mh-text);
     padding: 0 var(--mh-space-3);
-    font-size: 0.76rem;
-    font-weight: 800;
-    letter-spacing: 0.02em;
+    font-size: 0.875rem;
+    font-weight: 700;
     text-decoration: none;
     cursor: pointer;
     transition:
-        border-color var(--mh-transition-standard),
         color var(--mh-transition-standard),
-        background-color var(--mh-transition-standard),
-        box-shadow var(--mh-transition-standard);
+        background-color var(--mh-transition-standard);
 }
 
 .mh-nav-chip:hover {
-    color: var(--mh-organic-moss);
-    background: #dcebe2;
-    box-shadow: inset 0 -3px 0 var(--mh-accent);
+    background: var(--mh-accent-tint);
 }
 
 .mh-nav-chip[aria-current='page'] {
-    color: #fffdf7;
+    color: var(--mh-on-accent);
     background: var(--mh-accent);
-    box-shadow: none;
 }
 
 .mh-skip-link {
     position: absolute;
     left: var(--mh-space-2);
     top: var(--mh-space-2);
-    z-index: 50;
-    border: 1px solid var(--mh-border);
-    border-radius: 12px;
-    background: #fffdf8;
+    z-index: 60;
+    border: var(--mh-outline);
+    border-radius: var(--mh-radius-patch-sm);
+    background: var(--mh-surface);
     color: var(--mh-text);
     padding: var(--mh-space-2) var(--mh-space-3);
     text-decoration: none;
@@ -321,8 +605,20 @@
     transform: translateY(0);
 }
 
+/* ---------- Misc ---------- */
+
+.mh-eyebrow,
+.mh-kicker {
+    color: var(--mh-text-muted);
+    font-family: var(--mh-font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
 .mh-skeleton {
-    border-radius: 12px;
+    border-radius: var(--mh-radius-patch-sm);
     background: linear-gradient(
         90deg,
         rgb(191 173 141 / 18%) 0%,
@@ -344,64 +640,48 @@
 }
 
 .mh-stat-tile {
-    border: 1px solid var(--mh-border);
-    border-radius: 2px 12px 2px 12px;
-    background: #fffdf7;
+    border: var(--mh-outline);
+    border-radius: var(--mh-radius-patch-sm);
+    background: var(--mh-surface);
     padding: var(--mh-space-3);
-    box-shadow: 2px 2px 0 rgb(23 32 25 / 14%);
+    box-shadow: var(--mh-shadow-sm);
 }
 
 .mh-record-card {
-    border: 1px solid var(--mh-border-soft);
-    border-radius: 2px 12px 2px 12px;
-    background: var(--mh-surface-elev);
-    padding: var(--mh-space-3);
+    border: var(--mh-outline);
+    border-radius: var(--mh-radius-patch);
+    background: var(--mh-surface);
+    padding: var(--mh-space-4);
+    box-shadow: var(--mh-shadow-sm);
     transition:
-        border-color var(--mh-transition-standard),
         box-shadow var(--mh-transition-standard),
         transform var(--mh-transition-standard);
 }
 
 .mh-record-card:hover {
-    border-color: var(--mh-border);
-    box-shadow: 2px 2px 0 rgb(23 32 25 / 12%);
-    transform: translateY(-1px);
+    box-shadow: var(--mh-shadow);
+    transform: translate(-1px, -1px);
 }
 
 input[type='checkbox'],
 input[type='radio'] {
+    width: 1.125rem;
+    height: 1.125rem;
     accent-color: var(--mh-accent);
 }
 
-:where(a, button, input, textarea, select, summary, [role='button']):focus-visible {
+:where(a, button, input, textarea, select, summary, [role='button'], [tabindex]):focus-visible {
     outline: 2px solid var(--mh-focus);
     outline-offset: 2px;
     box-shadow: 0 0 0 2px var(--mh-focus-offset);
 }
 
 @media (max-width: 480px) {
-    .mh-card {
-        border-radius: 18px;
-    }
-
-    .mh-panel-shell {
-        border-radius: 16px;
-    }
-
-    .mh-nav-chip {
-        font-size: 0.74rem;
-        padding: 0 var(--mh-space-2);
-    }
-
     .mh-grid-pattern {
-        background-size:
-            24px 24px,
-            24px 24px,
-            100% 100%,
-            100% 100%;
+        background-size: 24px 24px;
     }
 
-    .mh-button {
+    .mh-button--md {
         min-height: 46px;
     }
 }
