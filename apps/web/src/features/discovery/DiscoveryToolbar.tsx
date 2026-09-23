@@ -30,6 +30,8 @@ interface DiscoveryToolbarProps {
     /** Number of active extra filters, added to the button badge. */
     extraActiveCount?: number;
     onClearExtra?: () => void;
+    /** Omit the area/radius line when the page shows its own (the map). */
+    hideAreaSummary?: boolean;
 }
 
 interface ActiveFilter {
@@ -51,6 +53,7 @@ export const DiscoveryToolbar = ({
     extraFilters,
     extraActiveCount = 0,
     onClearExtra,
+    hideAreaSummary = false,
 }: DiscoveryToolbarProps) => {
     const { t } = useLocale();
     const { access, request } = useApproximateLocation(state, onPatch);
@@ -138,6 +141,7 @@ export const DiscoveryToolbar = ({
                 <div className='mh-toolbar__location' role='status'>
                     <Icon name='pin' size={18} />
                     <p className='min-w-0 flex-1'>
+                        {hideAreaSummary ? null : (
                         <strong>
                             {areaKm
                                 ? t('discovery.areaSummary', {
@@ -149,6 +153,7 @@ export const DiscoveryToolbar = ({
                                 : (state.areaLabel ??
                                   t('discovery.areaUnknown'))}
                         </strong>
+                        )}
                         <span className='mh-toolbar__location-note'>
                             {access === 'fallback'
                                 ? t('discovery.locationFallback')

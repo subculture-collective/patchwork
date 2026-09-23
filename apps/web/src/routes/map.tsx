@@ -261,43 +261,50 @@ export const MapRoute = ({
 
             {errorMessage || resourceErrorMessage || tileError ? (
                 <div className='mb-6 grid gap-3'>
-                    {errorMessage ? (
+                    {errorMessage || resourceErrorMessage ? (
                         <Banner
                             tone='danger'
-                            title={t('map.apiSyncIssue', {
-                                message: errorMessage,
-                            })}
                             actions={
-                                <Button
-                                    size='sm'
-                                    variant='secondary'
-                                    onClick={onRetry}
-                                >
-                                    {t('map.retryDiscovery')}
-                                </Button>
+                                <>
+                                    {errorMessage ? (
+                                        <Button
+                                            size='sm'
+                                            variant='secondary'
+                                            onClick={onRetry}
+                                        >
+                                            {t('map.retryDiscovery')}
+                                        </Button>
+                                    ) : null}
+                                    {resourceErrorMessage ? (
+                                        <Button
+                                            size='sm'
+                                            variant='secondary'
+                                            onClick={onRetryResources}
+                                        >
+                                            {t('map.retryPlaces')}
+                                        </Button>
+                                    ) : null}
+                                </>
                             }
                         >
-                            {feedRecords.length > 0 ? (
+                            {errorMessage ? (
+                                <p className='font-bold'>
+                                    {t('map.apiSyncIssue', {
+                                        message: errorMessage,
+                                    })}
+                                </p>
+                            ) : null}
+                            {errorMessage && feedRecords.length > 0 ? (
                                 <p>{t('map.staleResults')}</p>
                             ) : null}
+                            {resourceErrorMessage ? (
+                                <p className='font-bold'>
+                                    {t('map.publicPlaceIssue', {
+                                        message: resourceErrorMessage,
+                                    })}
+                                </p>
+                            ) : null}
                         </Banner>
-                    ) : null}
-                    {resourceErrorMessage ? (
-                        <Banner
-                            tone='danger'
-                            title={t('map.publicPlaceIssue', {
-                                message: resourceErrorMessage,
-                            })}
-                            actions={
-                                <Button
-                                    size='sm'
-                                    variant='secondary'
-                                    onClick={onRetryResources}
-                                >
-                                    {t('map.retryPlaces')}
-                                </Button>
-                            }
-                        />
                     ) : null}
                     {tileError ? (
                         <Banner tone='warning' live='alert'>
@@ -311,6 +318,7 @@ export const MapRoute = ({
                 idPrefix='map'
                 state={discoveryState}
                 onPatch={onPatchDiscovery}
+                hideAreaSummary
             />
 
             <div className='mh-map-layout'>
@@ -321,6 +329,9 @@ export const MapRoute = ({
                             role='status'
                             aria-live='polite'
                         >
+                            <Badge tone='info'>
+                                {t('map.filteredArea')}
+                            </Badge>
                             <p className='min-w-0 flex-1 text-sm text-mh-textMuted'>
                                 <strong className='text-mh-text'>
                                     {activeArea.label}
