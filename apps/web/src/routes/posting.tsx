@@ -13,7 +13,10 @@ import {
 } from '../posting-form';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
-import { Panel } from '../components/Panel';
+import { Banner } from '../components/Banner';
+import { PageHeader } from '../components/PageHeader';
+import { SegmentedControl } from '../components/SegmentedControl';
+import { Surface } from '../components/Surface';
 import { queryAidPostLifecycleViaApi, uploadPrivateAttachmentViaApi } from '../features/api-client';
 import { useLocale } from '../i18n';
 import { PUBLIC_MIN_PRECISION_KM } from '@patchwork/shared';
@@ -210,20 +213,18 @@ export const PostingRoute = ({
     };
 
     return (
-        <section className='space-y-6'>
-            <header className='mh-route-header'>
-                <h1 className='mh-route-title'>{t('posting.heading')}</h1>
-                <p className='mt-2 text-sm text-mh-textMuted'>
-                    {t('posting.description')}
-                </p>
-            </header>
+        <section className='mx-auto max-w-3xl'>
+            <PageHeader
+                title={t('posting.heading')}
+                description={t('posting.description')}
+            />
 
-            <Panel title={String(t('posting.formTitle'))}>
-                <form className='space-y-4' onSubmit={handleSubmit}>
+            <Surface aria-label={String(t('posting.formTitle'))}>
+                <form className='grid gap-5' onSubmit={handleSubmit}>
                     <div>
                         <label
                             htmlFor='posting-title'
-                            className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
+                            className='mb-1.5 block mh-field-label'
                         >
                             {t('posting.titleLabel')}
                         </label>
@@ -242,7 +243,7 @@ export const PostingRoute = ({
                     <div>
                         <label
                             htmlFor='posting-description'
-                            className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
+                            className='mb-1.5 block mh-field-label'
                         >
                             {t('posting.descriptionLabel')}
                         </label>
@@ -261,11 +262,11 @@ export const PostingRoute = ({
                         />
                     </div>
 
-                    <div className='grid gap-4 sm:grid-cols-2'>
+                    <div>
                         <div>
                             <label
                                 htmlFor='posting-category'
-                                className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
+                                className='mb-1.5 block mh-field-label'
                             >
                                 {t('posting.categoryLabel')}
                             </label>
@@ -290,44 +291,29 @@ export const PostingRoute = ({
                             </select>
                         </div>
 
-                        <div>
-                            <label
-                                htmlFor='posting-urgency'
-                                className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
-                            >
-                                {t('posting.urgencyLabel')}
-                            </label>
-                            <Input
-                                id='posting-urgency'
-                                name='urgency'
-                                autoComplete='off'
-                                type='number'
-                                min={1}
-                                max={5}
-                                value={urgency}
-                                onChange={(event) => {
-                                    const nextUrgency = Number.parseInt(
-                                        event.target.value,
-                                        10,
-                                    );
-                                    if (Number.isNaN(nextUrgency)) {
-                                        return;
-                                    }
-                                    setUrgency(
-                                        Math.min(
-                                            5,
-                                            Math.max(1, nextUrgency),
-                                        ) as 1 | 2 | 3 | 4 | 5,
-                                    );
-                                }}
-                            />
-                        </div>
+                    </div>
+
+                    <div>
+                        <SegmentedControl
+                            label={String(t('posting.urgencyLabel'))}
+                            hideLabel={false}
+                            value={String(urgency) as '1' | '2' | '3' | '4' | '5'}
+                            options={(['1', '2', '3', '4', '5'] as const).map(
+                                (level) => ({ value: level, label: level }),
+                            )}
+                            onChange={(level) =>
+                                setUrgency(Number(level) as 1 | 2 | 3 | 4 | 5)
+                            }
+                        />
+                        <p className='mh-field-hint mt-1.5'>
+                            {t('posting.urgencyHint')}
+                        </p>
                     </div>
 
                     <div>
                         <label
                             htmlFor='posting-tags'
-                            className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
+                            className='mb-1.5 block mh-field-label'
                         >
                             {t('posting.accessibilityTags')}
                         </label>
@@ -342,8 +328,8 @@ export const PostingRoute = ({
                         />
                     </div>
 
-                    <div className='border-2 border-mh-borderSoft p-3'>
-                        <h3 className='font-bold'>{t('posting.approximateArea')}</h3>
+                    <div className='mh-surface mh-surface--quiet p-4'>
+                        <h2 className='mh-field-label'>{t('posting.approximateArea')}</h2>
                         <p className='mt-2 text-sm text-mh-textMuted'>
                             {t('posting.selectedArea', { area: location.areaLabel })}
                         </p>
@@ -353,28 +339,31 @@ export const PostingRoute = ({
                         <Button
                             className='mt-3'
                             type='button'
+                            variant='secondary'
+                            size='sm'
                             onClick={() => onNavigate('/map')}
                         >
                             {t('posting.changeArea')}
                         </Button>
                     </div>
 
-                    <div className='border-2 border-mh-border bg-mh-surfaceElev p-4'>
-                        <h3 className='font-bold'>
-                            {t('posting.privacySummary')}
-                        </h3>
-                        <ul className='mt-2 list-disc space-y-1 pl-5 text-sm text-mh-textMuted'>
+                    <Banner
+                        tone='info'
+                        live='none'
+                        title={t('posting.privacySummary')}
+                    >
+                        <ul className='list-disc space-y-1 pl-5 text-sm'>
                             <li>{t('posting.publicSummary')}</li>
                             <li>{t('posting.privateSummary')}</li>
                             <li>{t('posting.neverSummary')}</li>
                         </ul>
-                    </div>
+                    </Banner>
 
                     <div className='grid gap-4 sm:grid-cols-2'>
                         <div>
                             <label
                                 htmlFor='posting-start-at'
-                                className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
+                                className='mb-1.5 block mh-field-label'
                             >
                                 {t('posting.timeWindowStart')}
                             </label>
@@ -392,7 +381,7 @@ export const PostingRoute = ({
                         <div>
                             <label
                                 htmlFor='posting-end-at'
-                                className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
+                                className='mb-1.5 block mh-field-label'
                             >
                                 {t('posting.timeWindowEnd')}
                             </label>
@@ -412,7 +401,7 @@ export const PostingRoute = ({
                     <div>
                         <label
                             htmlFor='posting-attachments'
-                            className='mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-mh-text'
+                            className='mb-1.5 block mh-field-label'
                         >
                             {t('posting.attachments')}
                         </label>
@@ -427,7 +416,7 @@ export const PostingRoute = ({
                                 )
                             }
                         />
-                        <p className='mt-1 text-xs text-mh-textSoft'>
+                        <p className='mh-field-hint mt-1.5'>
                             {t('posting.attachmentHelp')}
                         </p>
                         {attachmentFiles.length ? (
@@ -449,22 +438,19 @@ export const PostingRoute = ({
                     </div>
 
                     {errors.length > 0 ? (
-                        <div className='space-y-1'>
-                            {errors.map((issue) => (
-                                <p
-                                    key={`${issue.field}-${issue.message}`}
-                                    className='mh-alert text-xs font-bold'
-                                >
-                                    {issue.field}: {issue.message}
-                                </p>
-                            ))}
-                        </div>
+                        <Banner tone='danger' title={t('posting.fixErrors')}>
+                            <ul className='list-disc space-y-1 pl-5'>
+                                {errors.map((issue) => (
+                                    <li key={`${issue.field}-${issue.message}`}>
+                                        {issue.message}
+                                    </li>
+                                ))}
+                            </ul>
+                        </Banner>
                     ) : null}
 
                     {successMessage ? (
-                        <p className='rounded-none border-2 border-mh-border bg-mh-surfaceElev px-3 py-2 text-xs font-bold text-mh-success'>
-                            {successMessage}
-                        </p>
+                        <Banner tone='success'>{successMessage}</Banner>
                     ) : null}
 
                     {projectionNotice ? (
@@ -489,13 +475,17 @@ export const PostingRoute = ({
                     ) : null}
 
                     {apiError ? (
-                        <p className='mh-alert text-xs font-bold'>
+                        <Banner tone='danger'>
                             {t('posting.unableToPresist', { error: apiError })}
-                        </p>
+                        </Banner>
                     ) : null}
 
                     <div className='flex flex-wrap gap-2'>
-                        <Button type='submit' disabled={isSubmitting}>
+                        <Button
+                            type='submit'
+                            variant='accent'
+                            disabled={isSubmitting}
+                        >
                             {isSubmitting
                                 ? t('posting.publishing')
                                 : t('posting.publishRequest')}
@@ -509,7 +499,7 @@ export const PostingRoute = ({
                         </Button>
                     </div>
                 </form>
-            </Panel>
+            </Surface>
         </section>
     );
 };

@@ -15,16 +15,32 @@ export const demoAreaPresets = {
     },
 } as const;
 
-export type LocationAccess = 'idle' | 'requesting' | 'granted' | 'fallback';
+export type LocationAccess =
+    | 'idle'
+    | 'requesting'
+    | 'granted'
+    | 'fallback'
+    | 'denied';
 
 /**
  * Requests the device location once when no discovery area is set, rounds it
  * to roughly a kilometre, and falls back to the demonstration area when the
  * browser refuses or cannot answer.
  */
+export interface ApproximateLocationOptions {
+    /** Request location on mount when no area is set (default true). */
+    auto?: boolean;
+    /**
+     * Load the demonstration area when location is unavailable (default
+     * true). Must be false wherever the area is published, e.g. posting.
+     */
+    fallbackToDemo?: boolean;
+}
+
 export const useApproximateLocation = (
     state: DiscoveryFilterState,
     onPatch: (patch: Partial<DiscoveryFilterState>) => void,
+    { auto = true, fallbackToDemo = true }: ApproximateLocationOptions = {},
 ) => {
     const { t } = useLocale();
     const [access, setAccess] = useState<LocationAccess>('idle');
@@ -33,8 +49,8 @@ export const useApproximateLocation = (
     const request = useCallback(() => {
         setAccess('requesting');
         if (!navigator.geolocation) {
-            setAccess('fallback');
-            onPatch(demoAreaPresets.chicagoland);
+            setAccess(fallbackToDemo ? 'fallback' : 'denied');
+            if (fallbackToDemo) onPatch(demoAreaPresets.chicagoland);
             return;
         }
         navigator.geolocation.getCurrentPosition(
@@ -54,20 +70,20 @@ export const useApproximateLocation = (
                 });
             },
             () => {
-                setAccess('fallback');
-                onPatch(demoAreaPresets.chicagoland);
+                setAccess(fallbackToDemo ? 'fallback' : 'denied');
+                if (fallbackToDemo) onPatch(demoAreaPresets.chicagoland);
             },
             { enableHighAccuracy: false, maximumAge: 300000, timeout: 5000 },
         );
-    }, [onPatch, t]);
+    }, [fallbackToDemo, onPatch, t]);
 
     // Ask only when the page first opens without an area. If the visitor
     // later clears the area, respect that instead of re-applying one.
     useEffect(() => {
-        if (requestedRef.current) return;
+        if (!auto || requestedRef.current) return;
         requestedRef.current = true;
         if (!state.center) request();
-    }, [request, state.center]);
+    }, [auto, request, state.center]);
 
     return { access, request };
 };

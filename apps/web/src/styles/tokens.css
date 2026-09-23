@@ -127,6 +127,15 @@
     font-size: 0.9375rem;
 }
 
+/*
+ * A surface inside another surface loses its outline weight and shadow so
+ * nested legacy Card/Panel markup reads as one container with sections.
+ */
+:is(.mh-surface, .mh-card, .mh-panel-shell) :is(.mh-surface, .mh-card, .mh-panel-shell) {
+    border: 1px solid var(--mh-border-subtle);
+    box-shadow: none;
+}
+
 /* Legacy Panel shell: now a single surface with an inline heading. */
 .mh-panel-shell {
     border: var(--mh-outline);
