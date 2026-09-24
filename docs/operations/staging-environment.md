@@ -47,30 +47,39 @@ encryption, moderation-token, or database-secret fallbacks.
 Parity is enforced programmatically by `checkStagingParity()` in
 `packages/shared/src/staging.ts`.
 
-## Intended deployment pipeline
+## Deployment workflow
 
-```
-push to main
-    |
-    v
-quality-gates job (lint, typecheck, test, security scans)
-    |
-    v
-e2e-production job (contract-path tests against Postgres)
-    |
-    v
-deploy-staging job (build immutable images, verify labels, smoke check)
-    |
-    v
-progressive-delivery-gate job (canary readiness, rollback trigger audit)
-```
+`.github/workflows/deploy-staging.yml` is manually dispatched on Gitea `main`
+with the full current main SHA. It runs:
 
-The protected CI path models these stages for GHCR/OIDC promotion. Separately,
-the authorized NUC home-staging execution published, signed, deployed, rolled
-back, and forward-promoted exact digests on 2026-07-28. See
-`evidence/phase-7/immutable-delivery.md`. A green local Compose check alone is
-still not deployment evidence, and the protected GitHub path remains
-production hardening.
+1. Preflight: exact-SHA CI status checks, required configuration, signing-key
+   agreement, registry login, and read-only SSH prerequisite checks.
+2. Four image builds: vulnerability scan, SBOM, Gitea provenance, registry push,
+   digest resolution, Cosign key signatures, and attestation verification.
+3. Digest-manifest assembly using Gitea-compatible artifact upload/download.
+4. Another main/CI check, then SSH transfer into a per-run directory and locked
+   digest deployment using the existing staging Compose project identity.
+5. Readiness and revision checks, followed by both credentialed browser suites.
+
+A host lock serializes deployment and immediate rollback. The wrapper verifies
+release trust before invoking the deploy script. A failed deployment rolls back
+only when the retained previous manifest matches the current release captured
+at entry. A trust rejection does not roll a healthy service back. A first
+deployment without a retained baseline requires operator recovery on failure.
+Browser-suite failures fail the workflow and require investigation; they do not
+automatically roll back database migrations or their disposable test records.
+
+Configure the repository secrets, variables, host trust root, registry pull
+credentials, and existing Compose project name using
+[staging-secrets.md](staging-secrets.md). Gitea does not enforce GitHub environment
+approvals; this workflow's manual dispatch and branch checks are not a substitute
+for a separate reviewer gate.
+
+This describes the port's implementation, not a completed Gitea deployment.
+The authorized NUC home-staging exercise published, signed, deployed, rolled
+back, and forward-promoted exact digests on 2026-07-28; see
+`evidence/phase-7/immutable-delivery.md` for that historical evidence. Qualify the
+configured Gitea workflow with a new hosted run before claiming this path works.
 
 ## Smoke Checks
 
@@ -134,7 +143,7 @@ secondary responder, a staffed rotation, or production-hours coverage.
 | Environment health | Patrick Fanella |
 | Primary on-call | Patrick Fanella |
 | Escalation | Patrick Fanella |
-| Deployment pipeline | `ci.yml` deploy-staging job |
+| Deployment pipeline | `.github/workflows/deploy-staging.yml` |
 
 Patrick Fanella may act as Incident Commander for home-staging incidents and
 is the first escalation point for alerts. Contact routing remains
