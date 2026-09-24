@@ -20,9 +20,15 @@ html {
     overflow-x: clip;
     background-color: var(--mh-bg);
     background-image:
-        linear-gradient(to right, rgb(90 76 57 / 6%) 1px, transparent 1px),
-        linear-gradient(to bottom, rgb(90 76 57 / 6%) 1px, transparent 1px);
-    background-size: 30px 30px;
+        linear-gradient(to right, rgb(90 76 57 / 7%) 1px, transparent 1px),
+        linear-gradient(to bottom, rgb(90 76 57 / 7%) 1px, transparent 1px),
+        radial-gradient(circle at 15% 18%, rgb(120 103 74 / 6%) 0, transparent 40%),
+        radial-gradient(circle at 85% 82%, rgb(99 125 76 / 8%) 0, transparent 45%);
+    background-size:
+        30px 30px,
+        30px 30px,
+        100% 100%,
+        100% 100%;
     color: var(--mh-text);
 }
 
@@ -168,7 +174,7 @@ html {
     cursor: pointer;
     border: var(--mh-outline);
     border-radius: var(--mh-radius-patch-sm);
-    background: var(--mh-surface);
+    background: var(--mh-surface-elev);
     box-shadow: var(--mh-shadow-sm);
     padding: 0 var(--mh-space-4);
     color: var(--mh-text);
@@ -332,6 +338,7 @@ html {
 /* ---------- Page header ---------- */
 
 .mh-page-header {
+    position: relative;
     display: flex;
     flex-wrap: wrap;
     align-items: flex-end;
@@ -339,14 +346,37 @@ html {
     gap: var(--mh-space-4);
     margin-bottom: var(--mh-space-6);
     border-bottom: var(--mh-outline);
-    padding-bottom: var(--mh-space-5);
+    padding: 0 0 var(--mh-space-5);
 }
 
 /* Legacy route headers adopt the same rhythm. */
 .mh-route-header {
+    position: relative;
     margin-bottom: var(--mh-space-6);
     border-bottom: var(--mh-outline);
     padding-bottom: var(--mh-space-5);
+}
+
+/* The mustard ring from the original headers, kept clear of the text. */
+.mh-page-header::after,
+.mh-route-header::after {
+    position: absolute;
+    right: 0;
+    bottom: -8px;
+    width: 40px;
+    height: 40px;
+    border: 8px solid var(--mh-accent-3);
+    border-radius: 50%;
+    content: '';
+    pointer-events: none;
+}
+
+.mh-page-header__actions {
+    padding-right: 52px;
+}
+
+.mh-page-header__description {
+    padding-right: 0;
 }
 
 .mh-route-header > p:not([role]) {
@@ -411,7 +441,7 @@ html {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     border-top: var(--mh-outline);
-    background: var(--mh-surface);
+    background: var(--mh-surface-elev);
     padding-bottom: env(safe-area-inset-bottom);
 }
 

@@ -48,6 +48,34 @@ export const Surface = ({
 }: PropsWithChildren<SurfaceProps>) => {
     const headingId = useId();
     const hasHeader = Boolean(title || actions || eyebrow);
+    const titled = Boolean(title) && tone === 'default';
+    if (titled) {
+        return (
+            <Element
+                id={id}
+                className={['mh-surface', 'mh-surface--titled', className]
+                    .filter(Boolean)
+                    .join(' ')}
+                aria-label={ariaLabel}
+                aria-labelledby={!ariaLabel ? headingId : undefined}
+            >
+                <header className='mh-surface__titlebar'>
+                    <Heading id={headingId} className='mh-surface__title'>
+                        {title}
+                    </Heading>
+                    {actions ? (
+                        <div className='flex flex-wrap items-center gap-2'>
+                            {actions}
+                        </div>
+                    ) : null}
+                    {description ? (
+                        <p className='mh-surface__description'>{description}</p>
+                    ) : null}
+                </header>
+                <div className='mh-surface__sheet'>{children}</div>
+            </Element>
+        );
+    }
     return (
         <Element
             id={id}
