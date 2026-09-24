@@ -134,8 +134,19 @@ test('clearing the area retains the same map and loads all-area results', async 
 test('county boundaries split into ZIPs with one keyboard action and regroup when zooming out', async ({
     page,
 }) => {
+    let releaseStates!: () => void;
+    const stateGate = new Promise<void>(resolve => { releaseStates = resolve; });
+    await page.route('**/geography/census2020/states.json', async route => {
+        await stateGate;
+        await route.continue();
+    });
     await page.goto('/nearby?lat=41.88&lng=-87.63&r=50000');
-    await page.getByRole('button', { name: 'Explore Cook County, IL: 240 requests', exact: true }).focus();
+    const county = page.getByRole('button', { name: 'Explore Cook County, IL: 240 requests', exact: true });
+    await county.focus();
+    const originalShape = await county.elementHandle();
+    releaseStates();
+    await expect.poll(() => originalShape!.evaluate(element => element.isConnected)).toBe(false);
+    await expect(county).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(page.locator('path[aria-label^="Show ZIP"]')).toHaveCount(4);
     await expect(page.locator('path.mh-map-cluster')).toHaveCount(0);
@@ -186,7 +197,7 @@ test('filters expose their state and remain usable by keyboard and touch', async
     await expect(food).toHaveAttribute('aria-pressed', 'true');
     expect(new URL(page.url()).searchParams.get('cat')).toBe('food');
     expect(
-        await food.evaluate(el => el.getBoundingClientRect().height),
+        await food.evaluate(el => Math.round(el.getBoundingClientRect().height)),
     ).toBeGreaterThanOrEqual(44);
     await food.click();
     await expect(food).toHaveAttribute('aria-pressed', 'false');

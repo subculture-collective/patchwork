@@ -60,6 +60,7 @@ export function PostalMap(props: Props) {
     const browseZoom = useRef(11);
     const previousPostalCode = useRef(props.selectedPostalCode);
     const fittedZip = useRef<string | undefined>(undefined);
+    const focusedBoundary = useRef<string | undefined>(undefined);
     const [resourceCells,setResourceCells]=useState<ResourceMapCell[]>();
     const [resourceMapError,setResourceMapError]=useState(false);
     const [zoom, setZoom] = useState(props.selectedPostalCode ? 13 : 9);
@@ -413,6 +414,8 @@ export function PostalMap(props: Props) {
                                 layer.once('remove', () =>
                                     map.off('moveend', updateAccess),
                                 );
+                                const boundaryId = `${isZip ? 'zip' : isCounty ? 'county' : 'state'}:${feature.properties.id}`;
+                                element?.setAttribute('data-boundary-id', boundaryId);
                                 element?.setAttribute('role', 'button');
                                 element?.setAttribute(
                                     'aria-pressed',
@@ -433,6 +436,11 @@ export function PostalMap(props: Props) {
                                         { label },
                                     ),
                                 );
+                                if (focusedBoundary.current === boundaryId &&
+                                    (document.activeElement === document.body || document.activeElement === container.current)) {
+                                    (element as SVGElement | undefined)?.focus({ preventScroll: true });
+                                    focusedBoundary.current = undefined;
+                                }
                                 element?.addEventListener('keydown', event => {
                                     if (
                                         ['Enter', ' '].includes(
@@ -456,6 +464,10 @@ export function PostalMap(props: Props) {
                 if (!abort.signal.aborted) setLoading(false);
             });
         return () => {
+            const active = document.activeElement;
+            if (active && container.current?.contains(active)) {
+                focusedBoundary.current = active.getAttribute('data-boundary-id') ?? undefined;
+            }
             abort.abort();
             group.remove();
         };
