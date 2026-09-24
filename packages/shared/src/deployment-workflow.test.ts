@@ -11,7 +11,8 @@ const read = (path: string) => readFileSync(resolve(root, path), 'utf8');
 describe('immutable staging deployment contract', () => {
     it('builds, scans, signs, and publishes all runtime images exactly once', () => {
         const workflow = read('.github/workflows/deploy-staging.yml');
-        expect(workflow).toContain('ghcr.io/${{ github.repository_owner }}');
+        expect(workflow).toContain('REGISTRY: git.subcult.tv/subculture-collective');
+        expect(workflow).toContain('password: ${{ secrets.STAGING_REGISTRY_TOKEN }}');
         for (const target of [
             'api-runtime',
             'indexer-runtime',
@@ -21,7 +22,8 @@ describe('immutable staging deployment contract', () => {
             expect(workflow).toContain(`target: ${target}`);
         }
         expect(workflow).toContain('aquasecurity/trivy-action');
-        expect(workflow).toContain('cosign sign --yes');
+        expect(workflow).toContain('cosign sign --yes --key env://COSIGN_PRIVATE_KEY');
+        expect(workflow).toContain('cosign verify --key cosign.pub');
         expect(workflow).toContain('docker push');
         expect(workflow).toContain('artifact-digests.json');
         expect(workflow).toContain('mapTileUrl');
@@ -31,7 +33,12 @@ describe('immutable staging deployment contract', () => {
         const workflow = read('.github/workflows/deploy-staging.yml');
         const deploy = read('scripts/deploy-staging-digests.sh');
         const rollback = read('scripts/rollback-staging-digests.sh');
-        expect(workflow).toContain('environment: staging');
+        expect(workflow).not.toContain('environment: staging');
+        expect(workflow).toContain('needs: preflight');
+        expect(workflow).toContain('bash scripts/verify-gitea-source.sh');
+        expect(workflow).toContain('bash scripts/check-staging-workflow-config.sh');
+        expect(workflow).toContain('PATCHWORK_RELEASE_VERIFY_MODE=key');
+        expect(workflow).toContain('./run-staging-release.sh');
         expect(workflow).toContain('deploy-staging-digests.sh');
         expect(workflow).toContain('at-record-lifecycle.spec.ts');
         expect(deploy).toContain('@sha256:');
