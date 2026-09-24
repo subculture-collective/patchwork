@@ -133,6 +133,7 @@ esac
             self.env[key] = "fixture-do-not-log"
         self.env.update(
             STAGING_SSH_USER="deploy", STAGING_SSH_HOST="staging.test",
+            STAGING_SSH_USE_SUDO="false", STAGING_COMPOSE_OVERRIDE_FILE="",
             STAGING_DEPLOY_PATH="/srv/patchwork", STAGING_ENV_FILE="/etc/patchwork/runtime.env",
             STAGING_COSIGN_PUBLIC_KEY_PATH="/etc/patchwork/cosign.pub",
             STAGING_COMPOSE_PROJECT_NAME="existing-staging",
@@ -165,6 +166,8 @@ esac
             ("STAGING_PUBLIC_ORIGIN", "http://staging.test"),
             ("STAGING_VITE_MAP_TILE_URL", "/tiles/us.pmtiles"),
             ("STAGING_COMPOSE_PROJECT_NAME", "run/123"),
+            ("STAGING_COMPOSE_OVERRIDE_FILE", "/etc/override;anything"),
+            ("STAGING_SSH_USE_SUDO", "true;anything"),
         ]:
             with self.subTest(key=key):
                 self.valid_config()

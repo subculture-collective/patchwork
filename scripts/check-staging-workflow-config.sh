@@ -33,4 +33,10 @@ done
 [[ "$STAGING_VITE_API_BASE_URL" != //* ]]
 [[ "$STAGING_VITE_MAP_TILE_URL" =~ ^/tiles/us\.[0-9a-f]{64}\.pmtiles$ ]]
 [[ "${STAGING_E2E_EXERCISE_MAINTENANCE:-false}" =~ ^(true|false)$ ]]
+
+[[ "${STAGING_SSH_USE_SUDO:-false}" =~ ^(true|false)$ ]]
+if [[ -n "${STAGING_COMPOSE_OVERRIDE_FILE:-}" ]]; then
+    [[ "$STAGING_COMPOSE_OVERRIDE_FILE" =~ ^/[a-zA-Z0-9_./-]+$ &&
+       "$STAGING_COMPOSE_OVERRIDE_FILE" != *'/../'* && "$STAGING_COMPOSE_OVERRIDE_FILE" != */.. ]]
+fi
 echo 'Staging workflow inputs are present and structurally valid.'

@@ -42,6 +42,8 @@ missing names without printing their values.
 | `STAGING_COSIGN_PUBLIC_KEY_PATH` | Absolute path to the public key already installed on staging |
 | `STAGING_DEPLOY_PATH` | Existing writable absolute directory; each run transfers into `run-<id>` below it |
 | `STAGING_COMPOSE_PROJECT_NAME` | Existing staging Compose project name; inspect `com.docker.compose.project` on the staging containers before setting it, to preserve the stack's volumes and networks |
+| `STAGING_SSH_USE_SUDO` | Optional `true` to run host preflight and deployment through existing noninteractive sudo; defaults to `false` |
+| `STAGING_COMPOSE_OVERRIDE_FILE` | Optional absolute path to the existing host Compose override; passed to deployment and rollback |
 | `STAGING_ENV_FILE` | Absolute path to the existing staging runtime environment file, outside the checkout |
 | `STAGING_PUBLIC_ORIGIN` | HTTPS origin for browser checks, without a trailing slash |
 | `STAGING_VITE_API_BASE_URL` | HTTPS API URL or same-origin absolute path such as `/api` |
@@ -58,12 +60,17 @@ Provision the staging account and runtime configuration before dispatch. The
 account needs Docker access, Docker Compose v2, Bash, `jq`, `flock`, `sha256sum`,
 and Cosign compatible with the workflow's pinned v2.5.2. It must be able to read
 the runtime environment and public key and write the deployment directory and
-`/var/lib/patchwork/releases`. Preserve the existing release manifests and
+`/var/lib/patchwork/releases`. With `STAGING_SSH_USE_SUDO=true`, those reads and
+release-state writes use the account's existing noninteractive sudo access; the
+transfer directory must still be writable by the SSH account. Do not loosen
+root-owned runtime-file permissions to satisfy preflight. Preserve the existing release manifests and
 checksums. Authenticate Docker and Cosign on the host to `git.subcult.tv` with
 a separate `read:package` credential for private image pulls; the publishing
 PAT is not transferred by the workflow. Retain access to the previous release's
 registry until rollback is qualified. Provision the external `staging-web`
-network and versioned map tile file described by the Compose file.
+network and versioned map tile file described by the Compose file. Retain any
+host override that pins external database volumes or ingress bindings using
+`STAGING_COMPOSE_OVERRIDE_FILE`.
 
 Generate the encrypted signing key using `cosign generate-key-pair` in the
 approved secret-management environment. Store the private key and password in
