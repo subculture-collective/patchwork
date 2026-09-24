@@ -61,6 +61,7 @@ export function PostalMap(props: Props) {
     const previousPostalCode = useRef(props.selectedPostalCode);
     const fittedZip = useRef<string | undefined>(undefined);
     const focusedBoundary = useRef<string | undefined>(undefined);
+    const boundaryLayer = useRef<L.LayerGroup | undefined>(undefined);
     const [resourceCells,setResourceCells]=useState<ResourceMapCell[]>();
     const [resourceMapError,setResourceMapError]=useState(false);
     const [zoom, setZoom] = useState(props.selectedPostalCode ? 13 : 9);
@@ -247,7 +248,6 @@ export function PostalMap(props: Props) {
         const map = mapRef.current;
         if (!map) return;
         const abort = new AbortController();
-        const group = L.layerGroup().addTo(map);
         setBoundaryError(undefined);
         setLoading(true);
         const files =
@@ -261,6 +261,16 @@ export function PostalMap(props: Props) {
         void Promise.all(files.map(file => boundaries(file, abort.signal)))
             .then(collections => {
                 if (abort.signal.aborted) return;
+                // Keep the current shapes interactive while replacement files load.
+                // Swap them synchronously so a focused shape never leaves a gap
+                // where Enter is sent to the page body instead of the map.
+                const active = document.activeElement;
+                if (active && container.current?.contains(active)) {
+                    focusedBoundary.current = active.getAttribute('data-boundary-id') ?? undefined;
+                }
+                boundaryLayer.current?.remove();
+                const group = L.layerGroup().addTo(map);
+                boundaryLayer.current = group;
                 for (const [
                     collectionIndex,
                     collection,
@@ -464,12 +474,7 @@ export function PostalMap(props: Props) {
                 if (!abort.signal.aborted) setLoading(false);
             });
         return () => {
-            const active = document.activeElement;
-            if (active && container.current?.contains(active)) {
-                focusedBoundary.current = active.getAttribute('data-boundary-id') ?? undefined;
-            }
             abort.abort();
-            group.remove();
         };
     }, [
         boundaryView, props.resourceMode,
