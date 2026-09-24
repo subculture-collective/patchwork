@@ -39,12 +39,18 @@ jobs:
             - name: Diagnostic coverage report
               run: npm run test:coverage
 
+            # Diagnostic only: the summary is already printed above. Upload the
+            # two machine-readable files rather than the 275-file HTML report,
+            # and never let a slow artifact service skip the browser gate below.
             - name: Upload coverage report
               uses: https://gitea.com/actions/upload-artifact@c24449f33cd45d4826c6702db7e49f7cdb9b551d
               if: always()
+              continue-on-error: true
               with:
                   name: test-coverage
-                  path: coverage/
+                  path: |
+                      coverage/lcov.info
+                      coverage/coverage-summary.json
                   retention-days: 14
 
             - name: Install Playwright browsers
