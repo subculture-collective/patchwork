@@ -4,7 +4,95 @@ Patchwork staging fails closed when required identity, OAuth, database, or
 service-auth values are absent. Compose files contain variable references only;
 do not commit resolved Compose output or an environment file.
 
-## Required values
+## Gitea workflow configuration
+
+`.github/workflows/deploy-staging.yml` targets
+`git.subcult.tv/subculture-collective/patchwork`. Gitea loads the existing
+`.github/workflows` directory; do not introduce a second workflow directory
+that shadows CI. Dispatch it from `main`, supplying the full current main SHA
+as `source_sha`. The workflow requires the dispatch revision to match that SHA
+and checks the latest `CI / quality-gates (push)` and
+`CI / e2e-production (push)` statuses from the same Gitea run. It checks main
+again before deployment; if main advances while images build, dispatch the new
+accepted commit instead of promoting the old one.
+
+Configure the following under the repository's **Settings → Actions → Secrets**
+and **Variables**. Do not paste values into issues or chat. The built-in
+`GITEA_TOKEN` reads repository metadata; a separate package token authenticates
+the registry. Repository/owner token settings must permit `contents: read` and
+`actions: read` for the job token.
+
+| Secret | Purpose |
+| --- | --- |
+| `STAGING_REGISTRY_TOKEN` | Dedicated Gitea PAT with `write:package`, owned by an account allowed to publish packages under `subculture-collective` |
+| `STAGING_COSIGN_PRIVATE_KEY` | Encrypted PEM signing key; supplied to Cosign through its environment, never copied to staging |
+| `STAGING_COSIGN_PASSWORD` | Nonempty password for the signing key |
+| `STAGING_SSH_PRIVATE_KEY` | Dedicated unencrypted automation SSH key for the staging deploy account |
+| `STAGING_SSH_KNOWN_HOSTS` | Host keys verified independently for the exact staging SSH hostname |
+| `STAGING_SSH_USER`, `STAGING_SSH_HOST` | Staging SSH account and hostname or IPv4 address, using port 22 |
+
+All browser fixture secrets in the table below are also required before any
+image build, including the maintainer storage state. The workflow reports
+missing names without printing their values.
+
+| Variable | Purpose |
+| --- | --- |
+| `STAGING_REGISTRY_USERNAME` | Gitea account that owns the package PAT |
+| `STAGING_COSIGN_PUBLIC_KEY` | Matching PEM public key; preflight compares it with the private key and the host's independent trust root |
+| `STAGING_COSIGN_PUBLIC_KEY_PATH` | Absolute path to the public key already installed on staging |
+| `STAGING_DEPLOY_PATH` | Existing writable absolute directory; each run transfers into `run-<id>` below it |
+| `STAGING_COMPOSE_PROJECT_NAME` | Existing staging Compose project name; inspect `com.docker.compose.project` on the staging containers before setting it, to preserve the stack's volumes and networks |
+| `STAGING_ENV_FILE` | Absolute path to the existing staging runtime environment file, outside the checkout |
+| `STAGING_PUBLIC_ORIGIN` | HTTPS origin for browser checks, without a trailing slash |
+| `STAGING_VITE_API_BASE_URL` | HTTPS API URL or same-origin absolute path such as `/api` |
+| `STAGING_VITE_MAP_TILE_URL` | Content-addressed `/tiles/us.<sha256>.pmtiles` path |
+| `STAGING_E2E_EXERCISE_MAINTENANCE` | Optional `true` or `false`; defaults to `false` |
+
+Use simple absolute filesystem paths without spaces or shell metacharacters.
+The workflow deliberately rejects values that would be unsafe to embed in a
+remote SSH command.
+
+### Host prerequisites and signing
+
+Provision the staging account and runtime configuration before dispatch. The
+account needs Docker access, Docker Compose v2, Bash, `jq`, `flock`, `sha256sum`,
+and Cosign compatible with the workflow's pinned v2.5.2. It must be able to read
+the runtime environment and public key and write the deployment directory and
+`/var/lib/patchwork/releases`. Preserve the existing release manifests and
+checksums. Authenticate Docker and Cosign on the host to `git.subcult.tv` with
+a separate `read:package` credential for private image pulls; the publishing
+PAT is not transferred by the workflow. Retain access to the previous release's
+registry until rollback is qualified. Provision the external `staging-web`
+network and versioned map tile file described by the Compose file.
+
+Generate the encrypted signing key using `cosign generate-key-pair` in the
+approved secret-management environment. Store the private key and password in
+Gitea Actions secrets. Install the public key independently on staging and put
+that same public key in `STAGING_COSIGN_PUBLIC_KEY`. Protect the host trust root
+from writes by the deployment account; the workflow never replaces it.
+
+Images are pushed under `git.subcult.tv/subculture-collective/patchwork-*`,
+resolved to digests, signed, and attested with SPDX and SLSA predicates. Key-based
+signing replaces GitHub OIDC. TLS, signature, attestation, and transparency-log
+verification remain enabled. Cosign's default public Rekor transparency log
+records signing evidence, including image identity and the public key. This
+pipeline does not introduce a private transparency log.
+
+Gitea ignores GitHub's `environment: staging` gate. This workflow therefore uses
+repository-scoped values and a manual dispatch restricted to this Gitea
+repository's `main` revision. That is **not** a protected-environment approval
+mechanism: repository writers and runner administrators are trusted with these
+credentials. Restrict write/dispatch access and protect main before configuring
+secrets. If separate reviewer approval is required, keep deployment disabled
+until that control exists outside this workflow. See the
+[Gitea compatibility reference](https://docs.gitea.com/usage/actions/comparison/)
+and [Cosign self-managed keys](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/).
+
+The port and local tests alone do not qualify registry publication, hosted
+artifact transfer, SSH deployment, or browser lifecycle checks. Record the
+first configured end-to-end run and its exact deployed digests separately.
+
+## Required runtime values
 
 | Variable | Requirement | Consumer |
 | --- | --- | --- |
@@ -24,9 +112,9 @@ do not commit resolved Compose output or an environment file.
 ## Protected browser-lifecycle inputs
 
 The deploy workflow has two non-mocked browser suites.  They run only in the
-GitHub `staging` environment after the digest deployment has passed readiness.
+Gitea deployment job after the digest deployment has passed readiness.
 These values are **test credentials and disposable fixtures**, not application
-configuration.  Store them as protected environment values; never commit a
+configuration. Store them as access-controlled repository secrets/variables; never commit a
 Playwright storage-state file.
 
 | Value | Protection | Purpose |
