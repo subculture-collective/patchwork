@@ -15,6 +15,10 @@ if [[ "$1" == inspect ]]; then
 fi
 if [[ "$1" == compose ]]; then
     printf '%s\n' "$*" >> "$DOCKER_CALLS"
+    if [[ "${FAKE_INFRASTRUCTURE_PULL_UNAVAILABLE:-false}" == true && "${!#}" == pull ]]; then
+        echo 'Object-store image is unavailable; application images remain pullable.' >&2
+        exit 1
+    fi
     if [[ " $* " == *' config --format json '* ]]; then
         printf '{"services":{"patchwork-spool":{"environment":{"INDEXER_PROJECTION_MODE":"%s"}}}}\n' \
             "${FAKE_PROJECTION_MODE:-v2-shadow}"
@@ -77,6 +81,7 @@ grep -q "$old_sha" "$tmpdir/state/previous-artifact-digests.json"
 ) >/dev/null
 
 export FAKE_REVISION="$old_sha"
+export FAKE_INFRASTRUCTURE_PULL_UNAVAILABLE=true
 bash "$repo_root/scripts/rollback-staging-digests.sh" \
     "$tmpdir/env" "$tmpdir/compose.yml" >/dev/null
 grep -q 'stop patchwork-v2-shadow' "$DOCKER_CALLS"
