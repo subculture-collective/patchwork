@@ -7,9 +7,8 @@ import { PostgresModerationAuditStore } from './postgres-audit-store.js';
 import { createModerationRuntime } from './moderation-runtime.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describeWithPostgres = databaseUrl ? describe : describe.skip;
 
-describeWithPostgres('DurableModerationWorkerService', () => {
+describe('DurableModerationWorkerService', () => {
     const pool = new Pool({ connectionString: databaseUrl });
 
     beforeAll(async () => {

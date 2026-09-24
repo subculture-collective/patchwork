@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+    nearbyResourceIntent,
     applyDiscoveryFilterPatch,
     defaultDiscoveryFilterState,
     parseDiscoveryFilterState,
@@ -15,9 +16,14 @@ import { buildDiscoveryFilterChipModel } from './discovery-primitives.js';
 describe('discovery filters', () => {
     it('serializes and parses a stable URL state', () => {
         const initial: DiscoveryFilterState = {
+            nearbyIntent: 'resources',
             feedTab: 'nearby',
             text: 'milk',
             category: 'food',
+            resourceCategory: 'legal-aid',
+            resourceService: 'housing',
+            resourceProgram: 'housing-counseling',
+            includeLibraries: true,
             status: 'open',
             minUrgency: 4,
             center: { lat: 1.3, lng: 103.8 },
@@ -32,22 +38,39 @@ describe('discovery filters', () => {
         );
 
         expect(queryString.includes('tab=nearby')).toBe(true);
+        expect(queryString.includes('libraries=1')).toBe(true);
         expect(parsed).toEqual(initial);
+    });
+
+    it('keeps libraries excluded unless explicitly enabled', () => {
+        expect(parseDiscoveryFilterState('', defaultDiscoveryFilterState).includeLibraries).toBeUndefined();
+        expect(parseDiscoveryFilterState('?libraries=1', defaultDiscoveryFilterState).includeLibraries).toBe(true);
+        expect(serializeDiscoveryFilterState({...defaultDiscoveryFilterState,includeLibraries:true})).toContain('libraries=1');
     });
 
     it('normalizes invalid query values and preserves safe defaults', () => {
         const parsed = parseDiscoveryFilterState(
-            '?cat=invalid&st=unknown&u=99&r=12&lat=111&lng=103.81&tab=nearby&q=   ',
+            '?program=invalid&service=invalid&cat=invalid&resourceType=invalid&st=unknown&u=99&r=12&lat=111&lng=103.81&tab=nearby&q=   ',
             defaultDiscoveryFilterState,
         );
 
         expect(parsed.feedTab).toBe('nearby');
         expect(parsed.status).toBe('open');
         expect(parsed.category).toBeUndefined();
+        expect(parsed.resourceCategory).toBeUndefined();
+        expect(parsed.resourceService).toBeUndefined();
+        expect(parsed.resourceProgram).toBeUndefined();
         expect(parsed.minUrgency).toBe(5);
         expect(parsed.radiusMeters).toBe(300);
         expect(parsed.center).toBeUndefined();
         expect(parsed.text).toBeUndefined();
+    });
+
+    it('keeps request links and explicit intent distinct from resource refinements', () => {
+        expect(nearbyResourceIntent({...defaultDiscoveryFilterState, postalCode:'60608'})).toBe(false);
+        expect(nearbyResourceIntent({...defaultDiscoveryFilterState, resourceProgram:'wic'})).toBe(true);
+        expect(nearbyResourceIntent({...defaultDiscoveryFilterState, nearbyIntent:'requests',resourceProgram:'wic'})).toBe(false);
+        expect(nearbyResourceIntent(parseDiscoveryFilterState('?nearby=resources&zip=60608', defaultDiscoveryFilterState))).toBe(true);
     });
 
     it('map/feed query contracts share filters while latest feed omits location', () => {

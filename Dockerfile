@@ -11,7 +11,9 @@ FROM node:22.22.2-alpine@sha256:8ea2348b068a9544dae7317b4f3aafcdc032df1647bb7d76
 
 WORKDIR /app
 
-RUN apk upgrade --no-cache \
+ARG ALPINE_SECURITY_REFRESH=2026-09-20
+RUN test -n "$ALPINE_SECURITY_REFRESH" \
+    && apk upgrade --no-cache \
     && wget -qO /tmp/npm.tgz https://registry.npmjs.org/npm/-/npm-12.0.1.tgz \
     && echo '5e02bea4c784df1c3bbea9e55c7d2232329e1d1920c254789833ed9e8b0a5f16  /tmp/npm.tgz' \
         | sha256sum -c - \
@@ -143,7 +145,9 @@ LABEL org.opencontainers.image.revision="${GIT_SHA}" \
       com.patchwork.ci.run-id="${CI_RUN_ID}" \
       com.patchwork.service="web"
 
-RUN apk upgrade --no-cache
+ARG ALPINE_SECURITY_REFRESH=2026-09-20
+RUN test -n "$ALPINE_SECURITY_REFRESH" \
+    && apk upgrade --no-cache
 
 COPY --from=web-build /app/apps/web/dist /usr/share/nginx/html
 COPY ./docker/nginx/patchwork-web.conf /etc/nginx/conf.d/default.conf

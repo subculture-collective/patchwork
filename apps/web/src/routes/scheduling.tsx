@@ -33,7 +33,7 @@ export const CoordinationSchedulingRoute = ({ did }: { did: string }) => {
         connections.map((connection) => connection.counterpartDid),
     );
     const [windows, setWindows] = useState<CoordinationWindow[]>([]);
-    const [connectionId, setConnectionId] = useState('');
+    const [connectionId, setConnectionId] = useState(() => new URLSearchParams(window.location.search).get('connection') ?? '');
     const [startAt, setStartAt] = useState('');
     const [endAt, setEndAt] = useState('');
     const [status, setStatus] = useState(String(t('scheduling.loading')));
@@ -56,7 +56,7 @@ export const CoordinationSchedulingRoute = ({ did }: { did: string }) => {
         );
         setConnections(active);
         setWindows(scheduling.data.windows);
-        setConnectionId((current) => current || active[0]?.id || '');
+        setConnectionId((current) => current ? (active.some(item => item.id === current) ? current : '') : (new URLSearchParams(window.location.search).has('connection') ? '' : active[0]?.id ?? ''));
         setStatus(
             active.length === 0
                 ? String(t('scheduling.empty'))

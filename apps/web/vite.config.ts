@@ -1,5 +1,4 @@
-import { defineConfig } from 'vitest/config';
-import { loadEnv } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath, URL } from 'node:url';
@@ -8,8 +7,9 @@ import { resolveWebDataMode } from './src/features/data-mode';
 export default defineConfig(({ command, mode }) => {
     resolveWebDataMode(loadEnv(mode, process.cwd(), ''), { command, mode });
     const apiProxy = {
+        ...(process.env.PATCHWORK_DEV_TILE_TARGET ? { '/tiles': { target: process.env.PATCHWORK_DEV_TILE_TARGET, changeOrigin: true } } : {}),
         '/api': {
-            target: 'http://localhost:4000',
+            target: process.env.PATCHWORK_DEV_API_TARGET ?? 'http://localhost:4000',
             changeOrigin: false,
             rewrite: (path: string) => path.replace(/^\/api/, ''),
         },
@@ -33,8 +33,31 @@ export default defineConfig(({ command, mode }) => {
         preview: {
             proxy: apiProxy,
         },
-        test: {
-            exclude: ['e2e/**', 'node_modules/**'],
+        build: {
+            // The national ZIP lookup changes independently from application
+            // code. Keep it in a stable cacheable chunk so routine UI releases
+            // do not force browsers to download the 2020 Census index again.
+            chunkSizeWarningLimit: 1500,
+            rollupOptions: {
+                output: {
+                    manualChunks(id) {
+                        if (
+                            id.includes('postal-index.json') ||
+                            id.includes('geography-names.json') ||
+                            id.endsWith('/postal-geography.ts')
+                        ) {
+                            return 'postal-geography-census2020';
+                        }
+                        if (
+                            id.includes('/node_modules/react/') ||
+                            id.includes('/node_modules/react-dom/') ||
+                            id.includes('/node_modules/scheduler/')
+                        ) {
+                            return 'react-vendor';
+                        }
+                    },
+                },
+            },
         },
     };
 });

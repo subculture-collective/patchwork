@@ -1,3 +1,4 @@
+import { fetchMapResourcePageFromApi } from './api-client';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     type AidPostCreateApiInput,
@@ -589,22 +590,27 @@ describe('api client', () => {
         expect(String(url)).toContain('pageSize=20');
     });
 
-    it('does not substitute an implicit city when map discovery has no selected area', async () => {
-        const fetchMock = vi.fn();
+    it('loads all-area map results without substituting a city after clearing the area', async () => {
+        const fetchMock = vi.fn(async () => createJsonResponse({ total: 0, page: 1, pageSize: 20, hasNextPage: false, results: [] }));
         globalThis.fetch = fetchMock as unknown as typeof fetch;
+        const result = await fetchFeedRecordsFromApi({ feedTab: 'nearby' }, 'map');
+        expect(result).toEqual({ ok: true, data: [] });
+        const url = String((fetchMock.mock.calls as unknown as Array<[unknown]>)[0]?.[0]);
+        expect(url).toContain('/query/map?');
+        expect(url).not.toContain('latitude=');
+        expect(url).not.toContain('radiusKm=');
+    });
 
-        const result = await fetchFeedRecordsFromApi(
-            { feedTab: 'nearby' },
-            'map',
-        );
-
-        expect(result).toMatchObject({
-            ok: false,
-            code: 'AREA_REQUIRED',
-            kind: 'validation',
-            retryable: false,
-        });
-        expect(fetchMock).not.toHaveBeenCalled();
+    it('keeps unlocated requests in latest and rejects inconsistent nearby counts', async () => {
+        globalThis.fetch = vi.fn(async () => createJsonResponse({ total: 1, page: 1, pageSize: 20, hasNextPage: false, results: [{
+            uri: 'at://did:plc:test/app.patchwork.aid.post/unlocated', authorDid: 'did:plc:test', title: 'Unlocated request', summary: 'No coordinates',
+            category: 'food', status: 'open', urgency: 'medium', updatedAt: '2026-09-05T12:00:00Z',
+        }] })) as unknown as typeof fetch;
+        const latest = await fetchFeedRecordsFromApi({ feedTab: 'latest' }, 'feed');
+        expect(latest.ok).toBe(true);
+        if (latest.ok) expect(latest.data).toHaveLength(1);
+        const nearby = await fetchFeedRecordsFromApi(baseDiscoveryState, 'feed');
+        expect(nearby.ok).toBe(false);
     });
 
     it('does not send an implicit location with a latest feed request', async () => {
@@ -619,7 +625,7 @@ describe('api client', () => {
         );
         globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-        await fetchFeedRecordsFromApi({ feedTab: 'latest' }, 'feed');
+        await fetchFeedRecordsFromApi({ ...baseDiscoveryState, feedTab: 'latest' }, 'feed');
 
         const url = String(
             (fetchMock.mock.calls as unknown as Array<[unknown]>)[0]?.[0],
@@ -668,7 +674,10 @@ describe('api client', () => {
 
         globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-        const result = await fetchDirectoryCardsFromApi(baseDiscoveryState);
+        const result = await fetchDirectoryCardsFromApi({
+            ...baseDiscoveryState,
+            resourceCategory: 'food-bank',
+        });
 
         expect(result.ok).toBe(false);
         if (result.ok) {
@@ -681,6 +690,18 @@ describe('api client', () => {
             kind: 'validation',
             retryable: false,
         });
+    });
+
+    it('keeps directory filters on bounded map downloads', async () => {
+        const fetchMock = vi.fn(async () => createJsonResponse({total:30000,page:1,pageSize:100,hasNextPage:true,results:[]}));
+        globalThis.fetch = fetchMock as unknown as typeof fetch;
+        const result = await fetchMapResourcePageFromApi({...baseDiscoveryState, resourceService:'youth', resourceProgram:'wic', resourceCategory:'clinic', radiusMeters:5000});
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(result).toMatchObject({ok:true,data:{total:30000,hasNextPage:true}});
+        const url = String((fetchMock.mock.calls as unknown as Array<[unknown]>)[0]?.[0]);
+        expect(url).toContain('pageSize=100');
+        const params = new URL(url, 'https://patchwork.test').searchParams;
+        expect(Object.fromEntries(params)).toMatchObject({service:'youth',program:'wic',category:'clinic',radiusKm:'5'});
     });
 
     it('maps durable directory projection responses into resource cards', async () => {
@@ -716,7 +737,10 @@ describe('api client', () => {
         );
         globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-        const result = await fetchDirectoryCardsFromApi(baseDiscoveryState);
+        const result = await fetchDirectoryCardsFromApi({
+            ...baseDiscoveryState,
+            resourceCategory: 'food-bank',
+        });
 
         expect(result).toMatchObject({
             ok: true,
@@ -741,6 +765,12 @@ describe('api client', () => {
             fetchMock.mock.calls as unknown as Array<[unknown]>
         )[0];
         expect(String(firstCall?.[0])).toContain('/query/directory');
+        expect(
+            new URL(
+                String(firstCall?.[0]),
+                'http://localhost',
+            ).searchParams.get('category'),
+        ).toBe('food-bank');
         expect(String(firstCall?.[0])).toContain('pageSize=20');
     });
 
@@ -1176,6 +1206,7 @@ describe('api client', () => {
                 urgency: 5,
                 accessibilityTags: ['mobility-aid'],
                 location: {
+                    postalCode: '60625',
                     lat: 1.301,
                     lng: 103.802,
                     precisionMeters: 500,
@@ -1207,11 +1238,8 @@ describe('api client', () => {
         const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
         expect(body['category']).toBe('transport');
         expect(body['urgency']).toBe('critical');
-        expect(body['location']).toEqual({
-            latitude: 1.3,
-            longitude: 103.8,
-            precisionKm: 1,
-        });
+        expect(body['version']).toBe('2.0.0');
+        expect(body['location']).toEqual({ countryCode: 'US', postalCode: '60625' });
     });
 
     it('creates an authenticated AT aid post with browser credentials', async () => {

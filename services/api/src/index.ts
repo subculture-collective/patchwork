@@ -1,3 +1,14 @@
+import { ResourceCorrectionService } from './resource-correction-service.js';
+import { createResourceCorrectionHandler } from './http/resource-correction-handler.js';
+import { SourceRefreshService } from './source-refresh/source-refresh-service.js';
+import { createSourceRefreshHandler } from './http/source-refresh-handler.js';
+import { TravelService } from './travel-service.js';
+import { createTravelHandler } from './http/travel-handler.js';
+import { createResourceMapHandler } from './http/resource-map-handler.js';
+import { SavedDiscoveryService } from './saved-discovery-service.js';
+import { createSavedDiscoveryHandler } from './http/saved-discovery-handler.js';
+import { AuthoringReceiptService } from './authoring-receipts.js';
+import { createAccountRequestsHandler } from './http/account-requests-handler.js';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -126,14 +137,10 @@ import { createDiscoveryHandler } from './http/discovery-handler.js';
 import { createGracefulShutdown } from './http/graceful-shutdown.js';
 import { createModerationGateway } from './http/moderation-gateway.js';
 import { createPublicSubmissionSafetyGate } from './public-submission-safety.js';
-import {
-    idempotencyKeyFromRequest,
-    withIdempotencyKey,
-} from './http/idempotent-request.js';
+import { createIdempotentMutation } from './http/idempotent-mutation.js';
 import {
     IdempotencyError,
     PostgresIdempotencyExecutor,
-    type IdempotentResponse,
 } from './http/idempotency-store.js';
 import { securityHeaders } from './http/security-headers.js';
 import {
@@ -255,7 +262,9 @@ const reportService =
     :   undefined;
 const lifecycleRepository =
     postgresPool ? new PostgresLifecycleRepository(postgresPool) : undefined;
-const lifecycleService = createLifecycleService(lifecycleRepository);
+const authoringReceiptService = postgresPool ? new AuthoringReceiptService(postgresPool) : undefined;
+const lifecycleService = createLifecycleService(lifecycleRepository,
+    authoringReceiptService ? (uri, cid) => authoringReceiptService.projection(uri, cid) : undefined);
 const roleRepository =
     postgresPool ? new PostgresRoleRepository(postgresPool) : undefined;
 const atAuthRuntime =
@@ -331,26 +340,19 @@ const attachmentService =
 if (attachmentService) {
     await attachmentService.ensureReady();
 }
-const notificationProviders =
-    config.NOTIFICATION_EMAIL_PROVIDER_URL &&
-    config.NOTIFICATION_EMAIL_PROVIDER_TOKEN &&
-    config.NOTIFICATION_EMAIL_FROM &&
-    config.NOTIFICATION_VAPID_SUBJECT &&
-    config.NOTIFICATION_VAPID_PUBLIC_KEY &&
-    config.NOTIFICATION_VAPID_PRIVATE_KEY ?
-        {
-            email: new HttpEmailProvider(
-                config.NOTIFICATION_EMAIL_PROVIDER_URL,
-                config.NOTIFICATION_EMAIL_PROVIDER_TOKEN,
-                config.NOTIFICATION_EMAIL_FROM,
-            ),
-            push: new VapidPushProvider({
-                subject: config.NOTIFICATION_VAPID_SUBJECT,
-                publicKey: config.NOTIFICATION_VAPID_PUBLIC_KEY,
-                privateKey: config.NOTIFICATION_VAPID_PRIVATE_KEY,
-            }),
-        }
-    :   {};
+const notificationProviders = {
+    ...(config.NOTIFICATION_EMAIL_PROVIDER_URL &&
+        config.NOTIFICATION_EMAIL_PROVIDER_TOKEN && config.NOTIFICATION_EMAIL_FROM ? {
+        email: new HttpEmailProvider(config.NOTIFICATION_EMAIL_PROVIDER_URL,
+            config.NOTIFICATION_EMAIL_PROVIDER_TOKEN, config.NOTIFICATION_EMAIL_FROM),
+    } : {}),
+    ...(config.NOTIFICATION_VAPID_SUBJECT && config.NOTIFICATION_VAPID_PUBLIC_KEY &&
+        config.NOTIFICATION_VAPID_PRIVATE_KEY ? {
+        push: new VapidPushProvider({ subject: config.NOTIFICATION_VAPID_SUBJECT,
+            publicKey: config.NOTIFICATION_VAPID_PUBLIC_KEY,
+            privateKey: config.NOTIFICATION_VAPID_PRIVATE_KEY }),
+    } : {}),
+};
 const notificationService =
     postgresPool ?
         new DurableNotificationService(
@@ -424,39 +426,8 @@ const signupInviteHandler =
         })
     :   undefined;
 
-const executeIdempotentMutation = async (
-    request: IncomingMessage,
-    actorDid: string,
-    body: unknown,
-    effect: (
-        commandBody: Record<string, unknown>,
-        idempotencyKey: string,
-    ) => Promise<IdempotentResponse>,
-    field: 'commandId' | 'idempotencyKey' | null = 'commandId',
-): Promise<IdempotentResponse> => {
-    if (!idempotencyExecutor) {
-        throw new PublicHttpError(
-            503,
-            'IDEMPOTENCY_STORE_UNAVAILABLE',
-            'Durable command processing is unavailable.',
-        );
-    }
-    const idempotencyKey = idempotencyKeyFromRequest(request);
-    const commandBody =
-        field ?
-            withIdempotencyKey(body, idempotencyKey, field)
-        :   { ...(body as Record<string, unknown>) };
-    return idempotencyExecutor.execute(
-        {
-            actorDid,
-            method: request.method ?? 'POST',
-            pathname: new URL(request.url ?? '/', 'http://localhost').pathname,
-            idempotencyKey,
-            body: commandBody,
-        },
-        () => effect(commandBody, idempotencyKey),
-    );
-};
+const executeIdempotentMutation = createIdempotentMutation(idempotencyExecutor, 'commandId');
+const executeBodyIdempotentMutation = createIdempotentMutation(idempotencyExecutor);
 
 const createAidPostCommandService =
     atAuthRuntime ?
@@ -555,6 +526,17 @@ const accountPrivacyHandler =
             },
         })
     :   undefined;
+const resourceMapHandler=postgresPool?createResourceMapHandler(postgresPool):undefined;
+const resourceCorrectionService=postgresPool?new ResourceCorrectionService(postgresPool):undefined;
+const resourceCorrectionHandler = resourceCorrectionService && authenticateApiRequest ? createResourceCorrectionHandler(resourceCorrectionService,authenticateApiRequest) : undefined;
+const sourceRefreshService=postgresPool?new SourceRefreshService(postgresPool):undefined;
+const sourceRefreshHandler=sourceRefreshService&&authenticateApiRequest?createSourceRefreshHandler(sourceRefreshService,authenticateApiRequest):undefined;
+const travelService=postgresPool&&config.API_ROUTING_SERVICE_URL?new TravelService(postgresPool,config.API_ROUTING_SERVICE_URL):undefined;
+const travelHandler=travelService?createTravelHandler(travelService):undefined;
+const savedDiscoveryService=postgresPool?new SavedDiscoveryService(postgresPool):undefined;
+const savedDiscoveryHandler = savedDiscoveryService && authenticateApiRequest ? createSavedDiscoveryHandler(savedDiscoveryService,authenticateApiRequest) : undefined;
+const accountRequestsHandler = authoringReceiptService && authenticateApiRequest
+    ? createAccountRequestsHandler(authoringReceiptService, authenticateApiRequest) : undefined;
 const accountOnboardingHandler =
     authenticateSessionRequest &&
     accountOnboardingService &&
@@ -562,7 +544,7 @@ const accountOnboardingHandler =
         createAccountOnboardingHandler({
             service: accountOnboardingService,
             authenticate: authenticateSessionRequest,
-            executeIdempotent: executeIdempotentMutation,
+            executeIdempotent: executeBodyIdempotentMutation,
         })
     :   undefined;
 const identityHandler =
@@ -584,7 +566,7 @@ const organizationHandler =
         createOrganizationHandler({
             service: organizationService,
             authenticate: authenticateApiRequest,
-            executeIdempotent: executeIdempotentMutation,
+            executeIdempotent: executeBodyIdempotentMutation,
         })
     :   undefined;
 const verificationHandler =
@@ -592,7 +574,7 @@ const verificationHandler =
         createVerificationHandler({
             service: verificationCaseService,
             authenticate: authenticateApiRequest,
-            executeIdempotent: executeIdempotentMutation,
+            executeIdempotent: executeBodyIdempotentMutation,
         })
     :   undefined;
 const coordinationHandler =
@@ -600,7 +582,7 @@ const coordinationHandler =
         createCoordinationHandler({
             service: coordinationService,
             authenticate: authenticateApiRequest,
-            executeIdempotent: executeIdempotentMutation,
+            executeIdempotent: executeBodyIdempotentMutation,
         })
     :   undefined;
 const coordinationSchedulingHandler =
@@ -608,7 +590,7 @@ const coordinationSchedulingHandler =
         createCoordinationSchedulingHandler({
             service: coordinationSchedulingService,
             authenticate: authenticateApiRequest,
-            executeIdempotent: executeIdempotentMutation,
+            executeIdempotent: executeBodyIdempotentMutation,
         })
     :   undefined;
 const groupHandler =
@@ -616,7 +598,7 @@ const groupHandler =
         createGroupHandler({
             service: durableGroupService,
             authenticate: authenticateApiRequest,
-            executeIdempotent: executeIdempotentMutation,
+            executeIdempotent: executeBodyIdempotentMutation,
         })
     :   undefined;
 const chatHandler =
@@ -624,7 +606,7 @@ const chatHandler =
         createChatHandler({
             service: durableChatService,
             authenticate: authenticateApiRequest,
-            executeIdempotent: executeIdempotentMutation,
+            executeIdempotent: executeBodyIdempotentMutation,
         })
     :   undefined;
 const exactLocationSignalHandler =
@@ -655,7 +637,7 @@ const maintenanceHandler =
         createMaintenanceHandler({
             service: maintenanceModeService,
             authenticate: authenticateApiRequest,
-            executeIdempotent: executeIdempotentMutation,
+            executeIdempotent: executeBodyIdempotentMutation,
         })
     :   undefined;
 const discoveryHandler = createDiscoveryHandler({
@@ -732,6 +714,15 @@ if (postgresPool) {
             }
         },
     });
+}
+if (config.API_ROUTING_SERVICE_URL) {
+    healthChecks.push({name:'routing',check:async()=>{
+        try {
+            const healthUrl=new URL('/otp/actuators/health',config.API_ROUTING_SERVICE_URL);
+            const response=await fetch(healthUrl,{signal:AbortSignal.timeout(3000)});
+            return response.ok?{status:'ok' as const}:{status:'degraded' as const,message:'Routing service health check failed'};
+        } catch { return {status:'degraded' as const,message:'Routing service unreachable'}; }
+    }});
 }
 
 const buildHealthPayload = async (): Promise<{
@@ -851,6 +842,38 @@ const renderPrometheusMetrics = (): string => {
     ].join('\n');
 
     return `${baseMetrics}\n${sliMetrics}\n${retentionMetrics.renderPrometheus()}\n${attachmentMetrics}\n${notificationMetrics}\n${maintenanceMetrics}`;
+};
+
+const renderSourceRefreshMetrics = async (): Promise<string> => {
+    if (!postgresPool) return '';
+    try {
+        const result = await postgresPool.query<{
+            source_id: string;
+            last_attempt_succeeded: boolean;
+            last_attempt_timestamp: string;
+            last_success_timestamp: string | null;
+        }>(`SELECT source_id,last_attempt_succeeded,
+            EXTRACT(EPOCH FROM last_attempt_at)::text AS last_attempt_timestamp,
+            EXTRACT(EPOCH FROM last_success_at)::text AS last_success_timestamp
+            FROM source_refresh_operational_status ORDER BY source_id`);
+        const lines = [
+            '# HELP patchwork_source_refresh_last_attempt_success Whether the latest scheduled source refresh completed without error.',
+            '# TYPE patchwork_source_refresh_last_attempt_success gauge',
+            '# HELP patchwork_source_refresh_last_attempt_timestamp_seconds Unix timestamp of the latest scheduled source refresh attempt.',
+            '# TYPE patchwork_source_refresh_last_attempt_timestamp_seconds gauge',
+            '# HELP patchwork_source_refresh_last_success_timestamp_seconds Unix timestamp of the latest completed source refresh.',
+            '# TYPE patchwork_source_refresh_last_success_timestamp_seconds gauge',
+        ];
+        for (const row of result.rows) {
+            const labels = `{project="patchwork",service="api",source="${row.source_id}"}`;
+            lines.push(`patchwork_source_refresh_last_attempt_success${labels} ${row.last_attempt_succeeded ? 1 : 0}`);
+            lines.push(`patchwork_source_refresh_last_attempt_timestamp_seconds${labels} ${Number(row.last_attempt_timestamp)}`);
+            if (row.last_success_timestamp !== null) lines.push(`patchwork_source_refresh_last_success_timestamp_seconds${labels} ${Number(row.last_success_timestamp)}`);
+        }
+        return lines.join('\n');
+    } catch {
+        return '';
+    }
 };
 
 const writeJson = (
@@ -1770,6 +1793,8 @@ const contractRoutes = [
     '/at/aid-posts/status/reconcile',
     '/at/directory-resources',
     '/at/volunteer-profile',
+    '/query/aid-post',
+    '/query/directory-resource',
     '/query/map',
     '/query/feed',
     '/query/directory',
@@ -1788,6 +1813,7 @@ const contractRoutes = [
     '/moderation/audit',
     '/account/export',
     '/account/deactivate',
+    '/account/requests',
     '/account/onboarding',
     '/account/consent',
     '/account/preferences',
@@ -1869,6 +1895,7 @@ const contractRoutes = [
     '/health',
     '/health/ready',
     '/metrics',
+    '/travel/plan',
     '/contracts',
 ] as const;
 
@@ -1881,9 +1908,9 @@ const routeHandlers: Readonly<Record<string, ApiRouteHandler>> = {
         const { payload, httpStatus } = await buildReadinessPayload();
         return { statusCode: httpStatus, body: payload };
     },
-    '/metrics': () => ({
+    '/metrics': async () => ({
         statusCode: 200,
-        body: renderPrometheusMetrics(),
+        body: `${renderPrometheusMetrics()}\n${await renderSourceRefreshMetrics()}`,
         contentType: 'text/plain; version=0.0.4',
     }),
     '/contracts': () => ({
@@ -1934,6 +1961,8 @@ const readPaths = new Set([
     '/health/ready',
     '/metrics',
     '/contracts',
+    '/query/aid-post',
+    '/query/directory-resource',
     '/query/map',
     '/query/feed',
     '/query/directory',
@@ -2095,6 +2124,21 @@ export const createApiServer = () => {
             return;
         }
 
+        if(resourceMapHandler?.(request,response,requestUrl))return;
+        if(requestUrl.pathname==='/query/resource-map'){writeJson(response,503,{error:{code:'RESOURCE_MAP_UNAVAILABLE',message:'Resource map is unavailable.'}});return;}
+        if (resourceCorrectionHandler?.(request,response,requestUrl)) return;
+        if (requestUrl.pathname.startsWith('/resource-corrections')) {writeJson(response,503,{error:{code:'CORRECTIONS_UNAVAILABLE',message:'Listing corrections are unavailable.'}});return;}
+        if (sourceRefreshHandler?.(request,response,requestUrl)) return;
+        if (requestUrl.pathname.startsWith('/admin/source-refresh')) {writeJson(response,503,{error:{code:'SOURCE_REFRESH_UNAVAILABLE',message:'Source-refresh review is unavailable.'}});return;}
+        if (travelHandler?.(request,response,requestUrl)) return;
+        if (requestUrl.pathname==='/travel/plan') {writeJson(response,503,{error:{code:'ROUTING_UNAVAILABLE',message:'Travel planning is unavailable.'}});return;}
+        if (savedDiscoveryHandler?.(request, response, requestUrl)) return;
+        if (requestUrl.pathname === '/account/saved-discovery'||requestUrl.pathname === '/account/saved-discovery/alerts') { writeJson(response,503,{error:{code:'SAVED_DISCOVERY_UNAVAILABLE',message:'Saved discovery is unavailable.'}});return; }
+        if (accountRequestsHandler?.(request, response, requestUrl)) return;
+        if (requestUrl.pathname === '/account/requests') {
+            writeJson(response, 503, { error: { code: 'ACCOUNT_REQUESTS_UNAVAILABLE', message: 'Your requests are temporarily unavailable.' } });
+            return;
+        }
         if (accountOnboardingHandler?.(request, response, requestUrl)) {
             return;
         }
@@ -2677,10 +2721,12 @@ export const startApiServer = () => {
                 intervalMs:
                     config.API_NOTIFICATION_INTERVAL_SECONDS * 1_000,
                 enforce: async () => {
+                    try { await savedDiscoveryService?.runDigestSweep(); } catch { console.error(JSON.stringify({level:'error',event:'saved_discovery_digest_failed'})); }
                     const delivery =
                         await notificationService.runDeliverySweep();
                     const expired =
                         await notificationService.runRetentionSweep();
+                        await resourceCorrectionService?.retain();
                     const metrics =
                         await notificationService.getOperatorMetrics();
                     notificationDeliveryPending = metrics.pending;

@@ -9,9 +9,8 @@
         "preview": "vite preview",
         "lint": "npm run typecheck",
         "typecheck": "tsc -p tsconfig.json --noEmit",
-        "test": "vitest run",
-        "test:e2e": "playwright test",
-        "test:integration:service": "vitest run --config vitest.service-integration.config.ts"
+        "test": "node ../../scripts/test.mjs unit apps/web/src",
+        "test:e2e": "playwright test"
     },
     "dependencies": {
         "@patchwork/at-lexicons": "file:../../packages/at-lexicons",

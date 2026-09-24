@@ -20,7 +20,8 @@ import { PostgresProjectionStore } from './db/projection-store.js';
 import { PostgresProjectionComparison } from './db/projection-comparison.js';
 import { renderPrometheusRuntimeMetrics } from './metrics.js';
 import { IndexerPipeline } from './pipeline.js';
-import { IndexerRuntime } from './runtime.js';
+import { bootstrapJetstreamV2Projection } from './v2-backfill.js';
+import { IndexerRuntime, isEventSourceCurrent } from './runtime.js';
 import type { AtEventSource } from './stream/event-source.js';
 import { JetstreamEventSource } from './stream/jetstream-source.js';
 import { JetstreamV2EventSource } from './stream/jetstream-v2-source.js';
@@ -191,11 +192,11 @@ const createRouteHandlers = (
             healthChecks.push({
                 name: 'event-source',
                 check: () =>
-                    source.getMetrics().connected ?
+                    isEventSourceCurrent(source.getMetrics()) ?
                         { status: 'ok' as const }
                     :   {
                             status: 'not_ready' as const,
-                            message: 'AT event source is disconnected',
+                            message: 'AT event source is disconnected or more than 30 seconds behind',
                         },
             });
         }
@@ -344,6 +345,7 @@ export const startIndexerServer = async () => {
         }
         return config.JETSTREAM_API_KEY;
     };
+    if (config.INDEXER_JETSTREAM_VERSION === 'v2') await bootstrapJetstreamV2Projection();
     const { pipeline, pool, projectionStore } = await createPipeline();
     const collections = [
         recordNsid.aidPost,
@@ -392,7 +394,7 @@ export const startIndexerServer = async () => {
     const runtime = new IndexerRuntime({
         pipeline,
         source,
-        heartbeat: cursor => projectionStore.recordHeartbeat(cursor),
+        heartbeat: (cursor, observedAt) => projectionStore.recordHeartbeat(cursor, observedAt),
     });
     await runtime.start();
     const comparison = new PostgresProjectionComparison(pool);

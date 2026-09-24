@@ -16,7 +16,6 @@ import {
 } from './idempotent-request.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describeWithPostgres = databaseUrl ? describe : describe.skip;
 
 const startServer = async (pool: Pool): Promise<{ server: Server; baseUrl: string }> => {
     const roles = new PostgresRoleRepository(pool);
@@ -72,7 +71,7 @@ const stopServer = async (server: Server): Promise<void> => {
     await once(server, 'close');
 };
 
-describeWithPostgres('lifecycle HTTP boundary with PostgreSQL', () => {
+describe('lifecycle HTTP boundary with PostgreSQL', () => {
     const pool = new Pool({ connectionString: databaseUrl });
 
     beforeAll(async () => {

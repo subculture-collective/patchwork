@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { AidPostRecord } from '@patchwork/at-lexicons';
+import { aidPostSchema, type AidPostRecord } from '@patchwork/at-lexicons';
 import { AtClientError } from '@patchwork/at-client';
 import {
     AidPostCommandService,
@@ -17,6 +17,8 @@ const record: AidPostRecord = {
     location: { latitude: 41.88, longitude: -87.63, precisionKm: 1 },
     createdAt: '2026-07-10T12:00:00.000Z',
 };
+
+const postalRecord = aidPostSchema.parse({ ...record, version: '2.0.0', location: { countryCode: 'US', postalCode: '60625' } });
 
 const client = (): AidPostClient => ({
     create: vi.fn(async value => ({
@@ -55,7 +57,7 @@ describe('AidPostCommandService', () => {
         await expect(
             service.create(
                 'browser-session',
-                record,
+                postalRecord,
                 'idempotency-one',
                 'did:plc:alice',
             ),
@@ -74,11 +76,17 @@ describe('AidPostCommandService', () => {
         const factory = vi.fn(async () => at);
         const service = new AidPostCommandService(factory);
 
-        await expect(service.create('browser-session', record)).resolves.toMatchObject({
+        await expect(service.create('browser-session', postalRecord)).resolves.toMatchObject({
             cid: 'bafy-created',
         });
         expect(factory).toHaveBeenCalledWith('browser-session');
-        expect(at.create).toHaveBeenCalledWith(record);
+        expect(at.create).toHaveBeenCalledWith(postalRecord);
+    });
+
+    it('rejects coordinate-only new requests before opening the AT client', async () => {
+        const factory = vi.fn(async () => client());
+        await expect(new AidPostCommandService(factory).create('session', record)).rejects.toMatchObject({ code: 'POSTAL_CODE_REQUIRED' });
+        expect(factory).not.toHaveBeenCalled();
     });
 
     it('updates with the caller-provided expected CID', async () => {
@@ -88,13 +96,13 @@ describe('AidPostCommandService', () => {
         await service.update('browser-session', {
             uri: 'at://did:plc:alice/app.patchwork.aid.post/3abc',
             expectedCid: 'bafy-current',
-            record: { ...record, status: 'resolved' },
+            record: { ...postalRecord, status: 'resolved' },
         });
 
         expect(at.update).toHaveBeenCalledWith(
             'at://did:plc:alice/app.patchwork.aid.post/3abc',
             'bafy-current',
-            { ...record, status: 'resolved' },
+            { ...postalRecord, status: 'resolved' },
         );
     });
 

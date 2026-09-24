@@ -20,6 +20,7 @@ const durableRoots = [
 ];
 const durableFiles = durableRoots.flatMap(collect).concat([
     'services/api/src/account-privacy-service.ts',
+    'services/api/src/authoring-receipts.ts',
     'services/api/src/coordination-service.ts',
     'scripts/backup-postgres.sh',
     'scripts/restore-postgres.sh',

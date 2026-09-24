@@ -1,3 +1,5 @@
+import { ResourceActions } from '../features/resource-actions';
+import { useMapSelection } from '../features/use-map-selection';
 import {
     useCallback,
     useEffect,
@@ -23,7 +25,6 @@ import {
 } from '../directory-resource-form';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
-import { ChipGroup, ToggleChip } from '../components/ToggleChip';
 import { Card } from '../components/Card';
 import { Input } from '../components/Input';
 import { Banner } from '../components/Banner';
@@ -31,7 +32,8 @@ import { EmptyState } from '../components/EmptyState';
 import { Icon } from '../components/Icon';
 import { PageHeader } from '../components/PageHeader';
 import { Sheet } from '../components/Sheet';
-import { DiscoveryToolbar } from '../features/discovery/DiscoveryToolbar';
+import { DiscoveryControls } from '../features/discovery-controls';
+import '../styles/request-map.css';
 import {
     type ApiDataOrigin,
     type AtDirectoryResourceResult,
@@ -52,15 +54,6 @@ import {
     formatLocalizedLabel,
     usePaginationFocus,
 } from '../features/shell-shared';
-
-const resourceCategoryOptions: readonly DirectoryResourceCategory[] = [
-    'food-bank',
-    'shelter',
-    'clinic',
-    'legal-aid',
-    'hotline',
-    'other',
-];
 
 const defaultDirectoryDraft = (center: {
     lat: number;
@@ -675,7 +668,7 @@ export const ResourceRoute = ({
     resourceCards,
     currentUserDid,
 }: ResourceRouteProps) => {
-    const { t, fmt } = useLocale();
+    const { t } = useLocale();
     const paginationFocus = usePaginationFocus({
         itemCount: resourceCards.length,
         isLoading,
@@ -686,9 +679,11 @@ export const ResourceRoute = ({
             [t],
         ),
     });
-    const [activeCategory, setActiveCategory] =
-        useState<DirectoryResourceCategory>();
-    const [selectedUri, setSelectedUri] = useState<string>();
+    const activeCategory = discoveryState.resourceCategory;
+    const setActiveCategory = (category: DirectoryResourceCategory | undefined) => onPatchDiscovery({resourceCategory: category});
+    const selection = useMapSelection([], resourceCards, 'all');
+    const selectedUri = selection.resourceUri;
+    const setSelectedUri = selection.selectResource;
     const [manageUri, setManageUri] = useState<string>();
 
     useEffect(() => {
@@ -731,7 +726,7 @@ export const ResourceRoute = ({
     );
 
     const detailPanel = selectedUri
-        ? openResourceDetailPanel(viewModel.cards, selectedUri)
+        ? openResourceDetailPanel(selection.resource ? [selection.resource] : [], selectedUri)
         : closeResourceDetailPanel();
 
     const countLabel =
@@ -744,7 +739,7 @@ export const ResourceRoute = ({
             card.uri.startsWith(`at://${currentUserDid}/`));
 
     return (
-        <section>
+        <section className='pw-request-map'>
             <PageHeader
                 title={t('resources.heading')}
                 description={t('resources.description')}
@@ -772,38 +767,13 @@ export const ResourceRoute = ({
                 </Banner>
             ) : null}
 
-            <DiscoveryToolbar
+            {discoveryState.center && <p className='mh-results-note'>{t('mapExplorer.nearest')}</p>}
+            <DiscoveryControls
                 idPrefix='resources'
                 state={discoveryState}
                 onPatch={onPatchDiscovery}
-                mode='places'
+                resourceMode
             />
-
-            <ChipGroup
-                legend={t('resources.directoryFiltersTitle')}
-                hideLegend
-                className='mb-5 -mt-2'
-            >
-                <ToggleChip
-                    pressed={!activeCategory}
-                    onClick={() => setActiveCategory(undefined)}
-                >
-                    {t('resources.allCategories')}
-                </ToggleChip>
-                {resourceCategoryOptions.map((category) => (
-                    <ToggleChip
-                        key={category}
-                        pressed={activeCategory === category}
-                        onClick={() =>
-                            setActiveCategory((current) =>
-                                current === category ? undefined : category,
-                            )
-                        }
-                    >
-                        {formatLocalizedLabel(t, category)}
-                    </ToggleChip>
-                ))}
-            </ChipGroup>
 
             <section aria-labelledby='resources-results-heading'>
                 <div className='mh-results-header'>
@@ -892,7 +862,7 @@ export const ResourceRoute = ({
                                             </dt>
                                             <dd>
                                                 <Icon name='pin' size={16} />
-                                                {card.location.areaLabel ??
+                                                {card.location?.areaLabel ?? card.serviceArea ??
                                                     t('resources.areaPending')}
                                             </dd>
                                         </div>
@@ -989,68 +959,24 @@ export const ResourceRoute = ({
             </div>
 
             <Sheet
-                open={detailPanel.open}
+                open={Boolean(selectedUri)}
                 onClose={() => setSelectedUri(undefined)}
                 title={t('resources.resourceDetailTitle')}
                 closeLabel={t('resources.close')}
-                footer={
-                    detailPanel.open ? (
-                        <>
-                            {detailPanel.actions.map((action) => (
-                                <Button
-                                    key={action.id}
-                                    variant={
-                                        action.id === 'request_intake'
-                                            ? 'accent'
-                                            : 'secondary'
-                                    }
-                                    size='sm'
-                                    onClick={() => {
-                                        if (action.id === 'request_intake') {
-                                            onNavigate('/posting');
-                                            return;
-                                        }
-                                        if (action.id === 'open_map') {
-                                            onNavigate('/map');
-                                        }
-                                    }}
-                                >
-                                    {action.label}
-                                </Button>
-                            ))}
-                        </>
-                    ) : null
-                }
+
             >
+                <section aria-label={t('myRequests.resourceDetail')}>
+                {selection.error ? <div role='alert'><p>{t('myRequests.resourceUnavailable')}</p><Button onClick={selection.retry}>{t('common.retry')}</Button></div> : selection.loading ? <p role='status'>{t('myRequests.resourceLoading')}</p> : null}
                 {detailPanel.open ? (
                     <div className='grid gap-3'>
                         <p className='mh-eyebrow'>{detailPanel.categoryLabel}</p>
                         <p className='mh-request-card__title'>
                             {detailPanel.title}
                         </p>
-                        <p className='text-mh-textMuted'>
-                            {detailPanel.openHours}
-                        </p>
-                        <p>{detailPanel.eligibilityNotes}</p>
-                        {detailPanel.exactPublicAddress ? (
-                            <Banner
-                                tone='info'
-                                live='none'
-                                title={t('resources.approvedAddress')}
-                            >
-                                <p>{detailPanel.exactPublicAddress}</p>
-                                <p className='mt-1 text-sm text-mh-textMuted'>
-                                    {t('resources.approvalExpires', {
-                                        date: fmt.longDate(
-                                            detailPanel.exactAddressApprovalExpiresAt ??
-                                                '',
-                                        ),
-                                    })}
-                                </p>
-                            </Banner>
-                        ) : null}
+                        {selection.resource && <ResourceActions resource={selection.resource} />}
                     </div>
                 ) : null}
+                </section>
             </Sheet>
         </section>
     );

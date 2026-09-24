@@ -3,6 +3,8 @@ import type { WebDataMode } from '../features/data-mode';
 export const appRoutes = [
     '/',
     '/map',
+    '/requests/view',
+    '/requests/mine',
     '/feed',
     '/resources',
     '/volunteer',
@@ -27,6 +29,8 @@ export type AppRoute = (typeof appRoutes)[number];
 export const routeLabelKeys: Readonly<Record<AppRoute, string>> = {
     '/': 'route.home',
     '/map': 'route.map',
+    '/requests/view': 'route.requestDetails',
+    '/requests/mine': 'route.myRequests',
     '/feed': 'route.feed',
     '/resources': 'route.resources',
     '/volunteer': 'route.volunteer',
@@ -60,6 +64,7 @@ export const isLegalRoute = (route: AppRoute): route is LegalRoute =>
 /** Routes that render a sign-in prompt when no session is present. */
 export const authenticatedRoutes: ReadonlySet<AppRoute> = new Set<AppRoute>([
     '/posting',
+    '/requests/mine',
     '/chat',
     '/inbox',
     '/scheduling',
@@ -149,7 +154,7 @@ export const resolveNavRoutes = (
 };
 
 export const normalizeRoute = (pathname: string): AppRoute =>
-    appRoutes.find((route) => route === pathname) ?? '/';
+    pathname === '/nearby' ? '/map' : pathname === '/activity' ? '/inbox' : appRoutes.find((route) => route === pathname) ?? '/';
 
 export const readCurrentRoute = (): AppRoute => {
     if (typeof window === 'undefined') {

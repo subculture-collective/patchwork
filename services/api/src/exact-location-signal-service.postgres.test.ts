@@ -4,7 +4,6 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { ExactLocationSignalService } from './exact-location-signal-service.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describePostgres = databaseUrl ? describe : describe.skip;
 const requesterDid = 'did:plc:location-requester';
 const helperDid = 'did:plc:location-helper';
 const outsiderDid = 'did:plc:location-outsider';
@@ -14,7 +13,7 @@ const offerId = '82111111-1111-4111-8111-111111111111';
 const hash = (value: string) =>
     createHash('sha256').update(value).digest('hex');
 
-describePostgres('ephemeral exact-location signaling boundary', () => {
+describe('ephemeral exact-location signaling boundary', () => {
     const pool = new Pool({ connectionString: databaseUrl });
 
     beforeEach(async () => {

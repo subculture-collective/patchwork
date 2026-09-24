@@ -1,4 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { Modal } from '../components/Modal';
+import { MyRequests } from '../features/my-requests';
+import { SavedDiscoveryPanel } from '../features/saved-discovery';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { defaultDiscoveryFilterState } from '../discovery-filters';
 import { StatusMessage } from '../components/StatusMessage';
 import { Badge } from '../components/Badge';
@@ -17,10 +20,10 @@ import {
     fetchCoordinationViaApi,
     fetchFeedRecordsFromApi,
     fetchMyOutcomeFeedbackViaApi,
-    decideCoordinationOfferViaApi,
+    decideCoordinationOfferViaApi as sendOfferDecision,
     markActivityInboxReadViaApi,
     matchRequestViaApi,
-    transitionCoordinationConnectionViaApi,
+    transitionCoordinationConnectionViaApi as sendConnectionTransition,
     submitOutcomeFeedbackViaApi,
 } from '../features/api-client';
 import { useLocale } from '../i18n';
@@ -43,6 +46,17 @@ const outcomeOptions = [
 
 export const CoordinationInboxRoute = ({ did }: { did: string }) => {
     const { t, fmt } = useLocale();
+    const operationKeys = useRef(new Map<string, string>());
+    useEffect(() => { operationKeys.current.clear(); }, [did]);
+    const retryMutation = async <T extends {ok: boolean}>(signature: string, send: (key: string) => Promise<T>) => {
+        const key = operationKeys.current.get(signature) ?? crypto.randomUUID();
+        operationKeys.current.set(signature, key);
+        const result = await send(key);
+        if (result.ok) operationKeys.current.delete(signature);
+        return result;
+    };
+    const decideCoordinationOfferViaApi = (input: Parameters<typeof sendOfferDecision>[0]) => retryMutation(`offer:${JSON.stringify(input)}`, key => sendOfferDecision(input, undefined, key));
+    const transitionCoordinationConnectionViaApi = (input: Parameters<typeof sendConnectionTransition>[0]) => retryMutation(`connection:${JSON.stringify(input)}`, key => sendConnectionTransition(input, undefined, key));
     const [offers, setOffers] = useState<CoordinationOffer[]>([]);
     const [connections, setConnections] = useState<CoordinationConnection[]>(
         [],
@@ -92,23 +106,11 @@ export const CoordinationInboxRoute = ({ did }: { did: string }) => {
             outcomeHistory,
             discoverable,
         ].find((result) => !result.ok);
-        if (failure && !failure.ok) {
-            setStatus(`${t('common.error')}: ${t('common.requestFailed')}`);
-            return;
-        }
-        if (
-            coordination.ok &&
-            inbox.ok &&
-            outcomeHistory.ok &&
-            discoverable.ok
-        ) {
-            setOffers(coordination.data.offers);
-            setConnections(coordination.data.connections);
-            setItems(inbox.data.items);
-            setFeedback(outcomeHistory.data.feedback);
-            setRequests(discoverable.data);
-            setStatus(t('inbox.unreadCount', { count: inbox.data.unread }));
-        }
+        if (coordination.ok) { setOffers(coordination.data.offers); setConnections(coordination.data.connections); }
+        if (inbox.ok) setItems(inbox.data.items);
+        if (outcomeHistory.ok) setFeedback(outcomeHistory.data.feedback);
+        if (discoverable.ok) setRequests(discoverable.data);
+        setStatus(failure ? t('myRequests.activityPartial') : t('inbox.unreadCount', {count: inbox.ok ? inbox.data.unread : 0}));
     }, [unreadOnly, t]);
 
     useEffect(() => {
@@ -203,12 +205,7 @@ export const CoordinationInboxRoute = ({ did }: { did: string }) => {
             </Panel>
 
             {offerRequest ? (
-                <div
-                    role='dialog'
-                    aria-modal='true'
-                    aria-labelledby='offer-help-title'
-                    className='fixed inset-0 z-50 grid place-items-center bg-black/60 p-4'
-                >
+                <Modal labelledBy='offer-help-title' onClose={() => setOfferRequestUri(undefined)}>
                     <section className='mh-card w-full max-w-xl space-y-4 p-5'>
                         <div>
                             <h2 id='offer-help-title' className='font-heading text-xl font-bold'>
@@ -254,7 +251,7 @@ export const CoordinationInboxRoute = ({ did }: { did: string }) => {
                             </Button>
                         </div>
                     </section>
-                </div>
+                </Modal>
             ) : null}
 
             <Panel title={String(t('inbox.offers'))}>
@@ -751,6 +748,8 @@ export const CoordinationInboxRoute = ({ did }: { did: string }) => {
                 )}
             </Panel>
 
+            <MyRequests />
+            <SavedDiscoveryPanel did={did} />
             <Panel title={String(t('inbox.activity'))}>
                 <label className='mb-3 block text-sm'>
                     <input

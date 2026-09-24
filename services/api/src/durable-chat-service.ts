@@ -485,18 +485,19 @@ export class DurableChatService {
         const title = 'New message';
         const body = 'Open Patchwork to read a new message.';
         const key = `chat:${messageId}:${recipientDid}`;
+        const actionUrl = `/chat?conversation=${encodeURIComponent(conversation.conversation_id)}`;
         const metadata = JSON.stringify({ conversationId: conversation.conversation_id,
             kind: conversation.kind });
         await client.query(
             `INSERT INTO activity_inbox_items (item_id,recipient_did,item_type,title,
                 summary,action_url,source_key,metadata,occurred_at,retention_until)
-             VALUES ($1,$2,'chat',$3,$4,'/chat',$5,$6::jsonb,$7,$8)
+             VALUES ($1,$2,'chat',$3,$4,$9,$5,$6::jsonb,$7,$8)
              ON CONFLICT (recipient_did,source_key) DO NOTHING`,
-            [randomUUID(), recipientDid, title, body, key, metadata, now, plusDays(now, 365)]);
+            [randomUUID(), recipientDid, title, body, key, metadata, now, plusDays(now, 365), actionUrl]);
         await client.query(
             `SELECT patchwork_enqueue_notification($1,'message_received',$2,$3,
-                'normal','/chat',$4::jsonb,$5,$6)`,
-            [recipientDid, title, body, metadata, key, now]);
+                'normal',$7,$4::jsonb,$5,$6)`,
+            [recipientDid, title, body, metadata, key, now, actionUrl]);
     }
 
     private renderConversation(authorization: Authorization, state?: {

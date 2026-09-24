@@ -1,4 +1,4 @@
-export const LEXICON_SET_VERSION = '1.1.0';
+export const LEXICON_SET_VERSION = '2.0.0';
 
 export const LEXICON_VERSION_POLICY = {
     baseline: 'All v1 record schemas are published as 1.0.0 lexicon revisions.',
@@ -10,7 +10,7 @@ export const LEXICON_VERSION_POLICY = {
 } as const;
 
 export const LEXICON_SCHEMA_REVISIONS = {
-    'app.patchwork.aid.post': '1.0.0',
+    'app.patchwork.aid.post': '2.0.0',
     'app.patchwork.volunteer.profile': '1.2.0',
     'app.patchwork.conversation.meta': '1.0.0',
     'app.patchwork.moderation.report': '1.0.0',

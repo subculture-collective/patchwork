@@ -5,7 +5,6 @@ import { DurableChatService } from './durable-chat-service.js';
 import { DurableGroupService } from './durable-group-service.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describePostgres = databaseUrl ? describe : describe.skip;
 const requester = 'did:plc:chat-requester';
 const helper = 'did:plc:chat-helper';
 const outsider = 'did:plc:chat-outsider';
@@ -13,7 +12,7 @@ const requestUri = `at://${requester}/app.patchwork.aid.post/chat`;
 const connectionId = '51111111-1111-4111-8111-111111111111';
 const baseline = new Date('2026-08-05T12:00:00.000Z');
 
-describePostgres('DurableChatService PostgreSQL boundary', () => {
+describe('DurableChatService PostgreSQL boundary', () => {
     const pool = new Pool({ connectionString: databaseUrl });
 
     beforeEach(async () => {
@@ -87,6 +86,8 @@ describePostgres('DurableChatService PostgreSQL boundary', () => {
              UNION ALL SELECT title,summary,action_url,metadata FROM activity_inbox_items`,
         )).rows);
         expect(externalArtifacts).not.toContain(privateBody);
+        expect(externalArtifacts).toContain(`/chat?conversation=${conversationId}`);
+        expect((await pool.query("SELECT action_url FROM notification_intents WHERE notification_type = 'message_received'")).rows.every(row => row.action_url === `/chat?conversation=${conversationId}`)).toBe(true);
         const moderation = JSON.stringify((await pool.query(
             `SELECT latest_reason,context,safe_preview FROM moderation_queue_items`,
         )).rows);

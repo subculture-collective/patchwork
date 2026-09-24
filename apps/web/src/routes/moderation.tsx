@@ -1,3 +1,4 @@
+import { SourceRefreshReview } from '../features/source-refresh-review';
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
@@ -595,6 +596,7 @@ export const ModeratorConsoleRoute = ({
                     )}
                 </Panel>
             ) : null}
+            <SourceRefreshReview />
         </div>
     );
 };

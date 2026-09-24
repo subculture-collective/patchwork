@@ -1,3 +1,4 @@
+import { loadPostingDraft, savePostingDraft, clearPostingDraft } from '../features/posting-draft';
 import {
     useEffect,
     useRef,
@@ -33,7 +34,7 @@ import {
 } from '../features/shell-shared';
 
 interface PostingRouteProps {
-    location: {
+    location?: {
         center: { lat: number; lng: number };
         areaLabel: string;
     };
@@ -55,13 +56,15 @@ export const PostingRoute = ({
     onCreateViaApi,
 }: PostingRouteProps) => {
     const { t } = useLocale();
-    const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
-    const [category, setCategory] = useState<AidPostingCategory>('food');
-    const [urgency, setUrgency] = useState<1 | 2 | 3 | 4 | 5>(4);
-    const [tagsText, setTagsText] = useState('');
-    const [startAt, setStartAt] = useState('');
-    const [endAt, setEndAt] = useState('');
+    const [saved] = useState(() => loadPostingDraft(sessionStorage));
+    const [postalCode, setPostalCode] = useState(saved?.postalCode ?? new URLSearchParams(window.location.search).get('zip') ?? '');
+    const [title, setTitle] = useState(saved?.title ?? '');
+    const [description, setDescription] = useState(saved?.description ?? '');
+    const [category, setCategory] = useState<AidPostingCategory>(saved?.category ?? 'food');
+    const [urgency, setUrgency] = useState<1 | 2 | 3 | 4 | 5>(saved?.urgency ?? 4);
+    const [tagsText, setTagsText] = useState(saved?.tagsText ?? '');
+    const [startAt, setStartAt] = useState(saved?.startAt ?? '');
+    const [endAt, setEndAt] = useState(saved?.endAt ?? '');
     const [errors, setErrors] = useState<readonly PostingValidationIssue[]>([]);
     const [successMessage, setSuccessMessage] = useState<string>();
     const [apiError, setApiError] = useState<string>();
@@ -114,6 +117,11 @@ export const PostingRoute = ({
         }
     };
 
+    useEffect(() => {
+        if (title || description || postalCode) savePostingDraft(sessionStorage, { title, description, postalCode, category, urgency, tagsText, startAt, endAt });
+        else clearPostingDraft(sessionStorage);
+    }, [title, description, postalCode, category, urgency, tagsText, startAt, endAt]);
+
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setApiError(undefined);
@@ -127,8 +135,9 @@ export const PostingRoute = ({
             urgency,
             accessibilityTags: parseCommaList(tagsText),
             location: {
-                lat: location.center.lat,
-                lng: location.center.lng,
+                postalCode,
+                lat: location?.center.lat ?? NaN,
+                lng: location?.center.lng ?? NaN,
                 precisionMeters: PUBLIC_MIN_PRECISION_KM * 1000,
             },
             timeWindow:
@@ -221,6 +230,11 @@ export const PostingRoute = ({
 
             <Surface aria-label={String(t('posting.formTitle'))}>
                 <form className='grid gap-5' onSubmit={handleSubmit}>
+                    <div>
+                        <label className='mb-1.5 block mh-field-label' htmlFor='posting-zip'>{t('posting.zipLabel')}</label>
+                        <Input id='posting-zip' inputMode='numeric' autoComplete='postal-code' maxLength={5} pattern='[0-9]{5}' required value={postalCode} onChange={event => setPostalCode(event.target.value)} />
+                        <p className='mt-1 text-sm text-mh-textMuted'>{t('posting.zipHelp')}</p>
+                    </div>
                     <div>
                         <label
                             htmlFor='posting-title'
@@ -328,10 +342,10 @@ export const PostingRoute = ({
                         />
                     </div>
 
-                    <div className='mh-surface mh-surface--quiet p-4'>
+                    {location && !postalCode && <div className='mh-surface mh-surface--quiet p-4'>
                         <h2 className='mh-field-label'>{t('posting.approximateArea')}</h2>
                         <p className='mt-2 text-sm text-mh-textMuted'>
-                            {t('posting.selectedArea', { area: location.areaLabel })}
+                            {t('posting.selectedArea', { area: location?.areaLabel })}
                         </p>
                         <p className='mt-1 text-sm text-mh-textMuted'>
                             {t('posting.publicPrecisionSummary')}
@@ -345,7 +359,7 @@ export const PostingRoute = ({
                         >
                             {t('posting.changeArea')}
                         </Button>
-                    </div>
+                    </div>}
 
                     <Banner
                         tone='info'

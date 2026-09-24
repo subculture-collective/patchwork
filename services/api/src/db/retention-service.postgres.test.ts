@@ -4,9 +4,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PostgresRetentionService } from './retention-service.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describeWithPostgres = databaseUrl ? describe : describe.skip;
 
-describeWithPostgres('private-data retention enforcement', () => {
+describe('private-data retention enforcement', () => {
     const pool = new Pool({ connectionString: databaseUrl });
     const retention = new PostgresRetentionService(pool);
 

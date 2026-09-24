@@ -140,6 +140,7 @@ test('posting binds private bytes to the created aid-post without exposing stora
     await expect(page.getByLabel('Precision meters')).toHaveCount(0);
     await expect(page.getByText('Selected area: Disposable test area')).toBeVisible();
     await expect(page.getByText(/Public at 1 km precision or coarser/)).toBeVisible();
+    await page.getByLabel('ZIP code where help is needed').fill('60625');
     await page.getByLabel('Title').fill('Disposable attachment request');
     await page
         .getByLabel('Description')
@@ -154,10 +155,8 @@ test('posting binds private bytes to the created aid-post without exposing stora
     ).toBeVisible();
     await page.getByRole('button', { name: 'Publish request' }).click();
 
-    expect(aidPostBody).toMatchObject({
-        location: {
-            precisionKm: 1,
-        },
+    await expect.poll(() => aidPostBody).toMatchObject({
+        location: { countryCode: 'US', postalCode: '60625' },
     });
 
     await expect(

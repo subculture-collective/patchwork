@@ -1,0 +1,6 @@
+{
+  "configVersion": "patchwork-chicago-1",
+  "transitModelTimeZone": "America/Chicago",
+  "transitServiceStart": "-P14D",
+  "transitServiceEnd": "P120D"
+}

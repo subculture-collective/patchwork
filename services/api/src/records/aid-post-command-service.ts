@@ -119,6 +119,9 @@ export class AidPostCommandService {
         actorDid?: string,
     ): Promise<AidPostRecordResult> {
         const parsed = aidPostSchema.parse(record);
+        if (!parsed.location.postalCode || parsed.version !== '2.0.0') {
+            throw new PublicHttpError(400, 'POSTAL_CODE_REQUIRED', 'A five-digit ZIP code is required to publish a request.');
+        }
         const client = await this.clientFactory(sessionToken);
         const rkey =
             idempotencyKey ?
@@ -161,6 +164,9 @@ export class AidPostCommandService {
     ): Promise<AidPostRecordResult> {
         const command = updateCommandSchema.parse(input);
         const record = aidPostSchema.parse(command.record);
+        if (!record.location.postalCode || record.version !== '2.0.0') {
+            throw new PublicHttpError(400, 'POSTAL_CODE_REQUIRED', 'Choose a five-digit ZIP code before editing this request.');
+        }
         if (this.safetyGate) {
             if (!idempotencyKey) {
                 throw new PublicHttpError(

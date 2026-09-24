@@ -1,3 +1,6 @@
+import { resourceMapResponseSchema, type ResourceMapViewport } from '@patchwork/shared';
+import { resourceProfileSchema } from '@patchwork/shared';
+import type { DiscoveryMapAggregates } from '@patchwork/shared';
 import {
     aidCategories,
     aidStatuses,
@@ -10,6 +13,7 @@ import type { NormalizedAidPostingDraft } from '../posting-form';
 import type {
     DirectoryResourceCategory,
     ResourceDirectoryCard,
+    ResourceDetail,
 } from '../resource-directory-ux';
 import {
     type FeedRecordEnvelope,
@@ -57,6 +61,25 @@ export interface ApiClientFailure {
 
 export type ApiClientResult<TData> = ApiClientSuccess<TData> | ApiClientFailure;
 
+export interface TravelLeg {
+    mode: string;
+    startTime: string;
+    endTime: string;
+    durationSeconds: number;
+    distanceMeters: number;
+    from: string;
+    to: string;
+    route?: string;
+}
+
+export interface TravelItinerary {
+    startTime: string;
+    endTime: string;
+    durationSeconds: number;
+    walkDistanceMeters: number;
+    legs: TravelLeg[];
+}
+
 export interface PagedResult<T> {
     items: T[];
     page: number;
@@ -64,6 +87,7 @@ export interface PagedResult<T> {
     total: number;
     hasNextPage: boolean;
     projectionFreshness?: unknown;
+    aggregates?: DiscoveryMapAggregates;
 }
 
 export type AidPostReportReason = 'spam' | 'abuse' | 'fraud' | 'other';
@@ -227,7 +251,7 @@ const buildAidQueryParams = (
             DEFAULT_FEED_RADIUS_KM
         :   DEFAULT_NEARBY_RADIUS_KM;
 
-    const center = state.center;
+    const center = scope === 'map' || state.feedTab === 'nearby' ? state.center : undefined;
     const radiusKm =
         state.radiusMeters !== undefined ?
             toRadiusKm(state.radiusMeters)
@@ -236,8 +260,10 @@ const buildAidQueryParams = (
     const params = new URLSearchParams({
         page: String(page),
         pageSize: String(DEFAULT_DISCOVERY_PAGE_SIZE),
+        dataset: 'all',
     });
-    if (center) {
+    if (state.postalCode) params.set('postalCode', state.postalCode);
+    if (center && !state.postalCode) {
         params.set('latitude', center.lat.toFixed(6));
         params.set('longitude', center.lng.toFixed(6));
         params.set('radiusKm', String(radiusKm));
@@ -253,7 +279,7 @@ const buildAidQueryParams = (
 
     const urgency = toApiUrgency(state.minUrgency);
     if (urgency) {
-        params.set('urgency', urgency);
+        params.set('minimumUrgency', urgency);
     }
 
     if (state.text) {
@@ -281,6 +307,7 @@ const buildDirectoryQueryParams = (
     const params = new URLSearchParams({
         page: String(page),
         pageSize: String(DEFAULT_DISCOVERY_PAGE_SIZE),
+        dataset: 'all',
     });
     if (center) {
         params.set('latitude', center.lat.toFixed(6));
@@ -288,6 +315,10 @@ const buildDirectoryQueryParams = (
         params.set('radiusKm', String(radiusKm));
     }
 
+    if (state.resourceService) params.set('service', state.resourceService);
+    if (state.resourceProgram) params.set('program', state.resourceProgram);
+    if (state.resourceCategory) params.set('category', state.resourceCategory);
+    if (state.includeLibraries) params.set('includeLibraries', 'true');
     if (state.text) {
         params.set('searchText', state.text);
     }
@@ -574,6 +605,7 @@ const requestJsonPost = async (
     path: string,
     body: unknown,
     signal?: AbortSignal,
+    idempotencyKey?: string,
 ): Promise<ApiClientResult<unknown>> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
@@ -599,7 +631,7 @@ const requestJsonPost = async (
                 headers: {
                     'content-type': 'application/json',
                     accept: 'application/json',
-                    'idempotency-key': newIdempotencyKey(),
+                    'idempotency-key': idempotencyKey ?? newIdempotencyKey(),
                     ...csrfHeaders(),
                 },
                 body: JSON.stringify(body),
@@ -733,8 +765,9 @@ const parseAtAidPostResult = (
 export const createAtAidPostViaApi = async (
     record: AidPostRecord,
     signal?: AbortSignal,
+    idempotencyKey?: string,
 ): Promise<ApiClientResult<AtAidPostResult>> => {
-    const result = await requestJsonPost('/at/aid-posts', record, signal);
+    const result = await requestJsonPost('/at/aid-posts', record.location.postalCode ? { ...record, location: { countryCode: 'US', postalCode: record.location.postalCode } } : record, signal, idempotencyKey);
     return result.ok ? parseAtAidPostResult(result.data) : result;
 };
 
@@ -2169,7 +2202,7 @@ const parseDirectoryVerificationStatus = (
 const parseDirectoryOperationalStatus = (
     value: string | undefined,
 ): ResourceDirectoryCard['operationalStatus'] => {
-    return value === 'open' || value === 'limited' || value === 'closed'
+    return value === 'open' || value === 'limited' || value === 'closed' || value === 'unknown'
         ? value
         : undefined;
 };
@@ -2236,6 +2269,7 @@ const mapAidPayloadToRecords = (
 
             return {
                 aidPostUri: uri,
+                postalCode: readString(row, 'postalCode'),
                 recipientDid: authorDid,
                 ...(cid ? { cid } : {}),
                 ...(recordOrigin === 'synthetic' ||
@@ -2270,9 +2304,14 @@ const mapAidPayloadToRecords = (
     return mapped as FeedRecordEnvelope[];
 };
 
-const mapDirectoryPayloadToCards = (
+const mapDirectoryPayloadToCards = (payload: unknown): ResourceDirectoryCard[] | undefined => {
+    const details = mapDirectoryPayloadToDetails(payload);
+    return details;
+};
+
+const mapDirectoryPayloadToDetails = (
     payload: unknown,
-): ResourceDirectoryCard[] | undefined => {
+): ResourceDetail[] | undefined => {
     if (!isRecord(payload)) {
         return [];
     }
@@ -2288,16 +2327,14 @@ const mapDirectoryPayloadToCards = (
         return (
             !readString(row, 'uri') ||
             !readString(row, 'name') ||
-            !isRecord(approximateGeo) ||
-            (readNumber(approximateGeo, 'latitude') ??
-                readNumber(approximateGeo, 'lat')) === undefined ||
-            (readNumber(approximateGeo, 'longitude') ??
-                readNumber(approximateGeo, 'lng')) === undefined
+            (approximateGeo !== undefined && (!isRecord(approximateGeo) ||
+            (readNumber(approximateGeo, 'latitude') ?? readNumber(approximateGeo, 'lat')) === undefined ||
+            (readNumber(approximateGeo, 'longitude') ?? readNumber(approximateGeo, 'lng')) === undefined))
         );
     });
     if (hasMalformedRow) return undefined;
 
-    return rows.reduce<ResourceDirectoryCard[]>((cards, row, index) => {
+    return rows.reduce<ResourceDetail[]>((cards, row, index) => {
         if (!isRecord(row)) {
             return cards;
         }
@@ -2322,7 +2359,7 @@ const mapDirectoryPayloadToCards = (
                 readNumber(approximateGeo, 'precisionKm')
             :   undefined;
 
-        if (!uri || !name || lat === undefined || lng === undefined) {
+        if (!uri || !name) {
             return cards;
         }
 
@@ -2345,16 +2382,19 @@ const mapDirectoryPayloadToCards = (
             :   undefined;
         const exactApprovalExpiresAt =
             exactPublicAddress ?
-                readString(exactPublicAddress, 'approvalExpiresAt')
+                (readString(exactPublicAddress, 'approvalExpiresAt') ?? readString(exactPublicAddress, 'sourceExpiresAt'))
             :   undefined;
 
         cards.push({
             uri,
+            ...(isRecord(row.publicListing) && typeof row.publicListing.sourceUrl === 'string' && typeof row.publicListing.sourceName === 'string' && typeof row.publicListing.sourceRetrievedAt === 'string' && ['claimed','unclaimed'].includes(String(row.publicListing.claimStatus))
+                ? { publicListing: row.publicListing as unknown as NonNullable<ResourceDirectoryCard['publicListing']> } : {}),
             authorDid: readString(row, 'authorDid'),
             cid: readString(row, 'cid'),
             id: parseRecordIdFromUri(uri, `remote-${index}`),
             name,
             category: parseDirectoryCategory(readString(row, 'category')),
+            ...(readNumber(row, 'distanceKm') !== undefined ? { distanceMeters: readNumber(row, 'distanceKm')! * 1000 } : {}),
             serviceArea: readString(row, 'serviceArea'),
             verificationStatus: parseDirectoryVerificationStatus(
                 readString(row, 'status'),
@@ -2373,16 +2413,18 @@ const mapDirectoryPayloadToCards = (
                         | 'sourced-public'
                         | 'visitor-created')
                 :   undefined,
-            location: {
-                lat,
-                lng,
+            ...((exactLatitude ?? lat) !== undefined && (exactLongitude ?? lng) !== undefined ? { location: {
+                lat: (exactLatitude ?? lat)!,
+                lng: (exactLongitude ?? lng)!,
                 precisionMeters: Math.round(
                     enforceMinimumGeoPrecisionKm(precisionKm ?? 1) * 1000,
                 ),
                 areaLabel: readString(row, 'serviceArea'),
-            },
+            } } : {}),
             openHours: readString(row, 'openHours'),
             eligibilityNotes: readString(row, 'eligibilityNotes'),
+            serviceProfile:resourceProfileSchema.safeParse(row['serviceProfile']).data,
+            serviceProfileRevision:readNumber(row,'serviceProfileRevision'),
             contact: {
                 url: readString(contact, 'url'),
                 phone: readString(contact, 'phone'),
@@ -2393,11 +2435,11 @@ const mapDirectoryPayloadToCards = (
             exactApprovalExpiresAt ?
                 {
                     exactPublicAddress: {
-                        kind: 'exact-public-resource' as const,
+                        kind: exactPublicAddress?.kind === 'sourced-public-resource' ? 'sourced-public-resource' as const : 'exact-public-resource' as const,
                         streetAddress: exactStreetAddress,
                         latitude: exactLatitude,
                         longitude: exactLongitude,
-                        approvalExpiresAt: exactApprovalExpiresAt,
+                        ...(exactPublicAddress?.kind === 'sourced-public-resource' ? { sourceExpiresAt: exactApprovalExpiresAt, sourceUrl: readString(exactPublicAddress, 'sourceUrl') } : { approvalExpiresAt: exactApprovalExpiresAt }),
                     },
                 }
             :   {}),
@@ -2407,11 +2449,27 @@ const mapDirectoryPayloadToCards = (
     }, []);
 };
 
+const mapAggregates = (value: unknown): DiscoveryMapAggregates | undefined => {
+    if (!isRecord(value) || !Array.isArray(value.cells) || value.cells.length > 34000 || typeof value.truncated !== 'boolean') return undefined;
+    const requestCount = readNumber(value, 'requestCount'), locatedRequestCount = readNumber(value, 'locatedRequestCount');
+    if (requestCount === undefined || locatedRequestCount === undefined || !Number.isInteger(requestCount) || !Number.isInteger(locatedRequestCount) || requestCount < 0 || locatedRequestCount < 0 || locatedRequestCount > requestCount) return undefined;
+    const cells: DiscoveryMapAggregates['cells'] = [];
+    for (const item of value.cells) {
+        if (!isRecord(item)) return undefined;
+        const latitude = readNumber(item, 'latitude'), longitude = readNumber(item, 'longitude'), count = readNumber(item, 'count'), radiusKm = readNumber(item, 'radiusKm');
+        if (latitude === undefined || longitude === undefined || count === undefined || radiusKm === undefined || Math.abs(latitude) > 90 || Math.abs(longitude) > 180 || !Number.isInteger(count) || count < 1 || radiusKm < 1) return undefined;
+        cells.push({ latitude, longitude, count, radiusKm, ...(readString(item, 'postalCode') ? { postalCode: readString(item, 'postalCode') } : {}) });
+    }
+    return { requestCount, locatedRequestCount, truncated: value.truncated, cells };
+};
+
 const pageEnvelope = <T>(
     payload: unknown,
     items: T[] | undefined,
 ): PagedResult<T> | undefined => {
     if (!isRecord(payload) || !items) return undefined;
+    const aggregates = payload.aggregates === undefined ? undefined : mapAggregates(payload.aggregates);
+    if (payload.aggregates !== undefined && !aggregates) return undefined;
     const page = readNumber(payload, 'page');
     const pageSize = readNumber(payload, 'pageSize');
     const total = readNumber(payload, 'total');
@@ -2424,6 +2482,7 @@ const pageEnvelope = <T>(
         pageSize,
         total,
         hasNextPage: payload.hasNextPage,
+        ...(aggregates ? { aggregates } : {}),
         ...(payload.projectionFreshness !== undefined
             ? { projectionFreshness: payload.projectionFreshness }
             : {}),
@@ -2452,7 +2511,7 @@ export const fetchFeedRecordPageFromApi = async (
     page = 1,
     signal?: AbortSignal,
 ): Promise<ApiClientResult<PagedResult<FeedRecordEnvelope>>> => {
-    if ((scope === 'map' || state.feedTab === 'nearby') && !state.center) return areaRequiredFailure();
+    if (scope !== 'map' && state.feedTab === 'nearby' && !state.center) return areaRequiredFailure();
     const result = await requestJson(
         scope === 'map' ? '/query/map' : '/query/feed',
         buildAidQueryParams(state, scope, page),
@@ -2460,6 +2519,9 @@ export const fetchFeedRecordPageFromApi = async (
     );
     if (!result.ok) return result;
     const envelope = pageEnvelope(result.data, mapAidPayloadToRecords(result.data));
+    if (state.center && (scope === 'map' || state.feedTab === 'nearby') && envelope?.items.some(record => !record.card.location)) {
+        return invalidResponseFailure('Nearby discovery returned a request without an approximate location.');
+    }
     return envelope ? { ok: true, data: envelope }
         : invalidResponseFailure('Discovery response was malformed.');
 };
@@ -2478,12 +2540,25 @@ export const fetchDirectoryCardPageFromApi = async (
     page = 1,
     signal?: AbortSignal,
 ): Promise<ApiClientResult<PagedResult<ResourceDirectoryCard>>> => {
-    if (!state.center) return areaRequiredFailure();
     const result = await requestJson('/query/directory', buildDirectoryQueryParams(state, page), signal);
     if (!result.ok) return result;
     const envelope = pageEnvelope(result.data, mapDirectoryPayloadToCards(result.data));
     return envelope ? { ok: true, data: envelope }
         : invalidResponseFailure('Directory response was malformed.');
+};
+
+/** One bounded page per selected area; never download the nationwide directory for pins. */
+export const fetchMapResourcePageFromApi = async (
+    state: DiscoveryFilterState,
+    signal?: AbortSignal,
+    page = 1,
+): Promise<ApiClientResult<PagedResult<ResourceDirectoryCard>>> => {
+    const params = buildDirectoryQueryParams(state, page);
+    params.set('pageSize', '100');
+    const result = await requestJson('/query/directory', params, signal);
+    if (!result.ok) return result;
+    const envelope = pageEnvelope(result.data, mapDirectoryPayloadToCards(result.data));
+    return envelope ? { ok: true, data: envelope } : invalidResponseFailure('Directory response was malformed.');
 };
 
 export const fetchDirectoryCardsFromApi = async (
@@ -2776,11 +2851,13 @@ export const fetchCoordinationViaApi = async (
 export const createCoordinationOfferViaApi = async (
     input: { requestUri: string; note: string | null },
     signal?: AbortSignal,
+    idempotencyKey?: string,
 ): Promise<ApiClientResult<{ offer: CoordinationOffer }>> => {
     const result = await requestJsonPost(
         '/coordination/offers',
         input,
         signal,
+        idempotencyKey,
     );
     return result.ok ?
             parseRecordPayload(
@@ -2797,6 +2874,7 @@ export const decideCoordinationOfferViaApi = async (
         decision: 'accept' | 'decline' | 'cancel';
     },
     signal?: AbortSignal,
+    idempotencyKey?: string,
 ): Promise<
     ApiClientResult<{
         offer: CoordinationOffer;
@@ -2807,6 +2885,7 @@ export const decideCoordinationOfferViaApi = async (
         '/coordination/offer-decisions',
         input,
         signal,
+        idempotencyKey,
     );
     return result.ok ?
             parseRecordPayload(
@@ -2823,11 +2902,13 @@ export const transitionCoordinationConnectionViaApi = async (
         action: 'complete' | 'cancel';
     },
     signal?: AbortSignal,
+    idempotencyKey?: string,
 ): Promise<ApiClientResult<{ connection: CoordinationConnection }>> => {
     const result = await requestJsonPost(
         '/coordination/connections',
         input,
         signal,
+        idempotencyKey,
     );
     return result.ok ?
             parseRecordPayload(
@@ -3611,6 +3692,8 @@ export interface LifecycleQueryApiResult {
     validTransitions: string[];
     updatedAt: string;
     projectionReceipt?: ProjectionReceipt;
+    publicSyncState?: 'pending' | 'synced' | 'failed';
+    publicCid?: string;
 }
 
 export interface ProjectionReceipt {
@@ -3642,6 +3725,7 @@ const parseProjectionReceipt = (value: unknown): ProjectionReceipt | undefined =
 export const transitionAidPostViaApi = async (
     input: LifecycleTransitionApiInput,
     signal?: AbortSignal,
+    idempotencyKey?: string,
 ): Promise<ApiClientResult<LifecycleTransitionApiResult>> => {
     const body = {
         postUri: input.postUri,
@@ -3654,6 +3738,7 @@ export const transitionAidPostViaApi = async (
         '/aid/post/transition',
         body,
         signal,
+        idempotencyKey,
     );
 
     if (!result.ok) {
@@ -3707,25 +3792,18 @@ export const createAidPostViaApi = async (
     const now = input.now ?? new Date().toISOString();
     const record = aidPostSchema.parse({
         $type: 'app.patchwork.aid.post',
-        version: '1.0.0',
+        version: '2.0.0',
         title: input.draft.title,
         description: input.draft.description,
         category: input.draft.category,
         urgency: toLexiconUrgency(input.draft.urgency),
         status: 'open',
-        location: {
-            latitude: Number(input.draft.location.lat.toFixed(2)),
-            longitude: Number(input.draft.location.lng.toFixed(2)),
-            precisionKm: Math.max(
-                1,
-                Number((input.draft.location.precisionMeters / 1000).toFixed(3)),
-            ),
-        },
+        location: { countryCode: 'US', postalCode: input.draft.location.postalCode },
         createdAt: now,
         updatedAt: now,
     });
 
-    const result = await createAtAidPostViaApi(record, signal);
+    const result = await createAtAidPostViaApi(record, signal, input.rkey);
     if (!result.ok) {
         return result;
     }
@@ -3739,6 +3817,7 @@ export const createAidPostViaApi = async (
     return {
         ok: true,
         data: {
+            postalCode: record.location.postalCode,
             aidPostUri: result.data.uri,
             recipientDid,
             cid: result.data.cid,
@@ -3880,3 +3959,169 @@ export const applyModerationPolicyViaApi = async (input: {
             )
         :   result;
 };
+
+export const fetchAidPostViaApi = async (uri: string, signal?: AbortSignal, dataset: 'all' | 'community' | 'demo' = 'all'): Promise<ApiClientResult<FeedRecordEnvelope>> => {
+    const result = await requestJson('/query/aid-post', new URLSearchParams({ uri, dataset }), signal);
+    if (!result.ok) return result;
+    const records = isRecord(result.data) ? mapAidPayloadToRecords(result.data) : undefined;
+    if (!records?.[0]) return invalidResponseFailure('Request details were unavailable.');
+    return { ok: true, data: records[0] };
+};
+
+export interface OwnedRequestReceipt {
+    uri: string;
+    title: string;
+    status: string;
+    sourceCid: string | null;
+    sourceWrittenAt: string;
+    publication: 'pending' | 'projected';
+}
+export async function fetchAccountRequestsViaApi(page = 1, signal?: AbortSignal): Promise<ApiClientResult<PagedResult<OwnedRequestReceipt>>> {
+    const result = await requestJson('/account/requests', new URLSearchParams({ page: String(page) }), signal);
+    if (!result.ok) return result;
+    const data = result.data;
+    if (!isRecord(data) || !Array.isArray(data.requests) || !Number.isSafeInteger(data.page)
+        || data.pageSize !== 20 || !Number.isSafeInteger(data.total) || typeof data.hasNextPage !== 'boolean'
+        || !data.requests.every((item: unknown) => isRecord(item) && typeof item.uri === 'string'
+            && typeof item.title === 'string' && typeof item.status === 'string'
+            && (item.sourceCid === null || typeof item.sourceCid === 'string') && typeof item.sourceWrittenAt === 'string'
+            && (item.publication === 'pending' || item.publication === 'projected'))) {
+        return invalidResponseFailure('Your requests response was malformed.');
+    }
+    return { ok: true, data: { items: data.requests as OwnedRequestReceipt[], page: data.page as number,
+        pageSize: 20, total: data.total as number, hasNextPage: data.hasNextPage } };
+}
+
+export async function fetchResourceViaApi(uri: string, signal?: AbortSignal, dataset: 'all' | 'community' | 'demo' = 'all'): Promise<ApiClientResult<ResourceDetail>> {
+    const result = await requestJson('/query/directory-resource', new URLSearchParams({ uri, dataset }), signal);
+    if (!result.ok) return result;
+    const cards = isRecord(result.data) ? mapDirectoryPayloadToDetails(result.data) : [];
+    if (!cards || cards.length !== 1 || cards[0]?.uri !== uri) return invalidResponseFailure('Resource details were unavailable.');
+    return { ok: true, data: cards[0] };
+}
+
+const validTravelLeg = (value: unknown): value is TravelLeg => isRecord(value)
+    && typeof value['mode'] === 'string'
+    && typeof value['startTime'] === 'string'
+    && typeof value['endTime'] === 'string'
+    && typeof value['durationSeconds'] === 'number'
+    && typeof value['distanceMeters'] === 'number'
+    && typeof value['from'] === 'string'
+    && typeof value['to'] === 'string'
+    && (value['route'] === undefined || typeof value['route'] === 'string');
+
+export const planTravelViaApi = async (input: {
+    resourceUri: string;
+    origin: { latitude: number; longitude: number };
+    dateTime: string;
+    arriveBy: boolean;
+    mode: 'walk' | 'transit';
+    wheelchair: boolean;
+}, signal?: AbortSignal): Promise<ApiClientResult<TravelItinerary[]>> => {
+    const result = await requestJsonPost('/travel/plan', input, signal);
+    if (!result.ok) return result;
+    if (!isRecord(result.data) || !Array.isArray(result.data['itineraries'])
+        || !result.data['itineraries'].every(value => isRecord(value)
+            && typeof value['startTime'] === 'string'
+            && typeof value['endTime'] === 'string'
+            && typeof value['durationSeconds'] === 'number'
+            && typeof value['walkDistanceMeters'] === 'number'
+            && Array.isArray(value['legs']) && value['legs'].every(validTravelLeg))) {
+        return invalidResponseFailure('Travel options were malformed. Try again.');
+    }
+    return { ok: true, data: result.data['itineraries'] as TravelItinerary[] };
+};
+
+export const submitPublicResourceClaimViaApi = (input: { resourceUri: string; organizationId: string; evidence: string }) => requestJsonPost('/organizations/resource-claims',input);
+export const listPublicResourceClaimsViaApi = () => requestJson('/organizations/resource-claims',new URLSearchParams());
+export const decidePublicResourceClaimViaApi = (input: { claimId: string; action: 'approve'|'deny'|'revoke'; reason: string }) => requestJsonPut('/organizations/resource-claims/decision',input);
+export const editPublicResourceViaApi = (input: { expectedUpdatedAt?:string;serviceProfile?:import('@patchwork/shared').ResourceProfile;serviceProfileRevision?:number; reconfirmServiceIds?:string[];resourceUri: string; name: string; openHours: string; eligibilityNotes: string; contact: { url: string; phone?: string } }) => requestJsonPut('/organizations/public-resource',input);
+
+export const listSavedDiscoveryViaApi = async ():Promise<ApiClientResult<{items:import('@patchwork/shared').SavedDiscoveryItem[]}>> => {
+    const result=await requestJson('/account/saved-discovery',new URLSearchParams());
+    if(!result.ok)return result;
+    const body=result.data as {items?:unknown};
+    return body && Array.isArray(body.items) ? {ok:true,data:body as {items:import('@patchwork/shared').SavedDiscoveryItem[]}} : invalidResponseFailure('Saved resources could not be loaded.');
+};
+export const saveDiscoveryViaApi = (input:import('@patchwork/shared').SavedDiscoveryInput) => requestJsonPut('/account/saved-discovery',input);
+export const removeSavedDiscoveryViaApi = (id:string) => requestJsonDelete('/account/saved-discovery',{id});
+
+export const fetchResourceMapViaApi = async(state:DiscoveryFilterState,viewport:ResourceMapViewport,signal?:AbortSignal)=>{
+    const params=buildDirectoryQueryParams(state,1);params.set('mapZoom',String(viewport.zoom));
+    for(const key of ['west','east','south','north'] as const)params.set(key,String(viewport[key]));
+    const result=await requestJson('/query/resource-map',params,signal);if(!result.ok)return result;
+    const parsed=resourceMapResponseSchema.safeParse(result.data);return parsed.success?{ok:true as const,data:parsed.data}:invalidResponseFailure('Resource map response was malformed.');
+};
+
+export const setSavedDiscoveryAlertsViaApi=(id:string,enabled:boolean)=>requestJsonPut('/account/saved-discovery/alerts',{id,enabled});
+
+export interface ResourceCorrection {
+ id:string;resource_uri:string;category:'contact'|'hours'|'access'|'closure'|'other';explanation:string;source_url?:string;
+ status:'pending'|'needs-information'|'applied'|'denied'|'duplicate';revision:number;response?:string;
+}
+
+const validCorrection=(value:unknown):value is ResourceCorrection=>isRecord(value)&&typeof value.id==='string'&&typeof value.resource_uri==='string'&&typeof value.explanation==='string'&&Number.isInteger(value.revision)&&['pending','needs-information','applied','denied','duplicate'].includes(String(value.status));
+const correctionCommand=async(path:string,body:unknown)=>{
+ const result=await requestJsonPost(path,body);
+ if(!result.ok)return result;
+ if(!isRecord(result.data)||(path==='/resource-corrections'?typeof result.data.id!=='string':result.data.updated!==true))return invalidResponseFailure('Correction confirmation was malformed. Check its status before retrying.');
+ return result;
+};
+export const submitResourceCorrectionViaApi=(body:unknown)=>correctionCommand('/resource-corrections',body);
+export const resourceCorrectionStatusViaApi=async(receipt:string)=>{
+ const result=await requestJsonPost('/resource-corrections/status',{receipt});
+ if(!result.ok)return result;
+ return isRecord(result.data)&&validCorrection(result.data.correction)?result:invalidResponseFailure('Correction status was malformed. Try again.');
+};
+export const respondResourceCorrectionViaApi=(body:unknown)=>correctionCommand('/resource-corrections/respond',body);
+export const decideResourceCorrectionViaApi=(body:unknown)=>correctionCommand('/resource-corrections/review',body);
+export const listResourceCorrectionsViaApi=async(review=false,page=1)=>{
+ const result=await requestJson(`/resource-corrections${review?'/review':''}`,new URLSearchParams({page:String(page)}));
+ if(!result.ok)return result;
+ return isRecord(result.data)&&Array.isArray(result.data.items)&&result.data.items.every(validCorrection)&&typeof result.data.hasNextPage==='boolean'?result:invalidResponseFailure('Correction list was malformed. Try again.');
+};
+
+export interface SourceRefreshCandidate {
+    candidateId: string;
+    runId: string;
+    resourceUri: string;
+    disposition: 'contact-automation-candidate' | 'review' | 'new-listing-review' | 'missing-review';
+    changedFields: string[];
+    reasons: string[];
+    before: Record<string, unknown> | null;
+    after: Record<string, unknown> | null;
+    evidence: { url?: string; retrievedAt?: string; sha256?: string } | null;
+    status: 'pending' | 'applied' | 'dismissed' | 'superseded';
+    decisionDetails: Record<string, unknown> | null;
+    sourceId: string;
+    rawSha256: string;
+    normalizedSha256: string;
+    retrievedAt: string;
+    createdAt: string;
+    updatedAt: string;
+    appliedAt: string | null;
+}
+
+const validSourceRefreshCandidate = (value: unknown): value is SourceRefreshCandidate =>
+    isRecord(value) && typeof value.candidateId === 'string' && typeof value.runId === 'string'
+    && typeof value.resourceUri === 'string' && typeof value.disposition === 'string'
+    && Array.isArray(value.changedFields) && value.changedFields.every(field => typeof field === 'string')
+    && Array.isArray(value.reasons) && value.reasons.every(reason => typeof reason === 'string')
+    && typeof value.status === 'string' && typeof value.sourceId === 'string'
+    && typeof value.rawSha256 === 'string' && typeof value.normalizedSha256 === 'string'
+    && typeof value.retrievedAt === 'string' && typeof value.createdAt === 'string'
+    && typeof value.updatedAt === 'string';
+
+export const listSourceRefreshCandidatesViaApi = async (status: 'pending' | 'resolved' = 'pending', page = 1) => {
+    const result = await requestJson('/admin/source-refresh/candidates', new URLSearchParams({ status, page: String(page) }));
+    if (!result.ok) return result;
+    return isRecord(result.data) && Array.isArray(result.data.items)
+        && result.data.items.every(validSourceRefreshCandidate)
+        && typeof result.data.hasNextPage === 'boolean'
+        ? result as ApiClientSuccess<{items: SourceRefreshCandidate[]; page: number; hasNextPage: boolean}>
+        : invalidResponseFailure('Source-refresh review data was malformed. Try again.');
+};
+export const dismissSourceRefreshCandidateViaApi = (input: {candidateId: string; expectedUpdatedAt: string; reason: string}) =>
+    requestJsonPost('/admin/source-refresh/candidates/dismiss', input);
+export const applySourceRefreshContactViaApi = (candidateId: string) =>
+    requestJsonPost('/admin/source-refresh/candidates/apply-contact', { candidateId });

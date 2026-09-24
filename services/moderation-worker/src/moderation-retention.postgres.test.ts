@@ -7,7 +7,6 @@ import { PostgresModerationQueueStore } from './postgres-queue-store.js';
 import { PostgresModerationRetentionService } from './postgres-retention-service.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describeWithPostgres = databaseUrl ? describe : describe.skip;
 
 const queued = (suffix: string, at: string): ModerationQueueItem => ({
     queueId: `retention-${suffix}`,
@@ -25,7 +24,7 @@ const queued = (suffix: string, at: string): ModerationQueueItem => ({
     context: {},
 });
 
-describeWithPostgres('moderation retention enforcement', () => {
+describe('moderation retention enforcement', () => {
     const pool = new Pool({ connectionString: databaseUrl });
     const queue = new PostgresModerationQueueStore(pool);
     const audit = new PostgresModerationAuditStore(pool);

@@ -134,3 +134,33 @@ test('desktop secondary navigation renders above page content', async ({ page })
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
     await expect(toggle).toBeFocused();
 });
+
+test('legacy discovery aliases canonicalize without trapping browser Back', async ({ page }) => {
+    await page.goto('/');
+    await page.goto('/nearby?dataset=demo&category=food&lat=41.85&lng=-87.93&r=20000');
+    await expect(page).toHaveURL(/\/map\?/);
+    expect(new URL(page.url()).searchParams.get('dataset')).toBe(null);
+    expect(new URL(page.url()).searchParams.get('view')).toBe(null);
+    await expect(page.locator('.leaflet-container')).toBeVisible();
+    await page.goBack();
+    await expect(page).toHaveURL(/\/$/);
+});
+
+test('activity aliases retain the selected connection', async ({ page }) => {
+    await page.goto('/activity?connection=handoff-target');
+    await expect(page).toHaveURL(/\/inbox\?/);
+    expect(new URL(page.url()).searchParams.get('connection')).toBe('handoff-target');
+});
+
+test('map filter changes discard legacy dataset and can be undone through Back', async ({
+    page,
+}) => {
+    await page.goto('/nearby?view=map&dataset=demo&lat=41.85&lng=-87.93&r=20000');
+    await page.locator('summary').filter({ hasText: 'Filters' }).click();
+    const before = page.url();
+    await page.getByRole('button', { name: 'Food', exact: true }).click();
+    expect(new URL(page.url()).searchParams.get('dataset')).toBe(null);
+    expect(page.url()).not.toBe(before);
+    await page.goBack();
+    await expect(page).toHaveURL(before);
+});

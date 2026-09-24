@@ -82,6 +82,17 @@ describe('phase 6 resource directory overlays + details ui', () => {
         expect(view.query.category).toBe('food');
     });
 
+    it('keeps unlocated services in the directory without inventing a map position', () => {
+        const service = buildResource({ location: undefined, name: 'Phone support' });
+        const view = buildResourceOverlayViewModel([service], defaultDiscoveryFilterState);
+        expect(view.cards).toEqual([service]);
+        expect(view.overlays).toEqual([]);
+        const nearby = buildResourceOverlayViewModel([service], {
+            ...defaultDiscoveryFilterState, center: { lat: 41.88, lng: -87.63 }, radiusMeters: 20000,
+        });
+        expect(nearby.cards).toEqual([]);
+    });
+
     it('shows hours and eligibility details in resource panel', () => {
         const cards = [
             buildResource({
@@ -182,4 +193,14 @@ describe('phase 6 resource directory overlays + details ui', () => {
         expect(ready.status).toBe('ready');
         expect(ready.ariaLiveMessage).toContain('1 directory resources loaded');
     });
+});
+
+it('sorts and labels nearby resources by distance even without API distance fields', () => {
+    const cards = [
+        buildResource({ id: 'far', name: 'A far resource', location: { lat: 41.98, lng: -87.63, precisionMeters: 1000 } }),
+        buildResource({ id: 'near', name: 'Z near resource', location: { lat: 41.88, lng: -87.63, precisionMeters: 1000 } }),
+    ];
+    const view = buildResourceOverlayViewModel(cards, { ...defaultDiscoveryFilterState, feedTab: 'nearby', center: { lat: 41.88, lng: -87.63 }, radiusMeters: 20000 });
+    expect(view.cards.map(card => card.id)).toEqual(['near', 'far']);
+    expect(view.cards[0]?.distanceMeters).toBe(0);
 });

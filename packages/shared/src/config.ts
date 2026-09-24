@@ -82,6 +82,7 @@ const apiSchema = baseSchema.merge(atprotoSchema).extend({
         .max(3_600)
         .default(15),
     API_MODERATION_SERVICE_URL: optionalUrlField,
+    API_ROUTING_SERVICE_URL: optionalUrlField,
     MODERATION_SERVICE_TOKEN: optionalSecretField,
     ATTACHMENT_OBJECT_ENDPOINT: optionalUrlField,
     ATTACHMENT_OBJECT_ACCESS_KEY: optionalSecretField,
@@ -153,28 +154,19 @@ const apiSchemaWithRefinements = apiSchema.superRefine((value, context) => {
             message: 'ATTACHMENT_SIGNING_KEY must be at least 32 characters.',
         });
     }
-    const notificationFields = [
-        'NOTIFICATION_EMAIL_PROVIDER_URL',
-        'NOTIFICATION_EMAIL_PROVIDER_TOKEN',
-        'NOTIFICATION_EMAIL_FROM',
-        'NOTIFICATION_VAPID_SUBJECT',
-        'NOTIFICATION_VAPID_PUBLIC_KEY',
-        'NOTIFICATION_VAPID_PRIVATE_KEY',
-        'NOTIFICATION_PROVIDER_WEBHOOK_TOKEN',
+    const notificationChannels = [
+        ['NOTIFICATION_EMAIL_PROVIDER_URL', 'NOTIFICATION_EMAIL_PROVIDER_TOKEN', 'NOTIFICATION_EMAIL_FROM', 'NOTIFICATION_PROVIDER_WEBHOOK_TOKEN'],
+        ['NOTIFICATION_VAPID_SUBJECT', 'NOTIFICATION_VAPID_PUBLIC_KEY', 'NOTIFICATION_VAPID_PRIVATE_KEY'],
     ] as const;
-    const configuredNotifications = notificationFields.filter(field =>
-        Boolean(value[field]),
-    );
-    if (
-        configuredNotifications.length > 0 &&
-        configuredNotifications.length !== notificationFields.length
-    ) {
-        context.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ['NOTIFICATION_EMAIL_PROVIDER_URL'],
-            message:
-                'All email, Web Push, and provider-feedback notification fields are required together.',
-        });
+    for (const fields of notificationChannels) {
+        const configured = fields.filter(field => Boolean(value[field]));
+        if (configured.length > 0 && configured.length !== fields.length) {
+            context.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: [fields[0]],
+                message: `Enabled notification channel requires ${fields.filter(field => !value[field]).join(', ')}.`,
+            });
+        }
     }
 });
 
@@ -299,6 +291,7 @@ export interface ProductionApiConfig extends ProductionConfigBase {
     ATPROTO_SESSION_ENCRYPTION_KEY?: string;
     ATPROTO_ACCOUNT_PDS_ADMIN_PASSWORD?: string;
     API_MODERATION_SERVICE_URL?: string;
+    API_ROUTING_SERVICE_URL?: string;
     MODERATION_SERVICE_TOKEN?: string;
     ATTACHMENT_OBJECT_ENDPOINT?: string;
     ATTACHMENT_OBJECT_ACCESS_KEY?: string;
@@ -408,23 +401,23 @@ export const validateProductionConfig = (
             `FATAL: private attachment runtime requires ${missingAttachments.join(', ')}.`,
         );
     }
-    const notificationRequired: Array<keyof ProductionApiConfig> = [
-        'NOTIFICATION_EMAIL_PROVIDER_URL',
-        'NOTIFICATION_EMAIL_PROVIDER_TOKEN',
-        'NOTIFICATION_EMAIL_FROM',
-        'NOTIFICATION_VAPID_SUBJECT',
-        'NOTIFICATION_VAPID_PUBLIC_KEY',
-        'NOTIFICATION_VAPID_PRIVATE_KEY',
-        'NOTIFICATION_PROVIDER_WEBHOOK_TOKEN',
+    const emailKeys: Array<keyof ProductionApiConfig> = [
+        'NOTIFICATION_EMAIL_PROVIDER_URL', 'NOTIFICATION_EMAIL_PROVIDER_TOKEN', 'NOTIFICATION_EMAIL_FROM',
     ];
-    const missingNotifications = notificationRequired.filter(
-        key => !config[key],
-    );
-    if (missingNotifications.length > 0) {
-        throw new Error(
-            `FATAL: durable notification delivery requires ${missingNotifications.join(', ')}.`,
-        );
+    const pushKeys: Array<keyof ProductionApiConfig> = [
+        'NOTIFICATION_VAPID_SUBJECT', 'NOTIFICATION_VAPID_PUBLIC_KEY', 'NOTIFICATION_VAPID_PRIVATE_KEY',
+    ];
+    const emailEnabled = emailKeys.some(key => Boolean(config[key]));
+    const pushEnabled = pushKeys.some(key => Boolean(config[key]));
+    const required = [
+        ...(emailEnabled ? [...emailKeys, 'NOTIFICATION_PROVIDER_WEBHOOK_TOKEN' as const] : []),
+        ...(pushEnabled ? pushKeys : []),
+    ];
+    const missing = required.filter(key => !config[key]);
+    if ((!emailEnabled && !pushEnabled) || missing.length > 0) {
+        throw new Error(`FATAL: durable notification delivery requires ${missing.length ? missing.join(', ') : 'at least one complete email or push channel'}.`);
     }
+
 };
 
 /**

@@ -5,9 +5,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { PostgresIdempotencyExecutor } from './idempotency-store.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describeWithPostgres = databaseUrl ? describe : describe.skip;
 
-describeWithPostgres('PostgreSQL HTTP idempotency executor', () => {
+describe('PostgreSQL HTTP idempotency executor', () => {
     const pool = new Pool({ connectionString: databaseUrl });
     const executor = new PostgresIdempotencyExecutor(pool);
 

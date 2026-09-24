@@ -51,6 +51,7 @@ export interface ApproximateGeoPoint {
 }
 
 export interface NormalizedAidPost {
+    postalCode?: string;
     kind: 'aid-post';
     title: string;
     description: string;
@@ -74,7 +75,7 @@ export interface NormalizedDirectoryResource {
     approximateGeo?: ApproximateGeoPoint;
     openHours?: string;
     eligibilityNotes?: string;
-    operationalStatus: 'open' | 'limited' | 'closed';
+    operationalStatus: 'open' | 'limited' | 'closed' | 'unknown';
     createdAt: string;
     updatedAt: string;
     searchableText: string;
@@ -277,7 +278,10 @@ const normalizeRecordPayload = (
                 aidRecord.urgency,
                 aidRecord.status,
             ),
-            approximateGeo: quantizeCoordinate(
+            ...(aidRecord.location.postalCode ? { postalCode: aidRecord.location.postalCode } : {}),
+            approximateGeo: aidRecord.location.postalCode ? {
+                latitude: aidRecord.location.latitude, longitude: aidRecord.location.longitude, precisionKm: 1,
+            } : quantizeCoordinate(
                 aidRecord.location.latitude,
                 aidRecord.location.longitude,
                 aidRecord.location.precisionKm,
@@ -305,7 +309,7 @@ const normalizeRecordPayload = (
                 :   undefined,
             openHours: directoryRecord.openHours,
             eligibilityNotes: directoryRecord.eligibilityNotes,
-            operationalStatus: directoryRecord.operationalStatus ?? 'open',
+            operationalStatus: directoryRecord.operationalStatus ?? 'unknown',
             createdAt: directoryRecord.createdAt,
             updatedAt: directoryRecord.updatedAt ?? directoryRecord.createdAt,
             searchableText: normalizeSearchableText(
@@ -316,7 +320,7 @@ const normalizeRecordPayload = (
                 directoryRecord.openHours ?? '',
                 directoryRecord.eligibilityNotes ?? '',
                 directoryRecord.location?.areaLabel ?? '',
-                directoryRecord.operationalStatus ?? 'open',
+                directoryRecord.operationalStatus ?? 'unknown',
             ),
             trustScore,
         };

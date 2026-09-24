@@ -350,10 +350,10 @@ export class PostgresProjectionStore {
                         uri, collection, cid, revision, author_did_hash, title,
                         description, category, urgency, status, searchable_text,
                         latitude, longitude, precision_km, record_created_at,
-                        record_updated_at, source_cursor, source_event_id
+                        record_updated_at, source_cursor, source_event_id, postal_code
                      ) VALUES (
                         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
-                        $13, $14, $15, $16, $17, $18
+                        $13, $14, $15, $16, $17, $18, $19
                      )
                      ON CONFLICT (uri) DO UPDATE SET
                         collection = EXCLUDED.collection,
@@ -366,6 +366,7 @@ export class PostgresProjectionStore {
                         urgency = EXCLUDED.urgency,
                         status = EXCLUDED.status,
                         searchable_text = EXCLUDED.searchable_text,
+                        postal_code = EXCLUDED.postal_code,
                         latitude = EXCLUDED.latitude,
                         longitude = EXCLUDED.longitude,
                         precision_km = EXCLUDED.precision_km,
@@ -395,6 +396,7 @@ export class PostgresProjectionStore {
                         payload.updatedAt,
                         event.seq,
                         event.eventId,
+                        payload.postalCode ?? null,
                     ],
                 );
             } else if (
@@ -548,11 +550,11 @@ export class PostgresProjectionStore {
         }
     }
 
-    async recordHeartbeat(cursor: number | null): Promise<void> {
+    async recordHeartbeat(cursor: number | null, observedAt = new Date()): Promise<void> {
         await this.pool.query(
             `INSERT INTO indexer_projection_state (
                 singleton, latest_cursor, heartbeat_at
-             ) VALUES (TRUE, $1, NOW())
+             ) VALUES (TRUE, $1, $2)
              ON CONFLICT (singleton) DO UPDATE SET
                 latest_cursor = CASE
                     WHEN EXCLUDED.latest_cursor IS NULL
@@ -564,8 +566,8 @@ export class PostgresProjectionStore {
                         EXCLUDED.latest_cursor
                     )
                 END,
-                heartbeat_at = NOW()`,
-            [cursor],
+                heartbeat_at = EXCLUDED.heartbeat_at`,
+            [cursor, observedAt],
         );
     }
 

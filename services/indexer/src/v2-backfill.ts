@@ -21,6 +21,7 @@ import {
 } from './checkpoint.js';
 import { PostgresDeadLetterStore } from './db/dead-letter-store.js';
 import { PostgresJetstreamControlStore } from './db/jetstream-control-store.js';
+import { PostgresLifecycleEventReconciler } from './db/lifecycle-reconciler.js';
 import { PostgresProjectionStore } from './db/projection-store.js';
 import { IndexerPipeline } from './pipeline.js';
 import { sdkServiceUrl, toAtEvent } from './stream/jetstream-v2-source.js';
@@ -120,16 +121,16 @@ export const runJetstreamV2Backfill = async (
     return { headSeq, commits, controls, relevantDids: relevantDids.size };
 };
 
-const start = async (): Promise<void> => {
+export const bootstrapJetstreamV2Projection = async (): Promise<void> => {
     const config = loadIndexerConfig();
     validateProductionServiceConfig(config);
     if (
         config.INDEXER_JETSTREAM_VERSION !== 'v2' ||
-        config.INDEXER_PROJECTION_MODE !== 'v2-shadow' ||
+        !['v2-shadow', 'v2-live'].includes(config.INDEXER_PROJECTION_MODE) ||
         !config.JETSTREAM_API_KEY
     ) {
         throw new Error(
-            'FATAL: v2 backfill requires Jetstream v2, v2-shadow, and JETSTREAM_API_KEY.',
+            'FATAL: v2 backfill requires Jetstream v2, a v2 projection mode, and JETSTREAM_API_KEY.',
         );
     }
     const databaseUrl =
@@ -138,9 +139,11 @@ const start = async (): Promise<void> => {
     const pool = new Pool({
         connectionString: databaseUrl,
         max: 5,
-        options: '-c search_path=jetstream_v2_shadow,public',
+        ...(config.INDEXER_PROJECTION_MODE === 'v2-shadow' ? { options: '-c search_path=jetstream_v2_shadow,public' } : {}),
     });
+    const lock = await pool.connect();
     try {
+        await lock.query('SELECT pg_advisory_lock(hashtext($1))', [`patchwork-bootstrap:${config.INDEXER_PROJECTION_MODE}`]);
         const persistedCheckpoint = new PostgresCheckpointStore(
             pool,
             'jetstream-v2-seq',
@@ -151,13 +154,14 @@ const start = async (): Promise<void> => {
         }
         const projectionStore = new PostgresProjectionStore(
             pool,
-            'patchwork-indexer-rebuild:v2-shadow',
+            `patchwork-indexer-rebuild:${config.INDEXER_PROJECTION_MODE}`,
         );
         const pipeline = new IndexerPipeline({
             checkpointStore: new InMemoryCheckpointStore('jetstream-v2-seq'),
             checkpointInterval: 100,
             projectionStore,
             deadLetterStore: new PostgresDeadLetterStore(pool),
+            ...(config.INDEXER_PROJECTION_MODE === 'v2-live' ? { lifecycleReconciler: new PostgresLifecycleEventReconciler(pool) } : {}),
         });
         const controls = new PostgresJetstreamControlStore(pool);
         const result = await runJetstreamV2Backfill({
@@ -198,13 +202,15 @@ const start = async (): Promise<void> => {
             },
             saveCheckpoint: async (cursor) => {
                 await persistedCheckpoint.save(cursor);
-                await projectionStore.recordHeartbeat(cursor);
+                // Live readiness is established by current source events, not archive completion.
             },
         });
         console.log(
             `[indexer:v2-backfill] complete head=${result.headSeq} commits=${result.commits} controls=${result.controls} dids=${result.relevantDids}`,
         );
     } finally {
+        await lock.query('SELECT pg_advisory_unlock(hashtext($1))', [`patchwork-bootstrap:${config.INDEXER_PROJECTION_MODE}`]);
+        lock.release();
         await pool.end();
     }
 };
@@ -213,7 +219,7 @@ if (
     process.argv[1] &&
     fileURLToPath(import.meta.url) === resolve(process.argv[1])
 ) {
-    void start().catch((error) => {
+    void bootstrapJetstreamV2Projection().catch((error) => {
         const metadata = {
             name: error instanceof Error ? error.name : 'UnknownError',
             ...(typeof error === 'object' &&

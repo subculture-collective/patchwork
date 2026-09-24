@@ -1,3 +1,6 @@
+import { RequestDetail } from './request-detail';
+import { MyRequests } from './my-requests';
+import type { DiscoveryMapAggregates } from '@patchwork/shared';
 import {
     useEffect,
     useMemo,
@@ -35,7 +38,6 @@ import { EmptyState } from '../components/EmptyState';
 import { Panel } from '../components/Panel';
 import { Banner } from '../components/Banner';
 import { AppShell } from '../app/AppShell';
-import { PostingAreaGate } from './discovery/PostingAreaGate';
 import {
     type ApiDataOrigin,
     type AtAidPostResult,
@@ -144,7 +146,10 @@ const readDiscoveryStateFromUrl = (
         return fallback;
     }
 
-    return parseDiscoveryFilterState(window.location.search, fallback);
+    const params = new URLSearchParams(window.location.search);
+    const parsed = parseDiscoveryFilterState(window.location.search, fallback);
+    if (!params.has('nearby') && (params.has('uri') || window.location.pathname === '/nearby')) return { ...parsed, nearbyIntent: 'requests' };
+    return parsed;
 };
 
 const lifecycleStatusFromValue = (
@@ -186,6 +191,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
     const auth = useAuth();
     const { locale, changeLocale, t } = useLocale();
     const mainContentRef = useRef<HTMLDivElement>(null);
+    const initialUrlSync = useRef(true);
     const [currentRoute, setCurrentRoute] = useState<AppRoute>(() =>
         readCurrentRoute(),
     );
@@ -240,6 +246,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
     );
     const [historyVersion, setHistoryVersion] = useState(0);
 
+    const [aidAggregates, setAidAggregates] = useState<DiscoveryMapAggregates>();
     const currentUserDid = auth.session?.did ?? '';
 
     useEffect(() => {
@@ -369,24 +376,30 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         const page = currentRoute === '/resources' ? directoryPage
             : currentRoute === '/map' || currentRoute === '/feed' ? aidPage : 1;
         const pageParams = new URLSearchParams(discoveryQueryString);
+        {
+            const existing = new URLSearchParams(window.location.search);
+            for (const key of ['uri', 'resource', 'connection', 'conversation', 'resourceName']) if (existing.has(key)) pageParams.set(key, existing.get(key)!);
+        }
         if (page > 1) pageParams.set('page', String(page));
         else pageParams.delete('page');
-        const nextUrl = `${currentRoute}${pageParams.toString() ? `?${pageParams.toString()}` : ''}`;
+        const nextUrl = `${currentRoute}${pageParams.toString() ? `?${pageParams.toString()}` : ''}${window.location.hash}`;
         const currentUrl = `${window.location.pathname}${window.location.search}`;
 
         if (nextUrl !== currentUrl) {
-            window.history.pushState({}, '', nextUrl);
+            if (initialUrlSync.current) window.history.replaceState({}, '', nextUrl);
+            else window.history.pushState({}, '', nextUrl);
         }
+        initialUrlSync.current = false;
     }, [aidPage, currentRoute, directoryPage, discoveryQueryString]);
 
     useEffect(() => {
-        if (currentRoute !== '/map' && currentRoute !== '/feed') {
+        if ((currentRoute !== '/map' && currentRoute !== '/feed') || (currentRoute === '/map' && discoveryState.nearbyIntent !== 'requests')) {
             return undefined;
         }
         if (webDataMode === 'fixture') return undefined;
         if (
             !discoveryState.center &&
-            (currentRoute === '/map' || discoveryState.feedTab === 'nearby')
+            currentRoute === '/feed' && discoveryState.feedTab === 'nearby'
         ) {
             setFeedRecords([]);
             setAidHasNextPage(false);
@@ -495,6 +508,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                     );
                     setAidHasNextPage(result.data.hasNextPage);
                     setAidTotal(result.data.total);
+                    setAidAggregates(result.data.aggregates);
                     setAidDataOrigin('api');
                     return;
                 }
@@ -514,20 +528,10 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
     }, [aidPage, aidReload, currentRoute, currentUserDid, discoveryState, t]);
 
     useEffect(() => {
-        if (currentRoute !== '/resources' && currentRoute !== '/map') {
+        if ((currentRoute !== '/resources' && currentRoute !== '/map') || (currentRoute === '/map' && discoveryState.nearbyIntent !== 'requests')) {
             return undefined;
         }
         if (webDataMode === 'fixture') return undefined;
-        if (!discoveryState.center) {
-            setResourceCards([]);
-            setDirectoryHasNextPage(false);
-            setDirectoryTotal(0);
-            setDirectoryDataOrigin('idle');
-            setDirectoryErrorMessage(undefined);
-            setIsDirectoryLoading(false);
-            return undefined;
-        }
-
         const controller = new AbortController();
         setIsDirectoryLoading(true);
         setDirectoryErrorMessage(undefined);
@@ -806,9 +810,12 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
             );
         }
         switch (currentRoute) {
+            case '/requests/view': return <RequestDetail />;
+            case '/requests/mine': return <MyRequests />;
             case '/map':
                 return (
                     <MapRoute
+                        aggregates={aidAggregates}
                         discoveryState={discoveryState}
                         onPatchDiscovery={patchDiscoveryState}
                         onPushDiscovery={pushDiscoveryState}
@@ -941,14 +948,13 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                 );
             case '/posting':
                 return (
-                    discoveryState.center ? (
                         <PostingRoute
-                            location={{
+                            location={discoveryState.center ? {
                                 center: discoveryState.center,
                                 areaLabel:
                                     discoveryState.areaLabel ??
                                     String(t('discovery.areaUnknown')),
-                            }}
+                            } : undefined}
                             onCreateRecord={(record) => {
                                 setFeedRecords((current) => [record, ...current]);
                                 patchDiscoveryState({
@@ -959,13 +965,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                             onNavigate={navigate}
                             onCreateViaApi={createAidPostViaApi}
                         />
-                    ) : (
-                        <PostingAreaGate
-                            state={discoveryState}
-                            onPatch={patchDiscoveryState}
-                            onChooseOnMap={() => navigate('/map')}
-                        />
-                    )
+
                 );
             case '/resources':
                 return (

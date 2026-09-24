@@ -1,3 +1,4 @@
+import { PublicResourceClaimManagement } from '../features/public-resource-claims';
 import {
     useCallback,
     useEffect,
@@ -780,6 +781,7 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
                     <p>{t('organizations.signInHelp')}</p>
                 </Panel>
             )}
+            <PublicResourceClaimManagement />
         </section>
     );
 };

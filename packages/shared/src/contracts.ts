@@ -42,6 +42,7 @@ export interface ApiQueryAidRequest {
 }
 
 export interface AidRecordSummary {
+    postalCode?: string;
     uri: string;
     authorDid: string;
     title: string;
@@ -55,7 +56,7 @@ export interface AidRecordSummary {
         | 'childcare'
         | 'other';
     urgency: 'low' | 'medium' | 'high' | 'critical';
-    approximateGeo: {
+    approximateGeo?: {
         latitude: number;
         longitude: number;
         precisionKm: number;
@@ -71,12 +72,20 @@ export interface AidRecordSummary {
     recordOrigin?: 'synthetic' | 'sourced-public' | 'visitor-created';
 }
 
+export interface DiscoveryMapAggregates {
+    requestCount: number;
+    locatedRequestCount: number;
+    truncated: boolean;
+    cells: Array<{ latitude: number; longitude: number; count: number; radiusKm: number; postalCode?: string }>;
+}
+
 export interface ApiQueryAidResponse {
     total: number;
     page: number;
     pageSize: number;
     hasNextPage: boolean;
     results: AidRecordSummary[];
+    aggregates?: DiscoveryMapAggregates;
     projectionFreshness?: ProjectionFreshness;
 }
 
@@ -90,7 +99,7 @@ export interface ProjectionFreshness {
 export interface ApiQueryDirectoryRequest {
     category?: string;
     status?: 'unverified' | 'community-verified' | 'partner-verified';
-    operationalStatus?: 'open' | 'limited' | 'closed';
+    operationalStatus?: 'open' | 'limited' | 'closed' | 'unknown';
     latitude?: number;
     longitude?: number;
     radiusKm?: number;
@@ -119,7 +128,7 @@ export interface DirectoryRecordSummary {
     };
     openHours?: string;
     eligibilityNotes?: string;
-    operationalStatus: 'open' | 'limited' | 'closed';
+    operationalStatus: 'open' | 'limited' | 'closed' | 'unknown';
     createdAt: string;
     updatedAt: string;
     recordOrigin?: 'synthetic' | 'sourced-public' | 'visitor-created';
@@ -165,7 +174,7 @@ export interface ApiQueryDirectoryResponse {
 
 export interface ApiQueryErrorResponse {
     error: {
-        code: 'INVALID_QUERY' | 'UNSUPPORTED_ROUTE';
+        code: 'INVALID_QUERY' | 'UNSUPPORTED_ROUTE' | 'NOT_FOUND';
         message: string;
         details?: Record<string, unknown>;
     };

@@ -893,3 +893,6 @@ code {
         transition: none !important;
     }
 }
+
+.mh-modal { margin: auto; width: min(42rem, calc(100% - 2rem)); max-height: calc(100svh - 2rem); overflow: auto; background: var(--mh-surface, #fffdf7); color: var(--mh-text, #172019); border: 1px solid var(--mh-border); border-radius: .75rem; }
+.mh-modal::backdrop { background: #17201980; }

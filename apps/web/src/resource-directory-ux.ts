@@ -13,6 +13,7 @@ export type DirectoryResourceCategory =
     | 'clinic'
     | 'legal-aid'
     | 'hotline'
+    | 'library'
     | 'other';
 
 export interface ResourceDirectoryCard {
@@ -27,31 +28,38 @@ export interface ResourceDirectoryCard {
         | 'unverified'
         | 'community-verified'
         | 'partner-verified';
-    operationalStatus?: 'open' | 'limited' | 'closed';
+    operationalStatus?: 'open' | 'limited' | 'closed' | 'unknown';
     createdAt?: string;
     updatedAt?: string;
-    location: {
+    location?: {
         lat: number;
         lng: number;
         precisionMeters: number;
         areaLabel?: string;
     };
+    serviceProfile?: import('@patchwork/shared').ResourceProfile;
+    serviceProfileRevision?: number;
     openHours?: string;
     eligibilityNotes?: string;
     contact: {
         url?: string;
         phone?: string;
     };
+    publicListing?: { sourceName: string; sourceUrl: string; sourceRetrievedAt: string; claimStatus: 'claimed' | 'unclaimed' };
     exactPublicAddress?: {
-        kind: 'exact-public-resource';
+        kind: 'exact-public-resource' | 'sourced-public-resource';
         streetAddress: string;
         latitude: number;
         longitude: number;
-        approvalExpiresAt: string;
+        approvalExpiresAt?: string;
+        sourceExpiresAt?: string;
+        sourceUrl?: string;
     };
     distanceMeters?: number;
     recordOrigin?: 'synthetic' | 'sourced-public' | 'visitor-created';
 }
+
+export type ResourceDetail = Omit<ResourceDirectoryCard, 'location'> & { location?: ResourceDirectoryCard['location'] };
 
 export interface ResourceOverlayMarker {
     uri: string;
@@ -76,11 +84,11 @@ export interface ResourceOverlayViewModel {
 }
 
 export const currentExactPublicAddress = (
-    resource: ResourceDirectoryCard,
+    resource: Pick<ResourceDirectoryCard, 'exactPublicAddress'>,
     nowMs = Date.now(),
 ): ResourceDirectoryCard['exactPublicAddress'] | undefined => {
     const exact = resource.exactPublicAddress;
-    const expiresAt = exact ? Date.parse(exact.approvalExpiresAt) : NaN;
+    const expiresAt = exact ? Date.parse((exact.kind === 'sourced-public-resource' ? exact.sourceExpiresAt : exact.approvalExpiresAt) ?? '') : NaN;
     return exact && Number.isFinite(expiresAt) && expiresAt > nowMs
         ? exact
         : undefined;
@@ -134,17 +142,17 @@ const resourceMatchesText = (
         resource.name,
         resource.openHours ?? '',
         resource.eligibilityNotes ?? '',
-        resource.location.areaLabel ?? '',
+        resource.location?.areaLabel ?? '',
     ]
         .join(' ')
         .toLowerCase();
 
-    return haystack.includes(text.toLowerCase());
+    return text.toLowerCase().split(/\s+/).filter(Boolean).every(word => haystack.includes(word));
 };
 
 const toOverlayMarker = (
     resource: ResourceDirectoryCard,
-): ResourceOverlayMarker => {
+): ResourceOverlayMarker | undefined => {
     const exact = currentExactPublicAddress(resource);
     if (exact) {
         return {
@@ -159,6 +167,7 @@ const toOverlayMarker = (
         };
     }
 
+    if (!resource.location) return undefined;
     const precisionMeters = Math.max(
         MINIMUM_GEO_PRIVACY_RADIUS_METERS,
         Math.round(resource.location.precisionMeters),
@@ -195,6 +204,7 @@ export const filterResourceDirectoryCards = (
     const categoryFilters = mapAidCategoryToDirectoryCategories(state.category);
 
     return cards
+        .map(card => query.center && card.location ? { ...card, distanceMeters: haversineDistanceMeters(query.center, card.location) } : card)
         .filter(card => {
             if (filters.category && card.category !== filters.category) {
                 return false;
@@ -212,6 +222,7 @@ export const filterResourceDirectoryCards = (
             }
 
             if (query.center && query.radiusMeters !== undefined) {
+                if (!card.location) return false;
                 const distance = haversineDistanceMeters(
                     query.center,
                     card.location,
@@ -247,13 +258,13 @@ export const buildResourceOverlayViewModel = (
     return {
         query,
         cards: filtered,
-        overlays: filtered.map(card => toOverlayMarker(card)),
+        overlays: filtered.map(card => toOverlayMarker(card)).filter((marker): marker is ResourceOverlayMarker => Boolean(marker)),
         activeCategoryFilter: filters.category,
     };
 };
 
 export const openResourceDetailPanel = (
-    cards: readonly ResourceDirectoryCard[],
+    cards: readonly ResourceDetail[],
     selectedUri: string,
 ): ResourceDetailPanelModel => {
     const selected = cards.find(card => card.uri === selectedUri);

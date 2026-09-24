@@ -9,7 +9,6 @@ import { PostgresProjectionComparison } from './projection-comparison.js';
 import { PostgresProjectionStore } from './projection-store.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describePostgres = databaseUrl ? describe : describe.skip;
 const hash = (value: string): string =>
     createHash('sha256').update(value).digest('hex');
 
@@ -42,7 +41,7 @@ const event = (cid: string, seq: number): NormalizedFirehoseEvent => ({
     },
 });
 
-describePostgres('Jetstream v2 shadow projection', () => {
+describe('Jetstream v2 shadow projection', () => {
     const live = new Pool({ connectionString: databaseUrl });
     const shadow = new Pool({
         connectionString: databaseUrl,

@@ -1,13 +1,10 @@
 # AT Protocol artifacts
 
-Current implementation and continuation sequencing are governed by
-`docs/superpowers/plans/2026-07-10-patchwork-continuation-roadmap.md`. The
-documents below describe existing contracts; they do not by themselves imply
-that real OAuth, repository writes, or live ingestion are implemented.
+These documents describe versioned identity, record, and deletion contracts.
 
 Alpha data placement and ingestion are governed by
-`docs/architecture/adr/0003-at-alpha-data-boundaries.md`. Only aid posts are an
-alpha write collection. Jetstream is the initial filtered live source, backed
+`docs/architecture/adr/0003-at-alpha-data-boundaries.md`. Aid posts, directory resources, and volunteer profiles are public write
+collections. Jetstream is the initial filtered live source, backed
 by repository reconciliation; it is not treated as record authority or a
 complete historical source.
 

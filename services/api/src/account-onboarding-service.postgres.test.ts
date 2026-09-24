@@ -9,9 +9,8 @@ import {
 import { AccountOnboardingService } from './account-onboarding-service.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describePostgres = databaseUrl ? describe : describe.skip;
 
-describePostgres('durable account onboarding', () => {
+describe('durable account onboarding', () => {
     const pool = new Pool({ connectionString: databaseUrl });
     const service = new AccountOnboardingService(pool);
     const did = 'did:plc:onboarding-alice';

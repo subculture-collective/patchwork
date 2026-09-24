@@ -137,7 +137,7 @@ test.describe('Keyboard navigation', () => {
             await openDrawerButton.first().click();
 
             // Verify drawer opened
-            const drawerPanel = page.getByRole('heading', { name: 'Request details' });
+            const drawerPanel = page.getByRole('dialog');
             await expect(drawerPanel).toBeVisible();
 
             // Press Escape to close
@@ -356,7 +356,7 @@ test.describe('Keyboard tab order across routes (#99)', () => {
         await page.goto('/map');
         await page.waitForLoadState('networkidle');
 
-        const map = page.locator('.mh-interactive-map');
+        const map = page.locator('.pw-resource-map__canvas');
         await expect(map).toBeVisible();
         await expect
             .poll(async () => (await map.boundingBox())?.height ?? 0)

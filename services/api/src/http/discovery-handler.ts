@@ -5,6 +5,8 @@ import type { AuthenticatedRequest } from './authenticated-request.js';
 import { writeJsonResponse, writePublicError } from './error-response.js';
 
 interface DiscoveryQueryService {
+    queryResource?(params: URLSearchParams): ApiRouteResult | Promise<ApiRouteResult>;
+    queryAidPost?(params: URLSearchParams, viewerDid?: string): ApiRouteResult | Promise<ApiRouteResult>;
     queryMap(
         params: URLSearchParams,
         viewerDid?: string,
@@ -30,6 +32,8 @@ export interface DiscoveryHandlerDependencies {
 }
 
 const discoveryPaths = new Set([
+    '/query/aid-post',
+    '/query/directory-resource',
     '/query/map',
     '/query/feed',
     '/query/directory',
@@ -55,7 +59,13 @@ export const createDiscoveryHandler = (
                 const authenticated =
                     await dependencies.authenticateOptional(request);
                 const result =
-                    requestUrl.pathname === '/query/map' ?
+                    requestUrl.pathname === '/query/directory-resource' ?
+                        await dependencies.service.queryResource?.(requestUrl.searchParams)
+                        ?? { statusCode: 404, body: { error: { code: 'NOT_FOUND', message: 'This resource is unavailable.' } } }
+                    : requestUrl.pathname === '/query/aid-post' ?
+                        await dependencies.service.queryAidPost?.(requestUrl.searchParams, authenticated?.principal.did)
+                        ?? { statusCode: 404, body: { error: { code: 'NOT_FOUND', message: 'This request is unavailable.' } } }
+                    : requestUrl.pathname === '/query/map' ?
                         await dependencies.service.queryMap(
                             requestUrl.searchParams,
                             authenticated?.principal.did,

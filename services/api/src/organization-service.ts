@@ -1,3 +1,4 @@
+import { PublicResourceClaimService } from './public-resource-claim-service.js';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import {
@@ -164,6 +165,11 @@ const parseOrganizationId = (value: string): string => {
 };
 
 export class OrganizationService {
+    listResourceClaims(actorDid: string) { return new PublicResourceClaimService(this.pool).list(actorDid); }
+    submitResourceClaim(actorDid: string, input: unknown) { return new PublicResourceClaimService(this.pool).submit(actorDid,input); }
+    decideResourceClaim(actorDid: string, input: unknown) { return new PublicResourceClaimService(this.pool).decide(actorDid,input); }
+    editPublicResource(actorDid: string, input: unknown) { return new PublicResourceClaimService(this.pool).edit(actorDid,input); }
+
     constructor(private readonly pool: Pool) {}
 
     async listPublic(searchText?: string): Promise<Record<string, unknown>> {

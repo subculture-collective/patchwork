@@ -1,3 +1,4 @@
+import { queryProjected, discoveryDataset } from './projected-discovery.js';
 import { z, ZodError } from 'zod';
 import {
     DiscoveryIndexStore,
@@ -81,6 +82,13 @@ const readString = (
 
     return value;
 };
+const readBoolean = (params: URLSearchParams, key: string): boolean | string | undefined => {
+    const value = params.get(key);
+    if (value === null || value.trim() === '') return undefined;
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+};
 
 const formatValidationError = (error: ZodError): ApiQueryErrorResponse => {
     return {
@@ -111,7 +119,9 @@ export class ApiDiscoveryQueryService {
                 longitude: readNumber(params, 'longitude'),
                 radiusKm: readNumber(params, 'radiusKm'),
                 category: readString(params, 'category'),
+                includeLibraries: readBoolean(params, 'includeLibraries'),
                 urgency: readString(params, 'urgency'),
+                minimumUrgency: readString(params, 'minimumUrgency'),
                 status: readString(params, 'status'),
                 freshnessHours: readNumber(params, 'freshnessHours'),
                 searchText: readString(params, 'searchText'),
@@ -150,6 +160,7 @@ export class ApiDiscoveryQueryService {
                 radiusKm: readNumber(params, 'radiusKm'),
                 category: readString(params, 'category'),
                 urgency: readString(params, 'urgency'),
+                minimumUrgency: readString(params, 'minimumUrgency'),
                 status: readString(params, 'status'),
                 freshnessHours: readNumber(params, 'freshnessHours'),
                 searchText: readString(params, 'searchText'),
@@ -183,6 +194,8 @@ export class ApiDiscoveryQueryService {
     queryDirectory(params: URLSearchParams): ApiRouteResult {
         try {
             const input = validateDirectoryQueryInput({
+                service: readString(params, 'service'),
+                program: readString(params, 'program'),
                 category: readString(params, 'category'),
                 status: readString(params, 'status'),
                 operationalStatus: readString(params, 'operationalStatus'),
@@ -245,50 +258,6 @@ export const createFixtureQueryService = (): ApiDiscoveryQueryService => {
     const ingested = consumer.ingest(buildPhase3FixtureFirehoseEvents());
     return createQueryServiceFromNormalizedEvents(ingested.normalizedEvents);
 };
-
-interface ProjectionRow {
-    uri: string;
-    cid: string | null;
-    title: string;
-    description: string;
-    category: string;
-    urgency: string;
-    status: string;
-    searchable_text: string;
-    latitude: number;
-    longitude: number;
-    precision_km: number;
-    record_created_at: Date | string;
-    record_updated_at: Date | string;
-    source_cursor: string | number;
-    projected_at: Date | string;
-    record_origin: 'synthetic' | 'sourced-public' | 'visitor-created';
-}
-
-interface DirectoryProjectionRow {
-    uri: string;
-    cid: string | null;
-    name: string;
-    service_area: string;
-    category: string;
-    verification_status: string;
-    contact: {
-        url?: string;
-        phone?: string;
-    };
-    searchable_text: string;
-    latitude: number | null;
-    longitude: number | null;
-    precision_km: number | null;
-    open_hours: string | null;
-    eligibility_notes: string | null;
-    operational_status: string;
-    record_created_at: Date | string;
-    record_updated_at: Date | string;
-    source_cursor: string | number;
-    projected_at: Date | string;
-    record_origin: 'synthetic' | 'sourced-public' | 'visitor-created';
-}
 
 interface ProjectionStateRow {
     latest_cursor: string | number | null;
@@ -381,6 +350,17 @@ export const assessProjectionReadiness = (
 export class PostgresProjectionQueryService {
     constructor(private readonly pool: Pool) {}
 
+    async queryAidPost(params: URLSearchParams, viewerDid?: string): Promise<ApiRouteResult> {
+        const uri = params.get('uri');
+        if (!uri || !/^at:\/\/did:[^/]+\/app\.patchwork\.aid\.post\/[^/]+$/.test(uri)) {
+            return { statusCode: 400, body: { error: { code: 'INVALID_QUERY', message: 'A request URI is required.' } } };
+        }
+        const result = await queryProjected(this.pool, new URLSearchParams({ dataset: params.get('dataset') ?? 'all' }), 'feed', viewerDid, uri);
+        if ('error' in result.body) return result;
+        if (!result.body.results.length) return { statusCode: 404, body: { error: { code: 'NOT_FOUND', message: 'This request is unavailable.' } } };
+        return result;
+    }
+
     async queryMap(
         params: URLSearchParams,
         viewerDid?: string,
@@ -395,60 +375,41 @@ export class PostgresProjectionQueryService {
         return this.queryAid(params, 'feed', viewerDid);
     }
 
-    async queryDirectory(params: URLSearchParams): Promise<ApiRouteResult> {
-        const snapshot = await this.loadDirectorySnapshot();
-        const service = createQueryServiceFromNormalizedEvents(snapshot.events);
-        const result = service.queryDirectory(params);
+    async queryResource(params: URLSearchParams): Promise<ApiRouteResult> {
+        const uri = params.get('uri');
+        if (!uri || !/^at:\/\/did:[^/]+\/app\.patchwork\.directory\.resource\/[^/]+$/.test(uri)) {
+            return { statusCode: 400, body: { error: { code: 'INVALID_QUERY', message: 'A resource URI is required.' } } };
+        }
+        const result = await this.queryDirectory(new URLSearchParams({ dataset: params.get('dataset') ?? 'all' }), uri);
+        if ('error' in result.body) return result;
+        if (!result.body.results.length) return { statusCode: 404, body: { error: { code: 'NOT_FOUND', message: 'This resource is unavailable.' } } };
+        return result;
+    }
+
+    async queryDirectory(params: URLSearchParams, resourceUri?: string): Promise<ApiRouteResult> {
+        const result = await queryProjected(this.pool, params, 'directory', undefined, resourceUri);
         if ('error' in result.body) return result;
         const exactLocations = await this.pool.query<{
-            resource_uri: string;
-            street_address: string;
-            latitude: number;
-            longitude: number;
-            approval_expires_at: Date | string;
-        }>(
-            `SELECT e.resource_uri, e.street_address, e.latitude,
-                    e.longitude, e.approval_expires_at
-             FROM exact_public_address_requests e
-             WHERE e.status = 'approved'
-               AND e.confidential_facility = FALSE
-               AND e.approval_expires_at > NOW()
-               AND EXISTS (
-                   SELECT 1 FROM verification_applications v
-                   WHERE v.subject_type = 'organization'
-                     AND v.organization_id = e.organization_id
-                     AND v.subject_ref = e.organization_id::text
-                     AND v.status = 'approved' AND v.expires_at > NOW()
-               )
-               AND EXISTS (
-                   SELECT 1 FROM verification_applications v
-                   WHERE v.subject_type = 'resource'
-                     AND v.organization_id = e.organization_id
-                     AND v.subject_ref = e.resource_uri
-                     AND v.status = 'approved' AND v.expires_at > NOW()
-               )
-               AND EXISTS (
-                   SELECT 1
-                   FROM organization_resource_stewardships s
-                   WHERE s.organization_id = e.organization_id
-                     AND s.resource_uri = e.resource_uri
-                     AND s.status = 'active'
-               )`,
-        );
-        const exactByUri = new Map(
-            exactLocations.rows.map(row => [
-                row.resource_uri,
-                {
-                    kind: 'exact-public-resource' as const,
-                    streetAddress: row.street_address,
-                    latitude: Number(row.latitude),
-                    longitude: Number(row.longitude),
-                    approvalExpiresAt: new Date(
-                        row.approval_expires_at,
-                    ).toISOString(),
-                },
-            ]),
-        );
+            resource_uri: string; street_address: string; latitude: number; longitude: number;
+            valid_until: string; basis: 'reviewed' | 'public-source'; source_url: string | null;
+        }>(`SELECT DISTINCT ON(resource_uri) * FROM eligible_public_resource_addresses
+            WHERE resource_uri=ANY($1::text[]) ORDER BY resource_uri, basis DESC, valid_until DESC`,
+            [(result.body as ApiQueryDirectoryResponse).results.map(row => row.uri)]);
+        const listings = await this.pool.query(`SELECT resource_uri, source_name, source_url, source_retrieved_at,
+            claimed_by_organization_id FROM public_resource_listings WHERE resource_uri=ANY($1::text[])`,
+            [(result.body as ApiQueryDirectoryResponse).results.map(row => row.uri)]);
+        const profiles=await this.pool.query('SELECT resource_uri,profile,revision FROM resource_service_profiles WHERE resource_uri=ANY($1::text[])',[(result.body as ApiQueryDirectoryResponse).results.map(row=>row.uri)]);
+        const profileByUri=new Map(profiles.rows.map(row=>[row.resource_uri,{serviceProfile:row.profile,serviceProfileRevision:row.revision}]));
+        const listingByUri = new Map(listings.rows.map(row => [row.resource_uri, {
+            sourceName: row.source_name, sourceUrl: row.source_url, sourceRetrievedAt: new Date(row.source_retrieved_at).toISOString(),
+            claimStatus: row.claimed_by_organization_id ? 'claimed' : 'unclaimed',
+        }]));
+        const exactByUri = new Map(exactLocations.rows.map(row => [row.resource_uri, {
+            streetAddress: row.street_address, latitude: Number(row.latitude), longitude: Number(row.longitude),
+            ...(row.basis === 'public-source'
+                ? { kind: 'sourced-public-resource' as const, sourceUrl: row.source_url, sourceExpiresAt: new Date(row.valid_until).toISOString() }
+                : { kind: 'exact-public-resource' as const, approvalExpiresAt: new Date(row.valid_until).toISOString() }),
+        }]));
         const body = result.body as ApiQueryDirectoryResponse;
         return {
             ...result,
@@ -456,13 +417,12 @@ export class PostgresProjectionQueryService {
                 ...body,
                 results: body.results.map(row => ({
                     ...row,
-                    recordOrigin:
-                        snapshot.origins.get(row.uri) ?? 'visitor-created',
+                    ...profileByUri.get(row.uri),
+                    ...(listingByUri.has(row.uri) ? { publicListing: listingByUri.get(row.uri) } : {}),
                     ...(exactByUri.has(row.uri) ?
                         { exactPublicAddress: exactByUri.get(row.uri) }
                     :   {}),
                 })),
-                projectionFreshness: snapshot.freshness,
             },
         };
     }
@@ -472,6 +432,7 @@ export class PostgresProjectionQueryService {
         viewerDid?: string,
     ): Promise<ApiRouteResult> {
         try {
+            const dataset = discoveryDataset(params);
             const input = volunteerQuerySchema.parse({
                 capability: readString(params, 'capability'),
                 language: readString(params, 'language'),
@@ -480,67 +441,32 @@ export class PostgresProjectionQueryService {
                 page: readNumber(params, 'page') ?? 1,
                 pageSize: readNumber(params, 'pageSize') ?? 20,
             });
-            const [result, stateResult, blockResult] = await Promise.all([
-                this.pool.query<VolunteerProjectionQueryRow>(
-                    `SELECT uri, cid, display_name, bio, capabilities,
-                            availability, contact_preference, skills,
-                            languages, service_area_label,
-                            no_permanent_address, latitude, longitude,
-                            precision_km, searchable_text,
-                            record_updated_at, projected_at, record_origin
-                     FROM indexer_volunteer_profile_projections
-                     ORDER BY record_updated_at DESC, uri`,
-                ),
-                this.pool.query<ProjectionStateRow>(
-                    `SELECT latest_cursor, heartbeat_at
-                     FROM indexer_projection_state
-                     WHERE singleton = TRUE`,
-                ),
-                viewerDid ?
-                    this.pool.query<{ excluded_did: string }>(
-                        `SELECT CASE
-                             WHEN blocker_did = $1 THEN subject_did
-                             ELSE blocker_did
-                         END AS excluded_did
-                         FROM user_blocks
-                         WHERE (blocker_did = $1 OR subject_did = $1)
-                           AND deleted_at IS NULL
-                           AND (
-                               retention_until IS NULL
-                               OR retention_until > NOW()
-                           )`,
-                        [viewerDid],
-                    )
-                :   Promise.resolve({
-                        rows: [] as { excluded_did: string }[],
-                    }),
-            ]);
-            const excluded = new Set(
-                blockResult.rows.map(row => row.excluded_did),
-            );
-            const search = input.searchText?.toLowerCase();
-            const filtered = result.rows.filter(row => {
-                const authorDid = authorDidFromUri(row.uri);
-                return (
-                    !excluded.has(authorDid) &&
-                    (!input.capability ||
-                        row.capabilities.includes(input.capability)) &&
-                    (!input.language ||
-                        row.languages.includes(input.language)) &&
-                    (!input.availability ||
-                        row.availability === input.availability) &&
-                    (!search || row.searchable_text.includes(search))
-                );
-            });
             const start = (input.page - 1) * input.pageSize;
-            const pageRows = filtered.slice(start, start + input.pageSize);
+            const [result, stateResult] = await Promise.all([
+                this.pool.query<{ rows: VolunteerProjectionQueryRow[]; total: string }>(`WITH filtered AS MATERIALIZED (
+                    SELECT p.* FROM indexer_volunteer_profile_projections p
+                    WHERE ($1::boolean IS NULL OR (record_origin = 'synthetic') = $1)
+                        AND ($2::text IS NULL OR capabilities ? $2::text)
+                        AND ($3::text IS NULL OR languages ? $3::text)
+                        AND ($4::text IS NULL OR availability = $4)
+                        AND ($5::text IS NULL OR strpos(searchable_text, $5) > 0)
+                        AND NOT EXISTS (SELECT 1 FROM user_blocks b WHERE b.deleted_at IS NULL
+                            AND (b.retention_until IS NULL OR b.retention_until > NOW())
+                            AND ((b.blocker_did = $6 AND b.subject_did = split_part(p.uri, '/', 3)) OR (b.subject_did = $6 AND b.blocker_did = split_part(p.uri, '/', 3))))
+                    ), paged AS (SELECT * FROM filtered ORDER BY record_updated_at DESC, uri COLLATE "C" LIMIT $7 OFFSET $8)
+                    SELECT (SELECT count(*)::text FROM filtered) AS total, coalesce((SELECT jsonb_agg(to_jsonb(paged)) FROM paged), '[]'::jsonb) AS rows`,
+                    [dataset === 'all' ? null : dataset === 'demo', input.capability ?? null, input.language ?? null, input.availability ?? null, input.searchText?.toLowerCase() ?? null, viewerDid ?? null, input.pageSize, start]),
+                this.pool.query<ProjectionStateRow>('SELECT latest_cursor, heartbeat_at FROM indexer_projection_state WHERE singleton = TRUE'),
+            ]);
+            const total = Number(result.rows[0]?.total ?? 0);
+            const pageRows = result.rows[0]?.rows ?? [];
             return {
                 statusCode: 200,
                 body: {
-                    total: filtered.length,
+                    total,
                     page: input.page,
                     pageSize: input.pageSize,
-                    hasNextPage: start + input.pageSize < filtered.length,
+                    hasNextPage: start + input.pageSize < total,
                     results: pageRows.map(row => {
                         const hasGeo =
                             row.latitude !== null &&
@@ -588,7 +514,7 @@ export class PostgresProjectionQueryService {
                         };
                     }),
                     projectionFreshness: freshnessForRows(
-                        result.rows,
+                        pageRows,
                         stateResult.rows[0],
                     ),
                 },
@@ -605,7 +531,8 @@ export class PostgresProjectionQueryService {
     }
 
     async getFreshness(): Promise<ProjectionFreshness> {
-        return (await this.loadSnapshot()).freshness;
+        const result = await this.pool.query<ProjectionStateRow>('SELECT latest_cursor, heartbeat_at FROM indexer_projection_state WHERE singleton = TRUE');
+        return freshnessForRows([], result.rows[0]);
     }
 
     private async queryAid(
@@ -613,177 +540,6 @@ export class PostgresProjectionQueryService {
         scope: 'map' | 'feed',
         viewerDid?: string,
     ): Promise<ApiRouteResult> {
-        const snapshot = await this.loadSnapshot(viewerDid);
-        const service = createQueryServiceFromNormalizedEvents(snapshot.events);
-        const result =
-            scope === 'map' ? service.queryMap(params) : service.queryFeed(params);
-        if ('error' in result.body) return result;
-        const body = result.body as ApiQueryAidResponse;
-        return {
-            ...result,
-            body: {
-                ...body,
-                results: body.results.map(row => ({
-                    ...row,
-                    recordOrigin:
-                        snapshot.origins.get(row.uri) ?? 'visitor-created',
-                })),
-                projectionFreshness: snapshot.freshness,
-            },
-        };
-    }
-
-    private async loadSnapshot(viewerDid?: string): Promise<{
-        events: NormalizedFirehoseEvent[];
-        freshness: ProjectionFreshness;
-        origins: Map<
-            string,
-            'synthetic' | 'sourced-public' | 'visitor-created'
-        >;
-    }> {
-        const [result, stateResult, blockResult] = await Promise.all([
-            this.pool.query<ProjectionRow>(
-            `SELECT uri, cid, title, description, category, urgency, status,
-                    searchable_text, latitude, longitude, precision_km,
-                    record_created_at, record_updated_at, source_cursor,
-                    projected_at, record_origin
-             FROM indexer_aid_post_projections
-             ORDER BY source_cursor, uri`,
-            ),
-            this.pool.query<ProjectionStateRow>(
-                `SELECT latest_cursor, heartbeat_at
-                 FROM indexer_projection_state
-                 WHERE singleton = TRUE`,
-            ),
-            viewerDid ?
-                this.pool.query<{ excluded_did: string }>(
-                    `SELECT CASE
-                         WHEN blocker_did = $1 THEN subject_did
-                         ELSE blocker_did
-                     END AS excluded_did
-                     FROM user_blocks
-                     WHERE (blocker_did = $1 OR subject_did = $1)
-                       AND deleted_at IS NULL
-                       AND (retention_until IS NULL OR retention_until > NOW())`,
-                    [viewerDid],
-                )
-            :   Promise.resolve({ rows: [] as { excluded_did: string }[] }),
-        ]);
-        const excludedDids = new Set(
-            blockResult.rows.map(row => row.excluded_did),
-        );
-        const events: NormalizedFirehoseEvent[] = result.rows
-            .filter(row => !excludedDids.has(authorDidFromUri(row.uri)))
-            .map(row => ({
-                eventId: `projection:${row.source_cursor}:${row.uri}`,
-                seq: Number(row.source_cursor),
-                action: 'create',
-                uri: row.uri,
-                collection: 'app.patchwork.aid.post',
-                authorDid: authorDidFromUri(row.uri),
-                ...(row.cid ? { cid: row.cid } : {}),
-                receivedAt: new Date(row.record_updated_at).toISOString(),
-                payload: {
-                    kind: 'aid-post',
-                    title: row.title,
-                    description: row.description,
-                    category: row.category as 'food',
-                    urgency: row.urgency as 'high',
-                    status: row.status as 'open',
-                    searchableText: row.searchable_text,
-                    approximateGeo: {
-                        latitude: Number(row.latitude),
-                        longitude: Number(row.longitude),
-                        precisionKm: Number(row.precision_km),
-                    },
-                    createdAt: new Date(row.record_created_at).toISOString(),
-                    updatedAt: new Date(row.record_updated_at).toISOString(),
-                    trustScore: 0.5,
-                },
-            }));
-        return {
-            events,
-            freshness: freshnessForRows(result.rows, stateResult.rows[0]),
-            origins: new Map(
-                result.rows.map(row => [row.uri, row.record_origin]),
-            ),
-        };
-    }
-
-    private async loadDirectorySnapshot(): Promise<{
-        events: NormalizedFirehoseEvent[];
-        freshness: ProjectionFreshness;
-        origins: Map<
-            string,
-            'synthetic' | 'sourced-public' | 'visitor-created'
-        >;
-    }> {
-        const [result, stateResult] = await Promise.all([
-            this.pool.query<DirectoryProjectionRow>(
-                `SELECT uri, cid, name, service_area, category,
-                        verification_status, contact, searchable_text,
-                        latitude, longitude, precision_km, open_hours,
-                        eligibility_notes, operational_status,
-                        record_created_at, record_updated_at, source_cursor,
-                        projected_at, record_origin
-                 FROM indexer_directory_resource_projections
-                 ORDER BY source_cursor, uri`,
-            ),
-            this.pool.query<ProjectionStateRow>(
-                `SELECT latest_cursor, heartbeat_at
-                 FROM indexer_projection_state
-                 WHERE singleton = TRUE`,
-            ),
-        ]);
-        const events: NormalizedFirehoseEvent[] = result.rows.map(row => {
-            const hasApproximateGeo =
-                row.latitude !== null &&
-                row.longitude !== null &&
-                row.precision_km !== null;
-            return {
-                eventId: `projection:${row.source_cursor}:${row.uri}`,
-                seq: Number(row.source_cursor),
-                action: 'create',
-                uri: row.uri,
-                collection: 'app.patchwork.directory.resource',
-                authorDid: authorDidFromUri(row.uri),
-                ...(row.cid ? { cid: row.cid } : {}),
-                receivedAt: new Date(row.record_updated_at).toISOString(),
-                payload: {
-                    kind: 'directory-resource',
-                    name: row.name,
-                    serviceArea: row.service_area,
-                    category: row.category as 'food-bank',
-                    verificationStatus:
-                        row.verification_status as 'unverified',
-                    contact: row.contact,
-                    ...(hasApproximateGeo ?
-                        {
-                            approximateGeo: {
-                                latitude: Number(row.latitude),
-                                longitude: Number(row.longitude),
-                                precisionKm: Number(row.precision_km),
-                            },
-                        }
-                    :   {}),
-                    ...(row.open_hours ? { openHours: row.open_hours } : {}),
-                    ...(row.eligibility_notes ?
-                        { eligibilityNotes: row.eligibility_notes }
-                    :   {}),
-                    operationalStatus: row.operational_status as 'open',
-                    createdAt: new Date(row.record_created_at).toISOString(),
-                    updatedAt: new Date(row.record_updated_at).toISOString(),
-                    searchableText: row.searchable_text,
-                    trustScore: 0.5,
-                },
-            };
-        });
-        return {
-            events,
-            freshness: freshnessForRows(result.rows, stateResult.rows[0]),
-            origins: new Map(
-                result.rows.map(row => [row.uri, row.record_origin]),
-            ),
-        };
+        return queryProjected(this.pool, params, scope, viewerDid);
     }
 }

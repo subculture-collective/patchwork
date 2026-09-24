@@ -9,7 +9,7 @@
         "build": "npm run typecheck",
         "lint": "npm run typecheck",
         "typecheck": "tsc -p tsconfig.json --noEmit",
-        "test": "vitest run"
+        "test": "node ../../scripts/test.mjs unit packages/at-client/src"
     },
     "dependencies": {
         "@atproto/api": "0.20.28",

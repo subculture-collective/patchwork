@@ -1,3 +1,5 @@
+import { resourceServices, resourcePrograms, type ResourceProgram, type ResourceService } from '@patchwork/shared';
+import { lookupPostalArea } from '@patchwork/at-lexicons';
 import {
     MAXIMUM_DISCOVERY_RADIUS_METERS,
     MINIMUM_DISCOVERY_RADIUS_METERS,
@@ -30,7 +32,24 @@ export interface DiscoveryCenter {
     lng: number;
 }
 
+export const directoryCategories = [
+    'food-bank',
+    'shelter',
+    'clinic',
+    'legal-aid',
+    'hotline',
+    'library',
+    'other',
+] as const;
+
 export interface DiscoveryFilterState {
+    nearbyIntent?: 'resources' | 'requests';
+    resourceService?: ResourceService;
+    resourceProgram?: ResourceProgram;
+    resourceCategory?: (typeof directoryCategories)[number];
+    includeLibraries?: boolean;
+    postalCode?: string;
+    dataset?: 'all' | 'community' | 'demo';
     feedTab: FeedTab;
     text?: string;
     category?: AidCategory;
@@ -44,6 +63,7 @@ export interface DiscoveryFilterState {
 }
 
 export interface SharedAidDiscoveryQuery {
+    postalCode?: string;
     text?: string;
     category?: AidCategory;
     status?: AidStatus;
@@ -190,13 +210,24 @@ export function normalizeDiscoveryFilterState(
     const category = normalizeCategory(state.category);
     const status = normalizeStatus(state.status);
     const minUrgency = normalizeUrgency(state.minUrgency);
-    const center = normalizeCenter(state.center);
+    const postalArea = state.postalCode ? lookupPostalArea(state.postalCode) : undefined;
+    const center = postalArea ? { lat: postalArea.latitude, lng: postalArea.longitude } : normalizeCenter(state.center);
     const areaLabel = normalizeText(state.areaLabel);
     const radiusMeters = normalizeRadius(state.radiusMeters);
     const since = normalizeSince(state.since);
 
     return {
         feedTab,
+        ...(['resources', 'requests'].includes(state.nearbyIntent ?? '') ? { nearbyIntent: state.nearbyIntent } : {}),
+        ...(state.resourceProgram && resourcePrograms.includes(state.resourceProgram) ? { resourceProgram: state.resourceProgram } : {}),
+        ...(state.resourceService && resourceServices.includes(state.resourceService) ? { resourceService: state.resourceService } : {}),
+        ...(state.resourceCategory &&
+        directoryCategories.includes(state.resourceCategory)
+            ? { resourceCategory: state.resourceCategory }
+            : {}),
+        ...(state.includeLibraries === true ? { includeLibraries: true } : {}),
+        ...(state.postalCode && /^\d{5}$/.test(state.postalCode) ? { postalCode: state.postalCode } : {}),
+        // Legacy dataset links now open the same integrated discovery view.
         ...(text ? { text } : {}),
         ...(category ? { category } : {}),
         ...(status ? { status } : {}),
@@ -240,6 +271,7 @@ export function toMapDiscoveryQuery(
     state: DiscoveryFilterState,
 ): SharedAidDiscoveryQuery {
     return {
+        postalCode: state.postalCode,
         text: state.text,
         category: state.category,
         status: state.status,
@@ -255,6 +287,7 @@ export function toFeedDiscoveryQuery(
 ): SharedAidDiscoveryQuery {
     const includeNearby = state.feedTab === 'nearby';
     return {
+        postalCode: state.postalCode,
         text: state.text,
         category: state.category,
         status: state.status,
@@ -274,6 +307,13 @@ export function serializeDiscoveryFilterState(
         params.set('tab', state.feedTab);
     }
 
+    if (state.nearbyIntent) params.set('nearby', state.nearbyIntent);
+    if (state.postalCode) params.set('zip', state.postalCode);
+    if (state.resourceService) params.set('service', state.resourceService);
+    if (state.resourceProgram) params.set('program', state.resourceProgram);
+    if (state.resourceCategory)
+        params.set('resourceType', state.resourceCategory);
+    if (state.includeLibraries) params.set('libraries', '1');
     if (state.text) {
         params.set('q', state.text);
     }
@@ -289,7 +329,7 @@ export function serializeDiscoveryFilterState(
     if (state.radiusMeters) {
         params.set('r', String(state.radiusMeters));
     }
-    if (state.center) {
+    if (state.center && !state.postalCode) {
         params.set('lat', String(state.center.lat));
         params.set('lng', String(state.center.lng));
     }
@@ -321,10 +361,19 @@ export function parseDiscoveryFilterState(
 
     return normalizeDiscoveryFilterState({
         ...fallback,
+
         feedTab:
             parsedTab ??
             fallback.feedTab ??
             defaultDiscoveryFilterState.feedTab,
+        nearbyIntent: (params.get('nearby') ?? fallback.nearbyIntent) as DiscoveryFilterState['nearbyIntent'],
+        postalCode: params.get('zip') ?? fallback.postalCode,
+        resourceProgram: (params.get('program') ?? fallback.resourceProgram) as ResourceProgram | undefined,
+        resourceService: (params.get('service') ?? fallback.resourceService) as ResourceService | undefined,
+        resourceCategory: (params.get('resourceType') ??
+            fallback.resourceCategory) as DiscoveryFilterState['resourceCategory'],
+        includeLibraries:
+            params.get('libraries') === '1' || fallback.includeLibraries === true,
         text: params.get('q') ?? fallback.text,
         category: parsedCategory ?? fallback.category,
         status: parsedStatus ?? fallback.status,
@@ -341,4 +390,10 @@ export function parseDiscoveryFilterState(
         areaLabel: params.get('area') ?? fallback.areaLabel,
         since: params.get('since') ?? fallback.since,
     });
+}
+
+/** Existing request links retain their meaning; resource filters select the resource journey. */
+export function nearbyResourceIntent(state: DiscoveryFilterState): boolean {
+    return state.nearbyIntent ? state.nearbyIntent === 'resources'
+        : Boolean(state.resourceProgram || state.resourceService || state.resourceCategory || state.includeLibraries);
 }

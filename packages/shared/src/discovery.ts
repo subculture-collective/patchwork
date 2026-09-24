@@ -1,3 +1,4 @@
+import { resourceServices, resourcePrograms, categoryServices } from './resource-services.js';
 import { z } from 'zod';
 import { type AidPostRecord } from '@patchwork/at-lexicons';
 import {
@@ -36,6 +37,7 @@ export interface AidQueryInput extends PaginationInput {
     radiusKm: number;
     category?: AidPostRecord['category'];
     urgency?: AidPostRecord['urgency'];
+    minimumUrgency?: AidPostRecord['urgency'];
     status?: AidPostRecord['status'];
     freshnessHours?: number;
     searchText?: string;
@@ -50,9 +52,12 @@ export interface AidFeedQueryInput extends Omit<AidQueryInput, 'latitude' | 'lon
 }
 
 export interface DirectoryQueryInput extends PaginationInput {
+    service?: import('./resource-services.js').ResourceService;
+    program?: import('./resource-services.js').ResourceProgram;
     category?: string;
+    includeLibraries?: boolean;
     status?: 'unverified' | 'community-verified' | 'partner-verified';
-    operationalStatus?: 'open' | 'limited' | 'closed';
+    operationalStatus?: 'open' | 'limited' | 'closed' | 'unknown';
     latitude?: number;
     longitude?: number;
     radiusKm?: number;
@@ -109,7 +114,7 @@ export interface DirectoryCard {
     };
     openHours?: string;
     eligibilityNotes?: string;
-    operationalStatus: 'open' | 'limited' | 'closed';
+    operationalStatus: 'open' | 'limited' | 'closed' | 'unknown';
     createdAt: string;
     updatedAt: string;
     recordOrigin?: 'synthetic' | 'sourced-public' | 'visitor-created';
@@ -284,6 +289,9 @@ export class DiscoveryIndexStore {
         const candidates = this.collectDirectoryCandidates(input);
 
         const filtered = candidates.filter(record => {
+            // In-memory records lack source evidence for a program claim.
+            if (input.program) return false;
+            if (input.service && categoryServices[record.category] !== input.service) return false;
             if (
                 input.latitude !== undefined &&
                 input.longitude !== undefined &&
@@ -319,7 +327,7 @@ export class DiscoveryIndexStore {
 
             if (
                 input.searchText &&
-                !record.searchableText.includes(input.searchText.toLowerCase())
+                !input.searchText.toLowerCase().split(/\s+/).filter(Boolean).every(word => record.searchableText.includes(word))
             ) {
                 return false;
             }
@@ -510,6 +518,11 @@ export class DiscoveryIndexStore {
             sets.push(new Set(this.aidUrgencyIndex.get(input.urgency) ?? []));
         }
 
+        if (input.minimumUrgency) {
+            const levels = ['low', 'medium', 'high', 'critical'] as const;
+            sets.push(new Set(levels.slice(levels.indexOf(input.minimumUrgency)).flatMap(level => [...(this.aidUrgencyIndex.get(level) ?? [])])));
+        }
+
         let uriSet: Set<string>;
 
         if (sets.length === 0) {
@@ -556,6 +569,14 @@ export class DiscoveryIndexStore {
                     ) ?? [],
                 ),
             );
+        }
+
+        if (!input.includeLibraries && input.category !== 'library') {
+            sets.push(new Set(
+                [...this.directoryRecords.values()]
+                    .filter(record => record.category !== 'library')
+                    .map(record => record.uri),
+            ));
         }
 
         let uriSet: Set<string>;
@@ -722,6 +743,7 @@ const aidQueryFields = {
         .enum(['food', 'shelter', 'medical', 'transport', 'childcare', 'other'])
         .optional(),
     urgency: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+    minimumUrgency: z.enum(['low', 'medium', 'high', 'critical']).optional(),
     status: z.enum(['open', 'in-progress', 'resolved', 'closed']).optional(),
     freshnessHours: z
         .number()
@@ -756,11 +778,14 @@ const aidFeedQuerySchema = z.object({
 
 const directoryQuerySchema = z
     .object({
+        service: z.enum(resourceServices).optional(),
+        program: z.enum(resourcePrograms).optional(),
         category: z.string().min(1).max(64).optional(),
+        includeLibraries: z.boolean().optional(),
         status: z
             .enum(['unverified', 'community-verified', 'partner-verified'])
             .optional(),
-        operationalStatus: z.enum(['open', 'limited', 'closed']).optional(),
+        operationalStatus: z.enum(['open', 'limited', 'closed', 'unknown']).optional(),
         latitude: z.number().min(-90).max(90).optional(),
         longitude: z.number().min(-180).max(180).optional(),
         radiusKm: z.number().positive().max(250).optional(),

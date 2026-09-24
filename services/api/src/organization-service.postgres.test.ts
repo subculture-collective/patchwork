@@ -4,12 +4,11 @@ import { PublicHttpError } from './http/error-response.js';
 import { OrganizationService } from './organization-service.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describePostgres = databaseUrl ? describe : describe.skip;
 const ownerDid = 'did:plc:organization-owner';
 const stewardDid = 'did:plc:organization-steward';
 const memberDid = 'did:plc:organization-member';
 
-describePostgres('OrganizationService PostgreSQL boundary', () => {
+describe('OrganizationService PostgreSQL boundary', () => {
     const pool = new Pool({ connectionString: databaseUrl });
 
     beforeEach(async () => {

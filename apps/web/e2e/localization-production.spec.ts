@@ -8,7 +8,7 @@ const connectionId = '51111111-1111-4111-8111-111111111111';
 const routes = {
     en: [
         ['/', 'Patchwork'],
-        ['/map', 'Map of needs'],
+        ['/map', 'Find help nearby'],
         ['/feed', 'Requests'],
         ['/posting', 'Create request'],
         ['/resources', 'Resource directory'],
@@ -31,7 +31,7 @@ const routes = {
     ],
     es: [
         ['/', 'Patchwork'],
-        ['/map', 'Mapa de necesidades'],
+        ['/map', 'Encuentra ayuda cerca'],
         ['/feed', 'Solicitudes'],
         ['/posting', 'Crear solicitud'],
         ['/resources', 'Directorio de recursos'],

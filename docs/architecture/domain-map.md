@@ -2,16 +2,15 @@
 
 Updated: 2026-08-05
 
-ADR 0003 is the data-placement authority. The
-[current-state matrix](./current-state-matrix.md) records demonstrated
-maturity; this map does not imply operational launch approval.
+ADR 0003 defines data placement. [Postal geography](./postal-geography.md)
+defines request ZIPs and eligible public-resource locations.
 
 ## Buyer-ready bounded contexts
 
 | Domain | Authority | Runtime owner | Public/product boundary |
 | --- | --- | --- | --- |
 | Identity and consent | User PDS for DID identity; PostgreSQL for encrypted OAuth/session state, versioned consent, and preferences | API | Managed account creation and existing-account OAuth converge on cookie-backed sessions; browser identity and privilege fields are ignored |
-| Public aid, directory, and volunteer records | User AT repository | API command boundary and AT client | Authenticated owner CRUD; only approximate personal/service-area location is accepted |
+| Public aid, directory, and volunteer records | User AT repository | API command boundary and AT client | Authenticated owner CRUD; requests publish ZIP-only location; volunteer profiles publish a service area |
 | Ingestion and discovery | Repository authority observed through Jetstream; rebuildable PostgreSQL projections | Indexer writes, API reads | Anonymous map/feed/directory/volunteer queries with projection freshness and authenticated block filtering |
 | Organizations and verification | PostgreSQL | API | Membership/stewardship, private evidence metadata, annual decisions/appeals, and separate exact-public-address approval |
 | Private request coordination | PostgreSQL | API | Lifecycle, advisory matching, offers, connections, activity inbox, and outcomes; participant identity stays private until authorized |

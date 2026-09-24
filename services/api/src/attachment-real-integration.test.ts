@@ -13,16 +13,8 @@ const objectSecretKey = process.env.TEST_ATTACHMENT_OBJECT_SECRET_KEY;
 const objectBucket = process.env.TEST_ATTACHMENT_OBJECT_BUCKET;
 const clamdHost = process.env.TEST_ATTACHMENT_CLAMD_HOST;
 const clamdPort = Number(process.env.TEST_ATTACHMENT_CLAMD_PORT ?? '3310');
-const enabled =
-    databaseUrl &&
-    objectEndpoint &&
-    objectAccessKey &&
-    objectSecretKey &&
-    objectBucket &&
-    clamdHost;
-const describeReal = enabled ? describe : describe.skip;
 
-describeReal('real MinIO and ClamAV attachment boundary', () => {
+describe('real MinIO and ClamAV attachment boundary', () => {
     const pool = new Pool({ connectionString: databaseUrl });
     const objects = new MinioPrivateObjectStore(
         objectBucket ?? 'disabled-test-bucket',

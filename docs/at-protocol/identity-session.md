@@ -1,44 +1,22 @@
-# DID auth, handle resolution, and session refresh (Phase 2 / P2.2)
+# Identity and browser sessions
 
-This document describes the baseline identity/session lifecycle implemented in Phase 2.
+AT OAuth is implemented by `packages/at-client/src/oauth-client.ts` and
+`services/api/src/auth/at-auth-service.ts`. The API's auth runtime wires those
+adapters to persistent encrypted OAuth state and browser sessions.
 
-## Module
+A login begins with an AT handle and a local return path. The OAuth adapter
+performs authorization and callback validation. On success the API creates a
+bounded browser session and sets an HttpOnly, SameSite cookie, with Secure in
+HTTPS environments. Return paths are constrained to the local application and
+sensitive token parameters are removed.
 
-- `packages/shared/src/identity.ts`
+Protected requests restore the DID from the browser session. Browser-supplied
+identity and role fields do not grant authority. Roles, policy consent, and
+resource ownership are checked at the appropriate API boundary. Expired or
+unrestorable sessions fail explicitly; they do not silently become an
+anonymous identity for a protected operation.
 
-## Lifecycle
-
-1. **Handle input validation**
-    - Handle must be DNS-like (`alice.example`).
-2. **Handle resolution**
-    - Resolve handle to DID + PDS URL through an identity provider.
-3. **Session creation**
-    - Create an authenticated session using resolved DID.
-4. **Pre-expiry refresh**
-    - Refresh session when access token is inside refresh-leeway window.
-5. **Expiry handling**
-    - If refresh token expiry has passed, flow fails with explicit `SESSION_EXPIRED`.
-
-## Error model
-
-Structured error codes are emitted via `DidAuthError`:
-
-- `INVALID_HANDLE`
-- `INVALID_DID`
-- `HANDLE_RESOLUTION_FAILED`
-- `SESSION_CREATE_FAILED`
-- `SESSION_REFRESH_FAILED`
-- `SESSION_EXPIRED`
-
-## Test evidence
-
-Integration tests are in:
-
-- `packages/shared/src/identity.test.ts`
-
-Covered cases:
-
-- successful login
-- handle resolution failure
-- refresh before expiry
-- refresh-token-expired path
+OAuth refresh is owned by the official AT client adapter. Browser session
+persistence, encryption, expiry, and invalidation are tested in the API auth
+suites; adapter failures and callbacks are tested in the AT client suite.
+Actual provider login is a separate authenticated browser qualification.

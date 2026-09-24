@@ -102,26 +102,25 @@ test('API failure stays visible and never substitutes fixture discovery data', a
 }) => {
     let discoveryRequests = 0;
     await page.route('**/api/**', async route => {
-        if (route.request().url().includes('/query/map')) discoveryRequests += 1;
+        if (route.request().url().includes('/query/directory')) discoveryRequests += 1;
         await route.abort('failed');
     });
 
     await page.goto(
         '/map?tab=nearby&r=20000&lat=41.88&lng=-87.63&area=Disposable+test+area',
     );
-    const alert = page.getByRole('alert');
+    const alert = page.locator('.pw-explorer__results').getByRole('alert');
     await expect(alert).toContainText(
-        'The service could not complete this request.',
+        'Resources could not be loaded.',
     );
     await expect(page.getByText('NETWORK_ERROR')).toHaveCount(0);
-    await expect(page.getByText('Service unavailable')).toBeVisible();
     await expect(page.getByText('Need groceries before 21:00')).toHaveCount(0);
 
-    await page.getByRole('button', { name: 'Retry discovery' }).click();
+    await alert.getByRole('button', { name: 'Retry', exact: true }).click();
     await expect.poll(() => discoveryRequests).toBeGreaterThan(1);
 });
 
-test('map requests location and loads an approximate nearby area automatically', async ({ page }) => {
+test('resource map uses location only after an explicit request and rounds it', async ({ page }) => {
     let discoveryRequests = 0;
     await page.addInitScript(() => {
         Object.defineProperty(navigator, 'geolocation', {
@@ -194,11 +193,13 @@ test('map requests location and loads an approximate nearby area automatically',
     });
 
     await page.goto('/map');
+    await expect(page).not.toHaveURL(/lat=41\.88(?:&|$)/);
+    await page.getByRole('button', { name: 'Use my location', exact: true }).click();
 
     await expect(page).toHaveURL(/lat=41\.88/);
     await expect(page).toHaveURL(/lng=-87\.63/);
     await expect(page).toHaveURL(/area=Near\+you/);
-    await expect(page.getByText(/rounded, approximate version/)).toBeVisible();
+    await expect(page.getByText('Public places only. Your location stays approximate.')).toBeVisible();
     await expect(page.getByLabel('Approximate area label')).toHaveCount(0);
     await expect(
         page.getByRole('button', { name: 'Confirm approximate area' }),
@@ -260,7 +261,7 @@ test('direct deferred feedback route never exposes fixture implementations', asy
     }
 });
 
-test('map area selection is explicit, reversible, historical, and remembers style', async ({
+test('request ZIP selection is explicit, reversible, historical, and survives reload', async ({
     page,
 }) => {
     await page.route('**/api/**', async route => {
@@ -340,30 +341,23 @@ test('map area selection is explicit, reversible, historical, and remembers styl
     });
 
     await page.goto(
-        '/map?tab=nearby&r=20000&lat=40.72&lng=-73.99&area=Disposable+test+area',
+        '/map?nearby=requests&tab=nearby&r=20000&lat=40.72&lng=-73.99&area=Disposable+test+area',
     );
-    await expect(page.getByText('Area filter request')).toBeVisible();
-    await page.locator('.mh-map-circle').first().click({ force: true });
-    await expect(page.getByText('Filtered to this area')).toBeVisible();
-    await expect(page).toHaveURL(/r=1000/);
-    await expect(
-        page.getByRole('button', { name: 'Return to previous area' }),
-    ).toBeVisible();
-
+    await page.getByLabel('ZIP code', { exact: true }).fill('10003');
+    await page.getByRole('button', { name: 'Find area', exact: true }).click();
+    await expect(page).toHaveURL(/zip=10003/);
+    await expect(page.locator('path.mh-map-marker')).toHaveCount(0);
     await page.goBack();
-    await expect(page).toHaveURL(/(?:\?|&)r=20000(?:&|$)/);
-    await expect(page.getByText(/within 20 km/)).toBeVisible();
+    await expect(page).not.toHaveURL(/zip=/);
+    await expect(page).toHaveURL(/lat=40\.72/);
     await page.goForward();
-    await expect(page).toHaveURL(/r=1000/);
-    await expect(page.getByText('Filtered to this area')).toBeVisible();
-
-    await page.getByRole('radio', { name: 'Outline' }).check({ force: true });
-    await expect(page.locator('.mh-map-style-outline')).toBeVisible();
+    await expect(page).toHaveURL(/zip=10003/);
     await page.reload();
-    await expect(page.locator('.mh-map-style-outline')).toBeVisible();
+    await expect(page.getByLabel('ZIP code', { exact: true })).toHaveValue('10003');
     await page.getByRole('button', { name: 'Clear area filter' }).click();
-    await expect(page).not.toHaveURL(/(?:\?|&)r=/);
-    await expect(page.getByText('Filtered to this area')).toHaveCount(0);
+    await expect(page).not.toHaveURL(/(?:\?|&)zip=/);
+    await expect(page).not.toHaveURL(/(?:\?|&)lat=/);
+
 });
 
 test('legal routes show aligned unapproved buyer-ready policy boundaries', async ({

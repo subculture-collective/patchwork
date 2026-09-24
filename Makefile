@@ -17,22 +17,20 @@ BUILD_VERSION ?= 0.9.0
 IMAGE_TAG ?= $(BUILD_VERSION)-$(GIT_SHA)
 CI_RUN_ID ?= local
 
-# Rollback target tag (#109)
-ROLLBACK_TAG ?=
-SERVICE ?=
+# Explicit operator environment for verified manifest rollback
+STAGING_ENV_FILE ?=
 
 .PHONY: \
 	help \
 	install env-init \
 	dev dev-web dev-api dev-api-postgres dev-indexer dev-moderation \
 	db-up db-down db-migrate make-db-migrate db-seed db-reset \
-	lint typecheck test test-phase7 test-phase8 test-phase8-e2e test-web-e2e check build \
+	lint typecheck test test-integration test-web-e2e check build \
 	quality \
 	deploy-network deploy-build deploy-up deploy-down deploy-restart deploy-ps deploy-logs deploy-pull deploy-db-migrate \
 	compose-config \
 	staging-network staging-build staging-up staging-down staging-ps staging-logs staging-smoke staging-db-migrate \
-	image-tag image-build rollback \
-	deploy-rollout-pause deploy-rollout-resume deploy-rollout-abort
+	image-tag image-build rollback
 
 help: ## Show available make targets
 	@awk 'BEGIN {FS = ":.*##"; printf "\nPatchwork Make targets\n\n"} /^[a-zA-Z0-9_.-]+:.*##/ {printf "  %-24s %s\n", $$1, $$2} END {printf "\n"}' $(MAKEFILE_LIST)
@@ -90,14 +88,8 @@ typecheck: ## Run TypeScript checks across workspaces
 test: ## Run unit/integration tests across workspaces
 	$(NPM) run test
 
-test-phase7: ## Run moderation/privacy regression tests
-	$(NPM) run test:phase7
-
-test-phase8: ## Run phase 8 regression tests
-	$(NPM) run test:phase8
-
-test-phase8-e2e: ## Run API request-to-handoff contract E2E tests
-	$(NPM) run test:phase8-e2e
+test-integration: ## Run all PostgreSQL tests in a disposable database
+	$(NPM) run test:integration
 
 test-web-e2e: ## Run Playwright browser E2E tests for web app
 	$(NPM) run test:e2e -w $(WEB_PACKAGE)
@@ -105,7 +97,7 @@ test-web-e2e: ## Run Playwright browser E2E tests for web app
 check: ## Run the default local gate (lint + typecheck + test)
 	$(NPM) run check
 
-quality: check test-phase7 ## Run merge-readiness quality gate
+quality: check ## Run merge-readiness quality gate
 
 build: ## Build all workspaces
 	$(NPM) run build
@@ -229,34 +221,6 @@ image-build: ## Build Docker images with immutable tags and OCI labels
 		--build-arg CI_RUN_ID=$(CI_RUN_ID) \
 		-t patchwork-web:$(IMAGE_TAG) .
 
-rollback: ## Roll back a service to a previous image tag (SERVICE=api TAG=0.9.0-abc1234)
-	@if [ -z "$(SERVICE)" ] || [ -z "$(ROLLBACK_TAG)" ]; then \
-		echo "Usage: make rollback SERVICE=<api|spool|thimble|web> ROLLBACK_TAG=<tag>"; \
-		exit 1; \
-	fi
-	@echo "Rolling back patchwork-$(SERVICE) to tag $(ROLLBACK_TAG)..."
-	docker tag patchwork-$(SERVICE):$(ROLLBACK_TAG) patchwork-$(SERVICE):rollback-target
-	$(DC) -f $(COMPOSE_FILE) up -d --no-build patchwork-$(SERVICE)
-	@echo "Rollback to $(ROLLBACK_TAG) complete. Verify with: make deploy-ps"
-
-# ---------------------------------------------------------------------------
-# Progressive delivery (#110)
-# ---------------------------------------------------------------------------
-
-deploy-rollout-pause: ## Pause the current progressive rollout for SERVICE
-	@if [ -z "$(SERVICE)" ]; then echo "Usage: make deploy-rollout-pause SERVICE=<service>"; exit 1; fi
-	@echo "Pausing rollout for $(SERVICE)..."
-	@echo "ACTION: Operator must pause traffic shifting for $(SERVICE) in the load balancer."
-	@echo "Status: PAUSED"
-
-deploy-rollout-resume: ## Resume a paused progressive rollout for SERVICE
-	@if [ -z "$(SERVICE)" ]; then echo "Usage: make deploy-rollout-resume SERVICE=<service>"; exit 1; fi
-	@echo "Resuming rollout for $(SERVICE)..."
-	@echo "ACTION: Operator must resume traffic shifting for $(SERVICE) in the load balancer."
-	@echo "Status: IN-PROGRESS"
-
-deploy-rollout-abort: ## Abort the current rollout and revert to previous version for SERVICE
-	@if [ -z "$(SERVICE)" ]; then echo "Usage: make deploy-rollout-abort SERVICE=<service>"; exit 1; fi
-	@echo "Aborting rollout for $(SERVICE) -- routing all traffic to previous version..."
-	@echo "ACTION: Operator must route 100% traffic to the previous version for $(SERVICE)."
-	@echo "Status: ABORTED"
+rollback: ## Restore the previous verified staging manifest (STAGING_ENV_FILE required)
+	@test -n "$(STAGING_ENV_FILE)" || { echo "Set STAGING_ENV_FILE to the operator environment file."; exit 1; }
+	bash scripts/rollback-staging-digests.sh "$(STAGING_ENV_FILE)" "$(STAGING_COMPOSE_FILE)"

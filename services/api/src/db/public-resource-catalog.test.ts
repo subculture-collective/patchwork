@@ -1,0 +1,68 @@
+import { describe, expect, it } from 'vitest';
+import snapshot from './seed-data/chicago-metro-public-resources.json' with { type: 'json' };
+import { parsePublicResourceCatalog, publicResourceCatalog, publicResourceSeed } from './public-resource-catalog.js';
+
+describe('sourced public resource seed', () => {
+    it('includes public addresses and official links without claiming ownership', () => {
+        expect(new Set(publicResourceSeed.map(resource => resource.countyId))).toEqual(new Set(publicResourceCatalog.scope.countyIds));
+        expect(new Set(publicResourceSeed.map(resource => resource.category))).toEqual(new Set(['food-bank', 'clinic', 'library', 'other', 'shelter', 'legal-aid']));
+        expect(publicResourceSeed.find(resource => resource.claimStatus !== 'unclaimed')).toBeUndefined();
+        expect(publicResourceSeed.find(resource => resource.streetAddress === '')).toBeUndefined();
+        expect(publicResourceSeed.find(resource => !/^https:\/\//.test(resource.source.url))).toBeUndefined();
+        expect(publicResourceSeed.find(resource => resource.operationalStatus !== 'unknown')).toBeUndefined();
+        expect(publicResourceSeed.find(resource => resource.latitude <= -90 || resource.latitude >= 90)).toBeUndefined();
+        expect(publicResourceSeed.find(resource => resource.longitude <= -180 || resource.longitude >= 180)).toBeUndefined();
+    });
+
+    it('covers every state without importing artificial activity', () => {
+        const states = new Set(publicResourceSeed.map(resource => resource.state));
+        for (const state of 'AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY'.split(' ')) expect(states.has(state as never)).toBe(true);
+        const national = publicResourceSeed.filter(resource => resource.sourceId === 'hrsa-national');
+        expect(national.length).toBeGreaterThan(10000);
+        expect(national.every(resource => resource.id.startsWith('hrsa-site-') && resource.services?.includes('health'))).toBe(true);
+        expect(national.every(resource => new URL(resource.website).hostname.includes('.'))).toBe(true);
+        const food = publicResourceSeed.filter(resource => resource.sourceId.startsWith('vivery-network-'));
+        const housing = publicResourceSeed.filter(resource => resource.sourceId === 'hud-current');
+        expect(food.length).toBeGreaterThan(10000);
+        expect(food.every(resource => resource.services?.includes('food') && resource.coordinateBasis === 'publisher-address')).toBe(true);
+        expect(housing.length).toBeGreaterThan(400);
+        expect(housing.every(resource => resource.services?.includes('housing') && resource.coordinateBasis === 'census-address-range')).toBe(true);
+        const socialSecurity = publicResourceSeed.filter(resource => resource.sourceId === 'ssa-field-offices');
+        expect(socialSecurity.length).toBeGreaterThan(1000);
+        expect(socialSecurity.every(resource => resource.services?.includes('benefits') && resource.services?.includes('disability')
+            && resource.coordinateBasis === 'census-address-range' && /SSI/.test(resource.publicAccess))).toBe(true);
+        const publicHousing = publicResourceSeed.filter(resource => resource.sourceId === 'hud-public-housing-authorities');
+        expect(publicHousing.length).toBeGreaterThan(3000);
+        expect(publicHousing.every(resource => resource.services?.includes('housing') && resource.services?.includes('benefits')
+            && resource.coordinateBasis === 'publisher-address' && /waiting lists/.test(resource.publicAccess))).toBe(true);
+        expect(publicResourceSeed.some(resource => /^(test|demo|dummy|sample|example)([ -]*[0-9]+)?$/i.test(resource.name))).toBe(false);
+        const stateBenefits = publicResourceSeed.filter(resource => resource.sourceId === 'idhs-benefits');
+        expect(stateBenefits.length).toBeGreaterThan(50);
+        expect(stateBenefits.every(resource => resource.services?.includes('benefits') && /SNAP/.test(resource.publicAccess)
+            && !/remote|long term care/i.test(resource.name))).toBe(true);
+        const wic = publicResourceSeed.filter(resource => resource.sourceId === 'idhs-wic');
+        expect(wic.length).toBeGreaterThan(150);
+        expect(wic.every(resource => resource.services?.includes('youth') && resource.services?.includes('food')
+            && /WIC/i.test(resource.name) && resource.category === 'clinic')).toBe(true);
+        const veterans = publicResourceSeed.filter(resource => resource.sourceId === 'va-public-offices');
+        expect(veterans.length).toBeGreaterThan(400);
+        expect(veterans.every(resource => new URL(resource.website).hostname.endsWith('va.gov')
+            && (resource.services?.includes('health') || resource.services?.includes('benefits')))).toBe(true);
+    });
+
+    it('keeps the source closure and omits that branch from the active seed', () => {
+        const branch = publicResourceCatalog.resources.find(resource => resource.name.startsWith('Galewood-Mont Clare'));
+        expect(branch?.operationalStatus).toBe('closed');
+        expect(publicResourceSeed.some(resource => resource.id === branch?.id)).toBe(false);
+    });
+
+    it('rejects missing addresses, invalid ZIPs and duplicate source IDs', () => {
+        const first = snapshot.resources[0]!;
+        for (const resource of [{ ...first, streetAddress: '' }, { ...first, postalCode: '00000' }]) {
+            expect(() => parsePublicResourceCatalog({ ...snapshot, resources: [resource] })).toThrow();
+        }
+        expect(() => parsePublicResourceCatalog({ ...snapshot, resources: [first, first] })).toThrow('Duplicate');
+        expect(() => parsePublicResourceCatalog({ ...snapshot, resources: [first, { ...first, id: 'different-source-id' }] })).toThrow('Duplicate');
+        expect(() => parsePublicResourceCatalog({ ...snapshot, resources: [{ ...first, sourceId: 'missing' }] })).toThrow('provenance');
+    });
+});

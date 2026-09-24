@@ -164,6 +164,11 @@ export class AccountPrivacyService {
                     removedOrganizations += removed.rowCount ?? 0;
                 }
             }
+            await client.query('DELETE FROM saved_discovery WHERE owner_did=$1',[did]);
+            await client.query('DELETE FROM resource_corrections WHERE reporter_did=$1',[did]);
+            await client.query("UPDATE resource_correction_events SET actor_did=NULL,details='{\"redactedForDeactivation\":true}'::jsonb WHERE actor_did=$1",[did]);
+            await client.query("DELETE FROM public_resource_claims WHERE applicant_did=$1 AND status<>'approved'",[did]);
+            await client.query("UPDATE public_resource_claims SET evidence='Evidence removed at account request.' WHERE applicant_did=$1",[did]);
             const organizationStewardships = await client.query(
                 `UPDATE organization_resource_stewardships
                  SET status = 'revoked', updated_at = $2
@@ -195,6 +200,7 @@ export class AccountPrivacyService {
                  WHERE member_did = $1`,
                 [did],
             );
+            await client.query("UPDATE public_resource_audit_events SET actor_did=NULL,details='{\"redactedForDeactivation\":true}'::jsonb WHERE actor_did=$1",[did]);
             const organizationAudit = await client.query(
                 `UPDATE organization_audit_events
                  SET actor_did = NULL,
@@ -359,6 +365,7 @@ export class AccountPrivacyService {
                 `DELETE FROM discovery_events WHERE author_did = $1`,
                 [did],
             );
+            const authoringReceipts = await client.query('DELETE FROM aid_authoring_receipts WHERE owner_did = $1', [did]);
             const workflows = await client.query(
                 `DELETE FROM request_workflows WHERE requester_did = $1`,
                 [did],
@@ -517,6 +524,7 @@ export class AccountPrivacyService {
                     groupMemberships: groupMemberships.rowCount ?? 0,
                     groupInvitations: groupInvitations.rowCount ?? 0,
                     legacyDiscoveryEvents: legacyDiscoveryEvents.rowCount ?? 0,
+                    authoringReceipts: authoringReceipts.rowCount ?? 0,
                     workflows: workflows.rowCount ?? 0,
                     platformRoles: platformRoles.rowCount ?? 0,
                     ownedBlocks: ownedBlocks.rowCount ?? 0,
@@ -715,6 +723,9 @@ export class AccountPrivacyService {
              FROM volunteer_private_profiles WHERE did = $1`,
             [did],
         );
+        const publicResourceAudit = await client.query('SELECT audit_id,resource_uri,action,details,occurred_at FROM public_resource_audit_events WHERE actor_did=$1 ORDER BY occurred_at',[did]);
+        const publicResourceClaims = await client.query(`SELECT claim_id,resource_uri,organization_id,evidence,status,
+            submitted_at,decided_at,decision_reason FROM public_resource_claims WHERE applicant_did=$1 ORDER BY submitted_at`,[did]);
         const organizationMemberships = await client.query<{
             organization_id: string;
             slug: string;
@@ -1142,6 +1153,9 @@ export class AccountPrivacyService {
              WHERE actor_did = $1 ORDER BY occurred_at, audit_event_id`,
             [did],
         );
+        const resourceCorrections=await client.query('SELECT id,resource_uri,category,explanation,source_url,status,response,submitted_at,updated_at FROM resource_corrections WHERE reporter_did=$1 ORDER BY submitted_at,id',[did]);
+        const savedDiscovery = await client.query('SELECT kind,resource_uri,search,alerts_enabled,created_at FROM saved_discovery WHERE owner_did=$1 ORDER BY created_at,id',[did]);
+        const authoringReceipts = await client.query('SELECT post_uri, title, source_cid, public_status, source_written_at, deleted_at, retention_until FROM aid_authoring_receipts WHERE owner_did = $1 ORDER BY source_written_at, post_uri', [did]);
         const commandMetadata = await client.query<{
                 method: string;
                 pathname: string;
@@ -1322,6 +1336,8 @@ export class AccountPrivacyService {
                         }
                     :   null,
                 organizations: {
+                    resourceClaims: publicResourceClaims.rows,
+                    resourceClaimAudit: publicResourceAudit.rows,
                     memberships: organizationMemberships.rows.map(row => ({
                         organizationId: row.organization_id,
                         slug: row.slug,
@@ -1643,6 +1659,13 @@ export class AccountPrivacyService {
                     action: row.action,
                     occurredAt: iso(row.occurred_at),
                     retentionUntil: iso(row.retention_until),
+                })),
+                savedDiscovery: savedDiscovery.rows,
+                resourceCorrections:resourceCorrections.rows,
+                authoringReceipts: authoringReceipts.rows.map(row => ({
+                    uri: row.post_uri, title: row.title, sourceCid: row.source_cid,
+                    publicStatus: row.public_status, sourceWrittenAt: row.source_written_at.toISOString(),
+                    deletedAt: row.deleted_at?.toISOString() ?? null, retentionUntil: row.retention_until.toISOString(),
                 })),
                 commandMetadata: commandMetadata.rows.map(row => ({
                     method: row.method,

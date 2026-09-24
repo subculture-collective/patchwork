@@ -33,16 +33,9 @@ This command:
 3. Restarts runtime services with `--no-build --no-deps`.
 4. Requires deep readiness before updating the current manifest pointer.
 
-### Rollback Policy Defaults
-
-| Parameter | Value |
-|-----------|-------|
-| Retained versions | Current and previous digest manifests on host; registry retention is operator policy |
-| Rollback window | 1 hour after deploy |
-| Requires approval | No (auto for listed triggers) |
-| Auto-rollback triggers | SLO burn exceeded, error rate spike, health check failure, smoke test failure |
-
-See `DEFAULT_ROLLBACK_POLICY` in `packages/shared/src/versioning.ts`.
+Keep current and previous verified manifests on the host. Rollback requires
+compatibility with the current database schema and successful readiness checks.
+The active deployment workflow and operator policy determine when rollback runs.
 
 ## Database Migration Rollback
 
@@ -78,21 +71,8 @@ has no automated down-migration command; documentation must not imply one.
 
 **Example:** Dropping a table, removing a column with data.
 
-### Migration Classification
-
-Use `classifyMigrationRollback()` from `packages/shared/src/versioning.ts` to
-programmatically determine the rollback strategy:
-
-```typescript
-import { classifyMigrationRollback } from '@patchwork/shared';
-
-const guidance = classifyMigrationRollback({
-    hasDropStatements: false,
-    hasRenameStatements: false,
-    hasDownMigration: false,
-});
-// Additive migrations remain compatible with the previous app digest.
-```
+Review the actual SQL for compatibility; Patchwork does not infer a safe rollback
+from filenames or provide automated down migrations.
 
 ## Release Notes Template
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
     loadApiConfig,
     loadIndexerConfig,
@@ -76,6 +76,24 @@ describe('config schema', () => {
         } else {
             process.env.ATPROTO_SERVICE_DID = previousDid;
         }
+    });
+
+    it('loads push-only and email-only environments and rejects partial enabled channels', () => {
+        try {
+            vi.stubEnv('ATPROTO_SERVICE_DID', 'did:web:patchwork-test.example.com');
+            vi.stubEnv('API_DATA_SOURCE', 'fixture');
+            vi.stubEnv('API_DATABASE_URL', '');
+            vi.stubEnv('DATABASE_URL', '');
+            for (const [key, value] of Object.entries(productionNotificationConfig)) vi.stubEnv(key, value);
+            for (const key of ['NOTIFICATION_EMAIL_PROVIDER_URL', 'NOTIFICATION_EMAIL_PROVIDER_TOKEN', 'NOTIFICATION_EMAIL_FROM', 'NOTIFICATION_PROVIDER_WEBHOOK_TOKEN']) vi.stubEnv(key, '');
+            expect(loadApiConfig().NOTIFICATION_VAPID_PUBLIC_KEY).toBe('test-vapid-public-key');
+            vi.stubEnv('NOTIFICATION_VAPID_PRIVATE_KEY', '');
+            expect(() => loadApiConfig()).toThrow(/NOTIFICATION_VAPID_PRIVATE_KEY/);
+            for (const [key, value] of Object.entries(productionNotificationConfig)) vi.stubEnv(key, key.startsWith('NOTIFICATION_VAPID_') ? '' : value);
+            expect(loadApiConfig().NOTIFICATION_EMAIL_FROM).toBe('notifications@example.test');
+            vi.stubEnv('NOTIFICATION_PROVIDER_WEBHOOK_TOKEN', '');
+            expect(() => loadApiConfig()).toThrow(/NOTIFICATION_PROVIDER_WEBHOOK_TOKEN/);
+        } finally { vi.unstubAllEnvs(); }
     });
 
     it('requires an API key only for Jetstream v2 replay', () => {
@@ -284,6 +302,21 @@ describe('validateProductionConfig', () => {
                 ATPROTO_ACCOUNT_PDS_ADMIN_PASSWORD: 'pds-admin-secret',
             }),
         ).toThrow(/private attachment runtime requires/);
+    });
+
+    it('allows a complete email channel independently of push and vice versa', () => {
+        const base = {
+            NODE_ENV: 'production', ATPROTO_SERVICE_DID: 'did:web:patchwork.example.com',
+            API_DATA_SOURCE: 'postgres', DATABASE_URL: 'postgresql://localhost/patchwork',
+            API_MODERATION_SERVICE_URL: 'http://moderation:4200', MODERATION_SERVICE_TOKEN: 'service-secret',
+            ATPROTO_ACCOUNT_PDS_ADMIN_PASSWORD: 'pds-admin-secret', ...productionAttachmentConfig,
+        };
+        expect(() => validateProductionConfig({ ...base, ...productionNotificationConfig,
+            NOTIFICATION_VAPID_SUBJECT: '', NOTIFICATION_VAPID_PUBLIC_KEY: '', NOTIFICATION_VAPID_PRIVATE_KEY: '',
+        })).not.toThrow();
+        expect(() => validateProductionConfig({ ...base, ...productionNotificationConfig,
+            NOTIFICATION_EMAIL_PROVIDER_URL: '', NOTIFICATION_EMAIL_PROVIDER_TOKEN: '', NOTIFICATION_EMAIL_FROM: '', NOTIFICATION_PROVIDER_WEBHOOK_TOKEN: '',
+        })).not.toThrow();
     });
 
     it('requires complete email, push, and feedback configuration in production', () => {

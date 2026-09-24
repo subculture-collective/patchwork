@@ -181,10 +181,10 @@ jobs:
                   test -n "$network"
                   docker run --detach --name "$container" \
                     --network "$network" \
-                    --env POSTGRES_DB=patchwork \
+                    --env POSTGRES_DB=patchwork_test \
                     --env POSTGRES_USER=patchwork \
                     --env POSTGRES_PASSWORD=patchwork_ci \
-                    --health-cmd "pg_isready -U patchwork -d patchwork" \
+                    --health-cmd "pg_isready -U patchwork -d patchwork_test" \
                     --health-interval 5s \
                     --health-timeout 3s \
                     --health-retries 20 \
@@ -201,9 +201,9 @@ jobs:
                   address=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$container")
                   test -n "$address"
                   echo "PATCHWORK_CI_POSTGRES_CONTAINER=$container" >> "$GITHUB_ENV"
-                  echo "API_DATABASE_URL=postgresql://patchwork:patchwork_ci@$address:5432/patchwork" >> "$GITHUB_ENV"
-                  echo "DATABASE_URL=postgresql://patchwork:patchwork_ci@$address:5432/patchwork" >> "$GITHUB_ENV"
-                  echo "TEST_DATABASE_URL=postgresql://patchwork:patchwork_ci@$address:5432/patchwork" >> "$GITHUB_ENV"
+                  echo "API_DATABASE_URL=postgresql://patchwork:patchwork_ci@$address:5432/patchwork_test" >> "$GITHUB_ENV"
+                  echo "DATABASE_URL=postgresql://patchwork:patchwork_ci@$address:5432/patchwork_test" >> "$GITHUB_ENV"
+                  echo "TEST_DATABASE_URL=postgresql://patchwork:patchwork_ci@$address:5432/patchwork_test" >> "$GITHUB_ENV"
 
             - name: Run database migrations
               run: |
@@ -212,16 +212,7 @@ jobs:
                   npm run db:migrate -w @patchwork/moderation-worker
 
             - name: PostgreSQL integration tests
-              run: npm run test:integration:postgres -w @patchwork/api
-
-            - name: Direct lifecycle service integration tests
-              run: npm run test:integration:service -w @patchwork/web
-
-            - name: Indexer PostgreSQL integration tests
-              run: npm run test -w @patchwork/indexer
-
-            - name: Moderation PostgreSQL integration tests
-              run: npm run test -w @patchwork/moderation-worker
+              run: npm run test:integration:postgres
 
             - name: Start private attachment integration services
               env:

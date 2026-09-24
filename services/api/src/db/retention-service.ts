@@ -9,6 +9,7 @@ export interface RetentionResult {
     oauthSessions: number;
     idempotencyCommands: number;
     workflows: number;
+    authoringReceipts: number;
     maintenanceAudit: number;
     coordinationWindows: number;
     groups: number;
@@ -57,6 +58,7 @@ export class PostgresRetentionService {
                  WHERE completed_at IS NOT NULL AND completed_at <= $1`,
                 [cutoff.toISOString()],
             );
+            const authoringReceipts = await client.query('DELETE FROM aid_authoring_receipts WHERE retention_until <= $1', [now.toISOString()]);
             const workflows = await client.query(
                 `DELETE FROM request_workflows
                  WHERE retention_until IS NOT NULL AND retention_until <= $1`,
@@ -101,6 +103,7 @@ export class PostgresRetentionService {
                 oauthSessions: oauthSessions.rowCount ?? 0,
                 idempotencyCommands: idempotencyCommands.rowCount ?? 0,
                 workflows: workflows.rowCount ?? 0,
+                authoringReceipts: authoringReceipts.rowCount ?? 0,
                 maintenanceAudit: maintenanceAudit.rowCount ?? 0,
                 coordinationWindows: coordinationWindows.rowCount ?? 0,
                 groups: groups.rowCount ?? 0,

@@ -1,0 +1,83 @@
+import { z } from 'zod';
+import { resourceServices } from '../../../../packages/shared/src/resource-services.js';
+import { directoryResourceSchema } from '@patchwork/at-lexicons';
+import benefitsSnapshot from './seed-data/state-benefit-resources.json' with { type: 'json' };
+import governmentSnapshot from './seed-data/national-government-resources.json' with { type: 'json' };
+import communitySnapshot from './seed-data/national-community-resources.json' with { type: 'json' };
+import nationalSnapshot from './seed-data/national-public-resources.json' with { type: 'json' };
+import snapshot from './seed-data/chicago-metro-public-resources.json' with { type: 'json' };
+import { postalLocationSchema } from '../../../../packages/at-lexicons/src/postal-geography.js';
+
+export const publicResourceSchema = z.object({
+    id: z.string().min(1),
+    services: z.array(z.enum(resourceServices)).min(1).optional(),
+    name: z.string().min(1).max(120),
+    category: directoryResourceSchema.shape.category,
+    sourceId: z.string().min(1),
+    countyId: z.string().regex(/^\d{5}$/),
+    coordinateBasis: z.enum(['publisher-address', 'census-address-range']),
+    streetAddress: z.string().min(1).max(300),
+    city: z.string().min(1),
+    state: z.enum(['AL','AK','AZ','AR','CA','CO','CT','DE','DC','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','PR','VI','GU','AS','MP']),
+    postalCode: postalLocationSchema.shape.postalCode,
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+    phone: z.string().min(7).optional(),
+    website: z.string().url().refine(url => ['https:', 'http:'].includes(new URL(url).protocol)),
+    usualHours: z.string().min(1).max(200),
+    claimStatus: z.literal('unclaimed'),
+    publicAccess: z.string().min(1).max(500),
+}).strict();
+
+export const publicResourceSourceSchema = z.object({
+    name: z.string().min(1),
+    url: z.string().url().refine(url => new URL(url).protocol === 'https:'),
+    apiUrl: z.string().url(),
+    retrievedAt: z.string().date(),
+    publishedAt: z.string().date().optional(),
+    sha256: z.string().regex(/^[a-f0-9]{64}$/),
+}).strict();
+
+export const publicResourceCatalogSchema = z.object({
+    scope: z.object({ name: z.string(), countyIds: z.array(z.string().regex(/^\d{5}$/)).min(1), sourceUrl: z.string().url() }).strict(),
+    sources: z.record(publicResourceSourceSchema),
+    resources: z.array(publicResourceSchema).min(1),
+}).strict();
+export type PublicResourceCatalogInput = z.input<typeof publicResourceCatalogSchema>;
+
+/** Import provenance establishes a public location, never ownership or endorsement. */
+export function parsePublicResourceCatalog(input: unknown) {
+    const catalog = publicResourceCatalogSchema.parse(input);
+    if (new Set(catalog.resources.map(resource => resource.id)).size !== catalog.resources.length) {
+        throw new Error('Duplicate public resource source identifier.');
+    }
+    const locations = new Set<string>();
+    for (const resource of catalog.resources) {
+        const key = [resource.name.trim().toLowerCase(), resource.streetAddress.trim().toLowerCase(), resource.postalCode].join('|');
+        if (locations.has(key)) throw new Error('Duplicate public resource location.');
+        locations.add(key);
+        if (!catalog.sources[resource.sourceId]) throw new Error('Missing resource provenance.');
+        if (!catalog.scope.countyIds.includes(resource.countyId)) throw new Error('Resource outside catalog scope.');
+    }
+    return {
+        ...catalog,
+        resources: catalog.resources.map(resource => ({
+            ...resource,
+            category: resource.sourceId === 'cpl' ? 'library' as const : resource.category,
+            source: catalog.sources[resource.sourceId]!,
+            // Source schedules are not a real-time open-now assertion.
+            operationalStatus: /closed until further notice/i.test(resource.usualHours)
+                ? 'closed' as const : 'unknown' as const,
+        })),
+    };
+}
+
+export const publicResourceCatalog = parsePublicResourceCatalog({
+    scope: { name: 'United States public resource directory', sourceUrl: nationalSnapshot.scope.sourceUrl,
+        countyIds: [...new Set([...snapshot.scope.countyIds, ...nationalSnapshot.scope.countyIds, ...communitySnapshot.scope.countyIds, ...governmentSnapshot.scope.countyIds, ...benefitsSnapshot.scope.countyIds])].sort() },
+    sources: { ...snapshot.sources, ...nationalSnapshot.sources, ...communitySnapshot.sources, ...governmentSnapshot.sources, ...benefitsSnapshot.sources },
+    resources: [...snapshot.resources, ...nationalSnapshot.resources, ...communitySnapshot.resources, ...governmentSnapshot.resources, ...benefitsSnapshot.resources],
+});
+export const publicResourceSeed = publicResourceCatalog.resources.filter(
+    resource => resource.operationalStatus !== 'closed',
+);

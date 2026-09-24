@@ -92,51 +92,8 @@ create-to-projection upper bound at or below 30 seconds, three resolved
 moderation items, and the resource/reliability limits enforced by
 `staging-capacity.ts`.
 
-## NUC home-staging evidence, 2026-07-28
+## Interpreting results
 
-A trusted Almaz edge generated all four read routes concurrently against the
-NUC immutable `995338c` runtime for 300 seconds. The run completed 12,000
-requests with no errors at 10 RPS per route and an 85.574 ms worst-route p95.
-During that interval, three independent two-account OAuth/PDS/Jetstream
-lifecycle journeys completed in 15.3, 13.8, and 11.3 seconds, and three
-durable moderation items resolved with a 0.356-second maximum queue age.
-
-The measured maxima/minima remained inside the gate: 65.3% host CPU, 58.98%
-host-memory headroom, 41% disk headroom, 1.4% container memory, 35% database
-connections, 0.032-second event-source lag, no error or restart delta, and
-0.047-second post-workload readiness. Disposable Patchwork accounts were
-deactivated, their PDS accounts were deleted, expected bounded
-deactivation/safety receipts were retained, and live projections, sessions,
-workflows, roles, owned blocks, moderation items, and moderation audit rows
-were absent afterward.
-
-The exact redacted aggregate evidence is
-`docs/operations/evidence/phase-8/staging-capacity.json`; methodology and
-caveats are in `staging-capacity.md`.
-
-## Local evidence, 2026-07-11
-
-The isolated run used PostgreSQL 16.14, Node 24.15.0, an Apple M3 with 16 GiB
-RAM, the complete 13/3/3 migration set, a fresh projection heartbeat, and
-1,000 generated durable aid-post projections. Each route ran for five seconds
-at concurrency four. The API used PostgreSQL data mode; test environment mode
-disabled external OAuth only.
-
-| Endpoint | Requests | Errors | Actual RPS | p50 | p95 | p99 |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| health | 250 | 0 | 50.11 | 9.31 ms | 13.18 ms | 15.00 ms |
-| map | 300 | 0 | 60.07 | 10.62 ms | 13.54 ms | 15.12 ms |
-| feed | 400 | 0 | 80.05 | 8.50 ms | 9.97 ms | 11.75 ms |
-| directory | 200 | 0 | 40.06 | 10.73 ms | 15.67 ms | 20.02 ms |
-
-All four modeled budgets passed. Full evidence and caveats are in
-`docs/operations/evidence/phase-8/local-capacity-probe.md`.
-
-## What remains unproven
-
-The NUC run does not establish saturation ceilings, the higher modeled
-50/60/80/40 RPS route targets, multiple API replicas, multi-region behavior,
-independent database capacity, Internet-scale client diversity, or production
-traffic patterns. Those remain production hardening and sizing work. The
-bounded home-staging `CAPACITY` condition is complete only at the observed
-40-RPS aggregate envelope.
+Attach measurements to the tested release, including runtime revision, workload,
+duration, latency, errors, resource use, and cleanup. A bounded staging probe
+does not establish production saturation limits or multi-region capacity.

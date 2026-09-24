@@ -201,6 +201,34 @@ endpoints, subscription keys, notification bodies, exact locations, private
 evidence, moderation notes, or provider credentials in incident notes.
 Provider feedback uses its dedicated bearer-token boundary.
 
+### Source refresh
+
+Check `systemctl status patchwork-source-refresh.service` and the latest journal
+without rerunning the job first. A failed attempt leaves retained evidence and
+review candidates unchanged. Confirm the API container is healthy, the evidence
+bind mount is present, and the retained directory remains below 2 GiB. Retry the
+oneshot service once after correcting the named failure. Do not delete raw,
+manifest, or catalog evidence to clear the capacity guard; expand or archive the
+volume with checksums intact. A stale alert uses the latest completed refresh,
+so a concurrent skip does not renew source evidence.
+
+### Travel routing
+
+Check the OTP actuator health endpoint and `patchwork-staging-routing` logs.
+Keep `API_ROUTING_SERVICE_URL` unset if the graph is absent, expired, or fails a
+known Chicago itinerary. A graph replacement is atomic; restore the most recent
+file under `/srv/patchwork-routing/previous` and restart only the routing
+container. Do not treat actuator health as itinerary or accessibility proof.
+Repeated `/travel/plan` failures should disable the API routing URL until the
+router or graph is corrected.
+
+For refresh failures, inspect `systemctl status patchwork-routing-refresh.service`
+and its journal. The job qualifies a candidate in a separate OTP container before
+publication and restores the complete previous release when post-publication
+runtime health fails. Confirm both the actuator and a known itinerary after a
+manual restore. Do not delete failed candidate logs or previous graph releases
+while investigating the publisher, graph build, or runtime failure.
+
 Every game day records UTC timestamps, commands, alert transition and delivery,
 operator decision, recovery observation, and follow-up fixes in the Phase 7
 evidence file. Local simulations do not satisfy the staging alert-delivery gate.
@@ -423,7 +451,7 @@ Use this template within 48 hours (P1) or 1 week (P2) of incident resolution.
 
 Game days are controlled exercises that simulate production incidents to
 validate runbooks, tooling, and team readiness. See
-[game-day-log.md](game-day-log.md) for the exercise log template.
+the incident or exercise record attached to the relevant release for the exercise log template.
 
 ### Scenario 1: Service Outage -- API Down
 

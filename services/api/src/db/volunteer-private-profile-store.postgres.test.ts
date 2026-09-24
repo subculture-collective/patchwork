@@ -3,9 +3,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PostgresVolunteerPrivateProfileStore } from './volunteer-private-profile-store.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describePostgres = databaseUrl ? describe : describe.skip;
 
-describePostgres('PostgresVolunteerPrivateProfileStore', () => {
+describe('PostgresVolunteerPrivateProfileStore', () => {
     const pool = new Pool({ connectionString: databaseUrl });
     const store = new PostgresVolunteerPrivateProfileStore(pool);
     const did = 'did:plc:private-volunteer';

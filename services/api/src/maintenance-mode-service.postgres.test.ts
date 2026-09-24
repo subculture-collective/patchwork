@@ -5,9 +5,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { MaintenanceModeService } from './maintenance-mode-service.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
-const describeWithPostgres = databaseUrl ? describe : describe.skip;
 
-describeWithPostgres('MaintenanceModeService', () => {
+describe('MaintenanceModeService', () => {
     const schema = `maintenance_${randomUUID().replaceAll('-', '')}`;
     const adminPool = new Pool({ connectionString: databaseUrl });
     const pool = new Pool({

@@ -60,6 +60,7 @@ export const useApproximateLocation = (
                     locationCoordinatePrecision;
                 setAccess('granted');
                 onPatch({
+                    postalCode: undefined,
                     center: {
                         lat: round(position.coords.latitude),
                         lng: round(position.coords.longitude),

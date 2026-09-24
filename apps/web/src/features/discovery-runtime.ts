@@ -1,6 +1,7 @@
 import type { FeedAidCard } from '../feed-ux';
 
 export interface FeedRecordEnvelope {
+    postalCode?: string;
     aidPostUri: string;
     recipientDid: string;
     cid?: string;
