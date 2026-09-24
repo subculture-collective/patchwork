@@ -219,7 +219,7 @@ test('public home advertises only implemented demonstration capabilities', async
     );
     await expect(
         page.getByRole('heading', {
-            name: 'Find help. Offer help. Strengthen your neighborhood.',
+            name: 'A little help, from a friend.',
         }),
     ).toBeVisible();
     await expect(

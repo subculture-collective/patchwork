@@ -4,6 +4,17 @@
     display: grid;
     gap: var(--mh-space-3);
     margin-bottom: var(--mh-space-6);
+    border: var(--mh-outline);
+    border-radius: 2px 20px 2px 20px;
+    background: var(--mh-panel);
+    box-shadow: var(--mh-shadow);
+    padding: var(--mh-space-3);
+}
+
+@media (min-width: 640px) {
+    .mh-toolbar {
+        padding: var(--mh-space-4);
+    }
 }
 
 .mh-toolbar__location {
@@ -126,7 +137,11 @@
     border-left-width: 6px;
     border-radius: var(--mh-radius-patch);
     background: var(--mh-surface);
-    box-shadow: var(--mh-shadow-sm);
+    background-image:
+        linear-gradient(to right, rgb(90 76 57 / 5%) 1px, transparent 1px),
+        linear-gradient(to bottom, rgb(90 76 57 / 5%) 1px, transparent 1px);
+    background-size: 30px 30px;
+    box-shadow: var(--mh-shadow);
     padding: var(--mh-space-4) var(--mh-space-4) var(--mh-space-4) var(--mh-space-5);
     align-content: start;
 }
@@ -212,9 +227,10 @@
     flex-wrap: wrap;
     align-items: center;
     gap: var(--mh-space-2);
-    border: 1px solid var(--mh-border-subtle);
+    border: var(--mh-outline);
     border-radius: var(--mh-radius-patch-sm);
     background: var(--mh-surface);
+    box-shadow: var(--mh-shadow-sm);
     padding: var(--mh-space-2) var(--mh-space-3);
 }
 
@@ -245,7 +261,7 @@
     border: var(--mh-outline);
     border-radius: var(--mh-radius-patch);
     background: var(--mh-surface);
-    box-shadow: var(--mh-shadow-sm);
+    box-shadow: var(--mh-shadow);
     padding: var(--mh-space-4);
     align-content: start;
 }

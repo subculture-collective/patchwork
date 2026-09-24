@@ -70,14 +70,16 @@ Text on pine, strong terracotta and red uses `--mh-on-accent` (`#fffdf7`).
 | Body, labels, controls | Public Sans 400/500/700 | 16px minimum for body and inputs, line-height 1.5 |
 | Eyebrows, metadata | JetBrains Mono 400/700 | Uppercase, `0.12em` tracking, one per section at most |
 
-Form labels, button text and chips use Public Sans in sentence case. Uppercase
-mono is reserved for eyebrows above section headings and compact metadata such
-as timestamps.
+Form labels are Public Sans, small, bold, uppercase and letter-spaced
+(`.mh-field-label`), the original Patchwork label style. Button and chip text
+is sentence case. Mono is used for eyebrows and compact metadata.
 
 ### Shape and depth
 
-- Radius: the "patch" corner, `--mh-radius-patch` (`2px 14px 2px 14px`), for
-  cards, buttons and inputs. Pills (`999px`) for chips and badges only.
+- Radius: the "patch" corner. `--mh-radius-patch` (`2px 18px 2px 18px`) for
+  cards and panels, `--mh-radius-patch-sm` (`3px 12px 3px 12px`) for buttons
+  and chips, `--mh-radius-input` (`2px 12px 2px 12px`) for inputs. Pills
+  (`999px`) for badges only.
 - Outline: `1.5px` ink on cards and buttons; `1px` soft border on inputs.
 - Shadow: flat offset only, in three steps: `--mh-shadow-sm` (2px),
   `--mh-shadow` (4px) and `--mh-shadow-lg` (7px, hover and floating
@@ -96,11 +98,11 @@ globally.
 | Component | Purpose |
 | --- | --- |
 | `Button` | Variants `primary` (pine), `accent` (terracotta), `neutral`, `danger`, `ghost`; sizes `sm`/`md` |
-| `ToggleChip`, `ChipGroup` | Multi-select filters (`aria-pressed`); selected = pine fill |
-| `SegmentedControl` | One-of-few choices (radio group), e.g. Latest / Nearby |
+| `ToggleChip`, `ChipGroup` | Multi-select filters (`aria-pressed`): ink-outlined, hard-shadow boxes; selected = mustard fill |
+| `SegmentedControl` | One-of-few choices (radio group) rendered as the same boxes; selected = pine fill |
 | `Field` | Label, hint, error and control wiring for `Input`, `Select`, `Textarea` |
-| `Surface` | The single card container, with an optional heading and actions |
-| `PageHeader` | Eyebrow, title, description, actions and status for each route |
+| `Surface` | The content container. With a title it renders the original panel: panel-toned shell, mustard title bar and an inner grid-paper sheet; without one it is a single outlined card |
+| `PageHeader` | Eyebrow, title, description, actions and status for each route, with the mustard ring ornament at the rule's right end |
 | `Banner` | Page-level `info`, `success`, `warning` and `danger` messages |
 | `EmptyState` | No results / not signed in, with a next action |
 | `Sheet` | Mobile drawer and dialog for navigation and filters |
@@ -118,8 +120,8 @@ globally.
 - Discovery pages: results and map first. Filters appear as a compact bar
   (search, Latest/Nearby, a "Filters" button with an active-count badge), and
   the full set opens in a sheet.
-- The paper grid texture belongs to the page background only; surfaces are
-  flat.
+- The paper grid texture sits on the page background and inside titled
+  panels' sheets and request cards; the panel shell itself is flat.
 
 ## 5. Accessibility
 
@@ -134,10 +136,10 @@ globally.
 ## 6. Anti-patterns
 
 - Red for selected or neutral states.
-- Nested containers: panel → title bar → inner box.
+- Nesting a titled panel inside another titled panel.
 - Filters that push results below the fold on a phone.
-- Uppercase letter-spaced form labels.
-- Decorative shapes that overlap content (the old route-header ring).
+- Decorative shapes that overlap text; the header ring sits outside the text
+  column.
 - Raw hex values or blurred shadows in feature code.
 
 ## 7. Visual baselines
