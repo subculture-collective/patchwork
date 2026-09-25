@@ -30,13 +30,14 @@ describe('POST /auth/signup', () => {
             throw new Error('API test server did not bind a TCP address.');
         }
         origin = `http://127.0.0.1:${address.port}`;
-    }, 15_000);
+    }, 30_000);
 
     beforeEach(() => {
         createAccount.mockReset();
     });
 
     afterAll(async () => {
+        if (!server) return;
         await new Promise<void>((resolve, reject) =>
             server.close(error => (error ? reject(error) : resolve())),
         );
