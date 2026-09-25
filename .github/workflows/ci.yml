@@ -65,7 +65,7 @@ jobs:
               run: npm run test:e2e:redact
 
             - name: Dependency vulnerability scan
-              run: npm audit --audit-level=high
+              run: npm audit --package-lock-only --audit-level=high
 
             - name: Hardcoded secrets check
               run: |
