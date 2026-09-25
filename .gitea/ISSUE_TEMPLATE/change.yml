@@ -1,0 +1,21 @@
+name: Change request
+about: Propose a behavior or policy change
+title: "Change: "
+body:
+  - type: textarea
+    attributes:
+      label: User outcome
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Acceptance criteria
+      description: Describe observable behavior and failure cases.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Privacy and safety impact
+      description: State how consent, retention, location, and moderation rules apply, or why they do not.
+    validations:
+      required: true

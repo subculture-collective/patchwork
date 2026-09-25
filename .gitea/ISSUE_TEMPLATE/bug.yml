@@ -1,0 +1,27 @@
+name: Bug report
+about: Report a reproducible Patchwork defect
+title: "Bug: "
+body:
+  - type: markdown
+    attributes:
+      value: Use test accounts and sanitized logs. Do not include private messages, precise locations, tokens, or personal records.
+  - type: input
+    attributes:
+      label: Affected component
+      placeholder: Web app, API, indexer, moderation, or deployment
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Expected and actual result
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Sanitized evidence
+      description: Include a test fixture, error code, or linked run without sensitive data.
