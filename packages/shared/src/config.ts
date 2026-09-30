@@ -96,6 +96,8 @@ const apiSchema = baseSchema.merge(atprotoSchema).extend({
         .min(1)
         .max(65_535)
         .default(3310),
+    NOTIFICATION_EMAIL_PROVIDER_KIND: z.enum(['http', 'brevo']).default('http'),
+    NOTIFICATION_EMAIL_REPLY_TO: optionalSecretField,
     NOTIFICATION_EMAIL_PROVIDER_URL: optionalUrlField,
     NOTIFICATION_EMAIL_PROVIDER_TOKEN: optionalSecretField,
     NOTIFICATION_EMAIL_FROM: optionalSecretField,
@@ -152,6 +154,14 @@ const apiSchemaWithRefinements = apiSchema.superRefine((value, context) => {
             code: z.ZodIssueCode.custom,
             path: ['ATTACHMENT_SIGNING_KEY'],
             message: 'ATTACHMENT_SIGNING_KEY must be at least 32 characters.',
+        });
+    }
+    if (value.NOTIFICATION_EMAIL_PROVIDER_KIND === 'brevo' &&
+        value.NOTIFICATION_EMAIL_PROVIDER_URL !== 'https://api.brevo.com/v3/smtp/email') {
+        context.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['NOTIFICATION_EMAIL_PROVIDER_URL'],
+            message: 'Brevo delivery requires its official SMTP email API URL.',
         });
     }
     const notificationChannels = [
@@ -299,6 +309,8 @@ export interface ProductionApiConfig extends ProductionConfigBase {
     ATTACHMENT_OBJECT_BUCKET?: string;
     ATTACHMENT_SIGNING_KEY?: string;
     ATTACHMENT_CLAMD_HOST?: string;
+    NOTIFICATION_EMAIL_PROVIDER_KIND?: 'http' | 'brevo';
+    NOTIFICATION_EMAIL_REPLY_TO?: string;
     NOTIFICATION_EMAIL_PROVIDER_URL?: string;
     NOTIFICATION_EMAIL_PROVIDER_TOKEN?: string;
     NOTIFICATION_EMAIL_FROM?: string;

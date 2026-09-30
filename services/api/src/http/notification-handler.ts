@@ -124,6 +124,7 @@ export const createNotificationHandler = (dependencies: {
         request: IncomingMessage,
     ): Promise<AuthenticatedRequest>;
     providerFeedbackToken?: string;
+    emailProviderKind?: 'http' | 'brevo';
 }) => (
     request: IncomingMessage,
     response: ServerResponse,
@@ -153,6 +154,33 @@ export const createNotificationHandler = (dependencies: {
                     );
                 }
                 const body = requireRecord(await readJsonBody(request));
+                if (dependencies.emailProviderKind === 'brevo' && !body['channel']) {
+                    const mapped: Record<string, 'delivered' | 'bounced' | 'invalid'> = {
+                        delivered: 'delivered', hard_bounce: 'bounced', hardBounce: 'bounced',
+                        invalid: 'invalid', blocked: 'invalid', spam: 'invalid', unsubscribed: 'invalid',
+                    };
+                    const event = mapped[readString(body, 'event')];
+                    if (!event) {
+                        writeJsonResponse(response, 202, { accepted: true });
+                        return;
+                    }
+                    const messageId = readString(body, 'message-id').replace(/^<|>$/g, '');
+                    if (!messageId || messageId.length > 512 || /[\r\n]/u.test(messageId)) {
+                        throw new PublicHttpError(400, 'INVALID_PROVIDER_FEEDBACK', 'The provider feedback payload is invalid.');
+                    }
+                    let accepted: boolean;
+                    try {
+                        accepted = await dependencies.service.recordProviderFeedback({
+                            channel: 'email', providerMessageId: messageId, event,
+                        });
+                    } catch {
+                        writeJsonResponse(response, 429, { accepted: false });
+                        return;
+                    }
+                    // Brevo retries 429, but discards other 4xx and 5xx responses.
+                    writeJsonResponse(response, accepted ? 202 : 429, { accepted });
+                    return;
+                }
                 const channel = readString(body, 'channel');
                 const providerMessageId = readString(
                     body,

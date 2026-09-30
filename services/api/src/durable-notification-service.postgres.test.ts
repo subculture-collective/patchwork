@@ -15,6 +15,7 @@ const requestUri =
     `at://${ownerDid}/app.patchwork.aid.post/notification-request`;
 
 class FakeEmailProvider implements EmailProvider {
+    retryWindowMs?: number;
     readonly sends: Array<{
         to: string;
         subject: string;
@@ -291,6 +292,26 @@ describe('durable notification outbox', () => {
         expect(new Set(
             attempts.rows.map(row => row.provider_idempotency_key),
         ).size).toBe(2);
+    });
+
+    it('holds ambiguous email retries beyond the provider idempotency window', async () => {
+        await service.requestEmailVerification(ownerDid, 'owner@example.test');
+        const link = email.sends[0]!.text.match(/https:\/\/\S+/u)![0];
+        expect(await service.confirmEmail(ownerDid, new URL(link).searchParams.get('emailToken')!)).toBe(true);
+        email.sends.length = 0;
+        email.retryWindowMs = 29 * 60_000;
+        await pool.query(`SELECT patchwork_enqueue_notification(
+            $1, 'lifecycle_changed', 'Request status updated', 'Open Patchwork.',
+            'normal', '/inbox', '{}'::jsonb, 'retry-window-one', NOW())`, [ownerDid]);
+        email.results.push({ accepted: false, retryable: true, errorCode: 'brevo-network' });
+        expect(await service.runDeliverySweep()).toMatchObject({ processed: 1, failed: 1 });
+        await pool.query(`UPDATE notification_delivery_attempts
+            SET next_attempt_at = NOW(), created_at = NOW() - INTERVAL '30 minutes'
+            WHERE channel = 'email'`);
+        expect(await service.runDeliverySweep()).toMatchObject({ processed: 1, failed: 1 });
+        expect(email.sends).toHaveLength(1);
+        const rows = await pool.query(`SELECT status, last_error_code FROM notification_delivery_attempts WHERE channel = 'email'`);
+        expect(rows.rows[0]).toMatchObject({ status: 'dead-letter', last_error_code: 'provider-retry-window-closed' });
     });
 
     it('atomically covers offer, connection, lifecycle, verification, appeal, expiry, and moderation sources', async () => {

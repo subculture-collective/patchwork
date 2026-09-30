@@ -37,6 +37,7 @@ describe('durable notification HTTP boundary', () => {
         const handler = createNotificationHandler({
             service,
             providerFeedbackToken: 'provider-feedback-secret',
+            emailProviderKind: 'brevo',
             authenticate: async () => ({
                 sessionToken: 'opaque',
                 session: { did: actorDid },
@@ -140,6 +141,33 @@ describe('durable notification HTTP boundary', () => {
             auth: 'auth-secret-material',
             userAgent: 'test-browser',
         });
+    });
+
+    it('normalizes native Brevo feedback without trusting its recipient', async () => {
+        recordProviderFeedback.mockResolvedValueOnce(true);
+        const response = await fetch(`${origin}/internal/notifications/provider-feedback`, {
+            method: 'POST',
+            headers: { authorization: 'Bearer provider-feedback-secret', 'content-type': 'application/json' },
+            body: JSON.stringify({ event: 'hard_bounce', 'message-id': '<brevo-one>', email: 'untrusted@example.test' }),
+        });
+        expect(response.status).toBe(202);
+        expect(recordProviderFeedback).toHaveBeenLastCalledWith({ channel: 'email', providerMessageId: 'brevo-one', event: 'bounced' });
+        recordProviderFeedback.mockClear();
+    });
+
+    it('requests provider retry for early receipts and unavailable storage', async () => {
+        for (const result of ['unknown', 'unavailable']) {
+            if (result === 'unknown') recordProviderFeedback.mockResolvedValueOnce(false);
+            else recordProviderFeedback.mockRejectedValueOnce(new Error('private storage detail'));
+            const response = await fetch(`${origin}/internal/notifications/provider-feedback`, {
+                method: 'POST',
+                headers: { authorization: 'Bearer provider-feedback-secret', 'content-type': 'application/json' },
+                body: JSON.stringify({ event: 'delivered', 'message-id': '<early@brevo.test>' }),
+            });
+            expect(response.status).toBe(429);
+            expect(await response.text()).not.toContain('private storage detail');
+        }
+        recordProviderFeedback.mockClear();
     });
 
     it('keeps provider feedback on a dedicated constant-time bearer boundary', async () => {
