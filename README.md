@@ -232,3 +232,5 @@ Licensed under `GPL-3.0-or-later`. See [LICENSE](LICENSE).
 https://www2.onnwee.me
 
 
+
+Transactional email can use Brevo; see [the setup and cutover guide](docs/brevo-email.md).

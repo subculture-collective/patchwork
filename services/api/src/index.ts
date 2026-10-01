@@ -103,6 +103,7 @@ import {
 import { AttachmentService } from './attachment-service.js';
 import { MinioPrivateObjectStore } from './private-object-store.js';
 import { ClamdMalwareScanner } from './clamd-scanner.js';
+import { BrevoEmailProvider } from './brevo-email-provider.js';
 import {
     DurableNotificationService,
     HttpEmailProvider,
@@ -343,7 +344,9 @@ if (attachmentService) {
 const notificationProviders = {
     ...(config.NOTIFICATION_EMAIL_PROVIDER_URL &&
         config.NOTIFICATION_EMAIL_PROVIDER_TOKEN && config.NOTIFICATION_EMAIL_FROM ? {
-        email: new HttpEmailProvider(config.NOTIFICATION_EMAIL_PROVIDER_URL,
+        email: config.NOTIFICATION_EMAIL_PROVIDER_KIND === 'brevo'
+            ? new BrevoEmailProvider(config.NOTIFICATION_EMAIL_PROVIDER_TOKEN, config.NOTIFICATION_EMAIL_FROM, config.NOTIFICATION_EMAIL_REPLY_TO)
+            : new HttpEmailProvider(config.NOTIFICATION_EMAIL_PROVIDER_URL,
             config.NOTIFICATION_EMAIL_PROVIDER_TOKEN, config.NOTIFICATION_EMAIL_FROM),
     } : {}),
     ...(config.NOTIFICATION_VAPID_SUBJECT && config.NOTIFICATION_VAPID_PUBLIC_KEY &&
@@ -630,6 +633,7 @@ const notificationHandler =
             authenticate: authenticateApiRequest,
             providerFeedbackToken:
                 config.NOTIFICATION_PROVIDER_WEBHOOK_TOKEN,
+            emailProviderKind: config.NOTIFICATION_EMAIL_PROVIDER_KIND,
         })
     :   undefined;
 const maintenanceHandler =

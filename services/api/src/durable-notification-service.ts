@@ -69,6 +69,7 @@ interface DeliveryRow {
     target_id: string;
     provider_idempotency_key: string;
     attempt_count: number;
+    created_at: Date | string;
     title: string;
     body: string;
     action_url: string;
@@ -268,6 +269,7 @@ export interface DeliveryProviderResult {
 }
 
 export interface EmailProvider {
+    readonly retryWindowMs?: number;
     send(input: {
         to: string;
         subject: string;
@@ -949,7 +951,7 @@ export class DurableNotificationService {
                  RETURNING d.*
              )
              SELECT c.delivery_id, c.notification_id, c.channel, c.target_id,
-                    c.provider_idempotency_key, c.attempt_count,
+                    c.provider_idempotency_key, c.attempt_count, c.created_at,
                     n.title, n.body, n.action_url, n.notification_type,
                     COALESCE(pref.language, 'en') AS language,
                     e.email_address, p.endpoint, p.p256dh,
@@ -968,7 +970,13 @@ export class DurableNotificationService {
         let delivered = 0;
         let failed = 0;
         for (const delivery of claimed.rows) {
-            const result = await this.deliver(delivery);
+            const retryWindow = delivery.channel === 'email'
+                ? this.providers.email?.retryWindowMs : undefined;
+            const retryExpired = retryWindow !== undefined && delivery.attempt_count > 1 &&
+                Date.now() - new Date(delivery.created_at).getTime() >= retryWindow;
+            const result: DeliveryProviderResult = retryExpired
+                ? { accepted: false, retryable: false, errorCode: 'provider-retry-window-closed' }
+                : await this.deliver(delivery);
             if (result.accepted) {
                 delivered += 1;
                 await this.pool.query(
