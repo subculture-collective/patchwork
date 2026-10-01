@@ -39,3 +39,5 @@ delivery only after configuring the deployed adapter and checking acceptance and
 inbox delivery separately.
 
 Before switching from an existing email provider, pause delivery and inspect the durable queue. Resolve or hold all pending, retrying, and locked email deliveries under their original provider before selecting Brevo. A provider change does not transfer the old provider's idempotency records. Keep existing destination preferences and suppression state.
+
+Brevo transactional webhooks receive events for the whole shared account. The Patchwork endpoint acknowledges events tagged for another project without storing them or asking Brevo to retry. Patchwork sends carry the `patchwork` tag; early receipts for its own messages still request retry.

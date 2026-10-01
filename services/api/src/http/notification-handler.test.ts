@@ -155,6 +155,18 @@ describe('durable notification HTTP boundary', () => {
         recordProviderFeedback.mockClear();
     });
 
+    it('acknowledges other project events without storing them or requesting retry', async () => {
+        for (const tags of [{ tags: ['subcult-os'] }, { tag: '["hasanara-operational"]' }]) {
+            const response = await fetch(`${origin}/internal/notifications/provider-feedback`, {
+                method: 'POST',
+                headers: { authorization: 'Bearer provider-feedback-secret', 'content-type': 'application/json' },
+                body: JSON.stringify({ event: 'delivered', 'message-id': '<other@brevo.test>', ...tags }),
+            });
+            expect(response.status).toBe(202);
+            expect(recordProviderFeedback).not.toHaveBeenCalled();
+        }
+    });
+
     it('requests provider retry for early receipts and unavailable storage', async () => {
         for (const result of ['unknown', 'unavailable']) {
             if (result === 'unknown') recordProviderFeedback.mockResolvedValueOnce(false);

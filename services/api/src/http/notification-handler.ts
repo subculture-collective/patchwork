@@ -155,6 +155,15 @@ export const createNotificationHandler = (dependencies: {
                 }
                 const body = requireRecord(await readJsonBody(request));
                 if (dependencies.emailProviderKind === 'brevo' && !body['channel']) {
+                    // Brevo sends account-wide events to each transactional webhook.
+                    let tags: unknown = body['tags'] ?? body['tag'];
+                    if (typeof tags === 'string') {
+                        try { tags = JSON.parse(tags); } catch { tags = [tags]; }
+                    }
+                    if (Array.isArray(tags) && tags.length > 0 && !tags.includes('patchwork')) {
+                        writeJsonResponse(response, 202, { accepted: true });
+                        return;
+                    }
                     const mapped: Record<string, 'delivered' | 'bounced' | 'invalid'> = {
                         delivered: 'delivered', hard_bounce: 'bounced', hardBounce: 'bounced',
                         invalid: 'invalid', blocked: 'invalid', spam: 'invalid', unsubscribed: 'invalid',
