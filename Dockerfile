@@ -11,7 +11,7 @@ FROM node:22.22.2-alpine@sha256:8ea2348b068a9544dae7317b4f3aafcdc032df1647bb7d76
 
 WORKDIR /app
 
-ARG ALPINE_SECURITY_REFRESH=2026-09-20
+ARG ALPINE_SECURITY_REFRESH=2026-10-01
 RUN test -n "$ALPINE_SECURITY_REFRESH" \
     && apk upgrade --no-cache \
     && wget -qO /tmp/npm.tgz https://registry.npmjs.org/npm/-/npm-12.0.1.tgz \
@@ -23,8 +23,8 @@ RUN test -n "$ALPINE_SECURITY_REFRESH" \
     && mv /tmp/npm/package /usr/local/lib/node_modules/npm \
     && rm -rf /tmp/npm /tmp/npm.tgz \
     && wget -qO /tmp/brace-expansion.tgz \
-        https://registry.npmjs.org/brace-expansion/-/brace-expansion-5.0.9.tgz \
-    && echo '5d06001fddd25cbee90c96db4dc5b7b57711b984c3141e28d10f143deb52dbaf  /tmp/brace-expansion.tgz' \
+        https://registry.npmjs.org/brace-expansion/-/brace-expansion-5.0.12.tgz \
+    && echo 'ef8448ec78f20b692f04fa6d01f39b5ab34c66404bea3429f5a39c6c9e0be8b4  /tmp/brace-expansion.tgz' \
         | sha256sum -c - \
     && mkdir /tmp/brace-expansion \
     && tar -xzf /tmp/brace-expansion.tgz -C /tmp/brace-expansion \
@@ -32,6 +32,15 @@ RUN test -n "$ALPINE_SECURITY_REFRESH" \
     && mv /tmp/brace-expansion/package \
         /usr/local/lib/node_modules/npm/node_modules/brace-expansion \
     && rm -rf /tmp/brace-expansion /tmp/brace-expansion.tgz \
+    && wget -qO /tmp/undici.tgz \
+        https://registry.npmjs.org/undici/-/undici-6.29.0.tgz \
+    && echo 'b7d888586625c1508c0e17463bac86aecd22ed6053bc945372aed8cae14406fc  /tmp/undici.tgz' \
+        | sha256sum -c - \
+    && mkdir /tmp/undici \
+    && tar -xzf /tmp/undici.tgz -C /tmp/undici \
+    && rm -rf /usr/local/lib/node_modules/npm/node_modules/undici \
+    && mv /tmp/undici/package /usr/local/lib/node_modules/npm/node_modules/undici \
+    && rm -rf /tmp/undici /tmp/undici.tgz \
     && wget -qO /tmp/ip-address.tgz \
         https://registry.npmjs.org/ip-address/-/ip-address-10.4.0.tgz \
     && echo 'e1faffa2aa19b4382664fd78ab9e5bf06a6ddcc525bd9c82bd74522487be2932  /tmp/ip-address.tgz' \
