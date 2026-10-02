@@ -1,5 +1,6 @@
-import { Panel } from '../components/Panel';
 import { useLocale } from '../i18n';
+import { Surface } from '../components/Surface';
+import { PageHeader } from '../components/PageHeader';
 
 export const LegalPolicyRoute = ({
     route,
@@ -43,21 +44,19 @@ export const LegalPolicyRoute = ({
                 };
     return (
         <section className='space-y-6'>
-            <header className='mh-route-header'>
-                <p className='mh-kicker'>{t('legal.draft')}</p>
-                <h1 className='mh-route-title'>{content.title}</h1>
-                <p className='mt-2 max-w-3xl text-mh-textMuted'>
-                    {content.summary}
-                </p>
-            </header>
-            <Panel title={t('legal.summaryTitle')}>
+            <PageHeader
+                eyebrow={t('legal.draft')}
+                title={content.title}
+                description={content.summary}
+            />
+            <Surface title={t('legal.summaryTitle')}>
                 <ul className='list-disc space-y-2 pl-5'>
                     {content.points.map((point) => (
                         <li key={point}>{point}</li>
                     ))}
                 </ul>
                 <p className='mt-4 text-sm font-bold'>{t('legal.noGo')}</p>
-            </Panel>
+            </Surface>
             <nav
                 aria-label={t('legal.navLabel')}
                 className='flex flex-wrap gap-4'

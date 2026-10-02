@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { StatusMessage } from '../components/StatusMessage';
 import { Button } from '../components/Button';
-import { Panel } from '../components/Panel';
 import { acceptCurrentPoliciesViaApi } from '../features/api-client';
 import { useLocale } from '../i18n';
 import { CURRENT_POLICY_VERSION, requiredPolicyDocuments } from '@patchwork/shared';
+import { Surface } from '../components/Surface';
 
 interface PolicyConsentGateProps {
     onAccepted: () => void;
@@ -39,7 +39,7 @@ export const PolicyConsentGate = ({ onAccepted }: PolicyConsentGateProps) => {
     };
 
     return (
-        <Panel title={t('consent.title')}>
+        <Surface title={t('consent.title')}>
             <p className='text-sm text-mh-textMuted'>
                 {t('consent.version', { version: CURRENT_POLICY_VERSION })}
             </p>
@@ -87,6 +87,6 @@ export const PolicyConsentGate = ({ onAccepted }: PolicyConsentGateProps) => {
                     <StatusMessage message={status} />
                 ) : null}
             </div>
-        </Panel>
+        </Surface>
     );
 };

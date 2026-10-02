@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { StatusMessage } from '../components/StatusMessage';
 import { Button } from '../components/Button';
-import { Card } from '../components/Card';
-import { Panel } from '../components/Panel';
 import {
     deactivateAccountViaApi,
     exportDataViaApi,
@@ -11,6 +9,8 @@ import {
 } from '../features/api-client';
 import { useLocale } from '../i18n';
 import { defaultAccountPreferences, type AccountPreferences } from '@patchwork/shared';
+import { Surface } from '../components/Surface';
+import { PageHeader } from '../components/PageHeader';
 
 interface AccountPrivacyRouteProps {
     onDeactivated: () => Promise<void>;
@@ -97,16 +97,14 @@ export const AccountPrivacyRoute = ({ onDeactivated }: AccountPrivacyRouteProps)
 
     return (
         <section className='space-y-6'>
-            <header className='mh-route-header'>
-                <h1 className='mh-route-title'>{t('account.heading')}</h1>
-                <p className='mt-2 text-sm text-mh-textMuted'>
-                    {t('account.description')}
-                </p>
-            </header>
+            <PageHeader
+                title={t('account.heading')}
+                description={t('account.description')}
+            />
 
-            <Panel title={String(t('account.controls'))}>
+            <Surface title={String(t('account.controls'))}>
                 <div className='space-y-4'>
-                    <Card title={String(t('account.preferences'))}>
+                    <Surface as='article' tone='quiet' title={String(t('account.preferences'))}>
                         <div className='grid gap-3 sm:grid-cols-2'>
                             <label className='text-sm font-bold'>
                                 {t('account.visibility')}
@@ -252,8 +250,8 @@ export const AccountPrivacyRoute = ({ onDeactivated }: AccountPrivacyRouteProps)
                                 <StatusMessage message={preferencesStatus} />
                             ) : null}
                         </div>
-                    </Card>
-                    <Card title={String(t('account.export'))}>
+                    </Surface>
+                    <Surface as='article' tone='quiet' title={String(t('account.export'))}>
                         <p className='text-sm text-mh-textMuted'>
                             {t('account.exportHelp')}
                         </p>
@@ -269,9 +267,9 @@ export const AccountPrivacyRoute = ({ onDeactivated }: AccountPrivacyRouteProps)
                                     : t('account.download')}
                             </Button>
                         </div>
-                    </Card>
+                    </Surface>
 
-                    <Card title={String(t('account.deactivation'))}>
+                    <Surface as='article' tone='quiet' title={String(t('account.deactivation'))}>
                         <p className='text-sm text-mh-textMuted'>
                             {t('account.deactivationHelp')}
                         </p>
@@ -323,13 +321,13 @@ export const AccountPrivacyRoute = ({ onDeactivated }: AccountPrivacyRouteProps)
                                 </div>
                             </div>
                         ) : null}
-                    </Card>
+                    </Surface>
 
                     {accountActionResult ? (
                         <StatusMessage message={accountActionResult} />
                     ) : null}
                 </div>
-            </Panel>
+            </Surface>
         </section>
     );
 };

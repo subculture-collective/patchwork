@@ -76,6 +76,8 @@ vi.mock('leaflet', () => ({
 const tileLayer = { on: vi.fn(), addTo: vi.fn() };
 vi.mock('protomaps-leaflet', () => ({
     leafletLayer: vi.fn(() => tileLayer),
+    paintRules: vi.fn(() => []),
+    labelRules: vi.fn(() => []),
 }));
 
 describe('InteractiveMap', () => {

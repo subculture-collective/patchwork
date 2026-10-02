@@ -115,16 +115,18 @@ export const formatPercent = (
     }).format(value);
 };
 
+const METERS_PER_MILE = 1609.344;
+
 /**
- * Locale-aware distance formatting for map radii.
+ * Distance for map radii and "how far" labels. Patchwork covers US ZIP areas,
+ * so distances read in miles in every locale; stored values stay metric.
  */
 export const formatDistance = (
     meters: number,
     locale: SupportedLocale,
 ): string => {
-    if (meters >= 1000) {
-        const km = meters / 1000;
-        return `${formatNumber(km, locale, { maximumFractionDigits: 1 })} km`;
-    }
-    return `${formatNumber(Math.round(meters), locale)} m`;
+    const miles = meters / METERS_PER_MILE;
+    return `${formatNumber(miles, locale, {
+        maximumFractionDigits: miles >= 10 ? 0 : 1,
+    })} mi`;
 };

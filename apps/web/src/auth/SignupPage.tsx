@@ -65,6 +65,9 @@ const signupErrorMessage = (
 export const SignupPage = () => {
     const auth = useAuth();
     const { t } = useLocale();
+    useEffect(() => {
+        document.title = `${t('route.signup')} · ${t('app.title')}`;
+    }, [t]);
     const [handleLabel, setHandleLabel] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -205,7 +208,7 @@ export const SignupPage = () => {
                         {t('auth.oneMoreStep')}
                     </h1>
                 </section>
-                <div role='status' className='mh-card space-y-4 p-6 sm:p-8'>
+                <div role='status' className='mh-surface space-y-4 p-6 sm:p-8'>
                     <p>
                         {t('auth.accountCreated', {
                             handle: createdAccount.handle,
@@ -259,7 +262,7 @@ export const SignupPage = () => {
                 </p>
             </section>
             <form
-                className='mh-card space-y-4 p-6 sm:p-8'
+                className='mh-surface space-y-4 p-6 sm:p-8'
                 onSubmit={submit}
                 aria-describedby={error ? 'signup-error' : undefined}
             >
@@ -278,7 +281,7 @@ export const SignupPage = () => {
                 ) : null}
 
                 <div>
-                    <label htmlFor='handle-label' className='block font-bold'>
+                    <label htmlFor='handle-label' className='mh-field-label mb-1.5'>
                         {t('auth.chooseHandle')}
                     </label>
                     <div className='relative'>
@@ -320,7 +323,7 @@ export const SignupPage = () => {
                 </div>
 
                 <div>
-                    <label htmlFor='email' className='block font-bold'>
+                    <label htmlFor='email' className='mh-field-label mb-1.5'>
                         {t('auth.email')}
                     </label>
                     <input
@@ -337,7 +340,7 @@ export const SignupPage = () => {
                 </div>
 
                 <div>
-                    <label htmlFor='password' className='block font-bold'>
+                    <label htmlFor='password' className='mh-field-label mb-1.5'>
                         {t('auth.password')}
                     </label>
                     <input
@@ -357,7 +360,7 @@ export const SignupPage = () => {
                 <div>
                     <label
                         htmlFor='password-confirm'
-                        className='block font-bold'
+                        className='mh-field-label mb-1.5'
                     >
                         {t('auth.confirmPassword')}
                     </label>
@@ -392,7 +395,7 @@ export const SignupPage = () => {
                 </div>
 
                 {!inviteToken ? <div>
-                    <label htmlFor='invite-code' className='block font-bold'>
+                    <label htmlFor='invite-code' className='mh-field-label mb-1.5'>
                         {t('auth.inviteCode')}
                     </label>
                     <input
@@ -418,12 +421,12 @@ export const SignupPage = () => {
                         onChange={(event) =>
                             setTermsAccepted(event.target.checked)
                         }
-                        className='mt-1 h-4 w-4 accent-mh-accent'
+                        className='mt-0.5 shrink-0'
                         disabled={isLoading}
                     />
                     <label
                         htmlFor='terms-accepted'
-                        className='text-sm leading-relaxed text-mh-textMuted'
+                        className='text-sm leading-relaxed'
                     >
                         {t('auth.acceptPoliciesPrefix', {
                             version: CURRENT_POLICY_VERSION,
@@ -448,6 +451,8 @@ export const SignupPage = () => {
                     </label>
                 </div>
 
+                <p className='mh-field-hint'>{t('auth.policiesDraft')}</p>
+
                 <div className='flex items-start gap-2'>
                     <input
                         id='eligibility-accepted'
@@ -458,12 +463,12 @@ export const SignupPage = () => {
                         onChange={(event) =>
                             setEligibilityAccepted(event.target.checked)
                         }
-                        className='mt-1 h-4 w-4 accent-mh-accent'
+                        className='mt-0.5 shrink-0'
                         disabled={isLoading}
                     />
                     <label
                         htmlFor='eligibility-accepted'
-                        className='text-sm font-bold leading-relaxed'
+                        className='text-sm leading-relaxed'
                     >
                         {t('auth.age')}
                     </label>

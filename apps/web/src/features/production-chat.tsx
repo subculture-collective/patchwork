@@ -18,6 +18,7 @@ import {
     type ProductionChatMessage,
     type ProductionGroup,
 } from './api-client';
+import { PageHeader } from '../components/PageHeader';
 
 interface ScopeOption {
     key: string;
@@ -215,11 +216,13 @@ export const ProductionChat = ({ currentUserDid }: { currentUserDid: string }) =
     };
 
     return <section aria-labelledby='production-chat-heading' className='space-y-5'>
-        <header className='mh-route-header'>
-            <h1 id='production-chat-heading' className='mh-route-title'>{t('chat.heading')}</h1>
-            <p className='mt-2 text-mh-textMuted'>{t('chat.description')}</p>
+        <PageHeader
+            title={t('chat.heading')}
+            titleId='production-chat-heading'
+            description={t('chat.description')}
+        >
             <p className='mh-banner mh-banner--info mt-3'>{t('chat.trust')}</p>
-        </header>
+        </PageHeader>
         {!online && <p role='alert' className='mh-banner mh-banner--warning'>{t('chat.offline')}</p>}
         <div role='status' aria-live='polite'>{busy ? t('chat.loading') : status}</div>
         {error && <p role='alert' className='mh-banner mh-banner--danger'>{error}</p>}
@@ -237,7 +240,7 @@ export const ProductionChat = ({ currentUserDid }: { currentUserDid: string }) =
             </div>
         ))}
 
-        <section className='mh-card grid gap-3 p-4' aria-labelledby='new-chat-heading'>
+        <section className='mh-surface grid gap-3 p-4' aria-labelledby='new-chat-heading'>
             <h2 id='new-chat-heading' className='font-heading text-xl font-bold'>{t('chat.newConversation')}</h2>
             <label className='grid gap-1 font-bold'>{t('chat.scope')}
                 <select className='mh-input px-3 py-2' value={scopeKey} onChange={(event) => setScopeKey(event.target.value)} disabled={busy}>
@@ -250,7 +253,7 @@ export const ProductionChat = ({ currentUserDid }: { currentUserDid: string }) =
         </section>
 
         <div className='grid gap-5 lg:grid-cols-[minmax(15rem,1fr)_minmax(0,2fr)]'>
-            <nav className='mh-card p-4' aria-labelledby='conversation-list-heading'>
+            <nav className='mh-surface p-4' aria-labelledby='conversation-list-heading'>
                 <div className='flex flex-wrap items-center justify-between gap-2'>
                     <h2 id='conversation-list-heading' className='font-heading text-xl font-bold'>{t('chat.conversations')}</h2>
                     <button type='button' className='mh-button mh-button--secondary mh-button--sm' onClick={() => void loadWorkspace()} disabled={busy}>{t('chat.refresh')}</button>
@@ -267,7 +270,7 @@ export const ProductionChat = ({ currentUserDid }: { currentUserDid: string }) =
                     </li>)}</ul>}
             </nav>
 
-            <section className='mh-card space-y-4 p-4' aria-labelledby='messages-heading'>
+            <section className='mh-surface space-y-4 p-4' aria-labelledby='messages-heading'>
                 <h2 id='messages-heading' className='font-heading text-xl font-bold'>{conversations.find((conversation) => conversation.id === selectedId)?.title ?? t('chat.messages')}</h2>
                 {!selectedId ? <p>{t('chat.chooseConversation')}</p> : <>
                     {nextCursor !== null && <button type='button' className='mh-button mh-button--secondary mh-button--md' disabled={busy} onClick={() => void loadMessages(selectedId, nextCursor)}>{t('chat.older')}</button>}

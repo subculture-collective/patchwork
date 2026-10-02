@@ -2,6 +2,7 @@ import 'leaflet/dist/leaflet.css';
 import { useEffect, useMemo, useRef, useId, useState } from 'react';
 import L from 'leaflet';
 import { leafletLayer } from 'protomaps-leaflet';
+import { basemapTheme } from './basemap-theme';
 import type { MapAidCard } from '../../map-ux.js';
 import {
     clusterExpansionZoom,
@@ -179,8 +180,7 @@ export const InteractiveMap = ({
         container.addEventListener('keydown', selectKeyboardPoint);
         const layer = leafletLayer({
             url: tileUrl,
-            flavor: 'light',
-            lang: 'en',
+            ...basemapTheme('en'),
             maxDataZoom: 10,
         });
         layer.on('tileerror', (event: unknown) => {

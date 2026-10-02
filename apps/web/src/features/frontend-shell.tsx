@@ -35,7 +35,7 @@ import {
 } from '../chat-ux';
 import { ButtonLink } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
-import { Panel } from '../components/Panel';
+import { PageHeader } from '../components/PageHeader';
 import { Banner } from '../components/Banner';
 import { AppShell } from '../app/AppShell';
 import {
@@ -62,8 +62,9 @@ import { useAuth } from '../auth/AuthProvider';
 import {
     type AppRoute,
     authenticatedRoutes,
-    deferredFixtureRoutes,
-        readCurrentRoute,
+    gateCopyKeys,
+    isKnownPath,
+    readCurrentRoute,
     resolveNavRoutes,
     routeLabelKeys,
 } from '../app/routes';
@@ -127,6 +128,7 @@ import {
     LegacyFixtureVolunteerRoute,
     VolunteerRoute,
 } from '../routes/volunteer';
+import { Surface } from '../components/Surface';
 
 interface FrontendShellProps {
     appTitle: string;
@@ -248,10 +250,17 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
 
     const [aidAggregates, setAidAggregates] = useState<DiscoveryMapAggregates>();
     const currentUserDid = auth.session?.did ?? '';
+    const readNotFound = () =>
+        typeof window !== 'undefined' &&
+        !isKnownPath(window.location.pathname);
+    const [isNotFound, setIsNotFound] = useState(readNotFound);
 
     useEffect(() => {
-        document.title = `${t(routeLabelKeys[currentRoute])} · ${appTitle}`;
-    }, [appTitle, currentRoute, locale, t]);
+        const label = isNotFound
+            ? t('runtime.notFoundTitle')
+            : t(routeLabelKeys[currentRoute]);
+        document.title = `${label} · ${appTitle}`;
+    }, [appTitle, currentRoute, isNotFound, locale, t]);
 
     useEffect(() => {
         if (!auth.session || webDataMode === 'fixture') return;
@@ -352,6 +361,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
 
         const handlePopState = () => {
             setCurrentRoute(readCurrentRoute());
+            setIsNotFound(readNotFound());
             setHistoryVersion((version) => version + 1);
             const page = readPaginationPageFromUrl();
             setAidPage(page);
@@ -369,7 +379,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
     }, []);
 
     useEffect(() => {
-        if (typeof window === 'undefined') {
+        if (typeof window === 'undefined' || isNotFound) {
             return;
         }
 
@@ -390,7 +400,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
             else window.history.pushState({}, '', nextUrl);
         }
         initialUrlSync.current = false;
-    }, [aidPage, currentRoute, directoryPage, discoveryQueryString]);
+    }, [aidPage, currentRoute, directoryPage, discoveryQueryString, isNotFound]);
 
     useEffect(() => {
         if ((currentRoute !== '/map' && currentRoute !== '/feed') || (currentRoute === '/map' && discoveryState.nearbyIntent !== 'requests')) {
@@ -514,7 +524,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                 }
 
                 setAidDataOrigin('unavailable');
-                setAidErrorMessage(t('common.requestFailed'));
+                setAidErrorMessage(t('common.loadFailed'));
             })
             .finally(() => {
                 if (!controller.signal.aborted) {
@@ -555,7 +565,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
                 }
 
                 setDirectoryDataOrigin('unavailable');
-                setDirectoryErrorMessage(t('common.requestFailed'));
+                setDirectoryErrorMessage(t('common.loadFailed'));
             })
             .finally(() => {
                 if (!controller.signal.aborted) {
@@ -578,6 +588,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
             }
         }
 
+        setIsNotFound(false);
         setCurrentRoute(route);
         ariaLive.routeChange(t(routeLabelKeys[route]));
     };
@@ -744,49 +755,79 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
     };
 
     const requiresAuthentication = authenticatedRoutes.has(currentRoute);
-    const isDeferredFixtureRoute =
-        webDataMode !== 'fixture' && deferredFixtureRoutes.has(currentRoute);
     const navRoutes = resolveNavRoutes(webDataMode, auth.session ?? undefined);
 
     const renderContent = (): ReactNode => {
-        if (isDeferredFixtureRoute) {
+        if (isNotFound) {
             return (
-                <Panel title={t('runtime.deferred')}>
-                    <p>{t('runtime.deferredHelp')}</p>
-                </Panel>
+                <>
+                    <PageHeader
+                        title={t('runtime.notFoundTitle')}
+                        description={t('runtime.notFoundHelp')}
+                    />
+                    <div className='flex flex-wrap gap-2'>
+                        <ButtonLink
+                            href='/'
+                            onClick={(event) => handleRouteClick(event, '/')}
+                        >
+                            {t('runtime.notFoundHome')}
+                        </ButtonLink>
+                        <ButtonLink
+                            href='/map'
+                            variant='secondary'
+                            onClick={(event) => handleRouteClick(event, '/map')}
+                        >
+                            {t('runtime.notFoundMap')}
+                        </ButtonLink>
+                    </div>
+                </>
             );
         }
         if (requiresAuthentication && !auth.session) {
+            const gateKey = gateCopyKeys[currentRoute];
             return (
-                <EmptyState
-                    region
-                    title={t('runtime.signInRequired')}
-                    actions={
-                        <ButtonLink
-                            href={`/login?returnTo=${encodeURIComponent(currentRoute)}`}
-                        >
-                            {t('runtime.signInContinue')}
-                        </ButtonLink>
-                    }
-                >
-                    <p>{t('runtime.signInHelp')}</p>
-                </EmptyState>
+                <>
+                    <PageHeader
+                        title={
+                            gateKey
+                                ? t(`runtime.gate.${gateKey}.title`)
+                                : t(routeLabelKeys[currentRoute])
+                        }
+                    />
+                    <EmptyState
+                        region
+                        title={t('runtime.signInRequired')}
+                        actions={
+                            <ButtonLink
+                                href={`/login?returnTo=${encodeURIComponent(currentRoute)}`}
+                            >
+                                {t('runtime.signInContinue')}
+                            </ButtonLink>
+                        }
+                    >
+                        <p>
+                            {gateKey
+                                ? t(`runtime.gate.${gateKey}.help`)
+                                : t('runtime.signInHelp')}
+                        </p>
+                    </EmptyState>
+                </>
             );
         }
         if (auth.session && webDataMode !== 'fixture' && onboardingError) {
             return (
-                <Panel title={t('runtime.onboardingUnavailable')}>
+                <Surface title={t('runtime.onboardingUnavailable')}>
                     <p role='alert'>
                         {t('runtime.onboardingError', { error: onboardingError })}
                     </p>
-                </Panel>
+                </Surface>
             );
         }
         if (auth.session && webDataMode !== 'fixture' && consentRequired === undefined) {
             return (
-                <Panel title={t('runtime.checkingPolicies')}>
+                <Surface title={t('runtime.checkingPolicies')}>
                     <p role='status'>{t('runtime.loadingConsent')}</p>
-                </Panel>
+                </Surface>
             );
         }
         if (auth.session && webDataMode !== 'fixture' && consentRequired) {
@@ -801,12 +842,12 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         }
         if (maintenanceStatus?.active && currentRoute === '/posting') {
             return (
-                <Panel title={t('runtime.paused')}>
+                <Surface title={t('runtime.paused')}>
                     <p role='alert'>{maintenanceStatus.publicMessage}</p>
                     <p className='mt-2 text-sm text-mh-textMuted'>
                         {t('runtime.pausedHelp')}
                     </p>
-                </Panel>
+                </Surface>
             );
         }
         switch (currentRoute) {
@@ -1075,6 +1116,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         <AppShell
             appTitle={appTitle}
             currentRoute={currentRoute}
+            isNotFound={isNotFound}
             navRoutes={navRoutes}
             auth={{
                 status: auth.status,

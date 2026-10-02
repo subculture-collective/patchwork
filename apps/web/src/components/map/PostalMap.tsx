@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import type { FeatureCollection, Geometry } from 'geojson';
 import { leafletLayer } from 'protomaps-leaflet';
+import { basemapTheme } from './basemap-theme';
 import { lookupPostalArea } from '@patchwork/at-lexicons';
 import type { DiscoveryMapAggregates } from '@patchwork/shared';
 import { useLocale } from '../../i18n';
@@ -110,8 +111,7 @@ export function PostalMap(props: Props) {
         map.createPane('postalLabels').style.zIndex = '450';
         leafletLayer({
             url: resolveMapTileUrl(import.meta.env, import.meta.env.PROD),
-            flavor: 'light',
-            lang: 'en',
+            ...basemapTheme('en'),
             maxDataZoom: 10,
         })
             .on('tileerror', () =>

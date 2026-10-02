@@ -384,22 +384,17 @@ describe('formatting utilities - formatPercent', () => {
 });
 
 describe('formatting utilities - formatDistance', () => {
-    it('formats meters below 1000', () => {
-        const result = formatDistance(500, 'en');
-        expect(result).toContain('500');
-        expect(result).toContain('m');
+    it('formats short distances in tenths of a mile', () => {
+        expect(formatDistance(500, 'en')).toBe('0.3 mi');
+        expect(formatDistance(5000, 'en')).toBe('3.1 mi');
     });
 
-    it('formats kilometers above 1000', () => {
-        const result = formatDistance(2500, 'en');
-        expect(result).toContain('2.5');
-        expect(result).toContain('km');
+    it('rounds distances of ten miles or more', () => {
+        expect(formatDistance(20000, 'en')).toBe('12 mi');
     });
 
     it('formats distance in Spanish locale', () => {
-        const result = formatDistance(2500, 'es');
-        expect(result).toContain('2,5');
-        expect(result).toContain('km');
+        expect(formatDistance(5000, 'es')).toBe('3,1 mi');
     });
 });
 

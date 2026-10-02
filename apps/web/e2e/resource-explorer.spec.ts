@@ -24,7 +24,7 @@ test('default resource map has keyboard-accessible pins, visit information, and 
     await expect(detail.getByText(resource.exactPublicAddress.streetAddress, {exact: true})).toHaveCount(1);
     await page.keyboard.press('Escape'); await expect(detail).not.toBeVisible();
     await expect(marker).toBeFocused();
-    await expect(page.locator('.pw-explorer__result-meta')).toContainText('1.2 km');
+    await expect(page.locator('.pw-explorer__result-meta')).toContainText('0.7 mi');
     const violations = (await new AxeBuilder({page}).analyze()).violations;
     expect(violations).toEqual([]);
 });

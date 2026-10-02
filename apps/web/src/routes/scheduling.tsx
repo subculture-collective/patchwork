@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '../components/Button';
-import { Card } from '../components/Card';
 import { Input } from '../components/Input';
-import { Panel } from '../components/Panel';
 import {
     type CoordinationConnection,
     type CoordinationWindow,
@@ -14,6 +12,8 @@ import {
 import { useLocale } from '../i18n';
 import { accountLabel } from '../features/identity/AccountName';
 import { useHandles } from '../features/identity/useHandles';
+import { Surface } from '../components/Surface';
+import { PageHeader } from '../components/PageHeader';
 
 const localDateTimeWithOffset = (value: string): string => {
     const date = new Date(value);
@@ -94,11 +94,10 @@ export const CoordinationSchedulingRoute = ({ did }: { did: string }) => {
 
     return (
         <section className='space-y-6'>
-            <header className='mh-route-header'>
-                <h1 className='mh-route-title'>{t('scheduling.heading')}</h1>
-                <p className='mt-2 text-sm text-mh-textMuted'>
-                    {t('scheduling.description')}
-                </p>
+            <PageHeader
+                title={t('scheduling.heading')}
+                description={t('scheduling.description')}
+            >
                 <p
                     role={
                         status.startsWith(String(t('common.error')))
@@ -109,8 +108,8 @@ export const CoordinationSchedulingRoute = ({ did }: { did: string }) => {
                 >
                     {status}
                 </p>
-            </header>
-            <Panel title={String(t('scheduling.proposeHeading'))}>
+            </PageHeader>
+            <Surface title={String(t('scheduling.proposeHeading'))}>
                 {connections.length === 0 ? (
                     <p>{t('scheduling.empty')}</p>
                 ) : (
@@ -191,12 +190,12 @@ export const CoordinationSchedulingRoute = ({ did }: { did: string }) => {
                         </Button>
                     </form>
                 )}
-            </Panel>
-            <Panel title={String(t('scheduling.currentHeading'))}>
+            </Surface>
+            <Surface title={String(t('scheduling.currentHeading'))}>
                 {!current ? (
                     <p>{t('scheduling.noProposal')}</p>
                 ) : (
-                    <Card
+                    <Surface as='article' tone='quiet'
                         title={String(t(`scheduling.status.${current.status}`))}
                     >
                         <p>
@@ -260,9 +259,9 @@ export const CoordinationSchedulingRoute = ({ did }: { did: string }) => {
                                 {t('scheduling.cancel')}
                             </Button>
                         ) : null}
-                    </Card>
+                    </Surface>
                 )}
-            </Panel>
+            </Surface>
         </section>
     );
 };

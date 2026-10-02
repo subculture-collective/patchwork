@@ -24,7 +24,7 @@ export function DiscoveryControls({
     resourceMode?: boolean;
     resourceFilters?: boolean;
 }) {
-    const { t } = useLocale();
+    const { t, fmt } = useLocale();
     const location = useDiscoveryLocation();
     const chips = buildDiscoveryFilterChipModel(state);
     const [search, setSearch] = useState(state.text ?? '');
@@ -178,7 +178,7 @@ export function DiscoveryControls({
                             value={state.radiusMeters ?? 20000}
                             onChange={event => onPatch({ radiusMeters: Number(event.target.value) })}>
                             {[...new Set([5000, 10000, 20000, 50000, 100000, 250000, state.radiusMeters ?? 20000])].sort((a,b)=>a-b)
-                                .map(radius => <option key={radius} value={radius}>{radius / 1000} km</option>)}
+                                .map(radius => <option key={radius} value={radius}>{fmt.distance(radius)}</option>)}
                         </select>
                     </div>}
                     <p className='text-sm text-mh-textMuted sm:col-span-2'>{t(state.resourceProgram ? 'resources.programHelp' : 'resources.searchHelp')}</p>
@@ -220,7 +220,7 @@ export function DiscoveryControls({
                     {location.status === 'requesting' ?
                         t('discovery.locationRequesting')
                     : state.postalCode ?
-                        `ZIP ${state.postalCode}${resourceMode ? ` · ${(state.radiusMeters ?? 20000) / 1000} km` : ''}`
+                        `ZIP ${state.postalCode}${resourceMode ? ` · ${fmt.distance(state.radiusMeters ?? 20000)}` : ''}`
                     :   (state.areaLabel ??
                         t(
                             state.center ?

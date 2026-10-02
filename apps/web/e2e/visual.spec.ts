@@ -3,7 +3,8 @@ import { expect, test, type Page } from '@playwright/test';
 /**
  * Opt-in visual baselines for the redesigned surfaces. Run with
  * PATCHWORK_VISUAL=1 (add --update-snapshots after an intended change).
- * Web fonts are blocked and data is mocked so screenshots are stable.
+ * Fonts ship with the app and data is mocked, so screenshots are stable and
+ * show the real typefaces.
  */
 test.skip(!process.env['PATCHWORK_VISUAL'], 'Set PATCHWORK_VISUAL=1 to run visual baselines.');
 
@@ -15,8 +16,6 @@ const requests = [
 ] as const;
 
 const mockApi = async (page: Page) => {
-    await page.route('https://fonts.googleapis.com/**', (route) => route.abort());
-    await page.route('https://fonts.gstatic.com/**', (route) => route.abort());
     await page.route('**/api/**', async (route) => {
         const path = new URL(route.request().url()).pathname.replace(/^\/api/, '');
         if (path === '/query/map' || path === '/query/feed') {
@@ -77,6 +76,7 @@ for (const [width, label] of [[390, 'phone'], [1280, 'desktop']] as const) {
             await page.clock.setFixedTime(new Date('2026-09-23T12:00:00.000Z'));
             await mockApi(page);
             await page.goto(path, { waitUntil: 'networkidle' });
+            await page.evaluate(() => document.fonts.ready);
             await expect(page).toHaveScreenshot(`${name}-${label}.png`, {
                 fullPage: true,
                 animations: 'disabled',

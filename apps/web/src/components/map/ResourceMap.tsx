@@ -2,6 +2,7 @@ import 'leaflet/dist/leaflet.css';
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { leafletLayer } from 'protomaps-leaflet';
+import { basemapTheme } from './basemap-theme';
 import type { ResourceMapCell } from '@patchwork/shared';
 import type { DiscoveryFilterState } from '../../discovery-filters';
 import { fetchResourceMapViaApi } from '../../features/api-client';
@@ -41,7 +42,7 @@ export function ResourceMap({ state, selectedUri, onSelect, onSearchArea, retry 
         const center = initialState.current.center ?? { lat: 41.885, lng: -87.623 };
         map.setView([center.lat, center.lng], 11);
         L.control.zoom({ position: 'bottomright' }).addTo(map);
-        const layer = leafletLayer({ url: resolveMapTileUrl(import.meta.env, import.meta.env.PROD), flavor: 'light', lang: locale, maxDataZoom: 10 });
+        const layer = leafletLayer({ url: resolveMapTileUrl(import.meta.env, import.meta.env.PROD), ...basemapTheme(locale), maxDataZoom: 10 });
         layer.on('tileerror', () => setTileError(true));
         layer.addTo(map);
         const refresh = () => setView(v => v + 1);

@@ -7,10 +7,8 @@ import {
 } from 'react';
 import { StatusMessage } from '../components/StatusMessage';
 import { Badge } from '../components/Badge';
-import { Button } from '../components/Button';
-import { Card } from '../components/Card';
+import { Button, ButtonLink } from '../components/Button';
 import { Input } from '../components/Input';
-import { Panel } from '../components/Panel';
 import {
     type ExactAddressRequest,
     type PrivateAttachment,
@@ -42,6 +40,8 @@ import {
     StewardshipScopePicker,
     type StewardshipScope,
 } from '../features/organizations/StewardshipScopePicker';
+import { Surface } from '../components/Surface';
+import { PageHeader } from '../components/PageHeader';
 
 export const VerificationRoute = ({ did }: { did: string }) => {
     const { t, fmt } = useLocale();
@@ -115,14 +115,22 @@ export const VerificationRoute = ({ did }: { did: string }) => {
 
     if (!did) {
         return (
-            <Panel title={t('verification.signIn')}>
-                <p className='text-sm text-mh-textMuted'>
-                    {t('verification.signInHelp')}
-                </p>
-                <a className='mh-text-link mt-3 inline-block' href='/login'>
-                    {t('verification.signInAction')}
-                </a>
-            </Panel>
+            <section className='space-y-6'>
+                <PageHeader
+                    title={t('verification.heading')}
+                />
+                <Surface title={t('verification.signIn')}>
+                    <p className='text-sm text-mh-textMuted'>
+                        {t('verification.signInHelp')}
+                    </p>
+                    <ButtonLink
+                        className='mt-3'
+                        href='/login?returnTo=%2Fverification'
+                    >
+                        {t('verification.signInAction')}
+                    </ButtonLink>
+                </Surface>
+            </section>
         );
     }
 
@@ -339,15 +347,14 @@ export const VerificationRoute = ({ did }: { did: string }) => {
 
     return (
         <section className='space-y-6'>
-            <header className='mh-route-header'>
-                <h1 className='mh-route-title'>{t('verification.heading')}</h1>
-                <p className='mt-2 text-sm text-mh-textMuted'>
-                    {t('verification.description')}
-                </p>
+            <PageHeader
+                title={t('verification.heading')}
+                description={t('verification.description')}
+            >
                 <StatusMessage message={status} className='mt-3' />
-            </header>
+            </PageHeader>
 
-            <Panel title={t('verification.apply')}>
+            <Surface title={t('verification.apply')}>
                 <form className='space-y-3' onSubmit={submitApplication}>
                     <label className='block text-sm font-bold'>
                         {t('verification.subject')}
@@ -408,7 +415,7 @@ export const VerificationRoute = ({ did }: { did: string }) => {
                             }
                         />
                     </label>
-                    <Card title={t('verification.privateFile')}>
+                    <Surface as='article' tone='quiet' title={t('verification.privateFile')}>
                         <p className='mb-2 text-xs text-mh-textMuted'>
                             {t('verification.fileHelp')}
                         </p>
@@ -505,7 +512,7 @@ export const VerificationRoute = ({ did }: { did: string }) => {
                                 {t('verification.noFiles')}
                             </p>
                         )}
-                    </Card>
+                    </Surface>
                     <label className='block text-sm font-bold'>
                         {t('verification.cleanFile')}
                         <select
@@ -545,9 +552,9 @@ export const VerificationRoute = ({ did }: { did: string }) => {
                     </label>
                     <Button type='submit'>{t('verification.submit')}</Button>
                 </form>
-            </Panel>
+            </Surface>
 
-            <Panel title={t('verification.status')}>
+            <Surface title={t('verification.status')}>
                 {workspace?.applications.length ? (
                     <ul className='space-y-3'>
                         {workspace.applications.map((application) => (
@@ -597,10 +604,10 @@ export const VerificationRoute = ({ did }: { did: string }) => {
                         {t('verification.noApplications')}
                     </p>
                 )}
-            </Panel>
+            </Surface>
 
             {appealable.length ? (
-                <Panel title={t('verification.appeal')}>
+                <Surface title={t('verification.appeal')}>
                     <form className='space-y-3' onSubmit={submitAppeal}>
                         <label className='block text-sm font-bold'>
                             {t('verification.application', { id: '' })}
@@ -641,10 +648,10 @@ export const VerificationRoute = ({ did }: { did: string }) => {
                             {t('verification.submitAppeal')}
                         </Button>
                     </form>
-                </Panel>
+                </Surface>
             ) : null}
 
-            <Panel title={t('verification.exactAddress')}>
+            <Surface title={t('verification.exactAddress')}>
                 <p className='mb-3 text-sm text-mh-textMuted'>
                     {t('verification.exactHelp')}
                 </p>
@@ -721,10 +728,10 @@ export const VerificationRoute = ({ did }: { did: string }) => {
                         ))}
                     </ul>
                 ) : null}
-            </Panel>
+            </Surface>
 
             {review || exactReview ? (
-                <Panel title={t('verification.moderator')}>
+                <Surface title={t('verification.moderator')}>
                     <p className='mb-3 text-sm text-mh-textMuted'>
                         {t('verification.moderatorHelp')}
                     </p>
@@ -741,7 +748,7 @@ export const VerificationRoute = ({ did }: { did: string }) => {
                     </label>
                     <div className='mt-4 space-y-3'>
                         {review?.applications.map((application) => (
-                            <Card
+                            <Surface as='article' tone='quiet'
                                 key={application.id}
                                 title={`${application.subjectType} verification`}
                             >
@@ -911,10 +918,10 @@ export const VerificationRoute = ({ did }: { did: string }) => {
                                         </>
                                     )}
                                 </div>
-                            </Card>
+                            </Surface>
                         ))}
                         {review?.appeals.map((appeal) => (
-                            <Card
+                            <Surface as='article' tone='quiet'
                                 key={appeal.id}
                                 title={t('verification.appealReview')}
                             >
@@ -936,10 +943,10 @@ export const VerificationRoute = ({ did }: { did: string }) => {
                                         {t('verification.denyAppeal')}
                                     </Button>
                                 </div>
-                            </Card>
+                            </Surface>
                         ))}
                         {exactReview?.map((request) => (
-                            <Card
+                            <Surface as='article' tone='quiet'
                                 key={request.id}
                                 title={t('verification.addressReview')}
                             >
@@ -972,10 +979,10 @@ export const VerificationRoute = ({ did }: { did: string }) => {
                                         {t('verification.reject')}
                                     </Button>
                                 </div>
-                            </Card>
+                            </Surface>
                         ))}
                     </div>
-                </Panel>
+                </Surface>
             ) : null}
         </section>
     );

@@ -17,7 +17,6 @@ export const appRoutes = [
     '/inbox',
     '/notifications',
     '/scheduling',
-    '/feedback',
     '/groups',
     '/legal/terms',
     '/legal/privacy',
@@ -43,7 +42,6 @@ export const routeLabelKeys: Readonly<Record<AppRoute, string>> = {
     '/inbox': 'route.inbox',
     '/notifications': 'route.notifications',
     '/scheduling': 'route.scheduling',
-    '/feedback': 'route.feedback',
     '/groups': 'route.groups',
     '/legal/terms': 'route.terms',
     '/legal/privacy': 'route.privacy',
@@ -72,11 +70,6 @@ export const authenticatedRoutes: ReadonlySet<AppRoute> = new Set<AppRoute>([
     '/moderation',
     '/groups',
     '/settings',
-]);
-
-/** Routes without an API-backed implementation; only the fixture demo renders them. */
-export const deferredFixtureRoutes: ReadonlySet<AppRoute> = new Set<AppRoute>([
-    '/feedback',
 ]);
 
 export const primaryRoutes: readonly AppRoute[] = [
@@ -153,8 +146,31 @@ export const resolveNavRoutes = (
     };
 };
 
+const routeAliases: Readonly<Record<string, AppRoute>> = {
+    '/nearby': '/map',
+    '/activity': '/inbox',
+};
+
 export const normalizeRoute = (pathname: string): AppRoute =>
-    pathname === '/nearby' ? '/map' : pathname === '/activity' ? '/inbox' : appRoutes.find((route) => route === pathname) ?? '/';
+    routeAliases[pathname] ?? appRoutes.find((route) => route === pathname) ?? '/';
+
+/** False for a path the shell has no page for; the shell then shows "not found". */
+export const isKnownPath = (pathname: string): boolean =>
+    pathname in routeAliases ||
+    (appRoutes as readonly string[]).includes(pathname);
+
+/** What signing in unlocks on each gated route (`runtime.gate.<key>`). */
+export const gateCopyKeys: Readonly<Partial<Record<AppRoute, string>>> = {
+    '/posting': 'posting',
+    '/requests/mine': 'myRequests',
+    '/chat': 'chat',
+    '/inbox': 'inbox',
+    '/scheduling': 'scheduling',
+    '/notifications': 'notifications',
+    '/moderation': 'moderation',
+    '/groups': 'groups',
+    '/settings': 'settings',
+};
 
 export const readCurrentRoute = (): AppRoute => {
     if (typeof window === 'undefined') {

@@ -55,7 +55,7 @@ export const DiscoveryToolbar = ({
     onClearExtra,
     hideAreaSummary = false,
 }: DiscoveryToolbarProps) => {
-    const { t } = useLocale();
+    const { t, fmt } = useLocale();
     const { access, request } = useApproximateLocation(state, onPatch);
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const filtersButtonRef = useRef<HTMLButtonElement>(null);
@@ -107,8 +107,8 @@ export const DiscoveryToolbar = ({
         onClearExtra?.();
     };
 
-    const areaKm = state.radiusMeters
-        ? Math.round(state.radiusMeters / 1000)
+    const areaDistance = state.radiusMeters
+        ? fmt.distance(state.radiusMeters)
         : undefined;
     const hasSheetFilters = mode === 'requests' || Boolean(extraFilters);
 
@@ -143,12 +143,12 @@ export const DiscoveryToolbar = ({
                     <p className='min-w-0 flex-1'>
                         {hideAreaSummary ? null : (
                         <strong>
-                            {areaKm
+                            {areaDistance
                                 ? t('discovery.areaSummary', {
                                       area:
                                           state.areaLabel ??
                                           t('discovery.areaUnknown'),
-                                      km: areaKm,
+                                      distance: areaDistance,
                                   })
                                 : (state.areaLabel ??
                                   t('discovery.areaUnknown'))}

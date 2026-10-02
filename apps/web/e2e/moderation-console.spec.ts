@@ -203,7 +203,7 @@ test('moderators can quarantine, appeal, audit, and shut down submissions withou
     await expect(queueItem).toBeVisible();
     await expect(page.getByText('resident@example.org')).toHaveCount(0);
     await expect(page.getByText(/two business days/)).toBeVisible();
-    await expect(page.getByText(/operationally NO-GO/)).toBeVisible();
+    await expect(page.getByText(/does not provide emergency response/)).toBeVisible();
 
     await queueItem.click();
     await page.getByRole('button', { name: 'Quarantine now' }).click();
