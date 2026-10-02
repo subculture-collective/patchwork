@@ -329,8 +329,18 @@ available engineering leads.
 
 **Mitigation**:
 
-- If the firehose connection dropped: restart the indexer (it resumes from
-  the last checkpoint).
+- Jetstream v2 replay reconnects after errors or an unexpected stream end.
+  Retry delays increase from 1 second to a maximum of 30 seconds and reset
+  after acknowledged progress. Replay resumes after the last successfully
+  acknowledged cursor; failed event handlers do not advance that cursor.
+- If the firehose connection dropped: verify relay and database connectivity,
+  then check `/ingestion/metrics` for an advancing source cursor and falling
+  source lag. If replay remains stuck, restart only the indexer; it resumes
+  from the saved checkpoint.
+- A connected source or recently saved checkpoint does not prove catch-up.
+  Check source lag and `/health/ready`. The API may keep refusing startup
+  until projection lag is within its configured freshness limit. Preserve
+  that limit and saved cursors while the indexer catches up.
 - If Postgres is unreachable: check database health and connectivity.
 - If the checkpoint store is corrupted: restore from the last known good
   checkpoint (see disaster recovery runbook).
