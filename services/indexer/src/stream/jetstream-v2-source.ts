@@ -1,3 +1,4 @@
+import { setTimeout as delay } from 'node:timers/promises';
 import {
     Jetstream,
     type CollectionFilter,
@@ -113,9 +114,7 @@ export class JetstreamV2EventSource implements AtEventSource {
         const client =
             this.options.createClient?.(clientOptions) ??
             new Jetstream(clientOptions);
-        this.metrics.connected = true;
-        this.metrics.connectionsTotal = 1;
-        this.task = this.consume(client, onEvent, onControlCursor).finally(
+        this.task = this.replayWithReconnect(client, onEvent, onControlCursor).finally(
             () => {
                 this.metrics.connected = false;
             },
@@ -152,6 +151,49 @@ export class JetstreamV2EventSource implements AtEventSource {
 
     getMetrics(): EventSourceMetrics {
         return { ...this.metrics, lagMilliseconds: this.lastEventTimeMs === null ? null : Math.max(0, Date.now() - this.lastEventTimeMs) };
+    }
+
+    private async replayWithReconnect(
+        client: Pick<Jetstream, 'replay'>,
+        onEvent: AtEventHandler,
+        onControlCursor?: AtCursorHandler,
+    ): Promise<void> {
+        const signal = this.abort!.signal;
+        let retryDelayMs = 1_000;
+        while (!signal.aborted) {
+            const priorCursor = this.metrics.lastAcknowledgedCursor;
+            this.metrics.connected = true;
+            this.metrics.connectionsTotal += 1;
+            if (this.metrics.connectionsTotal > 1) this.metrics.reconnectsTotal += 1;
+            try {
+                await this.consume(client, onEvent, onControlCursor);
+                if (!signal.aborted) {
+                    console.error('[indexer] Jetstream v2 replay ended unexpectedly; reconnecting.');
+                }
+            } catch (error) {
+                if (signal.aborted) return;
+                // Do not log messages, request URLs, headers, or response bodies.
+                const metadata: { name: string; code?: string } = {
+                    name: error instanceof Error ? error.name : 'UnknownError',
+                };
+                if (typeof error === 'object' && error !== null &&
+                    'code' in error && typeof error.code === 'string') {
+                    metadata.code = error.code;
+                }
+                console.error('[indexer] Jetstream v2 replay stopped unexpectedly.', metadata);
+            } finally {
+                this.metrics.connected = false;
+            }
+            if (signal.aborted) return;
+            if (this.metrics.lastAcknowledgedCursor !== priorCursor) retryDelayMs = 1_000;
+            try {
+                await delay(retryDelayMs, undefined, { signal });
+            } catch (error) {
+                if (signal.aborted) return;
+                throw error;
+            }
+            retryDelayMs = Math.min(retryDelayMs * 2, 30_000);
+        }
     }
 
     private async consume(

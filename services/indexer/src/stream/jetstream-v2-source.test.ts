@@ -1,11 +1,11 @@
 import type { Jetstream, ReplayOpts, TypedEvent } from '@bsky/jetstream';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { JetstreamV2EventSource } from './jetstream-v2-source.js';
 
 const collection = 'app.patchwork.aid.post';
 
 const waitFor = async (predicate: () => boolean): Promise<void> => {
-    const deadline = Date.now() + 1_000;
+    const deadline = Date.now() + 4_000;
     while (!predicate()) {
         if (Date.now() >= deadline) throw new Error('Timed out.');
         await new Promise(resolve => setTimeout(resolve, 5));
@@ -13,6 +13,113 @@ const waitFor = async (predicate: () => boolean): Promise<void> => {
 };
 
 describe('JetstreamV2EventSource', () => {
+    afterEach(() => vi.restoreAllMocks());
+
+    const control = (seq: number): TypedEvent => ({
+        did: 'did:plc:unrelated', seq, time: new Date().toISOString(),
+        kind: 'account', account: { did: 'did:plc:unrelated', active: true },
+    }) as TypedEvent;
+
+    const reconnectSource = (replay: (options?: ReplayOpts) => AsyncGenerator<TypedEvent>) =>
+        new JetstreamV2EventSource({
+            service: 'https://jetstream.us-east.bsky.network',
+            apiKey: 'test-replay-key', collections: [collection],
+            controls: {
+                identity: async () => undefined,
+                account: async () => undefined,
+                sync: async () => undefined,
+            },
+            createClient: () => ({ replay }) as Pick<Jetstream, 'replay'>,
+        });
+
+    it('reconnects after failure from the last acknowledged cursor without skipping a failed handler', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        const cursors: (number | undefined)[] = [];
+        const source = reconnectSource(options => (async function* () {
+            cursors.push(options?.afterSeq);
+            if (cursors.length === 1) { yield control(43); yield control(44); }
+            else yield control(44);
+        })());
+        let fail = true;
+        const acknowledged: number[] = [];
+        await source.start(42, async () => undefined, async cursor => {
+            if (cursor === 44 && fail) { fail = false; throw new Error('DB unavailable'); }
+            acknowledged.push(cursor);
+        });
+        try {
+            await waitFor(() => source.getMetrics().lastAcknowledgedCursor === 44);
+            expect(cursors).toEqual([42, 43]);
+            expect(acknowledged).toEqual([43, 44]);
+            expect(source.getMetrics()).toMatchObject({ connectionsTotal: 2, reconnectsTotal: 1 });
+        } finally { await source.stop(); }
+    });
+
+    it('reconnects when replay ends without an error', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        const cursors: (number | undefined)[] = [];
+        const source = reconnectSource(options => (async function* () {
+            cursors.push(options?.afterSeq);
+            yield control(cursors.length === 1 ? 43 : 44);
+        })());
+        await source.start(42, async () => undefined);
+        try {
+            await waitFor(() => source.getMetrics().lastAcknowledgedCursor === 44);
+            expect(cursors).toEqual([42, 43]);
+        } finally { await source.stop(); }
+    });
+
+    it('recovers from a transport rejection using the saved startup cursor', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        const cursors: (number | undefined)[] = [];
+        const source = reconnectSource(options => (async function* () {
+            cursors.push(options?.afterSeq);
+            if (cursors.length === 1) throw new Error('network unavailable');
+            yield control(43);
+        })());
+        await source.start(42, async () => undefined);
+        try {
+            await waitFor(() => source.getMetrics().lastAcknowledgedCursor === 43);
+            expect(cursors).toEqual([42, 42]);
+        } finally { await source.stop(); }
+    });
+
+    it('aborts active replay on shutdown without logging a failure or reconnecting', async () => {
+        const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        const source = reconnectSource(options => (async function* () {
+            yield control(43);
+            await new Promise<void>((_resolve, reject) => {
+                options!.signal!.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
+            });
+        })());
+        await source.start(42, async () => undefined);
+        await waitFor(() => source.getMetrics().lastAcknowledgedCursor === 43);
+        await source.stop();
+        expect(log).not.toHaveBeenCalled();
+        expect(source.getMetrics()).toMatchObject({ connected: false, connectionsTotal: 1, reconnectsTotal: 0 });
+    });
+
+    it('backs off repeated failures and cancels the pending retry on shutdown', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        const attempts: number[] = [];
+        const source = reconnectSource(() => (async function* () {
+            attempts.push(Date.now());
+            throw new Error('transport unavailable');
+        })());
+        await source.start(42, async () => undefined);
+        try {
+            await waitFor(() => attempts.length === 3);
+            expect(attempts[1]! - attempts[0]!).toBeGreaterThanOrEqual(900);
+            expect(attempts[2]! - attempts[1]!).toBeGreaterThanOrEqual(1_900);
+            expect(source.getMetrics().connected).toBe(false);
+            const stoppedAt = Date.now();
+            await source.stop();
+            expect(Date.now() - stoppedAt).toBeLessThan(500);
+            expect(source.getMetrics()).toMatchObject({ connected: false, lastAcknowledgedCursor: 42 });
+            await new Promise(resolve => setTimeout(resolve, 100));
+            expect(attempts).toHaveLength(3);
+        } finally { await source.stop(); }
+    });
+
     it('replays from v2 seq zero and handles every event kind deliberately', async () => {
         const events = [
             {
