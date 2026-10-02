@@ -34,6 +34,10 @@ export default defineConfig(({ command, mode }) => {
             proxy: apiProxy,
         },
         build: {
+            // The content security policy allows fonts from 'self' only, so a
+            // small font subset must stay a file instead of a data: URI.
+            assetsInlineLimit: (filePath: string) =>
+                filePath.endsWith('.woff2') ? false : undefined,
             // The national ZIP lookup changes independently from application
             // code. Keep it in a stable cacheable chunk so routine UI releases
             // do not force browsers to download the 2020 Census index again.

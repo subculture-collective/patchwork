@@ -213,7 +213,15 @@ test('resource map uses location only after an explicit request and rounds it', 
 test('public home advertises only implemented demonstration capabilities', async ({
     page,
 }) => {
+    const policyViolations: string[] = [];
+    page.on('console', (message) => {
+        if (/Content Security Policy/i.test(message.text())) {
+            policyViolations.push(message.text().slice(0, 200));
+        }
+    });
     await page.goto('/');
+    await page.evaluate(() => document.fonts.ready);
+    expect(policyViolations).toEqual([]);
 
     await expect(page.locator('.mh-preview-strip')).toContainText(
         'Pre-alpha preview',
