@@ -47,7 +47,7 @@ export const InviteManagementPage = () => {
     if (!auth.session) {
         return (
             <main className='mh-login-shell'>
-                <section className='mh-card p-6'>
+                <section className='mh-surface p-6'>
                     <h1 className='text-3xl font-black'>{t('adminInvites.title')}</h1>
                     <p className='mt-3'>{t('adminInvites.signInHelp')}</p>
                     <a
@@ -63,7 +63,7 @@ export const InviteManagementPage = () => {
     if (!auth.session.canManageSignupInvitations) {
         return (
             <main className='mh-login-shell'>
-                <section className='mh-card p-6'>
+                <section className='mh-surface p-6'>
                     <h1 className='text-3xl font-black'>{t('adminInvites.accessRequired')}</h1>
                     <p className='mt-3'>{t('adminInvites.accessHelp')}</p>
                     <a className='mt-5 inline-block font-bold underline' href='/'>
@@ -117,7 +117,7 @@ export const InviteManagementPage = () => {
                         {t('adminInvites.description')}
                     </p>
                 </header>
-                <section className='mh-card p-6' aria-labelledby='create-invite-heading'>
+                <section className='mh-surface p-6' aria-labelledby='create-invite-heading'>
                     <h2 id='create-invite-heading' className='text-2xl font-black'>
                         {t('adminInvites.createHeading')}
                     </h2>
@@ -178,7 +178,7 @@ export const InviteManagementPage = () => {
                         </p>
                     ) : null}
                 </section>
-                <section className='mh-card p-6' aria-labelledby='recent-invites-heading'>
+                <section className='mh-surface p-6' aria-labelledby='recent-invites-heading'>
                     <h2 id='recent-invites-heading' className='text-2xl font-black'>
                         {t('adminInvites.recent')}
                     </h2>

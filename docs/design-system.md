@@ -19,8 +19,9 @@ truth for values is `apps/web/src/styles/tokens.css`. Components live in
 1. **One container per idea.** A section is one surface. Do not nest a
    bordered box inside a title-barred box inside a panel.
 2. **Colour carries meaning.** Pine means act or selected. Mustard marks
-   emphasis. Terracotta is the "ask for help" call to action. Red means
-   danger, destructive actions and errors, and nothing else.
+   emphasis. Terracotta is the "ask for help" call to action, used once per
+   screen; repeated per-card actions are neutral. Red means danger,
+   destructive actions and errors, and nothing else.
 3. **Results before controls.** On discovery pages, the thing people came for
    (requests, places, the map) comes before the filters. Rarely used filters
    collapse.
@@ -50,8 +51,10 @@ introduce raw hex values or one-off shadows.
 | `--mh-accent` | `#12664f` | Pine: primary action, selected state, links |
 | `--mh-accent-2` | `#9ec5ad` | Sage: info badges, quiet highlights |
 | `--mh-accent-3` | `#f2c14e` | Mustard: emphasis, underlines, markers |
+| `--mh-accent-3-soft` | `#f5d77e` | Mustard card fill (home "lend a hand" path) |
 | `--mh-cta` | `#e85d3f` | Terracotta: brand mark and illustration |
 | `--mh-cta-strong` | `#c2462b` | Terracotta fill for the "Ask for help" button (4.9:1 with light text) |
+| `--mh-cta-tint` | `#efd6ca` | Terracotta card fill (home "local service" path) |
 | `--mh-success` | `#287c52` | Success status |
 | `--mh-warning` | `#8a5f00` | Warning text and borders |
 | `--mh-danger` | `#b93b2c` | Errors and destructive actions |
@@ -66,13 +69,20 @@ Text on pine, strong terracotta and red uses `--mh-on-accent` (`#fffdf7`).
 
 | Role | Family | Notes |
 | --- | --- | --- |
-| Display and headings | Fraunces 600–900 | Tight tracking (`-0.03em` to `-0.05em`), line-height ≤ 1.05 |
+| Display and headings | Fraunces 600–900 | Tight tracking (`-0.03em` to `-0.05em`; the 900-weight home headline stops at `-0.04em` so words stay apart), line-height ≤ 1.05 |
 | Body, labels, controls | Public Sans 400/500/700 | 16px minimum for body and inputs, line-height 1.5 |
 | Eyebrows, metadata | JetBrains Mono 400/700 | Uppercase, `0.12em` tracking, one per section at most |
 
 Form labels are Public Sans, small, bold, uppercase and letter-spaced
 (`.mh-field-label`), the original Patchwork label style. Button and chip text
 is sentence case. Mono is used for eyebrows and compact metadata.
+
+The three families ship with the app through `@fontsource-variable/*`
+packages imported in `styles/index.css`. No page load contacts a third-party
+font host, and the Content-Security-Policy allows fonts from `'self'` only.
+
+Distances shown to people are in miles (`fmt.distance`), because Patchwork
+covers US ZIP areas. Stored and transmitted values stay metric.
 
 ### Shape and depth
 
@@ -101,25 +111,30 @@ globally.
 | `ToggleChip`, `ChipGroup` | Multi-select filters (`aria-pressed`): ink-outlined, hard-shadow boxes; selected = mustard fill |
 | `SegmentedControl` | One-of-few choices (radio group) rendered as the same boxes; selected = pine fill |
 | `Field` | Label, hint, error and control wiring for `Input`, `Select`, `Textarea` |
-| `Surface` | The content container. With a title it renders the original panel: panel-toned shell, mustard title bar and an inner grid-paper sheet; without one it is a single outlined card |
-| `PageHeader` | Eyebrow, title, description, actions and status for each route, with the mustard ring ornament at the rule's right end |
+| `Surface` | The content container. With a title it renders the original panel: panel-toned shell, mustard title bar and an inner grid-paper sheet. `tone='plain'` is an outlined card with an inline heading; `tone='quiet'` is the same card inside a panel's sheet (`as='article'` for list items) |
+| `PageHeader` | Eyebrow, title, description, actions and status for each route, with the mustard ring ornament at the rule's right end. Children sit under the description for a page-level notice or status line |
 | `Banner` | Page-level `info`, `success`, `warning` and `danger` messages |
 | `EmptyState` | No results / not signed in, with a next action |
 | `Sheet` | Mobile drawer and dialog for navigation and filters |
 | `Badge` | Status and category labels |
 
-`Panel` and `Card` remain as thin wrappers during migration. New code uses
-`Surface`.
+Every route uses `Surface` and `PageHeader`; the earlier `Panel` and `Card`
+wrappers are gone.
 
 ## 4. Layout
 
 - Content width: `max-w-7xl` with `px-4 sm:px-6 lg:px-10`.
-- App shell: a single header bar with the brand, primary destinations and the
-  account menu. Below 900px, a top bar with a menu button opens a sheet, and a
+- App shell: a pre-alpha notice strip, then a single header bar with the
+  brand, primary destinations and the account menu. Below 900px, a top bar with a menu button opens a sheet, and a
   bottom tab bar gives one-tap access to Home, Map, Requests and Resources.
 - Discovery pages: results and map first. Filters appear as a compact bar
   (search, Latest/Nearby, a "Filters" button with an active-count badge), and
-  the full set opens in a sheet.
+  the full set opens in a sheet. The Map, Feed and Resources bars share one
+  look: panel-toned box, ink outline, patch corners, hard shadow and uppercase
+  field labels. Both Map tabs sit under one `PageHeader` whose action is the
+  resources/requests switch.
+- Map tiles use the paper flavour in `components/map/basemap-theme.ts`, the
+  one place colour values are written out for the canvas renderer.
 - The paper grid texture sits on the page background and inside titled
   panels' sheets and request cards; the panel shell itself is flat.
 
@@ -131,15 +146,19 @@ globally.
 3. Status never relies on colour alone; badges carry text.
 4. Errors use `role="alert"` and are linked to their field with
    `aria-describedby`.
-5. Every route has one `h1`, rendered by `PageHeader`.
+5. Every route has one `h1`, rendered by `PageHeader`. This includes
+   sign-in gates, which keep the page's title and say what signing in
+   unlocks, and the not-found page shown for unknown addresses.
 
 ## 6. Anti-patterns
 
 - Red for selected or neutral states.
 - Nesting a titled panel inside another titled panel.
 - Filters that push results below the fold on a phone.
-- Decorative shapes that overlap text; the header ring sits outside the text
-  column.
+- Decorative shapes that overlap text; the header ring sits in a reserved
+  gutter and is not drawn below 640px.
+- Internal or protocol language in public copy ("deferred", "NO-GO", "PDS",
+  "AT identity", "API sync").
 - Raw hex values or blurred shadows in feature code.
 
 ## 7. Visual baselines
@@ -154,5 +173,5 @@ PATCHWORK_VISUAL=1 npx playwright test e2e/visual.spec.ts                      #
 PATCHWORK_VISUAL=1 npx playwright test e2e/visual.spec.ts --update-snapshots   # after an intended change
 ```
 
-Web fonts are blocked and API data is mocked, so the baselines use fallback
-fonts and fixed content. Snapshots are platform-specific (`-linux.png`).
+Fonts are bundled and API data is mocked, so the baselines show the real
+typefaces with fixed content. Snapshots are platform-specific (`-linux.png`).

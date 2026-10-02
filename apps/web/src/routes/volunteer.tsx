@@ -17,11 +17,9 @@ import {
 } from '../volunteer-onboarding';
 import { StatusMessage } from '../components/StatusMessage';
 import { Badge } from '../components/Badge';
-import { Button } from '../components/Button';
+import { Button, ButtonLink } from '../components/Button';
 import { ToggleChip } from '../components/ToggleChip';
-import { Card } from '../components/Card';
 import { Input } from '../components/Input';
-import { Panel } from '../components/Panel';
 import {
     type AtVolunteerProfileResult,
     type VolunteerDiscoveryProfile,
@@ -44,6 +42,8 @@ import {
     readPaginationPageFromUrl,
     usePaginationFocus,
 } from '../features/shell-shared';
+import { Surface } from '../components/Surface';
+import { PageHeader } from '../components/PageHeader';
 
 const volunteerCapabilityOptions: readonly VolunteerOnboardingDraft['capabilities'][number][] =
     [
@@ -141,14 +141,12 @@ export const LegacyFixtureVolunteerRoute = ({ did }: { did: string }) => {
 
     return (
         <section className='space-y-6'>
-            <header className='mh-route-header'>
-                <h1 className='mh-route-title'>Volunteer onboarding</h1>
-                <p className='mt-2 text-mh-textMuted'>
-                    Tell neighbors what you can help with and when.
-                </p>
-            </header>
+            <PageHeader
+                title='Volunteer onboarding'
+                description='Tell neighbors what you can help with and when.'
+            />
 
-            <Panel title='Volunteer profile draft'>
+            <Surface title='Volunteer profile draft'>
                 <form className='space-y-4' onSubmit={handleSubmit}>
                     <div>
                         <div>
@@ -506,7 +504,7 @@ export const LegacyFixtureVolunteerRoute = ({ did }: { did: string }) => {
 
                     <Button type='submit'>Save volunteer profile</Button>
                 </form>
-            </Panel>
+            </Surface>
         </section>
     );
 };
@@ -716,18 +714,14 @@ export const VolunteerRoute = ({
 
     return (
         <section className='space-y-6'>
-            <header className='mh-route-header'>
-                <h1 className='mh-route-title'>
-                    {t('volunteer.profilesHeading')}
-                </h1>
-                <p className='mt-2 text-sm text-mh-textMuted'>
-                    {t('volunteer.profilesDescription')}
-                </p>
-            </header>
+            <PageHeader
+                title={t('volunteer.profilesHeading')}
+                description={t('volunteer.profilesDescription')}
+            />
 
-            <Panel title={t('volunteer.find')}>
+            <Surface title={t('volunteer.find')}>
                 <form
-                    className='flex flex-wrap gap-2'
+                    className='flex flex-wrap items-end gap-2'
                     onSubmit={(event) => {
                         event.preventDefault();
                         void loadProfiles(1, true);
@@ -745,13 +739,13 @@ export const VolunteerRoute = ({
                     <Button type='submit'>{t('volunteer.search')}</Button>
                 </form>
                 <StatusMessage message={discoveryStatus} className='mt-3' />
-                <p ref={paginationFocus.loadedCountRef} tabIndex={-1} className='mt-2 text-xs text-mh-textMuted' role='status'>
+                <p ref={paginationFocus.loadedCountRef} tabIndex={-1} hidden={volunteerTotal === 0} className='mt-2 text-xs text-mh-textMuted' role='status'>
                     {t('discovery.loadedCount', { loaded: profiles.length, total: volunteerTotal })}
                 </p>
                 <span className='sr-only' role='status' aria-live='polite'>{paginationFocus.announcement}</span>
                 <div className='mt-4 grid gap-3 sm:grid-cols-2'>
                     {profiles.map((profile) => (
-                        <Card key={profile.uri} title={profile.displayName}>
+                        <Surface as='article' tone='quiet' key={profile.uri} title={profile.displayName}>
                             {profile.recordOrigin === 'synthetic' ? (
                                 <Badge tone='info'>
                                     {t('volunteer.synthetic')}
@@ -783,7 +777,7 @@ export const VolunteerRoute = ({
                                         : ''}
                                 </p>
                             ) : null}
-                        </Card>
+                        </Surface>
                     ))}
                 </div>
                 {volunteerHasNextPage ? (
@@ -802,10 +796,10 @@ export const VolunteerRoute = ({
                         {t('discovery.loadMore')}
                     </Button>
                 ) : null}
-            </Panel>
+            </Surface>
 
             {did ? (
-                <Panel
+                <Surface
                     title={
                         owned ? t('volunteer.manage') : t('volunteer.create')
                     }
@@ -1030,7 +1024,7 @@ export const VolunteerRoute = ({
                             />{' '}
                             {t('volunteer.noPermanentAddress')}
                         </label>
-                        <Card title={t('volunteer.privateDetails')}>
+                        <Surface as='article' tone='quiet' title={t('volunteer.privateDetails')}>
                             <div className='grid gap-3 sm:grid-cols-2'>
                                 <label className='text-sm font-bold'>
                                     {t('volunteer.privateEmail')}
@@ -1063,7 +1057,7 @@ export const VolunteerRoute = ({
                                     />
                                 </label>
                             </div>
-                        </Card>
+                        </Surface>
                         <div className='flex flex-wrap items-center gap-2'>
                             <Button type='submit'>
                                 {owned
@@ -1084,11 +1078,17 @@ export const VolunteerRoute = ({
                             ) : null}
                         </div>
                     </form>
-                </Panel>
+                </Surface>
             ) : (
-                <Panel title={t('volunteer.signIn')}>
+                <Surface title={t('volunteer.signIn')}>
                     <p>{t('volunteer.signInHelp')}</p>
-                </Panel>
+                    <ButtonLink
+                        className='mt-3'
+                        href='/login?returnTo=%2Fvolunteer'
+                    >
+                        {t('runtime.signInContinue')}
+                    </ButtonLink>
+                </Surface>
             )}
         </section>
     );

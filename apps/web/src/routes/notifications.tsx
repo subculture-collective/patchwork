@@ -7,9 +7,7 @@ import {
 import { StatusMessage } from '../components/StatusMessage';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
-import { Card } from '../components/Card';
 import { Input } from '../components/Input';
-import { Panel } from '../components/Panel';
 import {
     type NotificationChannelState,
     fetchAccountPreferencesViaApi,
@@ -27,6 +25,8 @@ import {
 } from '../features/api-client';
 import { useLocale } from '../i18n';
 import { type Notification as DurableNotification, type NotificationFilter } from '@patchwork/shared';
+import { Surface } from '../components/Surface';
+import { PageHeader } from '../components/PageHeader';
 
 const applicationServerKey = (value: string): ArrayBuffer => {
     const padding = '='.repeat((4 - (value.length % 4)) % 4);
@@ -280,13 +280,11 @@ export const NotificationCenterRoute = () => {
 
     return (
         <section className='space-y-6'>
-            <header className='mh-route-header'>
-                <h1 className='mh-route-title'>{t('notifications.heading')}</h1>
-                <p className='mt-2 text-sm text-mh-textMuted'>
-                    {t('notifications.description')}
-                </p>
-            </header>
-            <Panel title={String(t('notifications.delivery'))}>
+            <PageHeader
+                title={t('notifications.heading')}
+                description={t('notifications.description')}
+            />
+            <Surface title={String(t('notifications.delivery'))}>
                 <p className='text-sm'>{t('notifications.privacy')}</p>
                 <div className='mt-4 grid gap-4 md:grid-cols-2'>
                     <form className='space-y-2' onSubmit={verifyEmail}>
@@ -354,8 +352,8 @@ export const NotificationCenterRoute = () => {
                         </div>
                     </div>
                 </div>
-            </Panel>
-            <Panel title={String(t('notifications.updates'))}>
+            </Surface>
+            <Surface title={String(t('notifications.updates'))}>
                 <div className='mb-4 flex flex-wrap items-end gap-3'>
                     <label className='text-sm font-bold'>
                         {t('notifications.show')}
@@ -409,7 +407,7 @@ export const NotificationCenterRoute = () => {
                 ) : (
                     <div className='space-y-3'>
                         {notifications.map((notification) => (
-                            <Card
+                            <Surface as='article' tone='quiet'
                                 key={notification.id}
                                 title={notification.title}
                             >
@@ -454,7 +452,7 @@ export const NotificationCenterRoute = () => {
                                         </a>
                                     ) : null}
                                 </div>
-                            </Card>
+                            </Surface>
                         ))}
                     </div>
                 )}
@@ -469,7 +467,7 @@ export const NotificationCenterRoute = () => {
                         </Button>
                     </p>
                 ) : null}
-            </Panel>
+            </Surface>
             <StatusMessage message={status} />
         </section>
     );

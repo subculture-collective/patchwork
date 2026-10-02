@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useAuth } from './AuthProvider.js';
 import { sanitizeReturnTo } from './auth-api.js';
 import { useLocale } from '../i18n';
@@ -34,6 +34,9 @@ export const LoginPage = () => {
     const auth = useAuth();
     const { t } = useLocale();
     const [handle, setHandle] = useState('');
+    useEffect(() => {
+        document.title = `${t('route.login')} · ${t('app.title')}`;
+    }, [t]);
 
     const returnTo = safeReturnTo();
 

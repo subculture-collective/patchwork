@@ -12,13 +12,13 @@ import { buildMapViewModel, closeMapDetailDrawer, openMapDetailDrawer, type MapA
 import { currentExactPublicAddress, buildResourceOverlayViewModel, type ResourceDirectoryCard } from '../resource-directory-ux';
 import { useLocale } from '../i18n';
 import { Badge } from '../components/Badge';
-import { Button } from '../components/Button';
-import { Card } from '../components/Card';
-import { Panel } from '../components/Panel';
+import { Button, ButtonLink } from '../components/Button';
+import { EmptyState } from '../components/EmptyState';
 import { MapDetailSheet } from './map-detail-sheet';
 import { RequestLifecycleActions } from './request-actions';
 import { ResourceActions } from './resource-actions';
 import { usePaginationFocus } from './use-pagination-focus';
+import { Surface } from '../components/Surface';
 
 const toSeverityTone = (
     status: AidStatus,
@@ -251,12 +251,8 @@ export const MapRoute = ({
             className={`mh-discovery-route mh-nearby-workspace is-${mobileView} ${resourceIntent ? 'is-resource-journey' : ''}`}
         >
             <header className='mh-nearby-header'>
-                <h1 className='mh-route-title'>{t('map.heading')}</h1>
-                <p className='mt-2 text-sm text-mh-textMuted'>
-                    {t(resourceIntent ? 'nearby.resourceStory' : 'nearby.requestStory')}
-                </p>
-                <div className='mt-3 flex flex-wrap gap-2'>
-                    {dataOrigin !== 'api' && (
+                <div className='flex flex-wrap gap-2'>
+                    {dataOrigin !== 'api' && originLabel && (
                         <Badge tone='info'>{originLabel}</Badge>
                     )}
                 </div>
@@ -406,11 +402,8 @@ export const MapRoute = ({
                                     resourceTotal ??
                                         mapResourceView.cards.length,
                                 ),
-                                distance: fmt.number(
-                                    activeArea.radiusMeters / 1000,
-                                    {
-                                        maximumFractionDigits: 1,
-                                    },
+                                distance: fmt.distance(
+                                    activeArea.radiusMeters,
                                 ),
                             })}
                         </p>
@@ -471,7 +464,7 @@ export const MapRoute = ({
                     closeLabel={t('resources.close')}
                     onClose={selection.close}
                 >
-                    <Panel title={t('handoff.requestDetails')}>
+                    <Surface title={t('handoff.requestDetails')}>
                         {selection.loading ? (
                             <p role='status'>{t('handoff.loadingRequest')}</p>
                         ) : (
@@ -482,7 +475,7 @@ export const MapRoute = ({
                                 </Button>
                             </>
                         )}
-                    </Panel>
+                    </Surface>
                 </MapDetailSheet>
             )}
             {selectedResource && (
@@ -490,9 +483,9 @@ export const MapRoute = ({
                     closeLabel={t('resources.close')}
                     onClose={selection.close}
                 >
-                    <Panel title={selectedResource.name}>
+                    <Surface title={selectedResource.name}>
                         <ResourceActions resource={selectedResource} />
-                    </Panel>
+                    </Surface>
                 </MapDetailSheet>
             )}
             <div
@@ -500,7 +493,7 @@ export const MapRoute = ({
                 tabIndex={-1}
                 className='mh-nearby-results scroll-mt-24'
             >
-                {resourceIntent ? <Card title={t('nearby.resources')}>
+                {resourceIntent ? <Surface as='article' tone='plain' title={t('nearby.resources')}>
                     <p role='status' className='text-sm text-mh-textMuted'>
                         {resourcesLoading ? t('nearby.loadingResources') : t('nearby.resourceCount', {count: resourceTotal ?? 0})}
                     </p>
@@ -514,7 +507,7 @@ export const MapRoute = ({
                         {resourceCards.map(resource => <li key={resource.uri} className='mh-record-card'>
                             <button className='mh-resource-result' onClick={() => setSelectedResourceUri(resource.uri)}>
                                 <strong>{resource.name}</strong>
-                                {discoveryState.center && resource.location && <span>{fmt.number(haversineDistanceMeters(discoveryState.center, resource.location) / 1000, {maximumFractionDigits: 1})} km</span>}
+                                {discoveryState.center && resource.location && <span>{fmt.distance(haversineDistanceMeters(discoveryState.center, resource.location))}</span>}
                                 <span>{resource.exactPublicAddress?.streetAddress ?? resource.location?.areaLabel}</span>
                                 <span>{resource.openHours ?? t('resources.hoursUnavailable')}</span>
                                 <span className='mh-link'>{t('resources.openDetails')}</span>
@@ -534,7 +527,7 @@ export const MapRoute = ({
                     {resourcesHasNextPage && onLoadMoreResources && <Button ref={resourcePaginationFocus.loadMoreRef} variant='neutral' disabled={resourcesLoading} onClick={() => resourcePaginationFocus.loadMore(onLoadMoreResources)}>{t('discovery.loadMore')}</Button>}
                     <p className='sr-only' role='status'>{resourcePaginationFocus.announcement}</p>
                     <a className='mh-link inline-block py-3' href={`/resources?${serializeDiscoveryFilterState(discoveryState)}`}>{t('nearby.fullDirectory')}</a>
-                </Card> : <Card
+                </Surface> : <Surface as='article' tone='plain'
                     title={
                         discoveryState.postalCode
                             ? t('experience.zipRequests', {
@@ -551,6 +544,7 @@ export const MapRoute = ({
                     <p
                         ref={paginationFocus.loadedCountRef}
                         tabIndex={-1}
+                        hidden={total === 0}
                         className='text-sm text-mh-textMuted'
                         role='status'
                     >
@@ -577,17 +571,21 @@ export const MapRoute = ({
                             ))}
                         </ul>
                     ) : mapView.filteredCards.length === 0 ? (
-                        <div className='space-y-3'>
+                        <EmptyState
+                            title={t('map.noRequestsTitle')}
+                            actions={
+                                <>
+                                    <ButtonLink variant='secondary' size='sm' href={`/resources${window.location.search}`}>
+                                        {t('nav.resources')}
+                                    </ButtonLink>
+                                    <ButtonLink variant='accent' size='sm' href={`/posting${window.location.search}`}>
+                                        {t('nav.ask')}
+                                    </ButtonLink>
+                                </>
+                            }
+                        >
                             <p>{t('map.noRequests')}</p>
-                            <div className='flex flex-wrap gap-2'>
-                                <a className='mh-button inline-flex px-3 py-2 text-sm' href={`/resources${window.location.search}`}>
-                                    {t('nav.resources')}
-                                </a>
-                                <a className='mh-button inline-flex px-3 py-2 text-sm' href={`/posting${window.location.search}`}>
-                                    {t('nav.ask')}
-                                </a>
-                            </div>
-                        </div>
+                        </EmptyState>
                     ) : (
                         <ul className='space-y-3'>
                             {mapView.filteredCards.map((card, index) => (
@@ -687,7 +685,7 @@ export const MapRoute = ({
                                 </p>
                             )}
                     </div>{' '}
-                </Card>}
+                </Surface>}
             </div>
 
             {drawer.open && selectedRecord ? (
@@ -695,7 +693,7 @@ export const MapRoute = ({
                     closeLabel={t('map.closeDrawer')}
                     onClose={selection.close}
                 >
-                    <Panel
+                    <Surface
                         title={String(t('map.mapDetailDrawerTitle'))}
                         aria-label={String(
                             t('map.detailsFor', {
@@ -766,7 +764,7 @@ export const MapRoute = ({
                                     </Button>
                                 ))}
                         </div>
-                    </Panel>
+                    </Surface>
                 </MapDetailSheet>
             ) : null}
         </section>

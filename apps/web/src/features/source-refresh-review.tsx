@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Button } from '../components/Button';
-import { Panel } from '../components/Panel';
 import { useLocale } from '../i18n';
 import {
     applySourceRefreshContactViaApi,
@@ -8,6 +7,7 @@ import {
     listSourceRefreshCandidatesViaApi,
     type SourceRefreshCandidate,
 } from './api-client';
+import { Surface } from '../components/Surface';
 
 const valueSummary = (value: Record<string, unknown> | null) => {
     if (!value) return '—';
@@ -51,7 +51,7 @@ export function SourceRefreshReview() {
         }
     };
     return (
-        <Panel title={t('sourceRefresh.title')}>
+        <Surface title={t('sourceRefresh.title')}>
             <p className='text-sm text-mh-textMuted'>{t('sourceRefresh.help')}</p>
             <div className='mt-3 flex flex-wrap gap-2'>
                 <label>
@@ -113,6 +113,6 @@ export function SourceRefreshReview() {
                 {page > 1 && <Button variant='neutral' disabled={busy} onClick={() => void load(page - 1)}>{t('sourceRefresh.previous')}</Button>}
                 {hasNext && <Button variant='neutral' disabled={busy} onClick={() => void load(page + 1)}>{t('sourceRefresh.next')}</Button>}
             </div>
-        </Panel>
+        </Surface>
     );
 }

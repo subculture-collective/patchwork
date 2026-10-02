@@ -1,6 +1,11 @@
 import { useId, type PropsWithChildren, type ReactNode } from 'react';
 
-type SurfaceTone = 'default' | 'flat' | 'quiet' | 'tinted';
+/**
+ * `default` with a title renders the titled panel (mustard bar and sheet).
+ * `plain` is the outlined card with an inline heading; `quiet` is the same
+ * without outline weight or shadow, for a card inside a panel's sheet.
+ */
+type SurfaceTone = 'default' | 'plain' | 'flat' | 'quiet' | 'tinted';
 type HeadingLevel = 'h2' | 'h3';
 
 interface SurfaceProps {
@@ -20,6 +25,7 @@ interface SurfaceProps {
 
 const toneClass: Record<SurfaceTone, string> = {
     default: '',
+    plain: '',
     flat: 'mh-surface--flat',
     quiet: 'mh-surface--quiet',
     tinted: 'mh-surface--tinted',

@@ -6,10 +6,8 @@ import {
     type FormEvent,
 } from 'react';
 import { StatusMessage } from '../components/StatusMessage';
-import { Button } from '../components/Button';
-import { Card } from '../components/Card';
+import { Button, ButtonLink } from '../components/Button';
 import { Input } from '../components/Input';
-import { Panel } from '../components/Panel';
 import {
     type MyOrganization,
     type OrganizationMember,
@@ -37,6 +35,8 @@ import { useLocale } from '../i18n';
 import {
     formatLocalizedLabel,
 } from '../features/shell-shared';
+import { Surface } from '../components/Surface';
+import { PageHeader } from '../components/PageHeader';
 
 const organizationAdminRoles = new Set(['owner', 'admin']);
 const stewardCapableRoles = new Set(['owner', 'admin', 'steward']);
@@ -268,14 +268,12 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
 
     return (
         <section className='space-y-6'>
-            <header className='mh-route-header'>
-                <h1 className='mh-route-title'>{t('organizations.heading')}</h1>
-                <p className='mt-2 text-sm text-mh-textMuted'>
-                    {t('organizations.description')}
-                </p>
-            </header>
+            <PageHeader
+                title={t('organizations.heading')}
+                description={t('organizations.description')}
+            />
 
-            <Panel title={String(t('organizations.find'))}>
+            <Surface title={String(t('organizations.find'))}>
                 <form
                     className='flex flex-wrap items-end gap-2'
                     onSubmit={(event) => {
@@ -299,7 +297,7 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
                 <StatusMessage message={status} className='mt-3' />
                 <div className='mt-4 grid gap-3 sm:grid-cols-2'>
                     {organizations.map((organization) => (
-                        <Card key={organization.id} title={organization.name}>
+                        <Surface as='article' tone='quiet' key={organization.id} title={organization.name}>
                             <p className='text-sm'>
                                 {organization.description}
                             </p>
@@ -331,14 +329,14 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
                             <p className='mt-2 text-xs text-mh-textMuted'>
                                 {organization.nonEndorsementLabel}
                             </p>
-                        </Card>
+                        </Surface>
                     ))}
                 </div>
-            </Panel>
+            </Surface>
 
             {did ? (
                 <>
-                    <Panel title={String(t('organizations.join'))}>
+                    <Surface title={String(t('organizations.join'))}>
                         <form
                             className='flex flex-wrap items-end gap-2'
                             onSubmit={acceptInvitation}
@@ -356,9 +354,9 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
                                 {t('organizations.accept')}
                             </Button>
                         </form>
-                    </Panel>
+                    </Surface>
 
-                    <Panel title={String(t('organizations.create'))}>
+                    <Surface title={String(t('organizations.create'))}>
                         <form
                             className='space-y-3'
                             onSubmit={createOrganization}
@@ -386,10 +384,10 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
                                 {t('organizations.createAction')}
                             </Button>
                         </form>
-                    </Panel>
+                    </Surface>
 
                     {mine.length ? (
-                        <Panel title={String(t('organizations.manage'))}>
+                        <Surface title={String(t('organizations.manage'))}>
                             <label className='block text-sm font-bold'>
                                 {t('organizations.organization')}
                                 <select
@@ -718,7 +716,7 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
                                                         item.stewardDid ===
                                                             did);
                                                 return (
-                                                    <Card
+                                                    <Surface as='article' tone='quiet'
                                                         key={item.id}
                                                         title={
                                                             resourceNames.get(
@@ -759,7 +757,7 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
                                                                 </Button>
                                                             </p>
                                                         ) : null}
-                                                    </Card>
+                                                    </Surface>
                                                 );
                                             })
                                         ) : (
@@ -770,16 +768,22 @@ export const OrganizationsRoute = ({ did }: { did: string }) => {
                                     </div>
                                 </>
                             ) : null}
-                        </Panel>
+                        </Surface>
                     ) : null}
                     {actionStatus ? (
                         <StatusMessage message={actionStatus} />
                     ) : null}
                 </>
             ) : (
-                <Panel title={String(t('organizations.signIn'))}>
+                <Surface title={String(t('organizations.signIn'))}>
                     <p>{t('organizations.signInHelp')}</p>
-                </Panel>
+                    <ButtonLink
+                        className='mt-3'
+                        href='/login?returnTo=%2Forganizations'
+                    >
+                        {t('runtime.signInContinue')}
+                    </ButtonLink>
+                </Surface>
             )}
             <PublicResourceClaimManagement />
         </section>

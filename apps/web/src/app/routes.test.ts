@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
     appRoutes,
     authenticatedRoutes,
+    gateCopyKeys,
+    isKnownPath,
     normalizeRoute,
     resolveNavRoutes,
     routeLabelKeys,
@@ -17,6 +19,19 @@ describe('app routes', () => {
     it('falls back to home for unknown paths', () => {
         expect(normalizeRoute('/map')).toBe('/map');
         expect(normalizeRoute('/does-not-exist')).toBe('/');
+    });
+
+    it('distinguishes unknown paths from routes and their aliases', () => {
+        expect(isKnownPath('/')).toBe(true);
+        expect(isKnownPath('/nearby')).toBe(true);
+        expect(isKnownPath('/feedback')).toBe(false);
+        expect(isKnownPath('/does-not-exist')).toBe(false);
+    });
+
+    it('explains every sign-in gate', () => {
+        for (const route of authenticatedRoutes) {
+            expect(gateCopyKeys[route]).toBeTruthy();
+        }
     });
 
     it('hides account routes from signed-out production visitors', () => {

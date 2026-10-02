@@ -2,7 +2,6 @@ import { SourceRefreshReview } from '../features/source-refresh-review';
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
-import { Panel } from '../components/Panel';
 import {
     type MaintenanceReasonCode,
     type MaintenanceState,
@@ -18,6 +17,8 @@ import { type ModerationAuditRecord, type ModerationPolicyAction, type Moderatio
 import {
     formatLocalizedLabel,
 } from '../features/shell-shared';
+import { Surface } from '../components/Surface';
+import { PageHeader } from '../components/PageHeader';
 
 const maintenanceReasonOptions: readonly {
     code: MaintenanceReasonCode;
@@ -195,21 +196,19 @@ export const ModeratorConsoleRoute = ({
 
     if (accessDenied) {
         return (
-            <Panel title={t('moderator.accessRequired')}>
+            <Surface title={t('moderator.accessRequired')}>
                 <p role='alert'>{t('moderator.accessHelp')}</p>
-            </Panel>
+            </Surface>
         );
     }
 
     return (
         <div className='space-y-5'>
-            <header className='mh-route-header'>
-                <h1 className='mh-route-title'>{t('moderator.title')}</h1>
-                <p className='mt-2 text-sm text-mh-textMuted'>
-                    {t('moderator.description')}
-                </p>
-            </header>
-            <Panel title={t('moderator.title')}>
+            <PageHeader
+                title={t('moderator.title')}
+                description={t('moderator.description')}
+            />
+            <Surface title={t('moderator.title')}>
                 <dl className='grid gap-2 text-sm sm:grid-cols-2'>
                     <div>
                         <dt className='font-bold'>{t('moderator.actor')}</dt>
@@ -246,7 +245,7 @@ export const ModeratorConsoleRoute = ({
                         {t('moderator.privateControls')}
                     </a>
                 </div>
-            </Panel>
+            </Surface>
 
             {error ? (
                 <p
@@ -265,7 +264,7 @@ export const ModeratorConsoleRoute = ({
                 </p>
             ) : null}
 
-            <Panel title={t('moderator.shutdown')}>
+            <Surface title={t('moderator.shutdown')}>
                 <p className='text-sm text-mh-textMuted'>
                     {t('moderator.shutdownHelp')}
                 </p>
@@ -357,9 +356,9 @@ export const ModeratorConsoleRoute = ({
                         {t('moderator.resume')}
                     </Button>
                 </div>
-            </Panel>
+            </Surface>
 
-            <Panel title={t('moderator.queue')}>
+            <Surface title={t('moderator.queue')}>
                 <div className='grid gap-2 sm:grid-cols-4'>
                     <select
                         aria-label={t('moderator.filterStatus')}
@@ -463,10 +462,10 @@ export const ModeratorConsoleRoute = ({
                         ))}
                     </div>
                 )}
-            </Panel>
+            </Surface>
 
             {selected ? (
-                <Panel title={t('moderator.caseActions')}>
+                <Surface title={t('moderator.caseActions')}>
                     <dl className='grid gap-2 text-sm sm:grid-cols-2'>
                         {Object.entries(selected.safePreview ?? {}).map(
                             ([key, value]) => (
@@ -594,7 +593,7 @@ export const ModeratorConsoleRoute = ({
                             ))}
                         </ol>
                     )}
-                </Panel>
+                </Surface>
             ) : null}
             <SourceRefreshReview />
         </div>

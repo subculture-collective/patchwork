@@ -28,6 +28,8 @@ export interface AppShellAuth {
 interface AppShellProps {
     appTitle: string;
     currentRoute: AppRoute;
+    /** True when the URL matches no route, so no nav item is current. */
+    isNotFound?: boolean;
     navRoutes: NavRouteGroups;
     auth: AppShellAuth;
     locale: Locale;
@@ -50,7 +52,8 @@ const tabIcons: Partial<Record<AppRoute, IconName>> = {
 
 export const AppShell = ({
     appTitle,
-    currentRoute,
+    currentRoute: shellRoute,
+    isNotFound = false,
     navRoutes,
     auth,
     locale,
@@ -61,6 +64,7 @@ export const AppShell = ({
     children,
 }: PropsWithChildren<AppShellProps>) => {
     const { t } = useLocale();
+    const currentRoute = isNotFound ? undefined : shellRoute;
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isMoreOpen, setIsMoreOpen] = useState(false);
     const menuToggleRef = useRef<HTMLButtonElement>(null);
@@ -71,7 +75,7 @@ export const AppShell = ({
     useEffect(() => {
         setIsMenuOpen(false);
         setIsMoreOpen(false);
-    }, [currentRoute]);
+    }, [shellRoute, isNotFound]);
 
     useEffect(() => {
         if (!isMoreOpen) return undefined;
@@ -117,7 +121,7 @@ export const AppShell = ({
         </a>
     );
 
-    const signInHref = `/login?returnTo=${encodeURIComponent(currentRoute)}`;
+    const signInHref = `/login?returnTo=${encodeURIComponent(currentRoute ?? '/')}`;
     const handle = auth.session?.handle
         ? `@${auth.session.handle.replace(/^@/, '')}`
         : t('nav.accountFallback');
@@ -187,6 +191,11 @@ export const AppShell = ({
                 {t('app.skipToContent')}
             </a>
 
+            <p className='mh-preview-strip' role='status'>
+                <strong>{t('runtime.environment')}</strong>{' '}
+                <span>{t('runtime.environmentHelp')}</span>
+            </p>
+
             <header className='mh-app-header'>
                 <div className='mh-masthead'>
                     <a
@@ -204,10 +213,6 @@ export const AppShell = ({
                     </a>
 
                     <div className='mh-app-header__tools'>
-                        <div className='mh-network-status' role='status'>
-                            <span aria-hidden='true' />{' '}
-                            {t('runtime.environment')}
-                        </div>
                         {languageSelect('header-language')}
                         {accountControl(false)}
                     </div>
@@ -284,10 +289,6 @@ export const AppShell = ({
                         </p>
                         {languageSelect('menu-language')}
                         {accountControl(true)}
-                        <p className='mh-network-status'>
-                            <span aria-hidden='true' />{' '}
-                            {t('runtime.environment')}
-                        </p>
                     </div>
                     </>
                     ) : null}
@@ -312,7 +313,12 @@ export const AppShell = ({
                             <button
                                 ref={moreToggleRef}
                                 type='button'
-                                className='mh-nav-chip mh-more__toggle'
+                                className={[
+                                    'mh-nav-chip mh-more__toggle',
+                                    currentRoute && navRoutes.secondary.includes(currentRoute)
+                                        ? 'is-current'
+                                        : '',
+                                ].join(' ')}
                                 aria-expanded={isMoreOpen}
                                 aria-controls='secondary-navigation-links'
                                 onClick={() =>

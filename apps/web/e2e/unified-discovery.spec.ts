@@ -454,7 +454,7 @@ test('resource searches keep the mobile map and a separate resource list through
     await expect(page.getByRole('button',{name:'Map',exact:true})).toHaveAttribute('aria-pressed','true');
     await page.getByRole('button',{name:'List',exact:true}).click();
     await expect(page.getByText('No resources found here')).toBeVisible();
-    await page.getByRole('button',{name:'Search within 50 km',exact:true}).click();
+    await page.getByRole('button',{name:'Search within 31 miles',exact:true}).click();
     await expect.poll(() => queries.at(-1)?.searchParams.get('radiusKm')).toBe('50');
     await page.getByRole('button',{name:'Neighbor requests',exact:true}).click();
     await expect(page.getByRole('button',{name:'Requests (0)',exact:true})).toHaveAttribute('aria-pressed','true');

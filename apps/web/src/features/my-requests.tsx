@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../auth/AuthProvider';
 import { useLocale } from '../i18n';
-import { Panel } from '../components/Panel';
 import { Button } from '../components/Button';
 import { fetchAccountRequestsViaApi, type OwnedRequestReceipt } from './api-client';
 import { RequestLifecycleActions } from './request-actions';
 import { useVisiblePoll } from './use-visible-poll';
+import { Surface } from '../components/Surface';
 
 export function MyRequests() {
     const { session } = useAuth();
@@ -41,7 +41,7 @@ export function MyRequests() {
         return () => active.current?.abort();
     }, [page, session?.did, t]);
     useVisiblePoll(load, 15_000, Boolean(session));
-    return <Panel title={t('myRequests.heading')}>
+    return <Surface title={t('myRequests.heading')}>
         <div className='flex flex-wrap items-center justify-between gap-3'>
             <a className='font-bold underline' href='/posting'>{t('myRequests.newRequest')}</a>
             <Button variant='neutral' disabled={busy} onClick={() => void load()}>{t('myRequests.refresh')}</Button>
@@ -67,5 +67,5 @@ export function MyRequests() {
             <span>{t('myRequests.page', { page })}</span>
             <Button disabled={!hasNext || busy} onClick={() => setPage(value => value + 1)}>{t('myRequests.next')}</Button>
         </nav>}
-    </Panel>;
+    </Surface>;
 }

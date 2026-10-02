@@ -5,7 +5,6 @@ import type {
 } from '@patchwork/shared';
 import { useLocale } from '../i18n';
 import { Button } from '../components/Button';
-import { Panel } from '../components/Panel';
 import {
     applyDiscoveryFilterPatch,
     serializeDiscoveryFilterState,
@@ -17,6 +16,7 @@ import {
     removeSavedDiscoveryViaApi,
     setSavedDiscoveryAlertsViaApi,
 } from './api-client';
+import { Surface } from '../components/Surface';
 
 export function SaveDiscoveryButton({ input }: { input: SavedDiscoveryInput }) {
     const { t } = useLocale();
@@ -32,7 +32,7 @@ export function SaveDiscoveryButton({ input }: { input: SavedDiscoveryInput }) {
         setBusy(false);
     }, [identity]);
     return (
-        <div className="space-y-1">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <Button
                 variant="neutral"
                 disabled={busy || saved}
@@ -56,11 +56,14 @@ export function SaveDiscoveryButton({ input }: { input: SavedDiscoveryInput }) {
                       : t('saved.saveSearch')}
             </Button>
             {message && (
-                <p role="status" className="text-sm">
+                <p role="status" className="order-last w-full text-sm">
                     {message}
                 </p>
             )}
-            <a className="mh-link text-sm" href="/inbox#saved-discovery">
+            <a
+                className="mh-link inline-flex min-h-11 items-center text-sm"
+                href="/inbox#saved-discovery"
+            >
                 {t('saved.view')}
             </a>
         </div>
@@ -115,7 +118,7 @@ export function SavedDiscoveryPanel({ did }: { did: string }) {
     }, [did]);
     return (
         <section id="saved-discovery">
-            <Panel title={t('saved.heading')}>
+            <Surface title={t('saved.heading')}>
                 <p>{t('saved.privacy')}</p>
                 <p>{t('saved.alertHelp')}</p>
                 <Button
@@ -226,7 +229,7 @@ export function SavedDiscoveryPanel({ did }: { did: string }) {
                         );
                     })}
                 </ul>
-            </Panel>
+            </Surface>
         </section>
     );
 }

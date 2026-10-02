@@ -17,9 +17,11 @@
     --mh-accent-2: #9ec5ad;
     --mh-accent-3: #f2c14e;
     --mh-accent-3-tint: #fbefc9;
+    --mh-accent-3-soft: #f5d77e;
     --mh-cta: #e85d3f;
     --mh-cta-strong: #c2462b;
     --mh-cta-strong-hover: #a93a22;
+    --mh-cta-tint: #efd6ca;
     --mh-on-accent: #fffdf7;
     --mh-organic-moss: #12664f;
     --mh-link: #075b48;
@@ -31,6 +33,7 @@
     --mh-danger: #b93b2c;
     --mh-danger-hover: #922f24;
     --mh-danger-tint: #f6e1dc;
+    --mh-danger-text: #7f2e22;
     --mh-info-tint: #e3eee7;
     --mh-border: #172019;
     --mh-border-subtle: #d4cec1;
@@ -38,10 +41,13 @@
     --mh-focus: #0b62d6;
     --mh-focus-offset: #fffdf7;
 
-    --mh-font-heading: 'Fraunces', 'Iowan Old Style', 'Georgia', serif;
-    --mh-font-body: 'Public Sans', 'Segoe UI', system-ui, sans-serif;
+    --mh-font-heading:
+        'Fraunces Variable', 'Fraunces', 'Iowan Old Style', 'Georgia', serif;
+    --mh-font-body:
+        'Public Sans Variable', 'Public Sans', 'Segoe UI', system-ui, sans-serif;
     --mh-font-mono:
-        'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+        'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace,
+        SFMono-Regular, Menlo, monospace;
 
     --mh-space-1: 4px;
     --mh-space-2: 8px;
@@ -83,7 +89,6 @@
 
 /* ---------- Surfaces ---------- */
 
-.mh-card,
 .mh-surface {
     border: var(--mh-outline);
     border-radius: var(--mh-radius-patch);
@@ -180,29 +185,6 @@
     font-size: 0.8125rem;
 }
 
-/* Nested legacy Card/Panel markup reads as sections, not stacked boxes. */
-:is(.mh-surface__sheet, .mh-card) :is(.mh-card, .mh-panel-shell) {
-    border: 1px solid var(--mh-border-subtle);
-    box-shadow: none;
-}
-
-/* Legacy Panel shell: now a single surface with an inline heading. */
-.mh-panel-shell {
-    border: var(--mh-outline);
-    border-radius: 2px 20px 2px 20px;
-    background: var(--mh-panel);
-    box-shadow: var(--mh-shadow);
-}
-
-.mh-panel-titlebar {
-    font-family: var(--mh-font-heading);
-    font-size: 1.25rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    line-height: 1.15;
-    color: var(--mh-text);
-}
-
 .mh-texture-dots {
     background-image: radial-gradient(
         circle at 1px 1px,
@@ -232,7 +214,7 @@
             rgb(70 99 56 / 6%) 0.5px,
             transparent 0.5px
         ),
-        linear-gradient(140deg, #f7f3ea 0%, #e9e5dc 100%);
+        linear-gradient(140deg, var(--mh-bg) 0%, var(--mh-surface-elev) 100%);
     background-size:
         5px 5px,
         7px 7px,
@@ -445,6 +427,43 @@
     outline-offset: 2px;
 }
 
+/* ---------- Disclosure ---------- */
+
+.mh-filter-disclosure > summary,
+.mh-resource-filter-disclosure > summary {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    gap: var(--mh-space-2);
+    cursor: pointer;
+    list-style: none;
+    color: var(--mh-text);
+    font-size: 0.875rem;
+    font-weight: 700;
+}
+
+.mh-filter-disclosure > summary::-webkit-details-marker,
+.mh-resource-filter-disclosure > summary::-webkit-details-marker {
+    display: none;
+}
+
+.mh-filter-disclosure > summary::before,
+.mh-resource-filter-disclosure > summary::before {
+    width: 0.5rem;
+    height: 0.5rem;
+    flex: none;
+    border-right: 2px solid currentcolor;
+    border-bottom: 2px solid currentcolor;
+    content: '';
+    transform: translateY(-2px) rotate(45deg);
+    transition: transform var(--mh-transition-standard);
+}
+
+.mh-filter-disclosure[open] > summary::before,
+.mh-resource-filter-disclosure[open] > summary::before {
+    transform: translateY(2px) rotate(-135deg);
+}
+
 /* ---------- Badges ---------- */
 
 .mh-badge--default {
@@ -492,7 +511,7 @@
 
 .mh-input:focus-visible {
     border-color: var(--mh-focus);
-    background: #fffcf6;
+    background: var(--mh-surface);
     box-shadow:
         0 0 0 2px var(--mh-focus-offset),
         0 0 0 4px rgb(11 98 214 / 28%);
@@ -578,7 +597,7 @@ textarea.mh-input {
     border-left: 4px solid var(--mh-danger);
     border-radius: 0 10px 10px 0;
     background: var(--mh-danger-tint);
-    color: #7f2e22;
+    color: var(--mh-danger-text);
     padding: var(--mh-space-2) var(--mh-space-3);
 }
 
@@ -661,6 +680,12 @@ textarea.mh-input {
 .mh-nav-chip[aria-current='page'] {
     color: var(--mh-on-accent);
     background: var(--mh-accent);
+}
+
+/* "More" is marked when the open page lives inside it. */
+.mh-nav-chip.is-current {
+    background: var(--mh-accent-tint);
+    box-shadow: inset 0 -3px 0 var(--mh-accent);
 }
 
 .mh-skip-link {

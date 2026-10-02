@@ -261,7 +261,7 @@ describe('AT authentication flow', () => {
         expect(html).toContain('type="submit"');
         expect(html).toContain('aria-live="polite"');
         expect(html).toContain('Continue with Bluesky');
-        expect(html).toContain('Bluesky or AT Protocol handle');
+        expect(html).toContain('Your handle');
     });
 
     it('renders a labelled signup form without exposing secrets', () => {
@@ -762,9 +762,9 @@ describe('AT authentication flow', () => {
         );
 
         expect(html).toContain('href="/signup?returnTo=%2Ffeed"');
-        expect(html).toContain('Create an account on Subcult’s PDS');
+        expect(html).toContain('Create an account with Subcult');
         expect(html).toContain(
-            'Get a portable handle hosted on Subcult&#x27;s community server (PDS).',
+            'Subcult&#x27;s community server hosts your account and handle.',
         );
         expect(html).not.toContain('secret');
         expect(html).not.toContain('token');

@@ -25,7 +25,6 @@ import {
 } from '../directory-resource-form';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
-import { Card } from '../components/Card';
 import { Input } from '../components/Input';
 import { Banner } from '../components/Banner';
 import { EmptyState } from '../components/EmptyState';
@@ -54,6 +53,7 @@ import {
     formatLocalizedLabel,
     usePaginationFocus,
 } from '../features/shell-shared';
+import { Surface } from '../components/Surface';
 
 const defaultDirectoryDraft = (center: {
     lat: number;
@@ -213,7 +213,7 @@ const DirectoryResourceManager = ({
     };
 
     return (
-        <Card title={t('directoryManager.title')}>
+        <Surface as='article' tone='plain' title={t('directoryManager.title')}>
             {currentUserDid ? (
                 <>
                     <div className='flex flex-wrap items-center justify-between gap-3'>
@@ -635,7 +635,7 @@ const DirectoryResourceManager = ({
                     {t('directoryManager.signInSuffix')}
                 </p>
             )}
-        </Card>
+        </Surface>
     );
 };
 
@@ -744,7 +744,8 @@ export const ResourceRoute = ({
                 title={t('resources.heading')}
                 description={t('resources.description')}
                 meta={
-                    dataOrigin !== 'api' ? (
+                    // A failed load is reported once, by the banner below.
+                    dataOrigin !== 'api' && !errorMessage ? (
                         <Badge tone='info'>{dataOriginLabel(dataOrigin, t)}</Badge>
                     ) : null
                 }
@@ -754,13 +755,14 @@ export const ResourceRoute = ({
                 <Banner
                     className='mb-6'
                     tone='danger'
-                    title={t('map.apiSyncIssue', { message: errorMessage })}
+                    title={t('resources.loadFailedTitle')}
                     actions={
                         <Button size='sm' variant='secondary' onClick={onRetry}>
                             {t('resources.retryDirectory')}
                         </Button>
                     }
                 >
+                    <p>{errorMessage}</p>
                     {resourceCards.length > 0 ? (
                         <p>{t('resources.staleResults')}</p>
                     ) : null}
@@ -781,7 +783,11 @@ export const ResourceRoute = ({
                         id='resources-results-heading'
                         className='mh-surface__title'
                     >
-                        {t('resources.overlayCardsTitle')}
+                        {t(
+                            discoveryState.center || discoveryState.postalCode
+                                ? 'resources.overlayCardsTitle'
+                                : 'resources.allPlacesTitle',
+                        )}
                     </h2>
                     <p
                         ref={paginationFocus.loadedCountRef}
@@ -812,7 +818,8 @@ export const ResourceRoute = ({
                             </li>
                         ))}
                     </ul>
-                ) : viewModel.cards.length === 0 ? (
+                ) : viewModel.cards.length === 0 && errorMessage ? null : viewModel
+                      .cards.length === 0 ? (
                     <EmptyState
                         title={t('resources.noResultsTitle')}
                         actions={
@@ -899,7 +906,7 @@ export const ResourceRoute = ({
                                             {t('resources.openDetails')}
                                         </Button>
                                         <Button
-                                            variant='accent'
+                                            variant='neutral'
                                             size='sm'
                                             aria-label={t(
                                                 'resources.startIntakeFor',

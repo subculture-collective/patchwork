@@ -1,8 +1,8 @@
 import { toChatStatusNotice, type ChatInitiationIntent, type ChatLaunchState } from '../chat-ux';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
-import { Card } from '../components/Card';
-import { Panel } from '../components/Panel';
+import { Surface } from '../components/Surface';
+import { PageHeader } from '../components/PageHeader';
 
 interface ChatRouteProps {
     currentUserDid: string;
@@ -42,15 +42,12 @@ export const ChatRoute = ({
 
     return (
         <section className='space-y-6'>
-            <header className='mh-route-header'>
-                <h1 className='mh-route-title'>Chat handoff</h1>
-                <p className='mt-2 text-sm text-mh-textMuted'>
-                    Post-linked 1:1 initiation with permission checks and
-                    recipient-capability fallback handling.
-                </p>
-            </header>
+            <PageHeader
+                title='Chat handoff'
+                description='Post-linked 1:1 initiation with permission checks and recipient-capability fallback handling.'
+            />
 
-            <Panel title='Launch controls'>
+            <Surface title='Launch controls'>
                 <div className='grid gap-3 sm:grid-cols-2'>
                     <label className='inline-flex items-center gap-2 text-sm text-mh-textMuted'>
                         <input
@@ -105,9 +102,9 @@ export const ChatRoute = ({
                         Reset state
                     </Button>
                 </div>
-            </Panel>
+            </Surface>
 
-            <Card title='Launch status'>
+            <Surface as='article' tone='plain' title='Launch status'>
                 <p className='text-sm text-mh-textMuted'>
                     State: {state.status}
                 </p>
@@ -123,7 +120,7 @@ export const ChatRoute = ({
                         {requestPreview}
                     </pre>
                 ) : null}
-            </Card>
+            </Surface>
         </section>
     );
 };

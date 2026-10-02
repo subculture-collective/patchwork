@@ -4,7 +4,6 @@ import { resourceProfileSchema } from "@patchwork/shared";
 import { useState } from "react";
 import { useLocale } from "../i18n";
 import { Button } from "../components/Button";
-import { Panel } from "../components/Panel";
 import type { ResourceDetail } from "../resource-directory-ux";
 import {
   fetchResourceViaApi,
@@ -15,6 +14,7 @@ import {
   editPublicResourceViaApi,
   type MyOrganization,
 } from "./api-client";
+import { Surface } from '../components/Surface';
 
 export function PublicResourceClaim({
   resource,
@@ -197,7 +197,7 @@ export function PublicResourceClaimManagement() {
     setLoaded(true);
   };
   return (
-    <Panel title={t("claims.title")}>
+    <Surface title={t("claims.title")}>
       <p className="text-sm">{t("claims.track")}</p>
       <Button variant="neutral" disabled={busy} onClick={() => void load()}>
         {loaded ? t("claims.refresh") : t("claims.viewClaims")}
@@ -278,7 +278,7 @@ export function PublicResourceClaimManagement() {
           </li>
         ))}
       </ul>
-    </Panel>
+    </Surface>
   );
 }
 

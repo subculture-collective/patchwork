@@ -230,7 +230,7 @@ test.describe('ARIA attributes', () => {
         ).toBeVisible();
         await expect(
             page.getByRole('button', {
-                name: /I know a resource.+Open the directory/,
+                name: /I run a local service.+Organizations and listings/,
             }),
         ).toBeVisible();
     });

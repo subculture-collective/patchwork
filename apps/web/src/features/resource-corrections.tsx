@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Button } from '../components/Button';
-import { Panel } from '../components/Panel';
 import { useLocale } from '../i18n';
 import {
     submitResourceCorrectionViaApi,
@@ -12,6 +11,7 @@ import {
     type ResourceCorrection,
 } from './api-client';
 import type { ResourceDetail } from '../resource-directory-ux';
+import { Surface } from '../components/Surface';
 const newReceipt = () =>
     Array.from(crypto.getRandomValues(new Uint8Array(32)), (value) =>
         value.toString(16).padStart(2, '0'),
@@ -276,7 +276,7 @@ export function ResourceCorrectionList({
         void load();
     }, [review]);
     return (
-        <Panel title={t(review ? 'corrections.review' : 'corrections.mine')}>
+        <Surface title={t(review ? 'corrections.review' : 'corrections.mine')}>
             <Button
                 variant="neutral"
                 disabled={busy}
@@ -321,7 +321,7 @@ export function ResourceCorrectionList({
                     {t('corrections.next')}
                 </Button>
             )}
-        </Panel>
+        </Surface>
     );
 }
 function CorrectionDecision({

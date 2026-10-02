@@ -205,8 +205,8 @@ test('resource map uses location only after an explicit request and rounds it', 
         page.getByRole('button', { name: 'Confirm approximate area' }),
     ).toHaveCount(0);
     await expect(page.getByText('Service unavailable')).toHaveCount(0);
-    await expect(page.getByText(/^API sync issue:/)).toHaveCount(0);
-    await expect(page.getByText(/^Public-place sync issue:/)).toHaveCount(0);
+    await expect(page.getByText(/^Requests could not be loaded/)).toHaveCount(0);
+    await expect(page.getByText(/^Places could not be loaded/)).toHaveCount(0);
     expect(discoveryRequests).toBeGreaterThan(0);
 });
 
@@ -215,8 +215,8 @@ test('public home advertises only implemented demonstration capabilities', async
 }) => {
     await page.goto('/');
 
-    await expect(page.getByRole('status')).toContainText(
-        'Demonstration environment',
+    await expect(page.locator('.mh-preview-strip')).toContainText(
+        'Pre-alpha preview',
     );
     await expect(
         page.getByRole('heading', {
@@ -249,16 +249,22 @@ test('public home advertises only implemented demonstration capabilities', async
     await expect(more.getByRole('link', { name: 'Chat' })).toHaveCount(0);
 });
 
-test('direct deferred feedback route never exposes fixture implementations', async ({
+test('unbuilt and unknown routes show a not-found page, never a fixture or the home page', async ({
     page,
 }) => {
-    for (const route of ['/feedback']) {
+    for (const route of ['/feedback', '/does-not-exist']) {
         await page.goto(route);
         await expect(
-            page.getByRole('region', { name: 'Deferred from the alpha' }),
+            page.getByRole('heading', { level: 1, name: 'Page not found' }),
         ).toBeVisible();
+        await expect(page).toHaveTitle('Page not found · Patchwork');
+        await expect(page).toHaveURL(new RegExp(`${route}$`));
         await expect(page.locator('form')).toHaveCount(0);
     }
+    await page.getByRole('link', { name: 'Go to home' }).click();
+    await expect(
+        page.getByRole('heading', { name: 'A little help, from a friend.' }),
+    ).toBeVisible();
 });
 
 test('request ZIP selection is explicit, reversible, historical, and survives reload', async ({
@@ -369,7 +375,7 @@ test('legal routes show aligned unapproved buyer-ready policy boundaries', async
     ).toBeVisible();
     await expect(page.getByText('at least 18')).toBeVisible();
     await expect(page.getByText(/Messages are server-readable/)).toBeVisible();
-    await expect(page.getByText(/operationally NO-GO/)).toBeVisible();
+    await expect(page.getByText(/is in pre-alpha and is not yet running/)).toBeVisible();
 
     await page.goto('/legal/privacy');
     await expect(

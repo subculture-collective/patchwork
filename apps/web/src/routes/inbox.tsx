@@ -6,9 +6,7 @@ import { defaultDiscoveryFilterState } from '../discovery-filters';
 import { StatusMessage } from '../components/StatusMessage';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
-import { Card } from '../components/Card';
 import { Input } from '../components/Input';
-import { Panel } from '../components/Panel';
 import {
     type ActivityInboxItem,
     type CoordinationConnection,
@@ -35,6 +33,8 @@ import {
     formatLocalizedLabel,
     parseCommaList,
 } from '../features/shell-shared';
+import { Surface } from '../components/Surface';
+import { PageHeader } from '../components/PageHeader';
 
 const outcomeOptions = [
     'successful',
@@ -146,11 +146,10 @@ export const CoordinationInboxRoute = ({ did }: { did: string }) => {
 
     return (
         <section className='space-y-6'>
-            <header className='mh-route-header'>
-                <h1 className='mh-route-title'>{t('inbox.heading')}</h1>
-                <p className='mt-2 text-sm text-mh-textMuted'>
-                    {t('inbox.description')}
-                </p>
+            <PageHeader
+                title={t('inbox.heading')}
+                description={t('inbox.description')}
+            >
                 <StatusMessage message={status} className='mt-2' />
                 <a
                     className='mt-3 inline-block font-bold underline'
@@ -158,9 +157,9 @@ export const CoordinationInboxRoute = ({ did }: { did: string }) => {
                 >
                     {t('inbox.openScheduling')}
                 </a>
-            </header>
+            </PageHeader>
 
-            <Panel title={String(t('inbox.discover'))}>
+            <Surface title={String(t('inbox.discover'))}>
                 {availableRequests.length === 0 ? (
                     <p className='text-sm text-mh-textMuted'>
                         {t('inbox.noRequests')}
@@ -168,7 +167,7 @@ export const CoordinationInboxRoute = ({ did }: { did: string }) => {
                 ) : (
                     <div className='grid gap-3 sm:grid-cols-2'>
                         {availableRequests.map((request) => (
-                            <Card
+                            <Surface as='article' tone='quiet'
                                 key={request.aidPostUri}
                                 title={request.card.title}
                             >
@@ -198,15 +197,15 @@ export const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                 >
                                     {t('inbox.offerHelp')}
                                 </Button>
-                            </Card>
+                            </Surface>
                         ))}
                     </div>
                 )}
-            </Panel>
+            </Surface>
 
             {offerRequest ? (
                 <Modal labelledBy='offer-help-title' onClose={() => setOfferRequestUri(undefined)}>
-                    <section className='mh-card w-full max-w-xl space-y-4 p-5'>
+                    <section className='mh-surface w-full max-w-xl space-y-4 p-5'>
                         <div>
                             <h2 id='offer-help-title' className='font-heading text-xl font-bold'>
                                 {t('inbox.offerHelpFor', {
@@ -254,7 +253,7 @@ export const CoordinationInboxRoute = ({ did }: { did: string }) => {
                 </Modal>
             ) : null}
 
-            <Panel title={String(t('inbox.offers'))}>
+            <Surface title={String(t('inbox.offers'))}>
                 {offers.length === 0 ? (
                     <p className='text-sm text-mh-textMuted'>
                         {t('inbox.noOffers')}
@@ -262,7 +261,7 @@ export const CoordinationInboxRoute = ({ did }: { did: string }) => {
                 ) : (
                     <div className='space-y-3'>
                         {offers.map((offer) => (
-                            <Card
+                            <Surface as='article' tone='quiet'
                                 key={offer.id}
                                 title={t('inbox.offerTitle', {
                                     direction: formatLocalizedLabel(
@@ -379,13 +378,13 @@ export const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                         )}
                                     </div>
                                 ) : null}
-                            </Card>
+                            </Surface>
                         ))}
                     </div>
                 )}
-            </Panel>
+            </Surface>
 
-            <Panel title={String(t('inbox.matching'))}>
+            <Surface title={String(t('inbox.matching'))}>
                 <p className='mb-3 text-sm text-mh-textMuted'>
                     {t('inbox.matchingHelp')}
                 </p>
@@ -502,9 +501,9 @@ export const CoordinationInboxRoute = ({ did }: { did: string }) => {
                         </div>
                     ))
                 )}
-            </Panel>
+            </Surface>
 
-            <Panel title={String(t('inbox.connections'))}>
+            <Surface title={String(t('inbox.connections'))}>
                 {connections.length === 0 ? (
                     <p className='text-sm text-mh-textMuted'>
                         {t('inbox.noConnections')}
@@ -523,7 +522,7 @@ export const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                 safetyConcern: false,
                             };
                             return (
-                                <Card
+                                <Surface as='article' tone='quiet'
                                     key={connection.id}
                                     title={t('inbox.connectionTitle', {
                                         status: formatLocalizedLabel(
@@ -741,16 +740,16 @@ export const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                                 : t('inbox.recorded')}
                                         </p>
                                     ) : null}
-                                </Card>
+                                </Surface>
                             );
                         })}
                     </div>
                 )}
-            </Panel>
+            </Surface>
 
             <MyRequests />
             <SavedDiscoveryPanel did={did} />
-            <Panel title={String(t('inbox.activity'))}>
+            <Surface title={String(t('inbox.activity'))}>
                 <label className='mb-3 block text-sm'>
                     <input
                         type='checkbox'
@@ -768,7 +767,7 @@ export const CoordinationInboxRoute = ({ did }: { did: string }) => {
                 ) : (
                     <div className='space-y-2'>
                         {items.map((item) => (
-                            <Card key={item.id} title={item.title}>
+                            <Surface as='article' tone='quiet' key={item.id} title={item.title}>
                                 <p className='text-sm'>{item.summary}</p>
                                 <p className='mt-1 text-xs text-mh-textMuted'>
                                     {formatLocalizedLabel(t, item.type)} ·{' '}
@@ -793,11 +792,11 @@ export const CoordinationInboxRoute = ({ did }: { did: string }) => {
                                         {t('inbox.markRead')}
                                     </Button>
                                 ) : null}
-                            </Card>
+                            </Surface>
                         ))}
                     </div>
                 )}
-            </Panel>
+            </Surface>
         </section>
     );
 };

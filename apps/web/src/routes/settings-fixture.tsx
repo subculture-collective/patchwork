@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { ToggleChip } from '../components/ToggleChip';
-import { Card } from '../components/Card';
-import { Panel } from '../components/Panel';
 import {
     deactivateAccountViaApi,
     exportDataViaApi,
@@ -31,6 +29,8 @@ import {
 import {
     formatCategoryLabel,
 } from '../features/shell-shared';
+import { Surface } from '../components/Surface';
+import { PageHeader } from '../components/PageHeader';
 
 interface SettingsRouteProps {
     currentUserDid: string;
@@ -174,18 +174,16 @@ export const SettingsRoute = ({ currentUserDid }: SettingsRouteProps) => {
 
     return (
         <section className='space-y-6'>
-            <header className='mh-route-header'>
-                <h1 className='mh-route-title'>Account settings</h1>
-                <p className='mt-2 text-sm text-mh-textMuted'>
-                    Privacy controls, contact preferences, notifications, and
-                    account management.
-                </p>
+            <PageHeader
+                title='Account settings'
+                description='Privacy controls, contact preferences, notifications, and account management.'
+            >
                 {dirty ? (
                     <div className='mt-3'>
                         <Badge tone='info'>Unsaved changes</Badge>
                     </div>
                 ) : null}
-            </header>
+            </PageHeader>
 
             {/* Section tabs */}
             <div className='flex flex-wrap gap-2'>
@@ -205,18 +203,18 @@ export const SettingsRoute = ({ currentUserDid }: SettingsRouteProps) => {
             </p>
 
             {isLoadingSettings ? (
-                <Panel title='Loading settings'>
+                <Surface title='Loading settings'>
                     <div className='space-y-3'>
                         <div className='mh-skeleton h-4 w-3/4' />
                         <div className='mh-skeleton h-4 w-1/2' />
                         <div className='mh-skeleton h-4 w-2/3' />
                     </div>
-                </Panel>
+                </Surface>
             ) : null}
 
             {/* Privacy section */}
             {!isLoadingSettings && activeSection === 'privacy' ? (
-                <Panel title='Privacy controls'>
+                <Surface title='Privacy controls'>
                     <div className='space-y-4'>
                         <div>
                             <p className='mb-1.5 mh-field-label'>
@@ -270,12 +268,12 @@ export const SettingsRoute = ({ currentUserDid }: SettingsRouteProps) => {
                             )}
                         </p>
                     </div>
-                </Panel>
+                </Surface>
             ) : null}
 
             {/* Contact section */}
             {!isLoadingSettings && activeSection === 'contact' ? (
-                <Panel title='Contact preferences'>
+                <Surface title='Contact preferences'>
                     <div className='space-y-3'>
                         <label className='inline-flex items-center gap-2 text-sm text-mh-textMuted'>
                             <input
@@ -326,12 +324,12 @@ export const SettingsRoute = ({ currentUserDid }: SettingsRouteProps) => {
                             Show phone on profile
                         </label>
                     </div>
-                </Panel>
+                </Surface>
             ) : null}
 
             {/* Notifications section */}
             {!isLoadingSettings && activeSection === 'notifications' ? (
-                <Panel title='Notification preferences'>
+                <Surface title='Notification preferences'>
                     <div className='space-y-3'>
                         <label className='inline-flex items-center gap-2 text-sm text-mh-textMuted'>
                             <input
@@ -406,14 +404,14 @@ export const SettingsRoute = ({ currentUserDid }: SettingsRouteProps) => {
                             System announcements
                         </label>
                     </div>
-                </Panel>
+                </Surface>
             ) : null}
 
             {/* Account section */}
             {!isLoadingSettings && activeSection === 'account' ? (
-                <Panel title='Account management'>
+                <Surface title='Account management'>
                     <div className='space-y-4'>
-                        <Card title='Data export'>
+                        <Surface as='article' tone='quiet' title='Data export'>
                             <p className='text-sm text-mh-textMuted'>
                                 Download the data Patchwork currently holds
                                 about your authenticated account. Credentials,
@@ -429,9 +427,9 @@ export const SettingsRoute = ({ currentUserDid }: SettingsRouteProps) => {
                                     Download data export
                                 </Button>
                             </div>
-                        </Card>
+                        </Surface>
 
-                        <Card title='Account deactivation'>
+                        <Surface as='article' tone='quiet' title='Account deactivation'>
                             <p className='text-sm text-mh-textMuted'>
                                 Deactivation immediately revokes Patchwork
                                 sessions and removes your posts from Patchwork
@@ -449,7 +447,7 @@ export const SettingsRoute = ({ currentUserDid }: SettingsRouteProps) => {
                                     Deactivate account
                                 </Button>
                             </div>
-                        </Card>
+                        </Surface>
 
                         {accountActionResult ? (
                             <p className='rounded-none border-2 border-mh-border bg-mh-surfaceElev px-3 py-2 text-xs font-bold text-mh-success'>
@@ -457,7 +455,7 @@ export const SettingsRoute = ({ currentUserDid }: SettingsRouteProps) => {
                             </p>
                         ) : null}
 
-                        <Card title='Audit trail'>
+                        <Surface as='article' tone='quiet' title='Audit trail'>
                             <p className='text-sm text-mh-textMuted'>
                                 View a log of all settings changes made to your
                                 account.
@@ -498,9 +496,9 @@ export const SettingsRoute = ({ currentUserDid }: SettingsRouteProps) => {
                                     ))}
                                 </ul>
                             ) : null}
-                        </Card>
+                        </Surface>
                     </div>
-                </Panel>
+                </Surface>
             ) : null}
 
             {/* Save / Cancel bar */}

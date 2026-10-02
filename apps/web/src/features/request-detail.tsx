@@ -3,7 +3,6 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useAuth } from '../auth/AuthProvider';
 import { useLocale } from '../i18n';
 import { Badge } from '../components/Badge';
-import { Panel } from '../components/Panel';
 import { Button } from '../components/Button';
 import {
     fetchAidPostViaApi,
@@ -11,6 +10,7 @@ import {
 } from './api-client';
 import type { FeedRecordEnvelope } from './discovery-runtime';
 import { RequestLifecycleActions } from './request-actions';
+import { Surface } from '../components/Surface';
 
 export function RequestDetail() {
     const { session } = useAuth();
@@ -118,13 +118,18 @@ export function RequestDetail() {
             </div>
             {error && <p role='alert'>{error}</p>}
             {!record ? (
-                loading ? (
-                    <p role='status'>{t('handoff.loadingRequest')}</p>
-                ) : (
-                    <Button onClick={() => setReload((value) => value + 1)}>
-                        {t('handoff.retry')}
-                    </Button>
-                )
+                <>
+                    <h1 className='mh-route-title'>
+                        {t('route.requestDetails')}
+                    </h1>
+                    {loading ? (
+                        <p role='status'>{t('handoff.loadingRequest')}</p>
+                    ) : uri ? (
+                        <Button onClick={() => setReload((value) => value + 1)}>
+                            {t('handoff.retry')}
+                        </Button>
+                    ) : null}
+                </>
             ) : (
                 <>
                     <header className='space-y-3'>
@@ -162,12 +167,12 @@ export function RequestDetail() {
                     </header>
                     <div className='grid items-start gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(260px,1fr)]'>
                         <div className='space-y-5'>
-                            <Panel title={t('requestPage.needed')}>
+                            <Surface title={t('requestPage.needed')}>
                                 <p className='whitespace-pre-wrap text-base leading-relaxed'>
                                     {record.card.description}
                                 </p>
-                            </Panel>
-                            <Panel title='ZIP area'>
+                            </Surface>
+                            <Surface title='ZIP area'>
                                 <p>
                                     {postalArea ? `ZIP ${postalArea.postalCode} · ${postalArea.stateName}` : 'The author has not supplied a ZIP code.'}
                                 </p>
@@ -190,8 +195,8 @@ export function RequestDetail() {
                                         {t('requestPage.resources')}
                                     </a>
                                 </div>
-                            </Panel>
-                            <Panel title={t('requestPage.updates')}>
+                            </Surface>
+                            <Surface title={t('requestPage.updates')}>
                                 <dl className='grid grid-cols-2 gap-3 text-sm'>
                                     <div>
                                         <dt className='font-bold'>
@@ -222,9 +227,9 @@ export function RequestDetail() {
                                         </dd>
                                     </div>
                                 </dl>
-                            </Panel>
+                            </Surface>
                         </div>
-                        <Panel
+                        <Surface
                             title={t(
                                 owner
                                     ? 'requestPage.manage'
@@ -324,7 +329,7 @@ export function RequestDetail() {
                             <p className='mt-5 border-t border-mh-borderSoft pt-3 text-sm text-mh-textMuted'>
                                 {t('requestPage.sequence')}
                             </p>
-                        </Panel>
+                        </Surface>
                     </div>
                 </>
             )}

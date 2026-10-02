@@ -23,6 +23,7 @@ import { LinkedRequestSelect } from './groups/LinkedRequestSelect';
 import { IdentityField } from './identity/IdentityField';
 import { AccountName, accountLabel } from './identity/AccountName';
 import { useHandles } from './identity/useHandles';
+import { PageHeader } from '../components/PageHeader';
 
 interface GroupState {
     groups: ProductionGroup[];
@@ -108,16 +109,18 @@ export const ProductionGroups = () => {
 
     return (
         <section aria-labelledby='production-groups-heading' className='space-y-6'>
-            <header className='mh-route-header'>
-                <h1 id='production-groups-heading' className='mh-route-title'>{t('groups.heading')}</h1>
-                <p className='mt-2 text-mh-textMuted'>{t('groups.description')}</p>
+            <PageHeader
+                title={t('groups.heading')}
+                titleId='production-groups-heading'
+                description={t('groups.description')}
+            >
                 <p className='mh-banner mh-banner--info mt-3'>{t('groups.trust')}</p>
-            </header>
+            </PageHeader>
 
             <div aria-live='polite' role='status'>{busy ? t('groups.loading') : message}</div>
             {error && <p role='alert' className='mh-banner mh-banner--danger'>{error}</p>}
 
-            <form onSubmit={createGroup} className='mh-card grid gap-4 p-5' aria-labelledby='create-group-heading'>
+            <form onSubmit={createGroup} className='mh-surface grid gap-4 p-5' aria-labelledby='create-group-heading'>
                 <h2 id='create-group-heading' className='font-heading text-xl font-bold'>{t('groups.create')}</h2>
                 <label className='grid gap-1 font-bold'>{t('groups.name')}
                     <input className='mh-input px-3 py-2' required maxLength={80} value={name} onChange={(event) => setName(event.target.value)} disabled={busy} />
@@ -145,7 +148,7 @@ export const ProductionGroups = () => {
                 <button className='mh-button mh-button--primary mh-button--md' disabled={busy}>{busy ? t('groups.creating') : t('groups.create')}</button>
             </form>
 
-            <section className='mh-card space-y-3 p-5' aria-labelledby='invitation-token-heading'>
+            <section className='mh-surface space-y-3 p-5' aria-labelledby='invitation-token-heading'>
                 <h2 id='invitation-token-heading' className='font-heading text-xl font-bold'>{t('groups.invitationToken')}</h2>
                 <p className='text-sm text-mh-textMuted'>{t('groups.invitationTokenHelp')}</p>
                 <label className='grid gap-1 font-bold'>{t('groups.invitationToken')}
@@ -169,7 +172,7 @@ export const ProductionGroups = () => {
                     <h2 id='your-groups-heading' className='font-heading text-2xl font-bold'>{t('groups.yourGroups')}</h2>
                     <button type='button' className='mh-button mh-button--secondary mh-button--md' onClick={() => void load()} disabled={busy}>{t('groups.refresh')}</button>
                 </div>
-                {data.groups.length === 0 ? <p className='mh-card p-5'>{t('groups.noGroups')}</p> :
+                {data.groups.length === 0 ? <p className='mh-surface p-5'>{t('groups.noGroups')}</p> :
                     data.groups.map((group) => <GroupCard key={group.id} group={group} linkable={linkable}
                         outgoing={data.outgoingInvitations.filter((invitation) => invitation.groupId === group.id)}
                         busy={busy} run={run} />)}
@@ -215,7 +218,7 @@ const GroupCard = ({ group, outgoing, busy, run, linkable }: {
     const roleLabel = (role: string) => role === 'owner' ? t('labels.owner') : role === 'moderator' ? t('groups.moderator') : t('labels.member');
 
     return (
-        <article className='mh-card space-y-4 p-5'>
+        <article className='mh-surface space-y-4 p-5'>
             <header>
                 <h3 className='font-heading text-xl font-bold'>{group.name}</h3>
                 <p>{group.description}</p>

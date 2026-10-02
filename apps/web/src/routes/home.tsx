@@ -2,6 +2,7 @@ import { type DiscoveryFilterState } from '../discovery-filters';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { TextLink } from '../components/TextLink';
+import { HomeNearby } from '../features/home-nearby';
 import { useLocale } from '../i18n';
 import {
     type AppRoute,
@@ -52,12 +53,6 @@ export const DashboardRoute = ({
                         >
                             {t('dashboard.askForHelp')}
                         </Button>
-                        <Button
-                            variant='neutral'
-                            onClick={() => onNavigate('/resources')}
-                        >
-                            {t('dashboard.findResources')}
-                        </Button>
                     </div>
                     <p className='mh-landing-note'>
                         <span aria-hidden='true' />{' '}
@@ -65,43 +60,14 @@ export const DashboardRoute = ({
                     </p>
                 </div>
 
-                <aside
-                    className='mh-how-card'
-                    aria-labelledby='how-patchwork-works'
-                >
-                    <div className='mh-how-card__patches' aria-hidden='true'>
-                        <span />
-                        <span />
-                        <span />
-                        <span />
-                    </div>
-                    <p className='mh-kicker'>{t('dashboard.howEyebrow')}</p>
-                    <h2 id='how-patchwork-works' className='mh-how-card__title'>
-                        {t('dashboard.howTitle')}
-                    </h2>
-                    <ol className='mt-5 grid gap-4'>
-                        {(['discover', 'connect', 'coordinate'] as const).map(
-                            (step, index) => (
-                                <li key={step} className='mh-how-step'>
-                                    <span
-                                        className='mh-how-step__number'
-                                        aria-hidden='true'
-                                    >
-                                        {index + 1}
-                                    </span>
-                                    <div>
-                                        <h3 className='font-bold text-mh-text'>
-                                            {t(`dashboard.${step}Title`)}
-                                        </h3>
-                                        <p className='mt-1 text-sm text-mh-textMuted'>
-                                            {t(`dashboard.${step}Description`)}
-                                        </p>
-                                    </div>
-                                </li>
-                            ),
-                        )}
-                    </ol>
-                </aside>
+                <HomeNearby
+                    discoveryState={discoveryState}
+                    onOpenMap={(event) => {
+                        event.preventDefault();
+                        onPatchDiscovery(buildNearbyPatch());
+                        onNavigate('/map');
+                    }}
+                />
             </header>
 
             <section
@@ -132,12 +98,6 @@ export const DashboardRoute = ({
                             onNavigate('/feed');
                         }}
                     >
-                        <span
-                            className='mh-path-card__index'
-                            aria-hidden='true'
-                        >
-                            {t('dashboard.needsIndex')}
-                        </span>
                         <span className='mh-path-card__title'>
                             {t('dashboard.needsTitle')}
                         </span>
@@ -145,8 +105,7 @@ export const DashboardRoute = ({
                             {t('dashboard.needsDescription')}
                         </span>
                         <span className='mh-path-card__link'>
-                            {t('dashboard.needsAction')}{' '}
-                            <span aria-hidden='true'>→</span>
+                            {t('dashboard.needsAction')}
                         </span>
                     </button>
                     <button
@@ -154,12 +113,6 @@ export const DashboardRoute = ({
                         className='mh-path-card mh-path-card--offer'
                         onClick={() => onNavigate('/volunteer')}
                     >
-                        <span
-                            className='mh-path-card__index'
-                            aria-hidden='true'
-                        >
-                            {t('dashboard.offerIndex')}
-                        </span>
                         <span className='mh-path-card__title'>
                             {t('dashboard.offerTitle')}
                         </span>
@@ -167,21 +120,14 @@ export const DashboardRoute = ({
                             {t('dashboard.offerDescription')}
                         </span>
                         <span className='mh-path-card__link'>
-                            {t('dashboard.offerAction')}{' '}
-                            <span aria-hidden='true'>→</span>
+                            {t('dashboard.offerAction')}
                         </span>
                     </button>
                     <button
                         type='button'
                         className='mh-path-card mh-path-card--resources'
-                        onClick={() => onNavigate('/resources')}
+                        onClick={() => onNavigate('/organizations')}
                     >
-                        <span
-                            className='mh-path-card__index'
-                            aria-hidden='true'
-                        >
-                            {t('dashboard.resourcesIndex')}
-                        </span>
                         <span className='mh-path-card__title'>
                             {t('dashboard.resourcesTitle')}
                         </span>
@@ -189,8 +135,7 @@ export const DashboardRoute = ({
                             {t('dashboard.resourcesDescription')}
                         </span>
                         <span className='mh-path-card__link'>
-                            {t('dashboard.resourcesAction')}{' '}
-                            <span aria-hidden='true'>→</span>
+                            {t('dashboard.resourcesAction')}
                         </span>
                     </button>
                 </div>
@@ -254,20 +199,24 @@ export const DashboardRoute = ({
                     </h2>
                     <p>{t('dashboard.trustDescription')}</p>
                 </div>
-                <ul className='mh-trust-list'>
-                    <li>
-                        <strong>{t('dashboard.approximateTitle')}</strong>
-                        <span>{t('dashboard.approximateDescription')}</span>
-                    </li>
-                    <li>
-                        <strong>{t('dashboard.privateTitle')}</strong>
-                        <span>{t('dashboard.privateDescription')}</span>
-                    </li>
-                    <li>
-                        <strong>{t('dashboard.controlTitle')}</strong>
-                        <span>{t('dashboard.controlDescription')}</span>
-                    </li>
-                </ul>
+                <ol className='mh-trust-list'>
+                    {(['discover', 'connect', 'coordinate'] as const).map(
+                        (step, index) => (
+                            <li key={step}>
+                                <strong>
+                                    <span
+                                        className='mh-trust-list__number'
+                                        aria-hidden='true'
+                                    >
+                                        {index + 1}
+                                    </span>
+                                    {t(`dashboard.${step}Title`)}
+                                </strong>
+                                <span>{t(`dashboard.${step}Description`)}</span>
+                            </li>
+                        ),
+                    )}
+                </ol>
             </section>
 
             <aside className='mh-safety-note' aria-labelledby='safety-heading'>

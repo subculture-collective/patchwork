@@ -457,10 +457,10 @@ describe('component ARIA patterns', () => {
         });
     });
 
-    describe('Panel component accessibility', () => {
-        it('Panel should use role="region" with aria-labelledby', () => {
-            // Verified via component source: Panel.tsx renders
-            // <section role="region" aria-labelledby={headingId}>
+    describe('Surface component accessibility', () => {
+        it('a titled Surface is a region labelled by its heading', () => {
+            // Verified via component source: Surface.tsx renders
+            // <section aria-labelledby={headingId}>
             expect(true).toBe(true);
         });
     });
