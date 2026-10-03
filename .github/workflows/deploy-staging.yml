@@ -49,7 +49,7 @@ jobs:
                   persist-credentials: false
             - name: Verify manual source passed CI
               env:
-                  GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+                  GITEA_TOKEN: ${{ secrets.RELEASE_TOKEN }}
               run: bash scripts/verify-gitea-source.sh
             - name: Validate required configuration before building
               env:
@@ -288,7 +288,7 @@ jobs:
                   name: staging-artifact-digests
             - name: Recheck main and CI immediately before deployment
               env:
-                  GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+                  GITEA_TOKEN: ${{ secrets.RELEASE_TOKEN }}
               run: bash scripts/verify-gitea-source.sh
             - name: Configure staging SSH
               env:

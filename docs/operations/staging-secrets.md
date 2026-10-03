@@ -17,13 +17,15 @@ again before deployment; if main advances while images build, dispatch the new
 accepted commit instead of promoting the old one.
 
 Configure the following under the repository's **Settings → Actions → Secrets**
-and **Variables**. Do not paste values into issues or chat. The built-in
-`GITEA_TOKEN` reads repository metadata; a separate package token authenticates
-the registry. Repository/owner token settings must permit `contents: read` and
-`actions: read` for the job token.
+and **Variables**. Do not paste values into issues or chat. The workflow supplies `secrets.RELEASE_TOKEN` through the `GITEA_TOKEN`
+environment variable to read repository metadata and CI status. The organization
+provides this secret; a repository override takes precedence. A separate package
+token authenticates the registry. Do not create a custom secret named
+`GITEA_TOKEN`: Gitea reserves that prefix.
 
 | Secret | Purpose |
 | --- | --- |
+| `RELEASE_TOKEN` | Gitea PAT permitted to read this repository and its Actions runs; inherited from the organization unless overridden |
 | `STAGING_REGISTRY_TOKEN` | Dedicated Gitea PAT with `write:package`, owned by an account allowed to publish packages under `subculture-collective` |
 | `STAGING_COSIGN_PRIVATE_KEY` | Encrypted PEM signing key; supplied to Cosign through its environment, never copied to staging |
 | `STAGING_COSIGN_PASSWORD` | Nonempty password for the signing key |
