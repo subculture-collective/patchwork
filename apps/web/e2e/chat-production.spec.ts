@@ -74,7 +74,7 @@ test('production chat discloses its trust model and supports duplicate-safe retr
     await page.getByRole('button', { name: 'Open conversation' }).click();
     await page.getByLabel('Message', { exact: true }).fill('Private browser message');
     await page.getByRole('button', { name: 'Send message' }).click();
-    await expect(page.getByRole('alert')).toContainText('draft is preserved');
+    await expect(page.getByRole('alert')).toContainText('Your draft is still here');
     await page.getByRole('button', { name: 'Retry message' }).click();
     await expect(page.getByText('Private browser message')).toBeVisible();
     expect(sentClientIds).toHaveLength(2);
