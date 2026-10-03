@@ -29,7 +29,8 @@ truth for values is `apps/web/src/styles/tokens.css`. Components live in
    Design each surface at 360px first, then add columns.
 5. **Plain language.** Headings describe what the person can do ("Requests
    near you"), not the system ("Feed operations"). Protocol terms such as DID,
-   PDS and CID stay out of primary UI.
+   PDS and CID stay out of primary UI. The voice notes for copy are in
+   [`docs/patchwork.md`](patchwork.md#voice).
 
 ## 2. Tokens
 

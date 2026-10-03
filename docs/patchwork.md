@@ -1,17 +1,23 @@
 # Patchwork
 
-**Mutual aid, woven.**
+**Mutual aid, block by block.**
 
-Patchwork is a mutual aid coordination platform built on the AT Protocol. It
-connects people who need help with volunteers and organisations in their
-community through a federated, transparent, and privacy-respecting network.
+Patchwork is mutual aid coordination software built on the AT Protocol.
+Neighbors post requests, offer help, and look up local organisations and
+services.
+
+> Status: pre-alpha demonstration. Patchwork is not approved to operate as a
+> public mutual-aid service, and nobody should arrange real help through it
+> yet. The [README](../README.md) and the
+> [implementation inventory](architecture/current-state-matrix.md) describe
+> what currently works. Where this overview and the inventory disagree, the
+> inventory is right.
 
 ---
 
 ## What Patchwork Is
 
-Patchwork is community infrastructure for getting through it. It provides
-tools for:
+Patchwork provides tools for:
 
 - **Posting aid requests** -- Describe what you need, categorise it, and share
   it with your community.
@@ -23,13 +29,12 @@ tools for:
   management for volunteers and organisations.
 - **Community resources** -- A shared directory of local resources, services,
   and partner organisations.
-- **Secure messaging** -- Direct communication between requesters and
-  volunteers for coordination.
-- **Feedback and outcomes** -- Post-handoff reporting to build trust and
-  improve the network.
+- **Messaging** -- Chat between people with an accepted connection, and in
+  group rooms. Messages are server-readable and are not end-to-end encrypted.
+- **Feedback and outcomes** -- A structured report after a handoff.
 
 Patchwork is **not** a charity, a professional services provider, or an
-emergency service. It is peer-to-peer mutual aid coordination infrastructure.
+emergency service. It cannot guarantee a match, a response or fulfillment.
 
 ## How It Works
 
@@ -55,12 +60,12 @@ social networking protocol. This means:
 | Feed                     | Nearby request stream with lifecycle actions    |
 | Resource directory       | Directory overlays and partner resources        |
 | Volunteer management     | Onboarding, verification, and profiles          |
-| Chat                     | Routed messaging with typing indicators         |
+| Chat                     | Server-readable text chat for connections and group rooms |
 | Moderation               | Queue-based triage with graduated enforcement   |
 | Inbox                    | Unified inbox for requests, assignments, and alerts |
 | Feedback                 | Post-handoff outcome reporting                  |
-| Offline support          | Offline sync queue for unreliable connectivity  |
-| Privacy controls         | Configurable geo-sharing, visibility, and data export |
+| Offline behaviour        | Shows an offline notice; changes are not queued while offline |
+| Privacy controls         | Approximate public areas, visibility settings, and data export |
 
 ## Architecture Overview
 
@@ -104,10 +109,32 @@ The whole platform is legible through the metaphor: *patches* (needs/offers),
 
 ## Taglines
 
-* "Mutual aid, woven."
-* "Requests in. Care out."
-* "A commons for need, offer, and coordination."
-* "Community infrastructure for getting through it."
+In use in the app:
+
+* Tagline: "Mutual aid, block by block"
+* Home headline: "A little help, from a friend."
+
+Earlier candidates, not in use: "Mutual aid, woven."; "Requests in. Care
+out."; "A commons for need, offer, and coordination."; "Community
+infrastructure for getting through it."
+
+## Voice
+
+Patchwork copy reads like a note on a community board from a neighbor who has
+done this before and is not in a hurry. It uses full sentences and small,
+ordinary examples: a ride to an appointment, a spare crib, a meal.
+
+* Say "you" and "your neighbors". The app uses the American spelling.
+* State the location rule exactly: requests show an approximate area; approved
+  public resources can show their address.
+* Keep the pre-alpha, demonstration and not-an-emergency-service notices in
+  every rewrite. Never promise that help will come.
+* Avoid hero language, urgency and crisis imagery. Keep protocol and internal
+  terms (PDS, DID, AT identity, NO-GO, deferred, API sync) out of public copy.
+* Interface labels and errors stay plain. An error says what happened and what
+  to do next.
+* English and Spanish carry the same meaning. Write the Spanish as a neighbor
+  would say it, not word for word.
 
 ## Branding
 

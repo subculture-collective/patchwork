@@ -233,7 +233,7 @@ test('public home advertises only implemented demonstration capabilities', async
     ).toBeVisible();
     await expect(
         page.getByText(
-            'Public discovery uses approximate areas, never exact addresses.',
+            'Requests show an approximate area. Approved public resources can show their address.',
         ),
     ).toBeVisible();
     await expect(page.getByText('127', { exact: true })).toHaveCount(0);

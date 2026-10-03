@@ -220,12 +220,12 @@ test.describe('ARIA attributes', () => {
 
         await expect(
             page.getByRole('button', {
-                name: /I need support.+Browse community needs/,
+                name: /I could use some help.+Browse requests/,
             }),
         ).toBeVisible();
         await expect(
             page.getByRole('button', {
-                name: /I can lend a hand.+Explore volunteering/,
+                name: /I can lend a hand.+Go to volunteering/,
             }),
         ).toBeVisible();
         await expect(
