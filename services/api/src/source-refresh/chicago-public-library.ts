@@ -186,6 +186,7 @@ export async function fetchCplPublisherEvidence(options: {
     baselineIds: ReadonlySet<string>;
     fetch?: typeof globalThis.fetch;
     now?: () => Date;
+    firstRetrievedAt?: (rawSha256: string) => Promise<Date | null>;
 }) {
     const fetcher = options.fetch ?? globalThis.fetch;
     const retrievedAt = (options.now ?? (() => new Date()))();
@@ -198,13 +199,17 @@ export async function fetchCplPublisherEvidence(options: {
     const declaredLength = Number(response.headers.get('content-length'));
     if (Number.isFinite(declaredLength) && declaredLength > MAX_BYTES) throw new Error('CPL response exceeds the permitted evidence size.');
     const raw = await readBoundedBody(response);
-    const catalog = normalizeCplPublisherBytes(raw, retrievedAt, options.baselineIds);
+    const rawSha256 = hash(raw);
+    // Keep the catalog's first-observed date stable for identical publisher bytes.
+    // The manifest below still records this fetch's actual observation time.
+    const firstRetrievedAt = await options.firstRetrievedAt?.(rawSha256);
+    const catalog = normalizeCplPublisherBytes(raw, firstRetrievedAt ?? retrievedAt, options.baselineIds);
     const manifest: CplEvidenceManifest = {
         version: 1, publisher: 'City of Chicago', datasetId: CPL_DATASET_ID,
         requestUrl: CPL_API_URL, responseUrl: response.url || CPL_API_URL,
         retrievedAt: retrievedAt.toISOString(), contentType,
         etag: response.headers.get('etag'), lastModified: response.headers.get('last-modified'),
-        rawSha256: hash(raw), rawBytes: raw.byteLength, rowCount: catalog.resources.length,
+        rawSha256, rawBytes: raw.byteLength, rowCount: catalog.resources.length,
         normalizedSha256: hashRefreshValue(catalog),
     };
     const paths = await retainCplEvidence(options.outputDir, raw, catalog, manifest);

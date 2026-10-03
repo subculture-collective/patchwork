@@ -90,6 +90,30 @@ describe('Chicago Public Library publisher adapter', () => {
         await expect(fetchCplPublisherEvidence({ outputDir, baselineIds: baselines(), fetch: fetcher, now: () => now })).resolves.toMatchObject({ manifest: result.manifest });
     });
 
+    it('keeps cross-day replay identity while retaining the latest observation time', async () => {
+        const outputDir = await workspace();
+        const raw = encode(rows());
+        const fetcher = vi.fn<typeof fetch>(async () => new Response(raw, {
+            status: 200, headers: { 'content-type': 'application/json' },
+        }));
+        const first = await fetchCplPublisherEvidence({ outputDir, baselineIds: baselines(), fetch: fetcher, now: () => now });
+        const later = new Date('2026-10-03T08:00:00Z');
+        const lookup = vi.fn(async () => now);
+        const replay = await fetchCplPublisherEvidence({ outputDir, baselineIds: baselines(), fetch: fetcher,
+            now: () => later, firstRetrievedAt: lookup });
+        expect(lookup).toHaveBeenCalledWith(first.manifest.rawSha256);
+        expect(replay.catalog).toEqual(first.catalog);
+        expect(replay.manifest.normalizedSha256).toBe(first.manifest.normalizedSha256);
+        expect(replay.manifest.retrievedAt).toBe(later.toISOString());
+        const changedRows = rows(); changedRows[0]!.address = '100 W. Changed Street';
+        const changed = await fetchCplPublisherEvidence({ outputDir, baselineIds: baselines(), now: () => later,
+            firstRetrievedAt: async () => null,
+            fetch: async () => new Response(encode(changedRows), { headers: { 'content-type': 'application/json' } }) });
+        expect(changed.manifest.rawSha256).not.toBe(first.manifest.rawSha256);
+        expect(changed.manifest.normalizedSha256).not.toBe(first.manifest.normalizedSha256);
+        expect(changed.catalog.sources.cpl!.retrievedAt).toBe('2026-10-03');
+    });
+
     it('does not retain evidence until the complete response validates', async () => {
         const outputDir = await workspace();
         const fetcher = vi.fn<typeof fetch>(async () => new Response(encode(rows(10)), { status: 200,
