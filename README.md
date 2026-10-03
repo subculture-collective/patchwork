@@ -1,5 +1,9 @@
 # Patchwork
 
+> Pre-alpha demonstration. Please do not arrange real help through it.
+
+![Patchwork: A little help, from a friend. Four stitched neighborhood patches.](docs/assets/readme/banner.png)
+
 **Mutual aid, block by block.**
 
 Someone two streets over needs a ride on Thursday. You have a car on Thursday.
@@ -13,7 +17,7 @@ yet.
 
 ![Patchwork home and resource discovery](https://subcult.tv/screenshots/patchwork-home-1440.webp)
 
-## What the preview does
+## Around the neighborhood
 
 - **Requests and offers.** Sign in with an AT Protocol account (a Bluesky
   account works) to post a request or offer help on someone else's. Accepted
