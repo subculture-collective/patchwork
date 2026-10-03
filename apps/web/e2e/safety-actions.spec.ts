@@ -411,12 +411,12 @@ test('owner can recover when private lifecycle transition outpaces public AT syn
         .getByRole('button', { name: 'Resolve request "Lifecycle sync recovery"' })
         .click();
     await expect(
-        page.getByText(/Private workflow saved, but its public AT status is not synchronized/),
+        page.getByText(/Your change was saved, but the public listing has not updated yet/),
     ).toBeVisible();
-    await page.getByRole('button', { name: 'Retry public status sync' }).click();
+    await page.getByRole('button', { name: 'Update the public listing' }).click();
 
     await expect(
-        page.getByText(/Private workflow saved, but its public AT status is not synchronized/),
+        page.getByText(/Your change was saved, but the public listing has not updated yet/),
     ).toHaveCount(0);
     await expect(page.getByText('Resolved').first()).toBeVisible();
     expect(syncAttempts).toBe(2);

@@ -524,7 +524,7 @@ describe('AT authentication flow', () => {
         expect(fetchMock).toHaveBeenCalledTimes(2);
         expect(navigate).not.toHaveBeenCalled();
         expect(container.textContent).toContain('Account created for alice.subcult.tv.');
-        expect(container.textContent).toContain('the login page');
+        expect(container.textContent).toContain('the sign-in page');
         expect(container.textContent).not.toContain('invite-123');
         await act(async () => root.unmount());
     });
@@ -646,8 +646,8 @@ describe('AT authentication flow', () => {
         );
 
         expect(html).toContain('role="alert"');
-        expect(html).toContain('This login callback is stale or invalid.');
-        expect(html).toContain('Start a new login');
+        expect(html).toContain('This sign-in link is out of date or invalid.');
+        expect(html).toContain('Start a new sign-in');
         expect(html).not.toContain('sensitive-state');
         expect(html).not.toContain('sensitive-code');
 

@@ -25,9 +25,9 @@ const routes = {
         ['/legal/terms', 'Terms of Service'],
         ['/legal/privacy', 'Privacy Policy'],
         ['/legal/community-guidelines', 'Community Guidelines'],
-        ['/login', 'Come on in. Your neighbors are here.'],
-        ['/signup', 'Join your neighbors.'],
-        ['/auth/callback?error=access_denied', 'Let’s get you back on track.'],
+        ['/login', 'Come on in and have a look around.'],
+        ['/signup', 'Come and try it out.'],
+        ['/auth/callback?error=access_denied', 'That sign-in did not finish.'],
     ],
     es: [
         ['/', 'Patchwork'],
@@ -48,9 +48,9 @@ const routes = {
         ['/legal/terms', 'Términos del servicio'],
         ['/legal/privacy', 'Política de privacidad'],
         ['/legal/community-guidelines', 'Normas de la comunidad'],
-        ['/login', 'Adelante. Tu comunidad está aquí.'],
-        ['/signup', 'Únete a tu comunidad.'],
-        ['/auth/callback?error=access_denied', 'Volvamos a encaminarte.'],
+        ['/login', 'Pasa y echa un vistazo.'],
+        ['/signup', 'Ven a probarlo.'],
+        ['/auth/callback?error=access_denied', 'Ese inicio de sesión no se completó.'],
     ],
 } as const;
 
