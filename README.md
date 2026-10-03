@@ -1,29 +1,35 @@
 # Patchwork
 
-**Find local resources. Connect around mutual aid.**
+**Mutual aid, block by block.**
 
-Patchwork brings mutual-aid requests, offers, and community resources into a
-searchable map and feed. It is built for people looking for support, volunteers
-offering their time, and organizations helping neighbors find one another.
+Someone two streets over needs a ride on Thursday. You have a car on Thursday.
+Patchwork is where neighbors ask for help like that and offer it. It also keeps
+a map and directory of food banks, clinics, shelters and other local services.
+
+This is a pre-alpha demonstration. Please don't arrange real help through it
+yet.
 
 [Explore the pre-alpha preview](https://patchwork.subcult.tv) · [Product overview](https://subcult.tv/products/patchwork) · [Give feedback](https://git.subcult.tv/subculture-collective/patchwork/issues)
 
 ![Patchwork home and resource discovery](https://subcult.tv/screenshots/patchwork-home-1440.webp)
 
-## A place to start, and a way to follow through
+## What the preview does
 
-- **Find resources:** browse the map, feed, and directory for relevant requests,
-  offers, and organization references.
-- **Make a connection:** publish requests or offers with an AT Protocol account
-  and follow accepted connections through the inbox.
-- **Coordinate:** use scheduling, groups, and chat to organize next steps with
-  connection participants and group members.
-- **Steward community information:** maintain organization profiles and resource
-  records, with moderation and reporting flows.
+- **Requests and offers.** Sign in with an AT Protocol account (a Bluesky
+  account works) to post a request or offer help on someone else's. Accepted
+  offers continue in the inbox.
+- **Map, feed and directory.** Browse requests, offers and organization
+  listings without an account.
+- **Scheduling, groups and chat.** People with an accepted connection can agree
+  a time and message each other. Group members share rooms.
+- **Organization listings.** Organizations maintain their profiles and resource
+  records. Listings can be reported, corrected and moderated.
 
-Patchwork uses [AT Protocol](https://atproto.com) for its account and public-record
-model. Public personal locations are approximate. Resource references are
-attributed and do not imply participation, endorsement, or current availability.
+Patchwork uses [AT Protocol](https://atproto.com) for accounts and public
+records. Requests and volunteer profiles show an approximate area, never an
+address. Approved public resources can show their address. Resource references
+are attributed and do not imply participation, endorsement, or current
+availability.
 
 ## Preview status
 
@@ -37,10 +43,10 @@ available journeys and data labels. The [current launch decision](docs/operation
 and [implementation inventory](docs/architecture/current-state-matrix.md) document
 the remaining launch requirements.
 
-## Help shape Patchwork
+## Feedback
 
-Feedback on resource discovery, community coordination, and moderation is welcome
-through [repository issues](https://git.subcult.tv/subculture-collective/patchwork/issues).
+Tell us what is confusing or wrong in resource discovery, coordination or
+moderation through [repository issues](https://git.subcult.tv/subculture-collective/patchwork/issues).
 For local setup, service architecture, and tests, use the
 [development guide](DEVELOPMENT.md).
 
