@@ -2,7 +2,7 @@
 
 > Pre-alpha demonstration. Please do not arrange real help through it.
 
-![Patchwork: A little help, from a friend. Four stitched neighborhood patches.](docs/assets/readme/banner.png)
+![Patchwork: A little help, from a friend. Four stitched neighborhood patches.](https://git.subcult.tv/api/v1/repos/subculture-collective/patchwork/raw/docs/assets/readme/banner.png?ref=19df4570437b398f3fd13eebe6b03aeef64fc135)
 
 **Mutual aid, block by block.**
 
