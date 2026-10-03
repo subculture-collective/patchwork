@@ -8,7 +8,7 @@ test('offline state is explicit and does not promise queued mutations', async ({
     await context.setOffline(true);
     await expect(page.getByRole('alert')).toContainText('You are offline.');
     await expect(page.getByRole('alert')).toContainText(
-        'does not queue mutations offline',
+        'does not save changes to send later',
     );
     await context.setOffline(false);
     await expect(page.getByText('You are offline.')).toHaveCount(0);

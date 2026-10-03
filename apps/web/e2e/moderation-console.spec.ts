@@ -227,14 +227,14 @@ test('moderators can quarantine, appeal, audit, and shut down submissions withou
     await expect(shutdown).toBeEnabled();
     await shutdown.click();
     await expect(page.getByText('Patchwork is temporarily read-only.')).toBeVisible();
-    await expect(page.getByText(/exact-location exchange are disabled/)).toBeVisible();
+    await expect(page.getByText(/private location sharing are off for now/)).toBeVisible();
     await page.goto('/posting');
     await expect(
         page.getByRole('region', {
             name: 'New submissions are temporarily paused',
         }),
     ).toBeVisible();
-    await expect(page.getByText(/Existing public information remains readable/)).toBeVisible();
+    await expect(page.getByText(/You can still read everything that is already public/)).toBeVisible();
 
     expect(commandBodies.length).toBeGreaterThan(0);
     expect(JSON.stringify(commandBodies)).not.toContain('actorDid');
