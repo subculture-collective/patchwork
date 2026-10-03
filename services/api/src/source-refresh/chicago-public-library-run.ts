@@ -47,6 +47,13 @@ export async function runCplSourceRefresh(options: {
         const evidence = await withBoundedPublisherRetry(
             () => fetchCplPublisherEvidence({
                 outputDir: options.outputDir, baselineIds, fetch: options.fetch, now: options.now,
+                firstRetrievedAt: async rawSha256 => {
+                    const previous = await lockClient.query<{ retrieved_at: Date | string }>(
+                        'SELECT retrieved_at FROM source_refresh_runs WHERE source_id=$1 AND raw_sha256=$2',
+                        ['cpl', rawSha256],
+                    );
+                    return previous.rows[0] ? new Date(previous.rows[0].retrieved_at) : null;
+                },
             }),
             delay,
         );
