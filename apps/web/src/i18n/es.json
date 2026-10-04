@@ -257,7 +257,7 @@
         "aggregateTruncated": "Acerca el mapa a una zona más pequeña para ver los grupos restantes.",
         "heading": "Mapa cercano",
         "description": "Encuentra solicitudes y recursos cerca de ti. Abre una publicación para ver cómo ayudar.",
-        "areaRequired": "Permite el acceso a la ubicación para cargar resultados cercanos. Si no está disponible, el área de demostración se carga automáticamente.",
+        "areaRequired": "Mueve el mapa o cambia el zoom y selecciona Buscar en esta área para cargar resultados. También puedes permitir el acceso a la ubicación en Ubicación y filtros.",
         "dbBackedApi": "API respaldada por BD",
         "apiSyncIssue": "Problema de sincronizaci\u00f3n de API: {{message}}",
         "clusterOverviewTitle": "Resumen de cl\u00fasteres",

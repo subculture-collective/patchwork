@@ -257,7 +257,7 @@
         "aggregateTruncated": "Zoom into a smaller area to see the remaining groups.",
         "heading": "Nearby map",
         "description": "Find requests and resources near you. Open a listing to see how to help.",
-        "areaRequired": "Allow location access to load nearby results. If location is unavailable, the demonstration area loads automatically.",
+        "areaRequired": "Move or zoom the map, then choose Search this area to load results. You can also allow location access under Location and filters.",
         "dbBackedApi": "DB-backed API",
         "apiSyncIssue": "API sync issue: {{message}}",
         "clusterOverviewTitle": "Cluster overview",

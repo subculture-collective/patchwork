@@ -182,6 +182,13 @@ export const MapRoute = ({
                       areaLabel: undefined,
                       radiusMeters: undefined,
                   };
+        const center = discoveryState.center;
+        if (center) {
+            setViewport(current => current ?? {
+                center,
+                radiusMeters: discoveryState.radiusMeters ?? 20000,
+            });
+        }
         setFocusedArea(undefined);
         onSelectPost(undefined);
         onPushDiscovery(patch);
@@ -197,7 +204,7 @@ export const MapRoute = ({
                     {t('map.description')}
                 </p>
                 <div className='mt-3 flex flex-wrap gap-2'>
-                    {dataOrigin !== 'api' && <Badge tone='info'>{originLabel}</Badge>}
+                    {dataOrigin !== 'api' && <Badge tone='info'>{dataOrigin === 'idle' ? t('discovery.areaRequiredTitle') : originLabel}</Badge>}
                     <p ref={paginationFocus.loadedCountRef} tabIndex={-1} className='text-sm text-mh-textMuted' role='status'>
                         {t('discovery.loadedCount', { loaded: feedRecords.length, total })}
                     </p>
@@ -312,28 +319,23 @@ export const MapRoute = ({
                         </Button>
                     </div>
                 ) : null}
-                {discoveryState.center ? (
-                    <Suspense
-                        fallback={<div className='mh-skeleton h-96 w-full' />}
-                    >
-                        <LazyInteractiveMap
-                            cards={mapView.filteredCards}
-                            resources={mapResourceView.cards}
-                            aggregateCells={aggregates && aggregates.requestCount > mapView.filteredCards.length ? aggregates.cells : undefined}
-                            selectedPostId={selectedPostId}
-                            center={discoveryState.center}
-                            onSelectPostId={onSelectPost}
-                            focusedArea={activeArea}
-                            onViewportChange={setViewport}
-                            onSelectResource={setSelectedResourceUri}
-                            onTilesFailed={setTileError}
-                        />
-                    </Suspense>
-                ) : (
-                    <div className='mh-alert p-4' role='status'>
-                        {t('map.areaRequired')}
-                    </div>
-                )}
+                {!discoveryState.center && <p className='mb-3 text-sm' role='status'>{t('map.areaRequired')}</p>}
+                <Suspense
+                    fallback={<div className='mh-skeleton h-96 w-full' />}
+                >
+                    <LazyInteractiveMap
+                        cards={mapView.filteredCards}
+                        resources={mapResourceView.cards}
+                        aggregateCells={aggregates && aggregates.requestCount > mapView.filteredCards.length ? aggregates.cells : undefined}
+                        selectedPostId={selectedPostId}
+                        center={discoveryState.center}
+                        onSelectPostId={onSelectPost}
+                        focusedArea={activeArea}
+                        onViewportChange={setViewport}
+                        onSelectResource={setSelectedResourceUri}
+                        onTilesFailed={setTileError}
+                    />
+                </Suspense>
             </section>
 
             {aggregates && aggregates.requestCount > mapView.filteredCards.length && <p role='status'>{t('map.aggregateHelp', { count: aggregates.requestCount })}{aggregates.truncated ? ` ${t('map.aggregateTruncated')}` : ''}</p>}
@@ -368,7 +370,7 @@ export const MapRoute = ({
                             ))}
                         </ul>
                     ) : mapView.filteredCards.length === 0 ? (
-                        <p>{t('map.noRequests')}</p>
+                        <p>{t(discoveryState.center ? 'map.noRequests' : 'map.areaRequired')}</p>
                     ) : (
                         <ul className='space-y-3'>
                             {mapView.filteredCards.map((card) => (
