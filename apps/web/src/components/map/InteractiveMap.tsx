@@ -384,7 +384,7 @@ export const InteractiveMap = ({
             </fieldset>
             {!hasItems && (
                 <p id={instructionsId} className='mh-map-empty-message'>
-                    {t('map.emptyInteractive')}
+                    {t(center ? 'map.emptyInteractive' : 'map.areaRequired')}
                 </p>
             )}
             {hasItems && (
