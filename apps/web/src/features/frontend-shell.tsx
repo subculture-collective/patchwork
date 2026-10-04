@@ -6881,13 +6881,12 @@ const CoordinationInboxRoute = ({ did }: { did: string }) => {
                 >
                     {status}
                 </p>
-                <a
-                    className='mt-3 inline-block font-bold underline'
-                    href='/scheduling'
-                >
-                    {t('inbox.openScheduling')}
-                </a>
-                <Button variant='neutral' onClick={() => void load()}>{t('myRequests.refresh')}</Button>
+                <div className='mt-3 flex flex-wrap items-center gap-4'>
+                    <a className='font-bold underline' href='/scheduling'>
+                        {t('inbox.openScheduling')}
+                    </a>
+                    <Button variant='neutral' onClick={() => void load()}>{t('myRequests.refresh')}</Button>
+                </div>
             </header>
 
             <Suspense fallback={null}><LazyMyRequests key={did} /></Suspense>
