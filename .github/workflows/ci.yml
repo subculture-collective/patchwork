@@ -224,6 +224,10 @@ jobs:
                   clamav="patchwork-ci-clamav-${GITHUB_RUN_ID}-${GITHUB_JOB}"
                   network=$(docker inspect --format '{{range $name, $network := .NetworkSettings.Networks}}{{$name}}{{end}}' "$HOSTNAME")
                   test -n "$network"
+                  docker build --file deploy/ci/minio.Dockerfile \
+                    --tag "patchwork-ci-minio:${GITHUB_RUN_ID}" deploy/ci
+                  objects_image=$(docker image inspect --format '{{.Id}}' "patchwork-ci-minio:${GITHUB_RUN_ID}")
+                  test -n "$objects_image"
                   docker run --detach --name "$objects" \
                     --network "$network" \
                     --env MINIO_ROOT_USER="$ATTACHMENT_OBJECT_ACCESS_KEY" \
@@ -232,7 +236,7 @@ jobs:
                     --health-interval 10s \
                     --health-timeout 5s \
                     --health-retries 18 \
-                    minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e \
+                    "$objects_image" \
                     server /data
                   docker run --detach --name "$clamav" \
                     --network "$network" \

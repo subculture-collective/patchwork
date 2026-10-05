@@ -43,9 +43,10 @@ public-source references. It is not an emergency service and cannot guarantee
 a match, response, or fulfillment. Chat is server-readable.
 
 Read the [evaluator guide](docs/product/buyer-ready-evaluator-guide.md) for the
-available journeys and data labels. The [current launch decision](docs/operations/evidence/coordination-localization-groups-chat-2026-08-05.md)
-and [implementation inventory](docs/architecture/current-state-matrix.md) document
-the remaining launch requirements.
+available journeys and data labels. The [current release and acceptance
+baseline](docs/operations/release-baseline.md) and [implementation
+inventory](docs/architecture/current-state-matrix.md) document the remaining
+launch requirements.
 
 ## Feedback
 

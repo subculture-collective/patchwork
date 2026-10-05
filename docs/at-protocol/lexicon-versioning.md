@@ -4,9 +4,11 @@ This document defines the v1 AT Lexicon schema set, constraints, and evolution p
 
 ## v1 schema set
 
-> Alpha scope: only `app.patchwork.aid.post` is enabled for runtime repository
-> writes. The other schemas remain deferred design/compatibility artifacts under
-> ADR 0003 and must not be treated as active product capabilities.
+> Current runtime scope: `app.patchwork.aid.post`,
+> `app.patchwork.volunteer.profile`, and `app.patchwork.directory.resource` have
+> authenticated repository paths. `app.patchwork.conversation.meta` and
+> `app.patchwork.moderation.report` remain prohibited runtime writes under ADR
+> 0003 and must not be presented as active public-record capabilities.
 
 Records are currently published at:
 
