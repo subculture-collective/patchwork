@@ -86,6 +86,10 @@ RUN npm prune --omit=dev --no-audit --no-fund
 
 FROM runtime-base AS api-runtime
 
+RUN rm -rf /usr/local/lib/node_modules/npm \
+    /usr/local/bin/npm \
+    /usr/local/bin/npx
+
 ARG GIT_SHA
 ARG GIT_BRANCH
 ARG BUILD_VERSION
@@ -97,7 +101,7 @@ LABEL org.opencontainers.image.revision="${GIT_SHA}" \
       com.patchwork.service="api"
 ENV NODE_ENV=production
 EXPOSE 4000
-CMD ["npm", "run", "start", "-w", "@patchwork/api"]
+CMD ["node", "--import", "tsx", "services/api/src/index.ts"]
 
 FROM runtime-base AS indexer-runtime
 
