@@ -137,10 +137,7 @@
     border-left-width: 6px;
     border-radius: var(--mh-radius-patch);
     background: var(--mh-surface);
-    background-image:
-        linear-gradient(to right, rgb(90 76 57 / 5%) 1px, transparent 1px),
-        linear-gradient(to bottom, rgb(90 76 57 / 5%) 1px, transparent 1px);
-    background-size: 30px 30px;
+    background-image: url('/brand/patchwork/textures/paper.svg');
     box-shadow: var(--mh-shadow);
     padding: var(--mh-space-4) var(--mh-space-4) var(--mh-space-4) var(--mh-space-5);
     align-content: start;

@@ -6,9 +6,21 @@ display face, ink outlines, flat hard shadows and a small set of saturated
 bulletin: confident headlines, plain working text, and colour used to mark
 meaning.
 
-This document describes the system that ships in `apps/web`. The source of
-truth for values is `apps/web/src/styles/tokens.css`. Components live in
-`apps/web/src/components/`.
+This document describes the system that ships in `apps/web`. The brand source is
+[SUBCULT Studio's Patchwork pack](https://git.subcult.tv/subculture-collective/subcult-studio/src/branch/main/branding/2026-10-01-packs/brands/patchwork/GUIDE.md),
+with the product typography and palette also described in
+[subcult-tv](https://git.subcult.tv/subculture-collective/subcult-tv/src/branch/main/src/styles/product-landings.css).
+Imported brand roles live in `apps/web/src/styles/brand-tokens.css`; application
+roles and semantic states live in `apps/web/src/styles/tokens.css`. Components
+live in `apps/web/src/components/`.
+
+The imported SVGs, textures, fonts and redistribution licenses are in
+`apps/web/public/brand/patchwork/`. `docs/patchwork-brand-provenance.json` records
+the source revisions and SHA-256 hashes. Update imports from the Studio masters
+and their provenance together. Keep artwork unchanged, including the mark's
+built-in clear space. The header and favicon use the official mark. Decorative
+artwork has empty alt text. Fonts are served locally; no Google Fonts request
+is needed.
 
 > History: until September 2026 this file described a soft "organic" preset
 > (moss/sage, diffuse shadows) that the code no longer used. The owner chose
@@ -44,30 +56,32 @@ introduce raw hex values or one-off shadows.
 | `--mh-surface` | `#fffdf7` | Cards, inputs |
 | `--mh-surface-elev` | `#e8e2d4` | Neutral buttons, quiet fills |
 | `--mh-panel` | `#d9d1c0` | Rare: grouped tool areas |
-| `--mh-text` | `#172019` | Ink: text and outlines |
+| `--mh-text` | `#365448` | Soft green ink: text and outlines |
 | `--mh-text-muted` | `#4f5a51` | Secondary text (AA on paper) |
 | `--mh-text-soft` | `#626a62` | Placeholders, metadata only |
 | `--mh-accent` | `#12664f` | Pine: primary action, selected state, links |
 | `--mh-accent-2` | `#9ec5ad` | Sage: info badges, quiet highlights |
 | `--mh-accent-3` | `#f2c14e` | Mustard: emphasis, underlines, markers |
 | `--mh-cta` | `#e85d3f` | Terracotta: brand mark and illustration |
-| `--mh-cta-strong` | `#c2462b` | Terracotta fill for the "Ask for help" button (4.9:1 with light text) |
+| `--mh-cta-strong` | `#b33e28` | Dark action tomato for the "Ask for help" button |
 | `--mh-success` | `#287c52` | Success status |
 | `--mh-warning` | `#8a5f00` | Warning text and borders |
 | `--mh-danger` | `#b93b2c` | Errors and destructive actions |
-| `--mh-border` | `#172019` | Ink outline |
+| `--mh-border` | `#365448` | Green ink outline |
 | `--mh-border-soft` | `#aaa99f` | Input borders, dividers |
 | `--mh-border-subtle` | `#d4cec1` | Hairlines inside cards |
 | `--mh-focus` | `#0b62d6` | Focus ring (distinct from every brand colour) |
 
 Text on pine, strong terracotta and red uses `--mh-on-accent` (`#fffdf7`).
+Sage information badges use `--mh-accent-hover` (`#0d5341`) for their labels;
+the softer body ink has insufficient contrast on that fill.
 
 ### Type
 
 | Role | Family | Notes |
 | --- | --- | --- |
-| Display and headings | Fraunces 600–900 | Tight tracking (`-0.03em` to `-0.05em`), line-height ≤ 1.05 |
-| Body, labels, controls | Public Sans 400/500/700 | 16px minimum for body and inputs, line-height 1.5 |
+| Display and headings | Fraunces 400/700 | Tight tracking (`-0.03em` to `-0.05em`), line-height ≤ 1.05 |
+| Body, labels, controls | Public Sans 400/700 | 16px minimum for body and inputs, line-height 1.5 |
 | Eyebrows, metadata | JetBrains Mono 400/700 | Uppercase, `0.12em` tracking, one per section at most |
 
 Form labels are Public Sans, small, bold, uppercase and letter-spaced
@@ -76,14 +90,17 @@ is sentence case. Mono is used for eyebrows and compact metadata.
 
 ### Shape and depth
 
-- Radius: the "patch" corner. `--mh-radius-patch` (`2px 18px 2px 18px`) for
-  cards and panels, `--mh-radius-patch-sm` (`3px 12px 3px 12px`) for buttons
+- Radius: the "patch" corner. `--mh-radius-patch` (`2px 22px 2px 22px`) for
+  cards and panels, `--mh-radius-patch-sm` (`2px 22px 2px 22px`) for buttons
   and chips, `--mh-radius-input` (`2px 12px 2px 12px`) for inputs. Pills
   (`999px`) for badges only.
 - Outline: `1.5px` ink on cards and buttons; `1px` soft border on inputs.
-- Shadow: flat offset only, in three steps: `--mh-shadow-sm` (2px),
-  `--mh-shadow` (4px) and `--mh-shadow-lg` (7px, hover and floating
-  surfaces). No blurred shadows.
+- Shadow: flat sage (`#b2bba1`) offsets: `--mh-shadow-sm` (3px 4px),
+  `--mh-shadow` (5px 6px) and `--mh-shadow-lg` (7px 8px, hover and floating
+  surfaces). Face and shadow share the same corner shape.
+- Stitches: inset dashed decoration on buttons and homepage patches, with a
+  CSS fallback that needs no JavaScript. The Studio SVG mark includes its own
+  uneven stitches. Stitches never intercept clicks or obscure focus rings.
 - Spacing: 4px base (`--mh-space-*`). Touch targets are at least 44px.
 
 ### Motion
@@ -120,8 +137,9 @@ globally.
 - Discovery pages: results and map first. Filters appear as a compact bar
   (search, Latest/Nearby, a "Filters" button with an active-count badge), and
   the full set opens in a sheet.
-- The paper grid texture sits on the page background and inside titled
-  panels' sheets and request cards; the panel shell itself is flat.
+- Studio's paper texture sits on the page background, surfaces and request
+  cards at its original 2.5% opacity. Button fabric uses the supplied 3.5%
+  white weave. Dense map and directory layouts retain their functional grids.
 
 ## 5. Accessibility
 

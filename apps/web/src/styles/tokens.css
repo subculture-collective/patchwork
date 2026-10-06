@@ -4,21 +4,21 @@
  * component classes below; it must not introduce raw colours or shadows.
  */
 :root {
-    --mh-bg: #f2efe7;
+    --mh-bg: var(--brand-bg);
     --mh-surface: #fffdf7;
     --mh-surface-elev: #e8e2d4;
     --mh-panel: #d9d1c0;
-    --mh-text: #172019;
+    --mh-text: var(--brand-fg);
     --mh-text-muted: #4f5a51;
     --mh-text-soft: #626a62;
-    --mh-accent: #12664f;
+    --mh-accent: var(--brand-accent);
     --mh-accent-hover: #0d5341;
     --mh-accent-tint: #dcebe2;
     --mh-accent-2: #9ec5ad;
     --mh-accent-3: #f2c14e;
     --mh-accent-3-tint: #fbefc9;
-    --mh-cta: #e85d3f;
-    --mh-cta-strong: #c2462b;
+    --mh-cta: var(--brand-secondary);
+    --mh-cta-strong: var(--brand-action-tomato);
     --mh-cta-strong-hover: #a93a22;
     --mh-on-accent: #fffdf7;
     --mh-organic-moss: #12664f;
@@ -32,7 +32,7 @@
     --mh-danger-hover: #922f24;
     --mh-danger-tint: #f6e1dc;
     --mh-info-tint: #e3eee7;
-    --mh-border: #172019;
+    --mh-border: var(--brand-fg);
     --mh-border-subtle: #d4cec1;
     --mh-border-soft: #aaa99f;
     --mh-focus: #0b62d6;
@@ -53,15 +53,16 @@
     --mh-space-10: 40px;
     --mh-space-12: 48px;
 
-    --mh-radius-patch: 2px 18px 2px 18px;
-    --mh-radius-patch-sm: 3px 12px 3px 12px;
+    --mh-radius-patch: 2px 22px 2px 22px;
+    --mh-radius-patch-sm: 2px 22px 2px 22px;
     --mh-radius-input: 2px 12px 2px 12px;
     --mh-radius-pill: 999px;
     --mh-outline: 1.5px solid var(--mh-border);
 
-    --mh-shadow-sm: 2px 2px 0 rgb(23 32 25 / 22%);
-    --mh-shadow: 4px 4px 0 rgb(23 32 25 / 16%);
-    --mh-shadow-lg: 7px 7px 0 rgb(23 32 25 / 18%);
+    --mh-shadow-color: #b2bba1;
+    --mh-shadow-sm: 3px 4px 0 var(--mh-shadow-color);
+    --mh-shadow: 5px 6px 0 var(--mh-shadow-color);
+    --mh-shadow-lg: 7px 8px 0 var(--mh-shadow-color);
     /* Legacy aliases kept for existing callers. */
     --mh-shadow-hard: var(--mh-shadow);
     --mh-shadow-hard-hover: var(--mh-shadow-lg);
@@ -459,7 +460,7 @@
 
 .mh-badge--info {
     background: var(--mh-accent-2);
-    color: var(--mh-text);
+    color: var(--mh-accent-hover);
 }
 
 .mh-badge--danger {

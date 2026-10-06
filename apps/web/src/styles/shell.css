@@ -19,16 +19,7 @@ html {
     min-height: 100vh;
     overflow-x: clip;
     background-color: var(--mh-bg);
-    background-image:
-        linear-gradient(to right, rgb(90 76 57 / 7%) 1px, transparent 1px),
-        linear-gradient(to bottom, rgb(90 76 57 / 7%) 1px, transparent 1px),
-        radial-gradient(circle at 15% 18%, rgb(120 103 74 / 6%) 0, transparent 40%),
-        radial-gradient(circle at 85% 82%, rgb(99 125 76 / 8%) 0, transparent 45%);
-    background-size:
-        30px 30px,
-        30px 30px,
-        100% 100%,
-        100% 100%;
+    background-image: url('/brand/patchwork/textures/paper.svg');
     color: var(--mh-text);
 }
 
@@ -79,20 +70,11 @@ html {
 }
 
 .mh-brand-mark {
-    display: grid;
+    display: block;
     flex: none;
-    width: 40px;
-    height: 40px;
-    place-items: center;
-    border: var(--mh-outline);
-    border-radius: var(--mh-radius-patch-sm);
-    background: var(--mh-cta);
-    box-shadow: 3px 3px 0 var(--mh-text);
-    color: var(--mh-on-accent);
-    font-family: var(--mh-font-heading);
-    font-size: 1.35rem;
-    font-weight: 900;
-    transform: rotate(-3deg);
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
 }
 
 .mh-brand strong,
@@ -388,7 +370,7 @@ html {
 .mh-route-title {
     font-family: var(--mh-font-heading);
     font-size: clamp(2rem, 7vw, 3.25rem);
-    font-weight: 900;
+    font-weight: 700;
     line-height: 1;
     letter-spacing: -0.045em;
     text-wrap: balance;

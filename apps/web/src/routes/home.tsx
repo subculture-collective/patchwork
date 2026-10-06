@@ -70,10 +70,12 @@ export const DashboardRoute = ({
                     aria-labelledby='how-patchwork-works'
                 >
                     <div className='mh-how-card__patches' aria-hidden='true'>
-                        <span />
-                        <span />
-                        <span />
-                        <span />
+                        <img
+                            src='/brand/patchwork/decorative/needle-thread.svg'
+                            alt=''
+                            width={96}
+                            height={96}
+                        />
                     </div>
                     <p className='mh-kicker'>{t('dashboard.howEyebrow')}</p>
                     <h2 id='how-patchwork-works' className='mh-how-card__title'>

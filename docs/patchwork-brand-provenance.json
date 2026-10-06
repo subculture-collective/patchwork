@@ -1,0 +1,99 @@
+{
+  "source_repository": "https://git.subcult.tv/subculture-collective/subcult-studio",
+  "source_revision": "62e58d6df71be3ac68ff112f4d4fce40e475502a",
+  "source_guide": "branding/2026-10-01-packs/brands/patchwork/GUIDE.md",
+  "reference_repository": "https://git.subcult.tv/subculture-collective/subcult-tv",
+  "reference_revision": "d4f28a99d23f836bc3cb00a4490cde5edcd07b0d",
+  "reference_files": [
+    "src/styles/product-fonts.css",
+    "src/styles/product-landings.css"
+  ],
+  "notes": "Patchwork brand pack is byte-identical between the local Studio checkout and fetched origin/main. Imported assets are unchanged; semantic state colors remain defined in the application. Font files are static 400/700 weights.",
+  "assets": [
+    {
+      "source": "branding/2026-10-01-packs/brands/patchwork/tokens.json",
+      "destination": "apps/web/public/brand/patchwork/tokens.json",
+      "sha256": "126592bc5a69ebf1d2dd17d9f594d68658e206fc16e1d1e94cd9f272f6158324"
+    },
+    {
+      "source": "branding/2026-10-01-packs/brands/patchwork/tokens.css",
+      "destination": "apps/web/public/brand/patchwork/tokens.css",
+      "sha256": "1dd1c3125f35b103d7ce5cd7d825a7d98cc01657099c5e1dc46161ca9999f583"
+    },
+    {
+      "source": "branding/2026-10-01-packs/brands/patchwork/logos/mark-primary.svg",
+      "destination": "apps/web/public/brand/patchwork/logos/mark-primary.svg",
+      "sha256": "f3c35cdec3825cb721e3fc270d60be269fcc637ad2e1dcd2b1d973c0c8bdb57c"
+    },
+    {
+      "source": "branding/2026-10-01-packs/brands/patchwork/textures/paper.svg",
+      "destination": "apps/web/public/brand/patchwork/textures/paper.svg",
+      "sha256": "cf575a04c676a14437bf9d6a8458146f07899d33dc41d70934193473d9ba1240"
+    },
+    {
+      "source": "branding/2026-10-01-packs/brands/patchwork/textures/fabric.svg",
+      "destination": "apps/web/public/brand/patchwork/textures/fabric.svg",
+      "sha256": "4fa3775a0d02ec5cba42eda5252138e317ac9942320bc8ff8fbb15d22d19ca7d"
+    },
+    {
+      "source": "branding/2026-10-01-packs/brands/patchwork/decorative/needle-thread.svg",
+      "destination": "apps/web/public/brand/patchwork/decorative/needle-thread.svg",
+      "sha256": "dfd1e8606cff847a7b1448171a0bde4d31a271442ddfc07529c1dcf53d61e31b"
+    },
+    {
+      "source": "branding/2026-10-01-packs/brands/patchwork/fonts/Fraunces-0.ttf",
+      "destination": "apps/web/public/brand/patchwork/fonts/Fraunces-0.ttf",
+      "sha256": "3eb6cf0a14feb1876cc464fa093af4e0c5b05dc46dec65619c1d95f2a1ab5aa7"
+    },
+    {
+      "source": "branding/2026-10-01-packs/brands/patchwork/fonts/Fraunces-1.ttf",
+      "destination": "apps/web/public/brand/patchwork/fonts/Fraunces-1.ttf",
+      "sha256": "f0a9d39b9f14079c55070189562da36c794f824cbcf514b50a0ad0ef20c69379"
+    },
+    {
+      "source": "branding/2026-10-01-packs/brands/patchwork/fonts/JetBrains-Mono-0.ttf",
+      "destination": "apps/web/public/brand/patchwork/fonts/JetBrains-Mono-0.ttf",
+      "sha256": "44ce4a84f20d60f24539bd0cef11f79c29e38609e0f8adf18551c9794a5d9dc3"
+    },
+    {
+      "source": "branding/2026-10-01-packs/brands/patchwork/fonts/JetBrains-Mono-1.ttf",
+      "destination": "apps/web/public/brand/patchwork/fonts/JetBrains-Mono-1.ttf",
+      "sha256": "a1d92abc6b02a87faed23d98067ab1027e8e95242fd7c9978a072ea383b89d1a"
+    },
+    {
+      "source": "branding/2026-10-01-packs/brands/patchwork/fonts/Public-Sans-0.ttf",
+      "destination": "apps/web/public/brand/patchwork/fonts/Public-Sans-0.ttf",
+      "sha256": "d8a092f98db3ae7c7f01e73f8f23aaaec97f16c325765042ae5a052f4d8de546"
+    },
+    {
+      "source": "branding/2026-10-01-packs/brands/patchwork/fonts/Public-Sans-1.ttf",
+      "destination": "apps/web/public/brand/patchwork/fonts/Public-Sans-1.ttf",
+      "sha256": "0daaf804b064cf37990f38ff9ba89fc8029e879f8e64260e7bfa6ef739569c3a"
+    },
+    {
+      "source": "branding/2026-10-01-packs/brands/patchwork/fonts/fraunces-OFL.txt",
+      "destination": "apps/web/public/brand/patchwork/fonts/fraunces-OFL.txt",
+      "sha256": "bdf4c22802eaf804f998195871c6b8938aac2ac14b2d78a8bd66a6f1eced833b"
+    },
+    {
+      "source": "branding/2026-10-01-packs/brands/patchwork/fonts/jetbrainsmono-OFL.txt",
+      "destination": "apps/web/public/brand/patchwork/fonts/jetbrainsmono-OFL.txt",
+      "sha256": "b2fe5e8987594e9ffd1d2ca52a2f5d73eb8335243893c5d6254b5ad69269591d"
+    },
+    {
+      "source": "branding/2026-10-01-packs/brands/patchwork/fonts/publicsans-OFL.txt",
+      "destination": "apps/web/public/brand/patchwork/fonts/publicsans-OFL.txt",
+      "sha256": "157a9e77f7580246e97c769490e2e977ae94399f9d30f4556015c41fe8c28bac"
+    },
+    {
+      "source": "branding/2026-10-01-packs/brands/patchwork/logos/mark-primary.svg",
+      "destination": "apps/web/public/favicon.svg",
+      "sha256": "f3c35cdec3825cb721e3fc270d60be269fcc637ad2e1dcd2b1d973c0c8bdb57c"
+    },
+    {
+      "source": "branding/2026-10-01-packs/brands/patchwork/tokens.css",
+      "destination": "apps/web/src/styles/brand-tokens.css",
+      "sha256": "1dd1c3125f35b103d7ce5cd7d825a7d98cc01657099c5e1dc46161ca9999f583"
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+/* Static weights distributed by SUBCULT Studio's Patchwork production pack. */
+@font-face {
+    font-family: 'Fraunces';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/brand/patchwork/fonts/Fraunces-0.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Fraunces';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('/brand/patchwork/fonts/Fraunces-1.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Public Sans';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/brand/patchwork/fonts/Public-Sans-0.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Public Sans';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('/brand/patchwork/fonts/Public-Sans-1.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'JetBrains Mono';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/brand/patchwork/fonts/JetBrains-Mono-0.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'JetBrains Mono';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('/brand/patchwork/fonts/JetBrains-Mono-1.ttf') format('truetype');
+}

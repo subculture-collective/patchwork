@@ -1,0 +1,59 @@
+/* Studio's Neighbourhood fabric direction, adapted to application controls.
+ * The mark and texture exports stay unchanged in public/brand/patchwork.
+ * Stitches are decorative and never intercept a pointer or cover a focus ring.
+ */
+.mh-button:not(.mh-button--ghost) {
+    position: relative;
+    isolation: isolate;
+    background-image: url('/brand/patchwork/textures/fabric.svg');
+    padding-inline: 1.375rem;
+}
+
+.mh-button:not(.mh-button--ghost)::after {
+    position: absolute;
+    inset: 6px;
+    border: 1.5px dashed currentColor;
+    border-radius: 1px 16px 1px 16px;
+    opacity: 0.7;
+    content: '';
+    pointer-events: none;
+}
+
+.mh-button--sm {
+    min-height: 44px;
+    padding-block: 0.625rem;
+}
+
+.mh-card,
+.mh-surface,
+.mh-empty,
+.mh-how-card,
+.mh-path-card {
+    background-image: url('/brand/patchwork/textures/paper.svg');
+}
+
+.mh-how-card,
+.mh-path-card {
+    position: relative;
+}
+
+.mh-how-card::before,
+.mh-path-card::before {
+    position: absolute;
+    inset: 8px;
+    border: 2px dashed var(--mh-border-soft);
+    border-radius: 1px 16px 1px 16px;
+    opacity: 0.65;
+    content: '';
+    pointer-events: none;
+}
+
+.mh-eyebrow,
+.mh-kicker {
+    color: var(--brand-safe-label);
+}
+
+.mh-surface__sheet {
+    background-image: url('/brand/patchwork/textures/paper.svg');
+    background-size: auto;
+}

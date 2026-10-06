@@ -194,9 +194,14 @@ export const AppShell = ({
                         className='mh-brand'
                         onClick={(event) => handleClick(event, '/')}
                     >
-                        <span className='mh-brand-mark' aria-hidden='true'>
-                            P
-                        </span>
+                        <img
+                            className='mh-brand-mark'
+                            src='/brand/patchwork/logos/mark-primary.svg'
+                            alt=''
+                            width={64}
+                            height={64}
+                            aria-hidden='true'
+                        />
                         <span>
                             <strong>{appTitle}</strong>
                             <small>{t('runtime.tagline')}</small>

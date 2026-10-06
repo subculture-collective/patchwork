@@ -1,7 +1,10 @@
 @import 'tailwindcss';
+@import './brand-tokens.css';
+@import './brand-fonts.css';
 @import './tokens.css';
 @import './shell.css';
 @import './discovery.css';
+@import './brand-details.css';
 
 /*
  * Tailwind v4 reads theme values from CSS. These map the design tokens to
@@ -118,9 +121,9 @@ code {
     margin-top: 12px;
     font-family: var(--mh-font-heading);
     font-size: clamp(3.15rem, 7.8vw, 7.35rem);
-    font-weight: 900;
-    line-height: 0.87;
-    letter-spacing: -0.06em;
+    font-weight: 700;
+    line-height: 0.98;
+    letter-spacing: -0.045em;
 }
 
 .mh-landing-deck {
@@ -141,7 +144,7 @@ code {
 .mh-landing-note span {
     color: var(--mh-accent);
     font-size: 1rem;
-    font-weight: 900;
+    font-weight: 700;
 }
 
 .mh-landing-note span::before {
@@ -151,41 +154,31 @@ code {
 .mh-how-card {
     position: relative;
     border: 1.5px solid var(--mh-border);
-    border-radius: 2px 24px 2px 24px;
+    border-radius: var(--mh-radius-patch);
     background: var(--mh-surface);
-    box-shadow: 8px 8px 0 rgb(23 32 25 / 18%);
+    box-shadow: var(--mh-shadow-lg);
     padding: clamp(24px, 4vw, 38px);
 }
 
 .mh-how-card__patches {
     position: absolute;
-    top: -14px;
-    right: 18px;
-    display: grid;
-    grid-template-columns: repeat(2, 22px);
-    transform: rotate(4deg);
+    top: -42px;
+    right: 16px;
+    width: 96px;
+    pointer-events: none;
 }
 
-.mh-how-card__patches span {
-    height: 22px;
-    border: 1px solid var(--mh-border);
-    background: var(--mh-accent-3);
-}
-
-.mh-how-card__patches span:nth-child(2),
-.mh-how-card__patches span:nth-child(3) {
-    background: var(--mh-accent-2);
-}
-
-.mh-how-card__patches span:nth-child(4) {
-    background: var(--mh-cta);
+.mh-how-card__patches img {
+    display: block;
+    width: 100%;
+    height: auto;
 }
 
 .mh-how-card__title {
     margin-top: 7px;
     font-family: var(--mh-font-heading);
     font-size: clamp(1.8rem, 4vw, 2.55rem);
-    font-weight: 800;
+    font-weight: 700;
     line-height: 1;
     letter-spacing: -0.035em;
 }
@@ -207,7 +200,7 @@ code {
     background: var(--mh-accent-3);
     font-family: var(--mh-font-mono);
     font-size: 0.72rem;
-    font-weight: 900;
+    font-weight: 700;
 }
 
 .mh-landing-section {
@@ -233,7 +226,7 @@ code {
     margin-top: 7px;
     font-family: var(--mh-font-heading);
     font-size: clamp(2.3rem, 5vw, 4.25rem);
-    font-weight: 900;
+    font-weight: 700;
     line-height: 0.95;
     letter-spacing: -0.05em;
 }
@@ -244,8 +237,8 @@ code {
     flex-direction: column;
     align-items: flex-start;
     border: 1.5px solid var(--mh-border);
-    border-radius: 2px 22px 2px 22px;
-    box-shadow: 4px 4px 0 rgb(23 32 25 / 18%);
+    border-radius: var(--mh-radius-patch);
+    box-shadow: var(--mh-shadow);
     padding: clamp(22px, 3vw, 30px);
     color: var(--mh-text);
     text-align: left;
@@ -255,7 +248,7 @@ code {
 }
 
 .mh-path-card:hover {
-    box-shadow: 8px 8px 0 rgb(23 32 25 / 22%);
+    box-shadow: var(--mh-shadow-lg);
     transform: translate(-2px, -2px);
 }
 
@@ -279,7 +272,7 @@ code {
 .mh-path-card__index {
     font-family: var(--mh-font-mono);
     font-size: 0.75rem;
-    font-weight: 900;
+    font-weight: 700;
 }
 
 .mh-path-card__title {
@@ -287,7 +280,7 @@ code {
     margin-top: 38px;
     font-family: var(--mh-font-heading);
     font-size: clamp(1.65rem, 3vw, 2.25rem);
-    font-weight: 900;
+    font-weight: 700;
     line-height: 1;
     letter-spacing: -0.035em;
 }
@@ -303,7 +296,7 @@ code {
     margin-top: auto;
     padding-top: 24px;
     font-size: 0.82rem;
-    font-weight: 900;
+    font-weight: 700;
     text-decoration: underline;
     text-underline-offset: 4px;
 }
@@ -316,7 +309,7 @@ code {
     margin: 0 calc(clamp(12px, 4vw, 40px) * -1);
     border: 1.5px solid var(--mh-border);
     background: var(--mh-surface-elev);
-    box-shadow: 6px 6px 0 rgb(23 32 25 / 16%);
+    box-shadow: var(--mh-shadow);
     padding: clamp(26px, 5vw, 48px);
 }
 
@@ -324,7 +317,7 @@ code {
     margin-top: 7px;
     font-family: var(--mh-font-heading);
     font-size: clamp(2rem, 4.5vw, 3.5rem);
-    font-weight: 900;
+    font-weight: 700;
     line-height: 0.96;
     letter-spacing: -0.045em;
 }
@@ -450,7 +443,7 @@ code {
     margin-top: var(--mh-space-3);
     font-family: var(--mh-font-heading);
     font-size: clamp(2.5rem, 9vw, 4.25rem);
-    font-weight: 900;
+    font-weight: 700;
     line-height: 0.98;
     letter-spacing: -0.045em;
     text-wrap: balance;
@@ -505,7 +498,7 @@ code {
     border: 1.5px solid var(--mh-border);
     border-radius: 2px 20px 2px 20px;
     background: var(--mh-surface);
-    box-shadow: 6px 6px 0 rgb(23 32 25 / 16%);
+    box-shadow: var(--mh-shadow);
     padding: clamp(24px, 6vw, 48px);
 }
 
@@ -534,7 +527,7 @@ code {
     margin-right: var(--mh-space-2);
     color: var(--mh-text);
     font-size: 0.75rem;
-    font-weight: 800;
+    font-weight: 700;
 }
 
 .mh-map-style-control label {
@@ -738,7 +731,7 @@ code {
     background: rgb(255 253 247 / 90%);
     color: var(--mh-text);
     font-size: 0.65rem;
-    font-weight: 900;
+    font-weight: 700;
     line-height: 1;
     pointer-events: none;
 }
@@ -848,7 +841,7 @@ code {
     border-radius: 50%;
     background: var(--mh-accent-2);
     color: var(--mh-text);
-    font-weight: 900;
+    font-weight: 700;
 }
 
 .mh-invite-welcome__mark::before {
