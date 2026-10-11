@@ -11,7 +11,7 @@ FROM node:22.22.2-alpine@sha256:8ea2348b068a9544dae7317b4f3aafcdc032df1647bb7d76
 
 WORKDIR /app
 
-ARG ALPINE_SECURITY_REFRESH=2026-10-01
+ARG ALPINE_SECURITY_REFRESH=2026-10-11
 RUN test -n "$ALPINE_SECURITY_REFRESH" \
     && apk upgrade --no-cache \
     && wget -qO /tmp/npm.tgz https://registry.npmjs.org/npm/-/npm-12.0.1.tgz \
@@ -158,7 +158,7 @@ LABEL org.opencontainers.image.revision="${GIT_SHA}" \
       com.patchwork.ci.run-id="${CI_RUN_ID}" \
       com.patchwork.service="web"
 
-ARG ALPINE_SECURITY_REFRESH=2026-09-20
+ARG ALPINE_SECURITY_REFRESH=2026-10-11
 RUN test -n "$ALPINE_SECURITY_REFRESH" \
     && apk upgrade --no-cache
 

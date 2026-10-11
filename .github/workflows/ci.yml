@@ -103,6 +103,7 @@ jobs:
                   echo "Image tag: ${IMAGE_TAG}"
 
             - name: Build Docker images with immutable tags (#109)
+              id: build-images
               run: |
                   docker build --target api-runtime \
                     --build-arg GIT_SHA=${{ steps.image-tag.outputs.sha }} \
@@ -125,16 +126,16 @@ jobs:
                     --volume /var/run/docker.sock:/var/run/docker.sock \
                     aquasec/trivy@sha256:be1190afcb28352bfddc4ddeb71470835d16462af68d310f9f4bca710961a41e \
                     image --scanners vuln --severity HIGH,CRITICAL --exit-code 1 \
-                    --format table patchwork-api:ci | tee trivy-api-report.txt
+                    --format table patchwork-api:${{ steps.image-tag.outputs.tag }} | tee trivy-api-report.txt
 
             - name: Trivy container scan — Web
-              if: success() || failure()
+              if: ${{ !cancelled() && steps.build-images.outcome == 'success' }}
               run: |
                   docker run --rm \
                     --volume /var/run/docker.sock:/var/run/docker.sock \
                     aquasec/trivy@sha256:be1190afcb28352bfddc4ddeb71470835d16462af68d310f9f4bca710961a41e \
                     image --scanners vuln --severity HIGH,CRITICAL --exit-code 1 \
-                    --format table patchwork-web:ci | tee trivy-web-report.txt
+                    --format table patchwork-web:${{ steps.image-tag.outputs.tag }} | tee trivy-web-report.txt
 
             - name: Upload security scan reports
               uses: https://gitea.com/actions/upload-artifact@c24449f33cd45d4826c6702db7e49f7cdb9b551d
