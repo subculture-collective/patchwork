@@ -46,6 +46,26 @@ component's observation as proof for a newly promoted release.
 Issue #38 belongs to milestone 58 but remains a hard prerequisite of #22.
 Total directory locations and CPL display-hours text do not satisfy it.
 
+## Accepted pilot boundaries
+
+The owner selected these boundaries on October 12, 2026:
+
+- **Service coverage (#38):** Chicago food and health services, at least 30
+  distinct service/location records overall and at least 10 in each category.
+  Each counted record needs source-backed hours or appointment instructions,
+  service area, and simple eligibility or an explicit unknown. Preserve the
+  issue's required-document, timezone/overnight/DST, independent-review, and
+  current/conflicting/expired evidence criteria.
+- **Routing observation (#13):** 72 hours including weekday peak periods.
+  Capture uptime, errors, graph age, queueing and resource headroom; report
+  gaps and preserve release/input identity throughout the window.
+- **Physical device (#14):** iPhone with Vivaldi. The owner consented to
+  transient device-location use. Consent does not establish that the journey
+  passed; retain redacted outcomes only.
+
+Disposable OAuth/PDS test accounts had not been created at that decision.
+Provider journeys remain pending private fixture configuration.
+
 ## Operator and independent-review inputs
 
 Engineering can inspect natural runs, prepare the candidate release and
