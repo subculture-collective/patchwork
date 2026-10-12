@@ -24,4 +24,24 @@ describe('fresh public catalog reset', () => {
         expect((await pool.query('SELECT count(*)::integer AS count FROM eligible_public_resource_addresses')).rows[0].count).toBe(publicResourceSeed.length);
         expect((await pool.query("SELECT count(*)::integer AS count FROM indexer_directory_resource_projections WHERE operational_status <> 'unknown' OR record_origin <> 'sourced-public'")).rows[0].count).toBe(0);
     }, 60000);
+    it('rolls back completed batches when a later listing fails and remains retryable', async () => {
+        await pool.query('TRUNCATE public_resource_listings,showcase_record_metadata,showcase_seed_runs,indexer_directory_resource_projections CASCADE');
+        const rejectedUri = `at://did:plc:patchwork-public-catalog/app.patchwork.directory.resource/${publicResourceSeed[100]!.id}`;
+        await pool.query(`CREATE FUNCTION public.reject_catalog_listing_fixture() RETURNS trigger LANGUAGE plpgsql AS $$
+            BEGIN IF NEW.resource_uri = TG_ARGV[0] THEN RAISE EXCEPTION 'catalog listing fixture failure'; END IF; RETURN NEW; END $$`);
+        await pool.query(`CREATE TRIGGER reject_catalog_listing_fixture BEFORE INSERT ON public_resource_listings
+            FOR EACH ROW EXECUTE FUNCTION public.reject_catalog_listing_fixture('${rejectedUri.replaceAll("'", "''")}')`);
+        try {
+            await expect(importPublicResources(pool, { apply: true })).rejects.toThrow('catalog listing fixture failure');
+            for (const table of ['indexer_directory_resource_projections', 'public_resource_listings', 'showcase_record_metadata', 'showcase_seed_runs']) {
+                expect((await pool.query(`SELECT count(*)::integer AS count FROM ${table}`)).rows[0].count).toBe(0);
+            }
+        } finally {
+            await pool.query('DROP TRIGGER reject_catalog_listing_fixture ON public_resource_listings');
+            await pool.query('DROP FUNCTION public.reject_catalog_listing_fixture()');
+        }
+        const imported = await importPublicResources(pool, { apply: true, maxNewPerState: 5 });
+        expect((await pool.query('SELECT count(*)::integer AS count FROM public_resource_listings')).rows[0].count).toBe(imported.newResources);
+    });
+
 });

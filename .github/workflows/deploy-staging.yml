@@ -245,6 +245,7 @@ jobs:
 
     manifest:
         needs: publish
+        timeout-minutes: 30
         runs-on: ubuntu-latest
         steps:
             - uses: https://gitea.com/actions/download-artifact@246d7188e736d3686f6d19628d253ede9697bd55

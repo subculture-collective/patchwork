@@ -604,40 +604,45 @@ export class AttachmentService {
     }
 
     async runDeletionSweep(
-        now = new Date(),
+        now?: Date,
         maximum = 100,
     ): Promise<{
         deleted: number;
         failed: number;
         failedPending: number;
     }> {
+        // Trigger-created jobs and default sweeps must share the database clock.
         const jobs = await this.pool.query<{
             job_id: string;
             object_key: string;
             attempt_count: number;
+            sweep_time: Date;
         }>(
-            `SELECT job_id, object_key, attempt_count
+            `SELECT job_id, object_key, attempt_count,
+                    COALESCE($1::timestamptz, NOW()) AS sweep_time
              FROM attachment_deletion_jobs
-             WHERE deleted_at IS NULL AND next_attempt_at <= $1
+             WHERE deleted_at IS NULL
+               AND next_attempt_at <= COALESCE($1::timestamptz, NOW())
              ORDER BY next_attempt_at, created_at
              LIMIT $2`,
-            [now, maximum],
+            [now ?? null, maximum],
         );
         let deleted = 0;
         let failed = 0;
         for (const job of jobs.rows) {
+            const sweepTime = job.sweep_time;
             try {
                 await this.objects.delete(job.object_key);
                 await this.pool.query(
                     `UPDATE attachment_deletion_jobs
                      SET deleted_at = $2, last_error_code = NULL
                      WHERE job_id = $1`,
-                    [job.job_id, now],
+                    [job.job_id, sweepTime],
                 );
                 deleted += 1;
             } catch (error) {
                 const nextAttempt = new Date(
-                    now.getTime() +
+                    sweepTime.getTime() +
                         Math.min(60, 2 ** job.attempt_count) * 60_000,
                 );
                 await this.pool.query(

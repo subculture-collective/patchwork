@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
 import { PDFDocument } from 'pdf-lib';
 import sharp from 'sharp';
-import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     AttachmentService,
 } from './attachment-service.js';
@@ -473,6 +473,37 @@ describe('durable private attachment pipeline', () => {
         ).rejects.toMatchObject({
             code: 'INVALID_ATTACHMENT_SUBJECT',
         });
+    });
+
+    it('uses database time for due deletions while preserving explicit sweep times', async () => {
+        await upload('aid-post', requestUri);
+        await service.runScanSweep();
+        await service.deleteForSubject(ownerDid, requestUri);
+        const past = new Date('2000-01-01T00:00:00.000Z');
+        await expect(service.runDeletionSweep(past)).resolves.toMatchObject({
+            deleted: 0,
+        });
+        await pool.query(
+            `UPDATE attachment_deletion_jobs
+             SET next_attempt_at = NOW() + INTERVAL '1 hour'
+             WHERE object_key LIKE 'private/clean/%'`,
+        );
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(past);
+        try {
+            await expect(service.runDeletionSweep()).resolves.toMatchObject({
+                deleted: 1,
+                failed: 0,
+                failedPending: 0,
+            });
+            expect(objects.objects.size).toBe(1);
+        } finally {
+            vi.useRealTimers();
+        }
+        await expect(
+            service.runDeletionSweep(new Date(Date.now() + 2 * 60 * 60_000)),
+        ).resolves.toMatchObject({ deleted: 1 });
+        expect(objects.objects.size).toBe(0);
     });
 
     it('reconciles closed workflow policy expiry into durable object deletion', async () => {
