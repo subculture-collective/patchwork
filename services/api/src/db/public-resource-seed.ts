@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { Pool } from 'pg';
+import { Pool, type PoolClient } from 'pg';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { publicResourceCatalog, publicResourceSeed } from './public-resource-catalog.js';
@@ -15,6 +15,13 @@ const preserved = new Set([
     'platform_maintenance_audit', 'operational_audit_events',
 ]);
 const quote = (value: string) => `"${value.replaceAll('"', '""')}"`;
+
+/** The SQL fragments are fixed below; all catalog data stays parameterized. */
+async function insertResourceRows(client: PoolClient, statement: string, tuple: string, rows: unknown[][]) {
+    const width = rows[0]!.length;
+    const tuples = rows.map((_, index) => tuple.replace(/\$(\d+)/g, (_, parameter: string) => `$${index * width + Number(parameter)}`));
+    await client.query(`${statement} VALUES ${tuples.join(',')}`, rows.flat());
+}
 
 /** Dry-run by default. Reset requires stopped writers and a verified database backup. */
 export async function importPublicResources(pool: Pool, options: {
@@ -55,27 +62,32 @@ export async function importPublicResources(pool: Pool, options: {
             // No CASCADE: unexpected references outside this explicit scope must fail closed.
             await client.query(`TRUNCATE ${cleared.map(table => `${quote(table.schemaname)}.${quote(table.tablename)}`).join(',')} RESTART IDENTITY`);
         }
-        for (const resource of batch) {
+        const additions = batch.filter(resource => {
             const uri = `at://${did}/app.patchwork.directory.resource/${resource.id}`;
-            const source = resource.source;
             const existing = options.reset ? undefined : existingRecords.get(uri);
-            if (existing) {
-                if (existing.record_origin !== 'sourced-public' || existing.seed_version !== PUBLIC_RESOURCE_VERSION) throw new Error('Catalog key occupied by a different record.');
-                continue; // Never overwrite a claimed operator edit or silently renew provenance.
-            }
-            await client.query(`INSERT INTO indexer_directory_resource_projections
-                (uri,collection,author_did_hash,name,service_area,category,verification_status,contact,searchable_text,latitude,longitude,precision_km,open_hours,eligibility_notes,operational_status,record_created_at,record_updated_at,source_cursor,source_event_id,record_origin,seed_version)
-                VALUES($1,'app.patchwork.directory.resource',$2,$3,$4,$5,'unverified',$6,$7,$8,$9,1,$10,$11,'unknown',NOW(),NOW(),0,$1,'sourced-public',$12)`,
-                [uri,hash(did),resource.name,`${resource.city}, ${resource.state} ${resource.postalCode}`,resource.category,
+            if (!existing) return true;
+            if (existing.record_origin !== 'sourced-public' || existing.seed_version !== PUBLIC_RESOURCE_VERSION) throw new Error('Catalog key occupied by a different record.');
+            return false; // Never overwrite a claimed operator edit or silently renew provenance.
+        });
+        // Bound each statement while avoiding three database round trips per resource.
+        for (let offset = 0; offset < additions.length; offset += 100) {
+            const projectionRows: unknown[][] = [];
+            const listingRows: unknown[][] = [];
+            const metadataRows: unknown[][] = [];
+            for (const resource of additions.slice(offset, offset + 100)) {
+                const uri = `at://${did}/app.patchwork.directory.resource/${resource.id}`;
+                const source = resource.source;
+                projectionRows.push([uri,hash(did),resource.name,`${resource.city}, ${resource.state} ${resource.postalCode}`,resource.category,
                     JSON.stringify({url:resource.website,...(resource.phone?{phone:resource.phone}:{})}),
                     `${resource.name} ${resource.category} ${(resource.services ?? []).join(' ')} ${resource.streetAddress} ${resource.city} ${resource.state} ${resource.postalCode} ${resource.publicAccess}`.toLowerCase(),
                     resource.latitude,resource.longitude,resource.usualHours,resource.publicAccess,PUBLIC_RESOURCE_VERSION]);
-            await client.query(`INSERT INTO public_resource_listings(resource_uri,source_name,source_url,source_retrieved_at,source_snapshot,source_expires_at,street_address,postal_code,latitude,longitude,public_access)
-                VALUES($1,$2,$3,$4,$5,$4::timestamptz+INTERVAL '90 days',$6,$7,$8,$9,$10)`,
-                [uri,source.name,source.url,source.retrievedAt,JSON.stringify(resource),`${resource.streetAddress}, ${resource.city}, ${resource.state} ${resource.postalCode}`,resource.postalCode,resource.latitude,resource.longitude,resource.publicAccess]);
-            await client.query(`INSERT INTO showcase_record_metadata(entity_type,entity_key,origin,seed_version,source_name,source_url,source_retrieved_at,source_last_verified_at,non_participation_disclosure,assigned_at)
-                VALUES('directory-resource',$1,'sourced-public',$2,$3,$4,$5,$5,TRUE,NOW())`,
-                [uri,PUBLIC_RESOURCE_VERSION,source.name,source.url,source.retrievedAt]);
+                listingRows.push([uri,source.name,source.url,source.retrievedAt,JSON.stringify(resource),`${resource.streetAddress}, ${resource.city}, ${resource.state} ${resource.postalCode}`,resource.postalCode,resource.latitude,resource.longitude,resource.publicAccess]);
+                metadataRows.push([uri,PUBLIC_RESOURCE_VERSION,source.name,source.url,source.retrievedAt]);
+            }
+            await insertResourceRows(client, `INSERT INTO indexer_directory_resource_projections
+                (uri,collection,author_did_hash,name,service_area,category,verification_status,contact,searchable_text,latitude,longitude,precision_km,open_hours,eligibility_notes,operational_status,record_created_at,record_updated_at,source_cursor,source_event_id,record_origin,seed_version)`, `($1,'app.patchwork.directory.resource',$2,$3,$4,$5,'unverified',$6,$7,$8,$9,1,$10,$11,'unknown',NOW(),NOW(),0,$1,'sourced-public',$12)`, projectionRows);
+            await insertResourceRows(client, `INSERT INTO public_resource_listings(resource_uri,source_name,source_url,source_retrieved_at,source_snapshot,source_expires_at,street_address,postal_code,latitude,longitude,public_access)`, `($1,$2,$3,$4,$5,$4::timestamptz+INTERVAL '90 days',$6,$7,$8,$9,$10)`, listingRows);
+            await insertResourceRows(client, `INSERT INTO showcase_record_metadata(entity_type,entity_key,origin,seed_version,source_name,source_url,source_retrieved_at,source_last_verified_at,non_participation_disclosure,assigned_at)`, `('directory-resource',$1,'sourced-public',$2,$3,$4,$5,$5,TRUE,NOW())`, metadataRows);
         }
         await client.query(`INSERT INTO showcase_seed_runs(seed_version,manifest_sha256,applied_at,record_count) VALUES($1,$2,NOW(),$3) ON CONFLICT(seed_version) DO NOTHING`,
             [`${PUBLIC_RESOURCE_VERSION}:${hash(batch.map(resource => resource.id).join('\n')).slice(0,12)}`,preview.manifestSha256,batch.length]);
