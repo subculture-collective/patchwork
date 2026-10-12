@@ -3,12 +3,20 @@
 ## Status
 
 Patchwork has an executable HTTP capacity probe, one bounded local PostgreSQL
-result, and a five-minute mixed NUC home-staging result. The validated staging
-envelope is **40 aggregate read requests per second** across the four alpha
-routes (10 RPS per route), alongside three real lifecycle journeys and three
-durable moderation items. This is a safe observed home-staging operating
-point, not a saturation result, production sizing claim, alpha `GO`, or
-reliability commitment.
+result, and a historical five-minute mixed NUC home-staging result at
+**40 aggregate read requests per second** across the four alpha routes
+(10 RPS per route), alongside three real lifecycle journeys and three durable
+moderation items. The August 7 re-certification failed under shared-host
+contention; its separate 8-RPS zero-error soak established only that dated
+stability point. Neither result establishes the capacity of today's release
+or the expanded national directory and travel workload.
+
+[Issue #20](https://git.subcult.tv/subculture-collective/patchwork/issues/20)
+requires a controlled, named-release baseline with representative national
+filters, concurrent refresh/review work, bounded travel traffic, browser
+transfer/render costs, database and host headroom, and recovery. Preserve the
+original throughput comparisons below. Historical observations are not
+production sizing approval, a pilot `GO`, or a reliability commitment.
 
 The older shared contracts in `packages/shared/src/load-testing.ts` contain
 modeled targets for alpha and deferred routes. They are inputs to evaluation,

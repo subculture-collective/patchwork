@@ -1,6 +1,6 @@
 # Release lineage and acceptance baseline
 
-Updated: 2026-10-04
+Updated: 2026-10-12
 
 This document is the current index for release lineage and readiness. It
 reconciles the active Gitea repository with retained release evidence; it does
@@ -66,6 +66,9 @@ Reconsideration requires a fresh, release-bound review that:
 The detailed retained decision and gate definitions are in the
 [alpha go/no-go review](evidence/phase-8/alpha-go-no-go.md). Expired dates in
 that record do not lower a gate; they require fresh evidence and a new review.
+The [pilot qualification procedure](pilot-qualification.md) maps the current
+Gitea milestone and its cross-milestone service-coverage prerequisite to that
+review. Issue #22 owns the final readiness decision.
 
 ## Unresolved requirements and owner decisions
 
