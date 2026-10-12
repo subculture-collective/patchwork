@@ -47,8 +47,8 @@ export default defineConfig({
             url: localBaseUrl,
             reuseExistingServer: false,
             timeout: 60_000,
-            stdout: 'ignore',
-            stderr: 'ignore',
+            stdout: 'pipe',
+            stderr: 'pipe',
             env: {
                 VITE_MAP_TILE_URL:
                     process.env['VITE_MAP_TILE_URL'] ??
