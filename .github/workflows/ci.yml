@@ -182,7 +182,9 @@ jobs:
                   container="patchwork-ci-postgres-${GITHUB_RUN_ID}-${GITHUB_JOB}"
                   network=$(docker inspect --format '{{range $name, $network := .NetworkSettings.Networks}}{{$name}}{{end}}' "$HOSTNAME")
                   test -n "$network"
+                  # Disposable fixture data avoids contention on the runner disk.
                   docker run --detach --name "$container" \
+                    --tmpfs /var/lib/postgresql/data:rw,size=512m \
                     --network "$network" \
                     --env POSTGRES_DB=patchwork_test \
                     --env POSTGRES_USER=patchwork \
