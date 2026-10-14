@@ -34,6 +34,7 @@ export default defineConfig(({ command, mode }) => {
             proxy: apiProxy,
         },
         build: {
+            cssCodeSplit: false,
             // The content security policy allows fonts from 'self' only, so a
             // small font subset must stay a file instead of a data: URI.
             assetsInlineLimit: (filePath: string) =>

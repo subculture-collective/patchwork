@@ -1,3 +1,4 @@
+import { publicPageMeta, updatePageMetadata } from '../seo';
 import { RequestDetail } from './request-detail';
 import { MyRequests } from './my-requests';
 import type { DiscoveryMapAggregates } from '@patchwork/shared';
@@ -259,7 +260,8 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         const label = isNotFound
             ? t('runtime.notFoundTitle')
             : t(routeLabelKeys[currentRoute]);
-        document.title = `${label} · ${appTitle}`;
+        document.title = !isNotFound && locale === 'en' && publicPageMeta[currentRoute] ? publicPageMeta[currentRoute].title : `${label} · ${appTitle}`;
+        updatePageMetadata(currentRoute, isNotFound);
     }, [appTitle, currentRoute, isNotFound, locale, t]);
 
     useEffect(() => {
