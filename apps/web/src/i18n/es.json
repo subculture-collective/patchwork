@@ -208,7 +208,9 @@
                 "title": "Configuración",
                 "help": "Inicia sesión para administrar tu cuenta, tu privacidad y tus datos."
             }
-        }
+        },
+        "studioSupport": "Apoya a SUBCULT",
+        "studioSupportBoundary": "Las contribuciones van al estudio que desarrolla Patchwork, no a las solicitudes de ayuda. Contribuir no organiza ni garantiza ayuda."
     },
     "dashboard": {
         "eyebrow": "Un tablero de avisos para el vecindario",

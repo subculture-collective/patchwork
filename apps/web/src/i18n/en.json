@@ -208,7 +208,9 @@
                 "title": "Settings",
                 "help": "Sign in to manage your account, privacy and data."
             }
-        }
+        },
+        "studioSupport": "Support SUBCULT",
+        "studioSupportBoundary": "Contributions go to the studio developing Patchwork, not to anyone’s request. Contributing does not arrange or guarantee help."
     },
     "dashboard": {
         "eyebrow": "A notice board for the neighborhood",
