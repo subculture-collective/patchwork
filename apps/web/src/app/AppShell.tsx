@@ -358,6 +358,7 @@ export const AppShell = ({
 
             <footer className='mh-footer'>
                 <p>{t('runtime.footer')}</p>
+                {currentRoute === '/' && <p><a href='https://subcult.tv/support'>{t('runtime.studioSupport')}</a> {t('runtime.studioSupportBoundary')}</p>}
                 <div role='navigation' aria-label={t('runtime.legalLabel')}>
                     {(
                         [
