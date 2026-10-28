@@ -8,6 +8,7 @@ import { writeJsonResponse, writePublicError } from './error-response.js';
 
 const routes = new Map<string, readonly string[]>([
     ['/coordination/mine', ['GET']],
+    ['/coordination/pickups', ['POST']],
     ['/coordination/offers', ['POST']],
     ['/coordination/offer-decisions', ['POST']],
     ['/coordination/connections', ['POST']],
@@ -73,7 +74,9 @@ export const createCoordinationHandler = (
                 body,
                 async commandBody => {
                     const output =
-                        requestUrl.pathname === '/coordination/offers' ?
+                        requestUrl.pathname === '/coordination/pickups' ?
+                            await dependencies.service.updatePickup(actorDid, commandBody)
+                        : requestUrl.pathname === '/coordination/offers' ?
                             await dependencies.service.createOffer(
                                 actorDid,
                                 commandBody,

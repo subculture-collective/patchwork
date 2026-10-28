@@ -1074,11 +1074,13 @@ export class AccountPrivacyService {
                 post_uri: string;
                 current_status: string;
                 public_status: string | null;
+                helper_capacity: number;
+                pickup_configured: boolean;
                 created_at: Date | string;
                 updated_at: Date | string;
                 retention_until: Date | string | null;
             }>(
-            `SELECT post_uri, current_status, public_status, created_at,
+            `SELECT post_uri, current_status, public_status, helper_capacity, pickup_configured, created_at,
                     updated_at, retention_until
              FROM request_workflows
              WHERE requester_did = $1 ORDER BY created_at, post_uri`,
@@ -1621,6 +1623,8 @@ export class AccountPrivacyService {
                     postUri: row.post_uri,
                     currentStatus: row.current_status,
                     publicStatus: row.public_status,
+                    helperCapacity: row.helper_capacity,
+                    pickupConfigured: row.pickup_configured,
                     createdAt: iso(row.created_at),
                     updatedAt: iso(row.updated_at),
                     retentionUntil: iso(row.retention_until),

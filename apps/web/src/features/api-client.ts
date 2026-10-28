@@ -2708,6 +2708,25 @@ export interface CoordinationOffer {
     helperDid?: string;
 }
 
+export interface CoordinationPickup {
+    requestUri: string;
+    helperCapacity: number;
+    configured: boolean;
+    status: string;
+    occupied: number;
+    active: number;
+}
+
+export const updateCoordinationPickupViaApi = async (
+    input: {requestUri: string; action: 'set-capacity'; helperCapacity: number} | {requestUri: string; action: 'close'},
+    signal?: AbortSignal,
+    idempotencyKey?: string,
+): Promise<ApiClientResult<{pickup: CoordinationPickup}>> => {
+    const result = await requestJsonPost('/coordination/pickups', input, signal, idempotencyKey);
+    if (!result.ok) return result;
+    return parseRecordPayload(result.data, 'pickup', 'Pickup response was malformed.');
+};
+
 export interface CoordinationConnection {
     id: string;
     offerId: string;
@@ -2822,6 +2841,7 @@ export const fetchCoordinationViaApi = async (
     ApiClientResult<{
         offers: CoordinationOffer[];
         connections: CoordinationConnection[];
+        pickups?: CoordinationPickup[];
     }>
 > => {
     const result = await requestJson(

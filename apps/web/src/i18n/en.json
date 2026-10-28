@@ -1956,5 +1956,15 @@
         "searchArea": "Search this area",
         "legend": "Public resource location",
         "zipPlaceholder": "60601"
+    },
+    "pickup": {
+        "heading": "Pickup helper places",
+        "policy": "Choose 1–20 helper places for one pickup. Pending offers stay available when full. Completed handoffs keep their places; cancellation or expiry frees a place. Complete or cancel every active arrangement before closing the pickup.",
+        "capacity": "Helper capacity",
+        "places": "{{occupied}} of {{capacity}} places committed; {{active}} active arrangements.",
+        "saving": "Updating pickup…",
+        "save": "Set pickup capacity",
+        "close": "Close pickup",
+        "request": "Your pickup"
     }
 }

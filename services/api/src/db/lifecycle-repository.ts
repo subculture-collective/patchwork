@@ -443,13 +443,14 @@ export class PostgresLifecycleRepository implements LifecycleRepository {
                 };
             }
 
-            const workflow = await client.query<{ current_status: RequestStatus }>(
-                `SELECT current_status FROM request_workflows
+            const workflow = await client.query<{ current_status: RequestStatus; pickup_configured: boolean }>(
+                `SELECT current_status, pickup_configured FROM request_workflows
                  WHERE post_uri = $1 FOR UPDATE`,
                 [command.postUri],
             );
             const current = workflow.rows[0];
             if (!current) throw new Error('REQUEST_WORKFLOW_NOT_FOUND');
+            if (current.pickup_configured) throw new Error('ASSIGNMENT_TRANSITION_NOT_ALLOWED');
             const concurrentDuplicate = await client.query<{
                 assignment_event_id: string | number;
                 assignment: AssignmentRecord;

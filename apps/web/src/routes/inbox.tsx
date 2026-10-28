@@ -10,6 +10,8 @@ import { Input } from '../components/Input';
 import {
     type ActivityInboxItem,
     type CoordinationConnection,
+    type CoordinationPickup,
+    updateCoordinationPickupViaApi as sendPickupUpdate,
     type CoordinationOffer,
     type MatchCandidate,
     type OutcomeFeedback,
@@ -57,6 +59,9 @@ export const CoordinationInboxRoute = ({ did }: { did: string }) => {
     };
     const decideCoordinationOfferViaApi = (input: Parameters<typeof sendOfferDecision>[0]) => retryMutation(`offer:${JSON.stringify(input)}`, key => sendOfferDecision(input, undefined, key));
     const transitionCoordinationConnectionViaApi = (input: Parameters<typeof sendConnectionTransition>[0]) => retryMutation(`connection:${JSON.stringify(input)}`, key => sendConnectionTransition(input, undefined, key));
+    const [pickups, setPickups] = useState<CoordinationPickup[]>([]);
+    const [capacities, setCapacities] = useState<Record<string, string>>({});
+    const [pickupPending, setPickupPending] = useState(false);
     const [offers, setOffers] = useState<CoordinationOffer[]>([]);
     const [connections, setConnections] = useState<CoordinationConnection[]>(
         [],
@@ -106,7 +111,8 @@ export const CoordinationInboxRoute = ({ did }: { did: string }) => {
             outcomeHistory,
             discoverable,
         ].find((result) => !result.ok);
-        if (coordination.ok) { setOffers(coordination.data.offers); setConnections(coordination.data.connections); }
+        if (coordination.ok) { setPickups(coordination.data.pickups ?? []); setOffers(coordination.data.offers); setConnections(coordination.data.connections); }
+        else setPickups([]);
         if (inbox.ok) setItems(inbox.data.items);
         if (outcomeHistory.ok) setFeedback(outcomeHistory.data.feedback);
         if (discoverable.ok) setRequests(discoverable.data);
@@ -501,6 +507,32 @@ export const CoordinationInboxRoute = ({ did }: { did: string }) => {
                         </div>
                     ))
                 )}
+            </Surface>
+
+            <Surface title={t('pickup.heading')}>
+                <p>{t('pickup.policy')}</p>
+                {pickups.filter(pickup => !['resolved', 'archived'].includes(pickup.status)).map(pickup => (
+                    <form key={pickup.requestUri} className='mt-3 space-y-2' onSubmit={event => {
+                        event.preventDefault();
+                        const input = {requestUri:pickup.requestUri, action:'set-capacity' as const, helperCapacity:Number(capacities[pickup.requestUri] ?? pickup.helperCapacity)};
+                        setPickupPending(true);
+                        void finish(t('pickup.saving'), retryMutation(`pickup:${JSON.stringify(input)}`, key => sendPickupUpdate(input, undefined, key))).finally(() => setPickupPending(false));
+                    }}>
+                        <p className='font-bold'>{requests.find(request => request.aidPostUri === pickup.requestUri)?.card.title ?? t('pickup.request')}</p>
+                        <p>{t('pickup.places', {occupied:pickup.occupied, capacity:pickup.helperCapacity, active:pickup.active})}</p>
+                        <label className='block'>{t('pickup.capacity')}
+                            <Input type='number' min={Math.max(1,pickup.occupied)} max={20} required
+                                value={capacities[pickup.requestUri] ?? String(pickup.helperCapacity)}
+                                onChange={event => setCapacities(previous => ({...previous,[pickup.requestUri]:event.target.value}))} />
+                        </label>
+                        <Button type='submit' disabled={pickupPending}>{t('pickup.save')}</Button>
+                        {pickup.configured && <Button type='button' variant='secondary' disabled={pickupPending || pickup.active > 0} onClick={() => {
+                            const input = {requestUri:pickup.requestUri, action:'close' as const};
+                            setPickupPending(true);
+                            void finish(t('pickup.saving'), retryMutation(`pickup:${JSON.stringify(input)}`, key => sendPickupUpdate(input, undefined, key))).finally(() => setPickupPending(false));
+                        }}>{t('pickup.close')}</Button>}
+                    </form>
+                ))}
             </Surface>
 
             <Surface title={String(t('inbox.connections'))}>

@@ -1956,5 +1956,15 @@
         "searchArea": "Buscar en esta zona",
         "legend": "Ubicación de recurso público",
         "zipPlaceholder": "60601"
+    },
+    "pickup": {
+        "heading": "Plazas de ayuda para la recogida",
+        "policy": "Elige entre 1 y 20 plazas para una recogida. Las ofertas pendientes se conservan cuando no quedan plazas. Las entregas completadas conservan su plaza; cancelar o vencer libera una plaza. Completa o cancela cada acuerdo activo antes de cerrar la recogida.",
+        "capacity": "Capacidad de personas ayudantes",
+        "places": "{{occupied}} de {{capacity}} plazas comprometidas; {{active}} acuerdos activos.",
+        "saving": "Actualizando la recogida…",
+        "save": "Establecer capacidad",
+        "close": "Cerrar recogida",
+        "request": "Tu recogida"
     }
 }

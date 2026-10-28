@@ -34,7 +34,7 @@ try {
     for (const workspace of ['api', 'indexer', 'moderation-worker']) {
         run('npm', ['run', 'db:migrate', '-w', `@patchwork/${workspace}`], env);
     }
-    run(process.execPath, ['scripts/test.mjs', 'postgres'], env);
+    run(process.execPath, ['scripts/test.mjs', 'postgres', ...process.argv.slice(2)], env);
 } finally {
     spawnSync('docker', ['rm', '--force', container], { stdio: 'ignore' });
 }
