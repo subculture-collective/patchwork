@@ -15,6 +15,6 @@
         "@atproto/api": "0.20.28",
         "@atproto/oauth-client-node": "0.4.8",
         "@patchwork/at-lexicons": "0.1.0",
-        "zod": "3.25.76"
+        "zod": "4.6.7"
     }
 }

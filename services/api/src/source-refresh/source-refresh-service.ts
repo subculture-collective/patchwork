@@ -31,7 +31,7 @@ const missingSchema = z.object({
 }).strict();
 const previewSchema = z.object({
     version: z.literal(1), mode: z.literal('preview-only'), generatedAt: z.string().datetime(), catalogSha256: sha,
-    counts: z.record(z.number().int().nonnegative()), candidates: z.array(candidateSchema), missing: z.array(missingSchema),
+    counts: z.record(z.string(), z.number().int().nonnegative()), candidates: z.array(candidateSchema), missing: z.array(missingSchema),
 }).strict();
 
 export class SourceRefreshError extends Error {

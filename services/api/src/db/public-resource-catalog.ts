@@ -40,7 +40,7 @@ export const publicResourceSourceSchema = z.object({
 
 export const publicResourceCatalogSchema = z.object({
     scope: z.object({ name: z.string(), countyIds: z.array(z.string().regex(/^\d{5}$/)).min(1), sourceUrl: z.string().url() }).strict(),
-    sources: z.record(publicResourceSourceSchema),
+    sources: z.record(z.string(), publicResourceSourceSchema),
     resources: z.array(publicResourceSchema).min(1),
 }).strict();
 export type PublicResourceCatalogInput = z.input<typeof publicResourceCatalogSchema>;
