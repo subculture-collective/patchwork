@@ -87,6 +87,7 @@ export const localizedInboxCopy = (
         'Coordination schedule updated': 'Agenda de coordinación actualizada',
     };
     const summaries: Record<string, string> = {
+        'The requester closed this pickup.': 'La persona solicitante cerró esta recogida.',
         'A volunteer offered to help. Their identity stays private until you accept.':
             'Una persona voluntaria se ofreció a ayudar. Su identidad permanece privada hasta que aceptes.',
         'Another offer was accepted for this request.':
@@ -115,6 +116,8 @@ interface WorkflowRow {
     post_uri: string;
     requester_did: string;
     current_status: string;
+    helper_capacity: number;
+    pickup_configured: boolean;
 }
 
 interface OfferRow {
@@ -149,6 +152,51 @@ const invalid = (code: string, message: string): never => {
 export class CoordinationService {
     constructor(private readonly pool: Pool) {}
 
+    async updatePickup(actorDid: string, input: unknown, now = new Date()): Promise<Record<string, unknown>> {
+        const parsed = z.discriminatedUnion('action', [
+            z.object({action: z.literal('set-capacity'), requestUri: requestUriSchema, helperCapacity: z.number().int().min(1).max(20)}).strict(),
+            z.object({action: z.literal('close'), requestUri: requestUriSchema}).strict(),
+        ]).safeParse(input);
+        if (!parsed.success) return invalid('INVALID_PICKUP', 'Choose a helper capacity between 1 and 20.');
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            const workflow = await this.loadWorkflow(client, parsed.data.requestUri, true);
+            if (workflow.requester_did !== actorDid) throw new PublicHttpError(403, 'PICKUP_FORBIDDEN', 'Only the requester may manage this pickup.');
+            await this.assertSafety(client, workflow, actorDid, ['open', 'triaged', 'assigned', 'in_progress']);
+            const counts = await client.query<{occupied: number; active: number}>(`SELECT count(*) FILTER (WHERE status IN ('active','completed'))::int AS occupied,
+                count(*) FILTER (WHERE status='active')::int AS active FROM coordination_connections WHERE request_uri=$1`, [workflow.post_uri]);
+            const {occupied, active} = counts.rows[0]!;
+            if (parsed.data.action === 'set-capacity') {
+                if (!workflow.pickup_configured && !['open','triaged'].includes(workflow.current_status))
+                    throw new PublicHttpError(409, 'LEGACY_ARRANGEMENT_ACTIVE', 'Finish the existing single-helper arrangement before configuring a pickup.');
+                if (parsed.data.helperCapacity < occupied) throw new PublicHttpError(409, 'CAPACITY_BELOW_COMMITMENTS', 'Capacity cannot be lower than committed places.');
+                await client.query(`UPDATE request_workflows SET helper_capacity=$2, pickup_configured=TRUE, updated_at=$3 WHERE post_uri=$1`,
+                    [workflow.post_uri, parsed.data.helperCapacity, now]);
+            } else {
+                if (!workflow.pickup_configured) throw new PublicHttpError(409, 'PICKUP_NOT_CONFIGURED', 'Configure this pickup first.');
+                if (active > 0) throw new PublicHttpError(409, 'PICKUP_HAS_ACTIVE_HELPERS', 'Complete or cancel every active arrangement before closing the pickup.');
+                await client.query(`UPDATE request_workflows SET current_status='resolved', updated_at=$2 WHERE post_uri=$1`, [workflow.post_uri, now]);
+                await client.query(`INSERT INTO request_transition_events (command_id,post_uri,actor_did,from_status,to_status,reason,occurred_at,actor_role)
+                    VALUES ($1,$2,$3,$4,'resolved','Requester closed pickup',$5,'requester')`, [randomUUID(),workflow.post_uri,actorDid,workflow.current_status,now]);
+                const pending = await client.query<OfferRow>(`UPDATE coordination_offers SET status='cancelled',decided_at=$2,updated_at=$2
+                    WHERE request_uri=$1 AND status='pending' RETURNING *`, [workflow.post_uri,now]);
+                for (const offer of pending.rows) {
+                    await this.recordEvent(client, {offerId:offer.offer_id,actorDid,action:'cancelled',previousStatus:'pending',nextStatus:'cancelled',summary:'Requester closed the pickup.',details:{requestUri:workflow.post_uri},now});
+                    await this.addInboxItem(client, {recipientDid:offer.offerer_did,type:'offer',title:'Offer closed',summary:'The requester closed this pickup.',
+                        actionUrl:'/inbox',sourceKey:`offer:${offer.offer_id}:cancelled`,metadata:{offerId:offer.offer_id},now});
+                }
+            }
+            await client.query(`INSERT INTO operational_audit_events (command_id,actor_did,action,subject_uri,payload,occurred_at,retention_until)
+                VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7)`, [randomUUID(),actorDid,`pickup:${parsed.data.action}`,workflow.post_uri,
+                JSON.stringify({helperCapacity:parsed.data.action === 'set-capacity' ? parsed.data.helperCapacity : workflow.helper_capacity}),now,plusDays(now,365)]);
+            await client.query('COMMIT');
+            return {pickup: {requestUri:workflow.post_uri, helperCapacity:parsed.data.action === 'set-capacity' ? parsed.data.helperCapacity : workflow.helper_capacity,
+                configured:true,status:parsed.data.action === 'close' ? 'resolved' : workflow.current_status,occupied,active}};
+        } catch (error) { await client.query('ROLLBACK'); throw error; }
+        finally { client.release(); }
+    }
+
     async createOffer(
         actorDid: string,
         input: unknown,
@@ -176,6 +224,7 @@ export class CoordinationService {
             await this.assertSafety(client, workflow, actorDid, [
                 'open',
                 'triaged',
+                ...(workflow.pickup_configured ? ['assigned', 'in_progress'] : []),
             ]);
             const eligible = await client.query(
                 `SELECT 1
@@ -288,16 +337,18 @@ export class CoordinationService {
         const client = await this.pool.connect();
         try {
             await client.query('BEGIN');
-            const offer = await this.loadOffer(
-                client,
-                parsed.data.offerId,
-                true,
-            );
-            const workflow = await this.loadWorkflow(
-                client,
-                offer.request_uri,
-                true,
-            );
+            const reference = await this.loadOffer(client, parsed.data.offerId);
+            const workflow = await this.loadWorkflow(client, reference.request_uri, true);
+            const offer = await this.loadOffer(client, parsed.data.offerId, true);
+
+            if (offer.status === 'accepted' && parsed.data.decision === 'accept' && actorDid === offer.requester_did) {
+                await this.assertSafety(client, workflow, offer.offerer_did, ['open', 'triaged', 'assigned', 'in_progress']);
+                const existing = await client.query<ConnectionRow>('SELECT * FROM coordination_connections WHERE offer_id=$1', [offer.offer_id]);
+                if (existing.rows[0]?.status === 'completed' || (existing.rows[0]?.status === 'active' && plusDays(new Date(existing.rows[0].accepted_at), 30) > now)) {
+                    await client.query('COMMIT');
+                    return { offer: this.renderOffer(offer, actorDid), connection: this.renderConnection(existing.rows[0], actorDid) };
+                }
+            }
             if (offer.status !== 'pending') {
                 throw new PublicHttpError(
                     409,
@@ -317,6 +368,7 @@ export class CoordinationService {
             await this.assertSafety(client, workflow, offer.offerer_did, [
                 'open',
                 'triaged',
+                ...(workflow.pickup_configured ? ['assigned', 'in_progress'] : []),
             ]);
             if (
                 parsed.data.decision === 'cancel' &&
@@ -352,6 +404,14 @@ export class CoordinationService {
             );
             let connection: ConnectionRow | null = null;
             if (nextStatus === 'accepted') {
+                if (workflow.pickup_configured) {
+                    const committed = await client.query<{occupied: number; duplicate: boolean}>(
+                        `SELECT count(*)::int AS occupied, coalesce(bool_or(helper_did=$2),false) AS duplicate
+                         FROM coordination_connections WHERE request_uri=$1 AND status IN ('active','completed')`,
+                        [offer.request_uri, offer.offerer_did]);
+                    if (committed.rows[0]!.duplicate) throw new PublicHttpError(409, 'HELPER_ALREADY_COMMITTED', 'This helper already has a place.');
+                    if (committed.rows[0]!.occupied >= workflow.helper_capacity) throw new PublicHttpError(409, 'PICKUP_FULL', 'All helper places are committed. Pending offers are retained.');
+                }
                 const connectionId = randomUUID();
                 await client.query(
                     `INSERT INTO coordination_connections (
@@ -368,7 +428,7 @@ export class CoordinationService {
                         now,
                     ],
                 );
-                await client.query(
+                if (!workflow.pickup_configured) await client.query(
                     `UPDATE request_workflows
                      SET current_status = 'assigned',
                          assignment = $2::jsonb, updated_at = $3
@@ -407,16 +467,18 @@ export class CoordinationService {
                     completed_at: null,
                     updated_at: now,
                 };
+                if (workflow.pickup_configured) await client.query(
+                    `UPDATE request_workflows SET current_status='assigned', updated_at=$2 WHERE post_uri=$1`, [offer.request_uri, now]);
                 const superseded = await client.query<OfferRow>(
                     `UPDATE coordination_offers
                      SET status = 'cancelled', decided_at = $3,
                          updated_at = $3
                      WHERE request_uri = $1 AND offer_id <> $2
-                       AND status = 'pending'
+                       AND status = 'pending' AND $4::boolean = FALSE
                      RETURNING offer_id, request_uri, requester_did,
                         offerer_did, note, status, offered_at, expires_at,
                         decided_at, updated_at`,
-                    [offer.request_uri, offer.offer_id, now],
+                    [offer.request_uri, offer.offer_id, now, workflow.pickup_configured],
                 );
                 for (const other of superseded.rows) {
                     await this.recordEvent(client, {
@@ -524,11 +586,9 @@ export class CoordinationService {
         const client = await this.pool.connect();
         try {
             await client.query('BEGIN');
-            const connection = await this.loadConnection(
-                client,
-                parsed.data.connectionId,
-                true,
-            );
+            const reference = await this.loadConnection(client, parsed.data.connectionId);
+            const workflow = await this.loadWorkflow(client, reference.request_uri, true);
+            const connection = await this.loadConnection(client, parsed.data.connectionId, true);
             if (
                 actorDid !== connection.requester_did &&
                 actorDid !== connection.helper_did
@@ -539,6 +599,12 @@ export class CoordinationService {
                     'Only a connection participant may change it.',
                 );
             }
+            const desiredStatus = parsed.data.action === 'complete' ? 'completed' : 'cancelled';
+            if (connection.status === desiredStatus) {
+                await this.assertAccountsAndBlocks(client, connection.requester_did, connection.helper_did);
+                await client.query('COMMIT');
+                return { connection: this.renderConnection(connection, actorDid) };
+            }
             if (connection.status !== 'active') {
                 throw new PublicHttpError(
                     409,
@@ -546,11 +612,8 @@ export class CoordinationService {
                     'Only an active connection can be changed.',
                 );
             }
-            const workflow = await this.loadWorkflow(
-                client,
-                connection.request_uri,
-                true,
-            );
+
+            if (plusDays(new Date(connection.accepted_at), 30) <= now) throw new PublicHttpError(409, 'CONNECTION_EXPIRED', 'The connection has expired.');
             await this.assertSafety(client, workflow, connection.helper_did, [
                 'assigned',
                 'in_progress',
@@ -569,7 +632,7 @@ export class CoordinationService {
                 [connection.connection_id, nextStatus, now],
             );
             if (nextStatus === 'completed') {
-                await client.query(
+                if (!workflow.pickup_configured) await client.query(
                     `UPDATE request_workflows
                      SET current_status = 'resolved',
                          handoff = $2::jsonb, updated_at = $3
@@ -603,7 +666,10 @@ export class CoordinationService {
                      SET current_status = 'open', assignment = NULL,
                          handoff = NULL, updated_at = $2
                      WHERE post_uri = $1
-                       AND current_status IN ('assigned', 'in_progress')`,
+                       AND current_status IN ('assigned', 'in_progress')
+                       AND (NOT pickup_configured OR NOT EXISTS (
+                           SELECT 1 FROM coordination_connections c WHERE c.request_uri=request_workflows.post_uri
+                             AND c.status IN ('active','completed')))`,
                     [connection.request_uri, now],
                 );
             }
@@ -684,7 +750,13 @@ export class CoordinationService {
              ORDER BY updated_at DESC, connection_id`,
             [actorDid],
         );
+        const pickups = await this.pool.query(`SELECT w.post_uri AS "requestUri", w.helper_capacity AS "helperCapacity",
+            w.pickup_configured AS configured, w.current_status AS status,
+            (SELECT count(*)::int FROM coordination_connections c WHERE c.request_uri=w.post_uri AND c.status IN ('active','completed')) AS occupied,
+            (SELECT count(*)::int FROM coordination_connections c WHERE c.request_uri=w.post_uri AND c.status='active') AS active
+            FROM request_workflows w WHERE w.requester_did=$1 ORDER BY w.created_at DESC LIMIT 100`, [actorDid]);
         return {
+            pickups: pickups.rows,
             offers: offers.rows.map((row) => this.renderOffer(row, actorDid)),
             connections: connections.rows.map((row) =>
                 this.renderConnection(row, actorDid),
@@ -1296,6 +1368,10 @@ export class CoordinationService {
         const client = await this.pool.connect();
         try {
             await client.query('BEGIN');
+            await client.query(`SELECT post_uri FROM request_workflows WHERE post_uri IN (
+                SELECT request_uri FROM coordination_offers WHERE status='pending' AND expires_at <= $1
+                UNION SELECT request_uri FROM coordination_connections WHERE status='active' AND accepted_at <= $1::timestamptz - INTERVAL '30 days'
+            ) ORDER BY post_uri FOR UPDATE`, [now]);
             const expiredOffers = await client.query<OfferRow>(
                 `SELECT offer_id, request_uri, requester_did, offerer_did,
                         note, status, offered_at, expires_at, decided_at,
@@ -1324,7 +1400,10 @@ export class CoordinationService {
                      SET current_status = 'open', assignment = NULL,
                          handoff = NULL, updated_at = $2
                      WHERE post_uri = $1
-                       AND current_status IN ('assigned', 'in_progress')`,
+                       AND current_status IN ('assigned', 'in_progress')
+                       AND (NOT pickup_configured OR NOT EXISTS (
+                           SELECT 1 FROM coordination_connections c WHERE c.request_uri=request_workflows.post_uri
+                             AND c.status IN ('active','completed')))`,
                     [connection.request_uri, now],
                 );
                 await this.recordEvent(client, {
@@ -1636,7 +1715,7 @@ export class CoordinationService {
         lock = false,
     ): Promise<WorkflowRow> {
         const result = await client.query<WorkflowRow>(
-            `SELECT post_uri, requester_did, current_status
+            `SELECT post_uri, requester_did, current_status, helper_capacity, pickup_configured
              FROM request_workflows
              WHERE post_uri = $1 ${lock ? 'FOR UPDATE' : ''}`,
             [requestUri],

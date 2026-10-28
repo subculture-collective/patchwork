@@ -7,9 +7,11 @@ import { createCoordinationHandler } from './coordination-handler.js';
 describe('coordination HTTP identity boundary', () => {
     let origin: string;
     const createOffer = vi.fn();
+    const updatePickup = vi.fn();
     const listInbox = vi.fn();
     const service = {
         createOffer,
+        updatePickup,
         listInbox,
     } as unknown as CoordinationService;
     const actorDid = 'did:plc:coordination-session';
@@ -55,6 +57,15 @@ describe('coordination HTTP identity boundary', () => {
         await new Promise<void>((resolve, reject) =>
             server.close(error => (error ? reject(error) : resolve())),
         );
+    });
+
+    it('derives pickup ownership from the authenticated session', async () => {
+        const body = {requestUri:'at://did:plc:requester/app.patchwork.aid.post/pickup',action:'set-capacity',helperCapacity:2};
+        updatePickup.mockResolvedValueOnce({pickup:body});
+        const response = await fetch(`${origin}/coordination/pickups`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+        expect(response.status).toBe(200);
+        expect(updatePickup).toHaveBeenCalledWith(actorDid,body);
+        expect(response.headers.get('cache-control')).toBe('no-store');
     });
 
     it('derives offer and inbox ownership from the session', async () => {

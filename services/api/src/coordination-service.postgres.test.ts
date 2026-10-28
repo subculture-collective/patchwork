@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { Pool } from 'pg';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { AccountPrivacyService } from './account-privacy-service.js';
@@ -137,6 +138,132 @@ describe('CoordinationService PostgreSQL boundary', () => {
     });
 
     afterAll(async () => pool.end());
+
+    const pickupTime = new Date('2026-02-01T12:00:00Z');
+    const extraHelper = async (suffix: string) => {
+        const did = `did:plc:pickup-${suffix}`;
+        await pool.query(`INSERT INTO indexer_volunteer_profile_projections
+            SELECT (jsonb_populate_record(NULL::indexer_volunteer_profile_projections, to_jsonb(p) || jsonb_build_object(
+                'uri',$2::text,'author_did_hash',$3::text,'source_event_id',$4::text))).*
+            FROM indexer_volunteer_profile_projections p WHERE uri=$1`,
+            [profileUri,`at://${did}/app.patchwork.volunteer.profile/main`,hash(did),`pickup-${suffix}`]);
+        return did;
+    };
+    const offerFor = async (service: CoordinationService, did: string) =>
+        ((await service.createOffer(did,{requestUri,note:`Private note for ${did}`},pickupTime)) as {offer:{id:string}}).offer.id;
+    const accept = async (service: CoordinationService, offerId: string) =>
+        ((await service.decideOffer(requesterDid,{offerId,decision:'accept'},pickupTime)) as {connection:{id:string}}).connection.id;
+
+    it('migrates existing one-helper workflows and arrangements without changing their data', async () => {
+        const client=await pool.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query('CREATE SCHEMA pickup_migration_fixture');
+            await client.query('SET LOCAL search_path TO pickup_migration_fixture, pg_catalog');
+            await client.query(`CREATE TABLE request_workflows (post_uri text PRIMARY KEY, current_status text, assignment jsonb, handoff jsonb);
+                CREATE TABLE coordination_connections (connection_id uuid PRIMARY KEY, request_uri text, helper_did text, status text);
+                INSERT INTO request_workflows VALUES ('legacy','assigned','{"assigneeDid":"did:plc:legacy"}',NULL);
+                INSERT INTO coordination_connections VALUES ('22222222-2222-4222-8222-222222222222','legacy','did:plc:legacy','active')`);
+            await client.query(await readFile(new URL('./db/migrations/0038_bounded_pickup_capacity.sql',import.meta.url),'utf8'));
+            expect((await client.query('SELECT * FROM request_workflows')).rows).toEqual([{post_uri:'legacy',current_status:'assigned',assignment:{assigneeDid:'did:plc:legacy'},handoff:null,helper_capacity:1,pickup_configured:false}]);
+            expect((await client.query('SELECT status FROM coordination_connections')).rows).toEqual([{status:'active'}]);
+        } finally { await client.query('ROLLBACK'); client.release(); }
+    });
+
+    it('preserves legacy defaults and validates requester-only bounded pickup capacity', async () => {
+        const service = new CoordinationService(pool);
+        expect((await pool.query('SELECT helper_capacity,pickup_configured FROM request_workflows WHERE post_uri=$1',[requestUri])).rows[0])
+            .toEqual({helper_capacity:1,pickup_configured:false});
+        for (const helperCapacity of [0,21,1.5]) await expect(service.updatePickup(requesterDid,{requestUri,action:'set-capacity',helperCapacity},pickupTime))
+            .rejects.toMatchObject({code:'INVALID_PICKUP'});
+        await expect(service.updatePickup(helperDid,{requestUri,action:'set-capacity',helperCapacity:2},pickupTime)).rejects.toMatchObject({code:'PICKUP_FORBIDDEN'});
+        await service.updatePickup(requesterDid,{requestUri,action:'set-capacity',helperCapacity:2},pickupTime);
+        expect((await new CoordinationService(pool).listMine(requesterDid,pickupTime)).pickups).toEqual(expect.arrayContaining([
+            expect.objectContaining({requestUri,helperCapacity:2,configured:true,occupied:0})]));
+    });
+
+    it('serializes final-place acceptance, replays without duplicates and releases a cancelled place once', async () => {
+        const service = new CoordinationService(pool);
+        const second = await extraHelper('second'); const third = await extraHelper('third');
+        await service.updatePickup(requesterDid,{requestUri,action:'set-capacity',helperCapacity:2},pickupTime);
+        const ids = await Promise.all([helperDid,second,third].map(did=>offerFor(service,did)));
+        const firstConnection = await accept(service,ids[0]!);
+        const race = await Promise.allSettled(ids.slice(1).map(id=>accept(new CoordinationService(pool),id)));
+        expect(race.filter(result=>result.status==='fulfilled')).toHaveLength(1);
+        expect(race.find(result=>result.status==='rejected')).toMatchObject({reason:{code:'PICKUP_FULL'}});
+        expect(await accept(service,ids[0]!)).toBe(firstConnection);
+        const waiting = race[0]!.status === 'rejected' ? ids[1]! : ids[2]!;
+        expect((await pool.query("SELECT status FROM coordination_offers WHERE offer_id=$1",[waiting])).rows[0].status).toBe('pending');
+        await expect(service.updatePickup(requesterDid,{requestUri,action:'set-capacity',helperCapacity:1},pickupTime)).rejects.toMatchObject({code:'CAPACITY_BELOW_COMMITMENTS'});
+        await Promise.all([1,2].map(()=>service.transitionConnection(helperDid,{connectionId:firstConnection,action:'cancel'},pickupTime)));
+        await accept(service,waiting);
+        expect((await pool.query("SELECT count(*)::int AS count FROM coordination_connections WHERE request_uri=$1 AND status='active'",[requestUri])).rows[0].count).toBe(2);
+        // A new pending offer from an already committed helper must not duplicate its place.
+        const committed = (await pool.query("SELECT helper_did FROM coordination_connections WHERE request_uri=$1 AND status='active' LIMIT 1",[requestUri])).rows[0].helper_did;
+        const duplicate = await offerFor(service,committed);
+        await expect(accept(service,duplicate)).rejects.toMatchObject({code:'HELPER_ALREADY_COMMITTED'});
+    });
+
+    it('keeps per-helper completion, schedules and private feedback separate until the requester closes', async () => {
+        const service = new CoordinationService(pool); const second = await extraHelper('private');
+        await service.updatePickup(requesterDid,{requestUri,action:'set-capacity',helperCapacity:2},pickupTime);
+        const firstId=await offerFor(service,helperDid); const secondId=await offerFor(service,second);
+        const first=await accept(service,firstId); const other=await accept(service,secondId);
+        await service.transitionConnection(helperDid,{connectionId:first,action:'complete'},pickupTime);
+        await service.submitFeedback(helperDid,{connectionId:first,outcome:'successful',rating:5,comment:'Only my private outcome',tags:[]},pickupTime);
+        expect((await pool.query('SELECT current_status,handoff FROM request_workflows WHERE post_uri=$1',[requestUri])).rows[0]).toMatchObject({current_status:'assigned',handoff:null});
+        expect((await pool.query('SELECT status FROM coordination_connections WHERE connection_id=$1',[other])).rows[0].status).toBe('active');
+        await expect(service.updatePickup(requesterDid,{requestUri,action:'close'},pickupTime)).rejects.toMatchObject({code:'PICKUP_HAS_ACTIVE_HELPERS'});
+        await expect(service.transitionConnection(second,{connectionId:first,action:'complete'},pickupTime)).rejects.toMatchObject({code:'CONNECTION_FORBIDDEN'});
+        const privateView=JSON.stringify(await service.listMine(second,pickupTime));
+        expect(privateView).not.toContain(helperDid); expect(privateView).not.toContain(first);
+        expect(JSON.stringify(await service.listFeedback(second))).not.toContain('Only my private outcome');
+        const {CoordinationSchedulingService}=await import('./coordination-scheduling-service.js');
+        const scheduling=new CoordinationSchedulingService(pool);
+        await scheduling.propose(second,{connectionId:other,startAt:'2026-02-02T12:00:00Z',endAt:'2026-02-02T13:00:00Z',timezone:'UTC'},pickupTime);
+        expect((await scheduling.list(helperDid)).windows).toHaveLength(0);
+        await service.transitionConnection(second,{connectionId:other,action:'complete'},pickupTime);
+        await service.updatePickup(requesterDid,{requestUri,action:'close'},pickupTime);
+        expect((await pool.query('SELECT current_status FROM request_workflows WHERE post_uri=$1',[requestUri])).rows[0].current_status).toBe('resolved');
+        expect((await pool.query('SELECT helper_capacity,pickup_configured FROM request_workflows WHERE post_uri=$1',[requestUri])).rows[0]).toEqual({helper_capacity:2,pickup_configured:true});
+    });
+
+    it('retains scheduling conflicts, account safety and database admission guards for pickups', async () => {
+        const service=new CoordinationService(pool); const second=await extraHelper('scheduling');
+        await service.updatePickup(requesterDid,{requestUri,action:'set-capacity',helperCapacity:2},pickupTime);
+        const first=await accept(service,await offerFor(service,helperDid));
+        const otherOffer=await offerFor(service,second);
+        await pool.query(`INSERT INTO user_blocks (command_id,blocker_did,subject_did,retention_until,created_at)
+            VALUES ('pickup-block',$1,$2,NOW()+INTERVAL '30 days',NOW())`,[requesterDid,second]);
+        await expect(accept(service,otherOffer)).rejects.toMatchObject({code:'PARTICIPANTS_BLOCKED'});
+        await pool.query('DELETE FROM user_blocks');
+        const other=await accept(service,otherOffer);
+        const {CoordinationSchedulingService}=await import('./coordination-scheduling-service.js');
+        const scheduling=new CoordinationSchedulingService(pool);
+        const interval={startAt:'2026-02-02T12:00:00Z',endAt:'2026-02-02T13:00:00Z',timezone:'UTC'};
+        await scheduling.propose(helperDid,{connectionId:first,...interval},pickupTime);
+        await scheduling.propose(second,{connectionId:other,...interval},pickupTime);
+        await scheduling.decide(requesterDid,{connectionId:first,action:'accept',expectedVersion:1},pickupTime);
+        await expect(scheduling.decide(requesterDid,{connectionId:other,action:'accept',expectedVersion:1},pickupTime)).rejects.toMatchObject({code:'SCHEDULE_CONFLICT'});
+        await expect(pool.query(`INSERT INTO coordination_connections SELECT (jsonb_populate_record(NULL::coordination_connections,
+            to_jsonb(c)||jsonb_build_object('connection_id','33333333-3333-4333-8333-333333333333','offer_id',$2::text))).*
+            FROM coordination_connections c WHERE connection_id=$1`,[first,otherOffer])).rejects.toMatchObject({code:expect.stringMatching(/23514|23505/)});
+        const exported=await new AccountPrivacyService(pool).exportFor(requesterDid);
+        expect(exported).toMatchObject({data:{workflows:expect.arrayContaining([expect.objectContaining({postUri:requestUri,helperCapacity:2,pickupConfigured:true})])}});
+    });
+
+    it('expires only one helper place without reopening or completing another helper arrangement', async () => {
+        const service=new CoordinationService(pool); const second=await extraHelper('expiry');
+        await service.updatePickup(requesterDid,{requestUri,action:'set-capacity',helperCapacity:2},pickupTime);
+        const first=await accept(service,await offerFor(service,helperDid));
+        const other=await accept(service,await offerFor(service,second));
+        await pool.query("UPDATE coordination_connections SET accepted_at=$2::timestamptz - INTERVAL '31 days' WHERE connection_id=$1",[first,pickupTime]);
+        await service.runExpirySweep(pickupTime);
+        expect((await pool.query('SELECT status FROM coordination_connections WHERE connection_id=$1',[first])).rows[0].status).toBe('expired');
+        expect((await pool.query('SELECT status FROM coordination_connections WHERE connection_id=$1',[other])).rows[0].status).toBe('active');
+        expect((await pool.query('SELECT current_status FROM request_workflows WHERE post_uri=$1',[requestUri])).rows[0].current_status).toBe('assigned');
+        const replacement=await offerFor(service,helperDid); await accept(service,replacement);
+    });
 
     it('keeps identities private until acceptance and persists offer, connection, handoff, inbox, and outcome state', async () => {
         const offeredAt = new Date('2026-01-02T12:00:00.000Z');
