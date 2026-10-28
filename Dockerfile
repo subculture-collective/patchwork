@@ -33,8 +33,8 @@ RUN test -n "$ALPINE_SECURITY_REFRESH" \
         /usr/local/lib/node_modules/npm/node_modules/brace-expansion \
     && rm -rf /tmp/brace-expansion /tmp/brace-expansion.tgz \
     && wget -qO /tmp/undici.tgz \
-        https://registry.npmjs.org/undici/-/undici-6.29.0.tgz \
-    && echo 'b7d888586625c1508c0e17463bac86aecd22ed6053bc945372aed8cae14406fc  /tmp/undici.tgz' \
+        https://registry.npmjs.org/undici/-/undici-6.29.1.tgz \
+    && echo '29c4b8e0b2d86cb8795571c1959012ce057a14ecfd34858335f47c31e770a04f  /tmp/undici.tgz' \
         | sha256sum -c - \
     && mkdir /tmp/undici \
     && tar -xzf /tmp/undici.tgz -C /tmp/undici \

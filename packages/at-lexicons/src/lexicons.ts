@@ -22,7 +22,7 @@ const lexiconDocSchema = z.object({
             record: z.object({
                 type: z.literal('object'),
                 required: z.array(z.string()),
-                properties: z.record(z.unknown()),
+                properties: z.record(z.string(), z.unknown()),
             }),
         }),
     }),

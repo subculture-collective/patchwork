@@ -448,7 +448,7 @@ export type RecordByNsid = {
 };
 
 export const recordValidators: {
-    [K in RecordNsid]: z.ZodType<RecordByNsid[K], z.ZodTypeDef, unknown>;
+    [K in RecordNsid]: z.ZodType<RecordByNsid[K], unknown>;
 } = {
     [recordNsid.aidPost]: aidPostSchema,
     [recordNsid.volunteerProfile]: volunteerProfileSchema,

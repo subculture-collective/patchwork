@@ -1,6 +1,6 @@
 # Patchwork
 
-> Pre-alpha demonstration. Please do not arrange real help through it.
+> Development preview. Please do not arrange real help through it.
 
 ![Patchwork: A little help, from a friend. Four stitched neighborhood patches.](https://git.subcult.tv/api/v1/repos/subculture-collective/patchwork/raw/docs/assets/readme/banner.png?ref=19df4570437b398f3fd13eebe6b03aeef64fc135)
 
@@ -10,10 +10,10 @@ Someone two streets over needs a ride on Thursday. You have a car on Thursday.
 Patchwork is where neighbors ask for help like that and offer it. It also keeps
 a map and directory of food banks, clinics, shelters and other local services.
 
-This is a pre-alpha demonstration. Please don't arrange real help through it
+This is a development preview. Please don't arrange real help through it
 yet.
 
-[Explore the pre-alpha preview](https://patchwork.subcult.tv) · [Product overview](https://subcult.tv/products/patchwork) · [Give feedback](https://git.subcult.tv/subculture-collective/patchwork/issues)
+[Explore the preview](https://patchwork.subcult.tv) · [Product overview](https://subcult.tv/products/patchwork) · [Give feedback](https://git.subcult.tv/subculture-collective/patchwork/issues)
 
 ![Patchwork home and resource discovery](https://subcult.tv/screenshots/patchwork-home-1440.webp)
 
@@ -37,7 +37,7 @@ availability.
 
 ## Preview status
 
-Patchwork is **pre-alpha and not approved to operate as a public mutual-aid
+Patchwork is **not approved to operate as a public mutual-aid
 service**. The preview may include clearly labeled synthetic examples and
 public-source references. It is not an emergency service and cannot guarantee
 a match, response, or fulfillment. Chat is server-readable.
