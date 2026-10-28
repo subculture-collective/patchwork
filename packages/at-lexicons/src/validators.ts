@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { lookupPostalArea, postalLocationSchema } from './postal-geography.js';
+import { lookupCountyArea, countyLocationSchema, lookupPostalArea, postalLocationSchema } from './postal-geography.js';
 
 export const recordNsid = {
     aidPost: 'app.patchwork.aid.post',
@@ -31,6 +31,7 @@ const aidCategoryValues = [
 const aidUrgencyValues = ['low', 'medium', 'high', 'critical'] as const;
 
 const legacyAidLocationSchema = z.object({
+    countyId:z.undefined().optional(),
     latitude: z.number().min(-90).max(90),
     longitude: z.number().min(-180).max(180),
     precisionKm: z.number().min(1).max(50),
@@ -41,20 +42,29 @@ const legacyAidLocationSchema = z.object({
 
 // Coordinates on a ZIP record are derived public geography metadata. Re-parsing
 // always overwrites them, so callers cannot inject a more precise location.
-const aidLocationSchema = z.union([postalLocationSchema, legacyAidLocationSchema])
+const normalizedCountyLocationSchema = countyLocationSchema.extend({
+    postalCode:z.undefined().optional(),
+    latitude:z.number().optional(), longitude:z.number().optional(), precisionKm:z.number().optional(), areaLabel:z.string().optional(),
+}).strict().transform(value => {
+    const area=lookupCountyArea(value.countyId)!;
+    return {countryCode:'US' as const,countyId:area.countyId,postalCode:undefined,
+        latitude:area.latitude,longitude:area.longitude,precisionKm:area.precisionKm,areaLabel:area.areaLabel};
+});
+const aidLocationSchema = z.union([normalizedCountyLocationSchema, postalLocationSchema, legacyAidLocationSchema])
     .transform(value => {
+        if ('countyId' in value && value.countyId) return value;
         if (value.postalCode) {
             const area = lookupPostalArea(value.postalCode)!;
             return { latitude: area.latitude, longitude: area.longitude,
                 precisionKm: 1, areaLabel: `ZIP ${area.postalCode}`,
-                postalCode: area.postalCode, countryCode: 'US' as const };
+                countyId:undefined, postalCode: area.postalCode, countryCode: 'US' as const };
         }
-        return value as z.infer<typeof legacyAidLocationSchema>;
+        return {...value, countyId:undefined} as z.infer<typeof legacyAidLocationSchema> & {countyId?:undefined};
     });
 
 export const aidPostSchema = z.object({
     $type: z.literal(recordNsid.aidPost),
-    version: z.enum(['1.0.0', '2.0.0']),
+    version: z.enum(['1.0.0', '2.0.0', '3.0.0']),
     title: z.string().min(1).max(140),
     description: z.string().min(1).max(5000),
     category: z.enum(aidCategoryValues),
@@ -66,6 +76,9 @@ export const aidPostSchema = z.object({
 }).strict().superRefine((value, context) => {
     if (value.version === '2.0.0' && !value.location.postalCode) {
         context.addIssue({ code: 'custom', path: ['location', 'postalCode'], message: 'A five-digit ZIP is required.' });
+    }
+    if ((value.version === '3.0.0') !== Boolean(value.location.countyId)) {
+        context.addIssue({code:'custom',path:['location'],message:'County locations require version 3.0.0; version 3.0.0 requires a county.'});
     }
     if (value.version === '1.0.0' && value.location.postalCode) {
         context.addIssue({ code: 'custom', path: ['version'], message: 'ZIP locations require record version 2.0.0.' });
@@ -256,7 +269,7 @@ interface AtLocation {
 }
 
 type AtAidPostRecord = Omit<AidPostRecord, 'location'> & {
-    location: AtLocation | { countryCode: 'US'; postalCode: string };
+    location: AtLocation | { countryCode: 'US'; postalCode: string } | { countryCode:'US'; countyId:string };
 };
 
 type AtDirectoryResourceRecord = Omit<DirectoryResourceRecord, 'location'> & {
@@ -326,7 +339,7 @@ export const encodeAidPostForAt = (
     record: AidPostRecord,
 ): AtAidPostRecord => ({
     ...record,
-    location: record.location.postalCode
+    location: record.location.countyId ? {countryCode:'US',countyId:record.location.countyId} : record.location.postalCode
         ? { countryCode: 'US', postalCode: record.location.postalCode }
         : encodeLocation(record.location),
 });

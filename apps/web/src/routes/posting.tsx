@@ -1,3 +1,4 @@
+import { isSmallPostalArea, lookupPostalArea } from '@patchwork/at-lexicons';
 import { loadPostingDraft, savePostingDraft, clearPostingDraft } from '../features/posting-draft';
 import {
     useEffect,
@@ -58,6 +59,9 @@ export const PostingRoute = ({
     const { t } = useLocale();
     const [saved] = useState(() => loadPostingDraft(sessionStorage));
     const [postalCode, setPostalCode] = useState(saved?.postalCode ?? new URLSearchParams(window.location.search).get('zip') ?? '');
+    const [countyInstead, setCountyInstead] = useState(saved?.countyInstead ?? false);
+    const postalArea=lookupPostalArea(postalCode);
+    const smallZip=isSmallPostalArea(postalCode);
     const [title, setTitle] = useState(saved?.title ?? '');
     const [description, setDescription] = useState(saved?.description ?? '');
     const [category, setCategory] = useState<AidPostingCategory>(saved?.category ?? 'food');
@@ -118,9 +122,9 @@ export const PostingRoute = ({
     };
 
     useEffect(() => {
-        if (title || description || postalCode) savePostingDraft(sessionStorage, { title, description, postalCode, category, urgency, tagsText, startAt, endAt });
+        if (title || description || postalCode) savePostingDraft(sessionStorage, { title, description, postalCode, countyInstead, category, urgency, tagsText, startAt, endAt });
         else clearPostingDraft(sessionStorage);
-    }, [title, description, postalCode, category, urgency, tagsText, startAt, endAt]);
+    }, [title, description, postalCode, countyInstead, category, urgency, tagsText, startAt, endAt]);
 
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -135,7 +139,7 @@ export const PostingRoute = ({
             urgency,
             accessibilityTags: parseCommaList(tagsText),
             location: {
-                postalCode,
+                ...(countyInstead && smallZip && postalArea ? {countyId:postalArea.countyId} : {postalCode}),
                 lat: location?.center.lat ?? NaN,
                 lng: location?.center.lng ?? NaN,
                 precisionMeters: PUBLIC_MIN_PRECISION_KM * 1000,
@@ -232,8 +236,16 @@ export const PostingRoute = ({
                 <form className='grid gap-5' onSubmit={handleSubmit}>
                     <div>
                         <label className='mb-1.5 block mh-field-label' htmlFor='posting-zip'>{t('posting.zipLabel')}</label>
-                        <Input id='posting-zip' inputMode='numeric' autoComplete='postal-code' maxLength={5} pattern='[0-9]{5}' required value={postalCode} onChange={event => setPostalCode(event.target.value)} />
+                        <Input id='posting-zip' inputMode='numeric' autoComplete='postal-code' maxLength={5} pattern='[0-9]{5}' required value={postalCode} onChange={event => { setPostalCode(event.target.value); setCountyInstead(false); }} />
                         <p className='mt-1 text-sm text-mh-textMuted'>{t('posting.zipHelp')}</p>
+                        {smallZip && postalArea && <div className='mt-2 space-y-2'>
+                            <p role='status'>{t('postal.smallZipWarning')}</p>
+                            <label className='flex items-start gap-2'>
+                                <input type='checkbox' checked={countyInstead} onChange={event=>setCountyInstead(event.target.checked)} />
+                                {t('postal.showCounty', {county:postalArea.countyName,state:postalArea.stateName})}
+                            </label>
+                            <p className='text-sm'>{t('postal.previousPublication')}</p>
+                        </div>}
                     </div>
                     <div>
                         <label

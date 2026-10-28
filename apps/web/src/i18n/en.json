@@ -1578,7 +1578,12 @@
         "loading": "Loading boundaries…",
         "retry": "Retry boundaries",
         "mapLabel": "Requests by ZIP area and public resource locations",
-        "legend": "Shaded areas count requests. Pins mark public resource addresses. Request locations stay at ZIP level. Boundaries: 2020 US Census."
+        "legend": "Shaded areas count requests. Pins mark public resource addresses. Request locations stay at ZIP level. Boundaries: 2020 US Census.",
+        "smallZipWarning": "This ZIP covers a small land area. Publishing it may reveal more about where you are.",
+        "showCounty": "Show my county instead: {{county}}, {{state}}",
+        "previousPublication": "Choosing a county now does not remove a ZIP already published in an earlier record. Neither area guarantees anonymity.",
+        "distanceFromCounty": "{{county}} · distances from the county area",
+        "publicArea": "Public area"
     },
     "resourceServices": {
         "food": "Food & meals",

@@ -1,7 +1,7 @@
 {
     "lexicon": 1,
     "id": "app.patchwork.aid.post",
-    "revision": "2.0.0",
+    "revision": "3.0.0",
     "description": "Aid request/offer post record.",
     "defs": {
         "main": {
@@ -30,7 +30,8 @@
                         "type": "string",
                         "enum": [
                             "1.0.0",
-                            "2.0.0"
+                            "2.0.0",
+                            "3.0.0"
                         ]
                     },
                     "title": {
@@ -82,9 +83,15 @@
                                 "type": "string",
                                 "minLength": 5,
                                 "maxLength": 5
+                            },
+                            "countyId": {
+                                "type": "string",
+                                "minLength": 5,
+                                "maxLength": 5,
+                                "description": "Supported Census county FIPS. Version 3 publishes countryCode and countyId only."
                             }
                         },
-                        "description": "Version 2.0.0 requires countryCode and postalCode only. Coordinate fields are legacy version 1.0.0 read compatibility; application validation enforces version-specific fields."
+                        "description": "Version 3.0.0 publishes countyId and countryCode only; ZIP and coordinates are forbidden on its wire record. Version 2.0.0 requires countryCode and postalCode only. Coordinates are legacy version 1.0.0 compatibility. Application validation enforces version-specific forms."
                     },
                     "createdAt": {
                         "type": "string",

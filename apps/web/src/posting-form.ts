@@ -1,6 +1,7 @@
 import {
     aidPostSchema,
     lookupPostalArea,
+    lookupCountyArea,
     type AidPostRecord,
 } from '@patchwork/at-lexicons';
 import { PUBLIC_MIN_PRECISION_KM } from '@patchwork/shared';
@@ -30,6 +31,7 @@ export interface PostingTimeWindow {
 }
 
 export interface PostingLocation {
+    countyId?: string;
     postalCode?: string;
     lat: number;
     lng: number;
@@ -131,6 +133,11 @@ const normalizeLocation = (
         return undefined;
     }
 
+    if (location.countyId !== undefined) {
+        const area=lookupCountyArea(location.countyId);
+        if (!area) return undefined;
+        return {countyId:area.countyId,lat:area.latitude,lng:area.longitude,precisionMeters:Math.round(area.precisionKm*1000),areaLabel:area.areaLabel};
+    }
     if (location.postalCode !== undefined) {
         const area = lookupPostalArea(location.postalCode);
         if (!area) return undefined;
@@ -333,13 +340,13 @@ export function buildAidPostCreatePayload(
 
     const recordCandidate = {
         $type: aidPostRecordNsid,
-        version: normalizedDraft.location.postalCode ? '2.0.0' : '1.0.0',
+        version: normalizedDraft.location.countyId ? '3.0.0' : normalizedDraft.location.postalCode ? '2.0.0' : '1.0.0',
         title: normalizedDraft.title,
         description: normalizedDraft.description,
         category: normalizedDraft.category,
         urgency: urgencyToLexicon(normalizedDraft.urgency),
         status: 'open',
-        location: normalizedDraft.location.postalCode ? { countryCode: 'US', postalCode: normalizedDraft.location.postalCode } : {
+        location: normalizedDraft.location.countyId ? {countryCode:'US',countyId:normalizedDraft.location.countyId} : normalizedDraft.location.postalCode ? { countryCode: 'US', postalCode: normalizedDraft.location.postalCode } : {
             latitude: normalizedDraft.location.lat,
             longitude: normalizedDraft.location.lng,
             precisionKm: Number((normalizedDraft.location.precisionMeters / 1000).toFixed(3)),
@@ -372,12 +379,12 @@ export function buildAidPostEditPayload(params: {
 
     const recordCandidate = {
         ...params.existingRecord,
-        version: normalizedDraft.location.postalCode ? '2.0.0' : '1.0.0',
+        version: normalizedDraft.location.countyId ? '3.0.0' : normalizedDraft.location.postalCode ? '2.0.0' : '1.0.0',
         title: normalizedDraft.title,
         description: normalizedDraft.description,
         category: normalizedDraft.category,
         urgency: urgencyToLexicon(normalizedDraft.urgency),
-        location: normalizedDraft.location.postalCode ? { countryCode: 'US', postalCode: normalizedDraft.location.postalCode } : {
+        location: normalizedDraft.location.countyId ? {countryCode:'US',countyId:normalizedDraft.location.countyId} : normalizedDraft.location.postalCode ? { countryCode: 'US', postalCode: normalizedDraft.location.postalCode } : {
             latitude: normalizedDraft.location.lat,
             longitude: normalizedDraft.location.lng,
             precisionKm: Number((normalizedDraft.location.precisionMeters / 1000).toFixed(3)),
@@ -411,6 +418,7 @@ export function toPostingDraftFromRecord(
         urgency: urgencyFromLexicon(record.urgency),
         accessibilityTags: [...(metadata?.accessibilityTags ?? [])],
         location: {
+            countyId:record.location.countyId,
             postalCode: record.location.postalCode,
             lat: record.location.latitude,
             lng: record.location.longitude,

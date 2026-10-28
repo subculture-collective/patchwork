@@ -1,3 +1,4 @@
+import {lookupCountyArea} from '@patchwork/at-lexicons';
 import {
     useCallback,
     useMemo,
@@ -718,6 +719,7 @@ export const FeedRoute = ({
                             return (
                                 <li key={card.id}>
                                     <RequestCard
+                                        areaLabel={record?.countyId ? lookupCountyArea(record.countyId)?.areaLabel : undefined}
                                         title={card.title}
                                         description={card.description}
                                         category={card.category}

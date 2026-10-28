@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import {lookupCountyArea} from '@patchwork/at-lexicons';
 import { readFile } from 'node:fs/promises';
 import { Pool } from 'pg';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
@@ -153,6 +154,14 @@ describe('CoordinationService PostgreSQL boundary', () => {
         ((await service.createOffer(did,{requestUri,note:`Private note for ${did}`},pickupTime)) as {offer:{id:string}}).offer.id;
     const accept = async (service: CoordinationService, offerId: string) =>
         ((await service.decideOffer(requesterDid,{offerId,decision:'accept'},pickupTime)) as {connection:{id:string}}).connection.id;
+
+    it('uses the county representative point for advisory matching and labels its distance origin', async () => {
+        const area=lookupCountyArea('17031')!;
+        await pool.query('UPDATE indexer_aid_post_projections SET county_id=$2,postal_code=NULL,latitude=$3,longitude=$4 WHERE uri=$1',[requestUri,area.countyId,area.latitude,area.longitude]);
+        await pool.query(`UPDATE volunteer_private_profiles SET matching_preferences=jsonb_set(matching_preferences,'{maxDistanceKm}','10000') WHERE did=$1`,[helperDid]);
+        const result=await new CoordinationService(pool).matchRequest(requesterDid,{requestUri,requiredLanguages:[],accessibilityNeeds:[]},pickupTime);
+        expect(result).toMatchObject({candidates:expect.arrayContaining([expect.objectContaining({kind:'volunteer',explanations:expect.arrayContaining([expect.stringContaining('from the county area')])})])});
+    });
 
     it('migrates existing one-helper workflows and arrangements without changing their data', async () => {
         const client=await pool.connect();

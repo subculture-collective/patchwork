@@ -1050,10 +1050,11 @@ export class CoordinationService {
         const request = await this.pool.query<{
             category: string;
             urgency: string;
+            county_id: string | null;
             latitude: number;
             longitude: number;
         }>(
-            `SELECT category, urgency, latitude, longitude
+            `SELECT category, urgency, county_id, latitude, longitude
              FROM indexer_aid_post_projections
              WHERE uri = $1 AND status = 'open'`,
             [workflow.post_uri],
@@ -1219,7 +1220,7 @@ export class CoordinationService {
                     `Availability is ${projection.availability}.`,
                     distanceKm === null
                         ? 'Approximate distance is unavailable.'
-                        : `Approximate distance is ${distanceKm.toFixed(1)} km.`,
+                        : `Approximate distance is ${distanceKm.toFixed(1)} km${request.rows[0].county_id ? ' from the county area' : ''}.`,
                     requiredLanguages.length
                         ? `Matches requested languages: ${requiredLanguages.join(', ')}.`
                         : 'No language requirement was specified.',
@@ -1320,7 +1321,7 @@ export class CoordinationService {
                         `Resource category matches ${request.rows[0].category}.`,
                         distance === null
                             ? 'Approximate distance is unavailable.'
-                            : `Approximate distance is ${distance.toFixed(1)} km.`,
+                            : `Approximate distance is ${distance.toFixed(1)} km${request.rows[0].county_id ? ' from the county area' : ''}.`,
                         'Resource verification and stewardship are active.',
                     ],
                     assignment: 'manual-only' as const,

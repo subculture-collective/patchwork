@@ -1,3 +1,4 @@
+import {postalMapCounts} from './postal-map-counts';
 import { fetchResourceMapViaApi } from '../../features/api-client';
 import type { DiscoveryFilterState } from '../../discovery-filters';
 import type { ResourceMapCell } from '@patchwork/shared';
@@ -71,26 +72,8 @@ export function PostalMap(props: Props) {
     const [loading, setLoading] = useState(false);
     const level = props.selectedPostalCode ? 'zip' : zoom < 7 ? 'state' : zoom < 10 ? 'county' : 'zip';
     const counts = useMemo(() => {
-        const states = new Set<string>();
-        const areas = new Map<string, number>();
-        for (const cell of props.cells) {
-            const area = cell.postalCode
-                ? lookupPostalArea(cell.postalCode)
-                : undefined;
-            if (!area) continue;
-            states.add(area.stateId);
-            const id =
-                level === 'state'
-                    ? area.stateId
-                    : level === 'county'
-                      ? area.countyId
-                      : area.postalCode;
-            areas.set(id, (areas.get(id) ?? 0) + cell.count);
-        }
-        return {
-            states: [...new Set([...states, ...visibleStates])].sort(),
-            areas,
-        };
+        const result=postalMapCounts(props.cells,level);
+        return {states:[...new Set([...result.states,...visibleStates])].sort(),areas:result.areas};
     }, [props.cells, level, visibleStates]);
 
     useEffect(() => {
@@ -315,10 +298,7 @@ export function PostalMap(props: Props) {
                                     ? props.cells.reduce(
                                           (sum, cell) =>
                                               sum +
-                                              (cell.postalCode &&
-                                              lookupPostalArea(cell.postalCode)
-                                                  ?.countyId ===
-                                                  feature.properties.id
+                                              ((cell.countyId ?? (cell.postalCode ? lookupPostalArea(cell.postalCode)?.countyId : undefined)) === feature.properties.id
                                                   ? cell.count
                                                   : 0),
                                           0,
@@ -675,9 +655,7 @@ export function PostalMap(props: Props) {
                         count: props.cells.reduce(
                             (sum, cell) =>
                                 sum +
-                                (cell.postalCode &&
-                                lookupPostalArea(cell.postalCode)?.countyId ===
-                                    activeCounty.id
+                                ((cell.countyId ?? (cell.postalCode ? lookupPostalArea(cell.postalCode)?.countyId : undefined)) === activeCounty.id
                                     ? cell.count
                                     : 0),
                             0,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lookupPostalArea, postalLocationSchema } from './postal-geography.js';
+import { lookupPostalArea, postalLocationSchema, lookupCountyArea, countyLocationSchema, isSmallPostalArea } from './postal-geography.js';
 import { aidPostSchema, decodeAidPostFromAt, encodeAidPostForAt } from './validators.js';
 
 describe('public ZIP locations', () => {
@@ -10,6 +10,23 @@ describe('public ZIP locations', () => {
         location: { countryCode: 'US', postalCode: '00601' },
         createdAt: '2026-09-06T12:00:00.000Z',
     };
+
+    it('warns for small land areas and publishes only the selected county', () => {
+        expect(isSmallPostalArea('10006')).toBe(true);
+        expect(isSmallPostalArea('60625')).toBe(false);
+        expect(isSmallPostalArea('00000')).toBe(false);
+        const county=lookupCountyArea('36061')!;
+        const parsed=aidPostSchema.parse({...record,version:'3.0.0',location:{countryCode:'US',countyId:'36061'}});
+        expect(parsed.location).toMatchObject({countyId:'36061',latitude:county.latitude,longitude:county.longitude});
+        expect(parsed.location.postalCode).toBeUndefined();
+        const encoded=encodeAidPostForAt(parsed);
+        expect(encoded.location).toEqual({countryCode:'US',countyId:'36061'});
+        expect(encodeAidPostForAt(decodeAidPostFromAt(encoded))).toEqual(encoded);
+        expect(countyLocationSchema.safeParse({...encoded.location,postalCode:'10006'}).success).toBe(false);
+        expect(countyLocationSchema.safeParse({...encoded.location,latitude:40,longitude:-74}).success).toBe(false);
+        expect(aidPostSchema.safeParse({...record,version:'3.0.0',location:{countryCode:'US',countyId:'00000'}}).success).toBe(false);
+        expect(aidPostSchema.safeParse({...record,location:{countryCode:'US',countyId:'36061'}}).success).toBe(false);
+    });
 
     it('publishes only ZIP and country, including after a decode/re-encode', () => {
         const parsed = aidPostSchema.parse(record);

@@ -16,6 +16,7 @@ const run = (command, args, env = process.env, capture = false) => {
 
 try {
     run('docker', ['run', '--detach', '--rm', '--name', container,
+        '--tmpfs', '/var/lib/postgresql/data:rw,size=1g',
         '--publish', '127.0.0.1::5432', '--env', 'POSTGRES_DB=patchwork_test',
         '--env', 'POSTGRES_HOST_AUTH_METHOD=trust', 'postgres:16-alpine'], process.env, true);
     let ready = false;
@@ -25,7 +26,10 @@ try {
         }
         await setTimeout(500);
     }
-    if (!ready) throw new Error('Disposable PostgreSQL did not become ready.');
+    if (!ready) {
+        spawnSync('docker', ['logs', '--tail', '80', container], { stdio: 'inherit' });
+        throw new Error('Disposable PostgreSQL did not become ready.');
+    }
     const port = run('docker', ['port', container, '5432/tcp'], process.env, true).split(':').at(-1);
     const database = `postgresql://postgres@127.0.0.1:${port}/patchwork_test`;
     const env = { ...process.env, NODE_ENV: 'test', TEST_DATABASE_URL: database,

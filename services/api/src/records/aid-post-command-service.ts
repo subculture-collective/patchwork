@@ -1,5 +1,6 @@
 import {
     aidPostSchema,
+    countyLocationSchema,
     type AidPostRecord,
 } from '@patchwork/at-lexicons';
 import { AtClientError, type AidPostRecordResult } from '@patchwork/at-client';
@@ -118,8 +119,9 @@ export class AidPostCommandService {
         idempotencyKey?: string,
         actorDid?: string,
     ): Promise<AidPostRecordResult> {
+        if (record && typeof record === 'object' && 'version' in record && record.version === '3.0.0') countyLocationSchema.parse((record as {location?:unknown}).location);
         const parsed = aidPostSchema.parse(record);
-        if (!parsed.location.postalCode || parsed.version !== '2.0.0') {
+        if (!(parsed.location.countyId && parsed.version === '3.0.0') && (!parsed.location.postalCode || parsed.version !== '2.0.0')) {
             throw new PublicHttpError(400, 'POSTAL_CODE_REQUIRED', 'A five-digit ZIP code is required to publish a request.');
         }
         const client = await this.clientFactory(sessionToken);
@@ -163,8 +165,9 @@ export class AidPostCommandService {
         idempotencyKey?: string,
     ): Promise<AidPostRecordResult> {
         const command = updateCommandSchema.parse(input);
+        if (command.record && typeof command.record === 'object' && 'version' in command.record && command.record.version === '3.0.0') countyLocationSchema.parse((command.record as {location?:unknown}).location);
         const record = aidPostSchema.parse(command.record);
-        if (!record.location.postalCode || record.version !== '2.0.0') {
+        if (!(record.location.countyId && record.version === '3.0.0') && (!record.location.postalCode || record.version !== '2.0.0')) {
             throw new PublicHttpError(400, 'POSTAL_CODE_REQUIRED', 'Choose a five-digit ZIP code before editing this request.');
         }
         if (this.safetyGate) {

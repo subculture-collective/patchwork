@@ -1,5 +1,5 @@
 import { categoryServices, resourceProgramEvidence, resourceMapViewportSchema, type ResourceMapCell } from '@patchwork/shared';
-import { lookupPostalArea } from '@patchwork/at-lexicons';
+import { lookupPostalArea, lookupCountyArea } from '@patchwork/at-lexicons';
 import { z, ZodError } from 'zod';
 import type { Pool, QueryResultRow } from 'pg';
 import { computeDiscoveryRank, validateAidFeedQueryInput, validateAidQueryInput, validateDirectoryQueryInput, type ApiQueryAidResponse, type ApiQueryDirectoryResponse, type DiscoveryMapAggregates } from '@patchwork/shared';
@@ -74,7 +74,7 @@ export async function readProjectionPage<T extends QueryResultRow>(pool: Pick<Po
     const located = input.latitude !== undefined && input.longitude !== undefined && input.radiusKm !== undefined;
     let distance = 'NULL::double precision';
     if (located) {
-        if (kind !== 'directory') where.push('p.postal_code IS NOT NULL');
+        if (kind !== 'directory') where.push('(p.postal_code IS NOT NULL OR p.county_id IS NOT NULL)');
         const lat = bind(input.latitude), lng = bind(input.longitude);
         where.push('p.latitude IS NOT NULL AND p.longitude IS NOT NULL AND p.precision_km IS NOT NULL');
         where.push(`p.latitude BETWEEN ${bind(input.latitude! - input.radiusKm! / 111)}::double precision AND ${bind(input.latitude! + input.radiusKm! / 111)}::double precision`);
@@ -112,7 +112,7 @@ export async function readProjectionPage<T extends QueryResultRow>(pool: Pick<Po
         FROM exact_places GROUP BY floor(latitude/${mapStep}::double precision),floor(longitude/${mapStep}::double precision)
     )`:'';
     const result = await pool.query<{ rows: T[]; all_uris?:string[]; resource_map?:{total:number;mapped:number;cells:ResourceMapCell[]}; aggregates: DiscoveryMapAggregates | null; total: string; projected_at: string | null; state: { latest_cursor: string | null; heartbeat_at: string } | null }>(`WITH candidates AS MATERIALIZED (
-        SELECT p.uri, ${kind === 'directory' ? 'NULL::text' : 'p.postal_code'} AS postal_code, ${kind === 'directory' ? 'p.latitude' : 'CASE WHEN p.postal_code IS NOT NULL THEN p.latitude END'} AS latitude, ${kind === 'directory' ? 'p.longitude' : 'CASE WHEN p.postal_code IS NOT NULL THEN p.longitude END'} AS longitude, p.precision_km, p.record_created_at, p.record_updated_at, p.projected_at, ${distance} AS distance_km FROM ${table} p WHERE ${where.join(' AND ')}
+        SELECT p.uri, ${kind === 'directory' ? 'NULL::text' : 'p.postal_code'} AS postal_code, ${kind === 'directory' ? 'NULL::text' : 'p.county_id'} AS county_id, ${kind === 'directory' ? 'p.latitude' : 'CASE WHEN p.postal_code IS NOT NULL OR p.county_id IS NOT NULL THEN p.latitude END'} AS latitude, ${kind === 'directory' ? 'p.longitude' : 'CASE WHEN p.postal_code IS NOT NULL OR p.county_id IS NOT NULL THEN p.longitude END'} AS longitude, p.precision_km, p.record_created_at, p.record_updated_at, p.projected_at, ${distance} AS distance_km FROM ${table} p WHERE ${where.join(' AND ')}
     ), filtered AS MATERIALIZED (SELECT * FROM candidates ${radius}), paged AS (
         SELECT * FROM filtered ORDER BY ${order} LIMIT ${limit} OFFSET ${offset}
     ), page_records AS (
@@ -124,9 +124,9 @@ export async function readProjectionPage<T extends QueryResultRow>(pool: Pick<Po
     ), cells AS (
         SELECT least(89.995, greatest(-89.995, floor(latitude * 100) / 100 + .005)) AS latitude,
             least(179.995, greatest(-179.995, floor(longitude * 100) / 100 + .005)) AS longitude,
-            count(*)::integer AS count, max(precision_km) + 1 AS "radiusKm", postal_code AS "postalCode"
+            count(*)::integer AS count, max(precision_km) + 1 AS "radiusKm", postal_code AS "postalCode", ${kind === 'directory' ? 'NULL::text' : 'county_id'} AS "countyId"
         FROM filtered WHERE latitude IS NOT NULL AND longitude IS NOT NULL
-        GROUP BY 1, 2, postal_code ORDER BY 1, 2, postal_code
+        GROUP BY 1, 2, postal_code, county_id ORDER BY 1, 2, postal_code
     ) ${mapCte} SELECT ${nowParam}::timestamptz AS query_at, stats.total::text AS total, stats.projected_at,
         ${includeAllUris?"coalesce((SELECT jsonb_agg(uri ORDER BY uri) FROM filtered),'[]'::jsonb)":'NULL::jsonb'} AS all_uris,
         ${viewport&&kind==='directory'?`jsonb_build_object('total',stats.total,'mapped',(SELECT count(*) FROM exact_places),'cells',coalesce((SELECT jsonb_agg(to_jsonb(c) ORDER BY latitude,longitude) FROM resource_cells c),'[]'::jsonb))`:'NULL::jsonb'} AS resource_map,
@@ -148,9 +148,10 @@ export async function queryProjected(pool: Pick<Pool,'query'>, params: URLSearch
         const result = await readProjectionPage(pool, params, kind, viewerDid, uri);
         const results = result.rows.map(row => {
             const postalArea = kind !== 'directory' && row.postal_code ? lookupPostalArea(row.postal_code) : undefined;
-            const geo = kind !== 'directory' ? (postalArea ? { latitude: postalArea.latitude, longitude: postalArea.longitude, precisionKm: 1 } : undefined) : row.latitude !== null && row.longitude !== null && row.precision_km !== null ? { latitude: Number(row.latitude), longitude: Number(row.longitude), precisionKm: Number(row.precision_km) } : undefined;
+            const countyArea = row.county_id ? lookupCountyArea(String(row.county_id)) : undefined;
+            const geo = kind !== 'directory' ? (countyArea ? {latitude:countyArea.latitude,longitude:countyArea.longitude,precisionKm:countyArea.precisionKm} : postalArea ? { latitude: postalArea.latitude, longitude: postalArea.longitude, precisionKm: 1 } : undefined) : row.latitude !== null && row.longitude !== null && row.precision_km !== null ? { latitude: Number(row.latitude), longitude: Number(row.longitude), precisionKm: Number(row.precision_km) } : undefined;
             return kind === 'directory' ? { ...common(row), name: row.name, category: row.category, serviceArea: row.service_area, status: row.verification_status, contact: row.contact, ...(geo ? { approximateGeo: geo } : {}), ...(row.open_hours ? { openHours: row.open_hours } : {}), ...(row.eligibility_notes ? { eligibilityNotes: row.eligibility_notes } : {}), operationalStatus: row.operational_status } : {
-                ...common(row), ...(row.postal_code ? { postalCode: row.postal_code } : {}), title: row.title, summary: row.description, category: row.category, urgency: row.urgency, status: row.status,
+                ...common(row), ...(row.county_id ? {countyId:row.county_id} : {}), ...(row.postal_code ? { postalCode: row.postal_code } : {}), title: row.title, summary: row.description, category: row.category, urgency: row.urgency, status: row.status,
                 ...(geo ? { approximateGeo: geo } : {}), ...(row.distance_km !== null ? { distanceKm: Number(row.distance_km) } : {}),
                 ranking: computeDiscoveryRank({ distanceKm: row.distance_km === null ? Infinity : Number(row.distance_km), createdAt: iso(row.record_created_at), trustScore: .5, nowIso: result.now }),
             };
