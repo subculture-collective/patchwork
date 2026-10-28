@@ -31,6 +31,7 @@ import type {
 } from '@patchwork/shared';
 import {
     aidPostSchema,
+    encodeAidPostForAt,
     directoryResourceSchema,
     volunteerProfileSchema,
     type AidPostRecord,
@@ -767,7 +768,7 @@ export const createAtAidPostViaApi = async (
     signal?: AbortSignal,
     idempotencyKey?: string,
 ): Promise<ApiClientResult<AtAidPostResult>> => {
-    const result = await requestJsonPost('/at/aid-posts', record.location.postalCode ? { ...record, location: { countryCode: 'US', postalCode: record.location.postalCode } } : record, signal, idempotencyKey);
+    const result = await requestJsonPost('/at/aid-posts', record.location.countyId ? {...record,location:{countryCode:'US',countyId:record.location.countyId}} : record.location.postalCode ? { ...record, location: { countryCode: 'US', postalCode: record.location.postalCode } } : record, signal, idempotencyKey);
     return result.ok ? parseAtAidPostResult(result.data) : result;
 };
 
@@ -775,7 +776,7 @@ export const updateAtAidPostViaApi = async (
     input: { uri: string; expectedCid: string; record: AidPostRecord },
     signal?: AbortSignal,
 ): Promise<ApiClientResult<AtAidPostResult>> => {
-    const result = await requestJsonPut('/at/aid-posts', input, signal);
+    const result = await requestJsonPut('/at/aid-posts', {...input,record:encodeAidPostForAt(input.record)}, signal);
     return result.ok ? parseAtAidPostResult(result.data) : result;
 };
 
@@ -2269,6 +2270,7 @@ const mapAidPayloadToRecords = (
 
             return {
                 aidPostUri: uri,
+                countyId: readString(row, 'countyId'),
                 postalCode: readString(row, 'postalCode'),
                 recipientDid: authorDid,
                 ...(cid ? { cid } : {}),
@@ -2458,7 +2460,7 @@ const mapAggregates = (value: unknown): DiscoveryMapAggregates | undefined => {
         if (!isRecord(item)) return undefined;
         const latitude = readNumber(item, 'latitude'), longitude = readNumber(item, 'longitude'), count = readNumber(item, 'count'), radiusKm = readNumber(item, 'radiusKm');
         if (latitude === undefined || longitude === undefined || count === undefined || radiusKm === undefined || Math.abs(latitude) > 90 || Math.abs(longitude) > 180 || !Number.isInteger(count) || count < 1 || radiusKm < 1) return undefined;
-        cells.push({ latitude, longitude, count, radiusKm, ...(readString(item, 'postalCode') ? { postalCode: readString(item, 'postalCode') } : {}) });
+        cells.push({ latitude, longitude, count, radiusKm, ...(readString(item, 'countyId') ? {countyId:readString(item,'countyId')} : {}), ...(readString(item, 'postalCode') ? { postalCode: readString(item, 'postalCode') } : {}) });
     }
     return { requestCount, locatedRequestCount, truncated: value.truncated, cells };
 };
@@ -3812,13 +3814,13 @@ export const createAidPostViaApi = async (
     const now = input.now ?? new Date().toISOString();
     const record = aidPostSchema.parse({
         $type: 'app.patchwork.aid.post',
-        version: '2.0.0',
+        version: input.draft.location.countyId ? '3.0.0' : '2.0.0',
         title: input.draft.title,
         description: input.draft.description,
         category: input.draft.category,
         urgency: toLexiconUrgency(input.draft.urgency),
         status: 'open',
-        location: { countryCode: 'US', postalCode: input.draft.location.postalCode },
+        location: input.draft.location.countyId ? {countryCode:'US',countyId:input.draft.location.countyId} : { countryCode: 'US', postalCode: input.draft.location.postalCode },
         createdAt: now,
         updatedAt: now,
     });
@@ -3837,6 +3839,7 @@ export const createAidPostViaApi = async (
     return {
         ok: true,
         data: {
+            countyId: record.location.countyId,
             postalCode: record.location.postalCode,
             aidPostUri: result.data.uri,
             recipientDid,

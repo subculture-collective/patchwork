@@ -51,6 +51,7 @@ export interface ApproximateGeoPoint {
 }
 
 export interface NormalizedAidPost {
+    countyId?: string;
     postalCode?: string;
     kind: 'aid-post';
     title: string;
@@ -278,9 +279,10 @@ const normalizeRecordPayload = (
                 aidRecord.urgency,
                 aidRecord.status,
             ),
+            ...(aidRecord.location.countyId ? {countyId:aidRecord.location.countyId} : {}),
             ...(aidRecord.location.postalCode ? { postalCode: aidRecord.location.postalCode } : {}),
-            approximateGeo: aidRecord.location.postalCode ? {
-                latitude: aidRecord.location.latitude, longitude: aidRecord.location.longitude, precisionKm: 1,
+            approximateGeo: aidRecord.location.countyId || aidRecord.location.postalCode ? {
+                latitude: aidRecord.location.latitude, longitude: aidRecord.location.longitude, precisionKm: aidRecord.location.precisionKm,
             } : quantizeCoordinate(
                 aidRecord.location.latitude,
                 aidRecord.location.longitude,

@@ -635,6 +635,7 @@ export class AccountPrivacyService {
                 category: string;
                 urgency: string;
                 status: string;
+                county_id: string | null;
                 latitude: number;
                 longitude: number;
                 precision_km: number;
@@ -642,7 +643,7 @@ export class AccountPrivacyService {
                 record_updated_at: Date | string;
                 record_origin: 'synthetic' | 'sourced-public' | 'visitor-created';
             }>(
-            `SELECT uri, cid, title, description, category, urgency, status,
+            `SELECT uri, cid, title, description, category, urgency, status, county_id,
                     latitude, longitude, precision_km, record_created_at,
                     record_updated_at, record_origin
              FROM indexer_aid_post_projections
@@ -1235,6 +1236,7 @@ export class AccountPrivacyService {
                     category: row.category,
                     urgency: row.urgency,
                     status: row.status,
+                    ...(row.county_id ? {countyId:row.county_id} : {}),
                     approximateGeo: {
                         latitude: Number(row.latitude),
                         longitude: Number(row.longitude),

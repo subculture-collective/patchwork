@@ -125,3 +125,18 @@ Fixtures used by tests:
 Validation and schema coverage tests:
 
 - `packages/at-lexicons/src/lexicons.test.ts`
+
+## County-only aid-post locations (3.0.0)
+
+The aid-post record keeps its NSID and adds version `3.0.0` for a location
+containing only `countryCode: "US"` and a supported Census `countyId`.
+Versions 1 and 2 remain readable. New writers must not publish coordinates or a
+ZIP in the county wire form. The application derives representative geography
+only for indexing and display. Deploy the additive live/shadow projection
+migration and capable readers before writers; keep them when rolling back a
+writer after county records exist. Older readers may omit the new version.
+Never convert a county-only request into a guessed ZIP.
+
+See [postal geography](../architecture/postal-geography.md) for the land-area
+threshold, provenance, reader order, rollback boundaries, and the limits of
+changing a record after a ZIP has already been published.

@@ -1578,7 +1578,12 @@
         "loading": "Cargando límites…",
         "retry": "Reintentar límites",
         "mapLabel": "Solicitudes por zona postal y ubicaciones de recursos públicos",
-        "legend": "Las zonas sombreadas cuentan solicitudes. Los marcadores indican direcciones de recursos públicos. Las solicitudes solo muestran el código postal. Límites: Censo de EE. UU. de 2020."
+        "legend": "Las zonas sombreadas cuentan solicitudes. Los marcadores indican direcciones de recursos públicos. Las solicitudes solo muestran el código postal. Límites: Censo de EE. UU. de 2020.",
+        "smallZipWarning": "Este código postal abarca una superficie pequeña. Publicarlo puede revelar más sobre dónde estás.",
+        "showCounty": "Mostrar mi condado en su lugar: {{county}}, {{state}}",
+        "previousPublication": "Elegir un condado ahora no elimina un código postal publicado en un registro anterior. Ninguna zona garantiza el anonimato.",
+        "distanceFromCounty": "{{county}} · distancias desde el área del condado",
+        "publicArea": "Zona pública"
     },
     "resourceServices": {
         "food": "Alimentos y comidas",

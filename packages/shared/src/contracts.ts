@@ -42,6 +42,7 @@ export interface ApiQueryAidRequest {
 }
 
 export interface AidRecordSummary {
+    countyId?: string;
     postalCode?: string;
     uri: string;
     authorDid: string;
@@ -76,7 +77,7 @@ export interface DiscoveryMapAggregates {
     requestCount: number;
     locatedRequestCount: number;
     truncated: boolean;
-    cells: Array<{ latitude: number; longitude: number; count: number; radiusKm: number; postalCode?: string }>;
+    cells: Array<{ latitude: number; longitude: number; count: number; radiusKm: number; countyId?: string; postalCode?: string }>;
 }
 
 export interface ApiQueryAidResponse {

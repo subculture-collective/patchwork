@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 const draftSchema = z.object({
+    countyInstead: z.boolean().optional(),
     postalCode: z.string().max(5).optional(),
     title: z.string().max(140), description: z.string().max(5000),
     category: z.enum(['food', 'shelter', 'medical', 'transport', 'childcare', 'other']),

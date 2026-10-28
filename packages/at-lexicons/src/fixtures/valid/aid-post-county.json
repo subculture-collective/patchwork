@@ -1,0 +1,14 @@
+{
+    "$type": "app.patchwork.aid.post",
+    "version": "3.0.0",
+    "title": "Need groceries for household of 3",
+    "description": "Need non-perishable food support for the next 2 days.",
+    "category": "food",
+    "urgency": "high",
+    "status": "open",
+    "location": {
+        "countryCode": "US",
+        "countyId": "36061"
+    },
+    "createdAt": "2026-02-26T10:00:00.000Z"
+}

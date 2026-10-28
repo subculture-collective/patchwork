@@ -1,3 +1,4 @@
+import {lookupCountyArea} from '@patchwork/at-lexicons';
 import { SaveSearchButton } from './saved-discovery';
 import { haversineDistanceMeters } from '../geo-utils';
 import { nearbyResourceIntent, serializeDiscoveryFilterState } from '../discovery-filters';
@@ -590,6 +591,7 @@ export const MapRoute = ({
                         <ul className='space-y-3'>
                             {mapView.filteredCards.map((card, index) => (
                                 <li key={card.id} className='mh-record-card'>
+                                    {feedRecords.find(record=>record.card.id===card.id)?.countyId && <p className='text-sm'>{lookupCountyArea(feedRecords.find(record=>record.card.id===card.id)!.countyId!)?.areaLabel}</p>}
                                     <div className='flex flex-wrap items-start justify-between gap-2'>
                                         <p className='text-sm font-bold text-mh-text'>
                                             {card.title}

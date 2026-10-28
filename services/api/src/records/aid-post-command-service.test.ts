@@ -40,6 +40,17 @@ const client = (): AidPostClient => ({
 });
 
 describe('AidPostCommandService', () => {
+    it('publishes a supported county but refuses coordinates or ZIP in the public county command', async () => {
+        const at=client(); const service=new AidPostCommandService(async()=>at);
+        const county={...postalRecord,version:'3.0.0',location:{countryCode:'US',countyId:'17031'}};
+        await expect(service.create('opaque',county)).resolves.toMatchObject({record:{version:'3.0.0',location:{countyId:'17031'}}});
+        for (const extra of [{postalCode:'60625'},{latitude:41,longitude:-87},{areaLabel:'My apartment'}]) {
+            await expect(service.create('opaque',{...county,location:{...county.location,...extra}})).rejects.toThrow();
+            await expect(service.update('opaque',{uri:'at://did:plc:alice/app.patchwork.aid.post/3abc',expectedCid:'old',record:{...county,location:{...county.location,...extra}}})).rejects.toThrow();
+        }
+        expect(at.create).toHaveBeenCalledTimes(1);
+        expect(at.update).not.toHaveBeenCalled();
+    });
     it('does not publish when the pre-publication gate holds the submission', async () => {
         const at = client();
         const safetyGate = {

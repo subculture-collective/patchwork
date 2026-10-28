@@ -1,4 +1,4 @@
-import { lookupPostalArea } from '@patchwork/at-lexicons';
+import { lookupPostalArea, lookupCountyArea } from '@patchwork/at-lexicons';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useAuth } from '../auth/AuthProvider';
 import { useLocale } from '../i18n';
@@ -76,11 +76,14 @@ export function RequestDetail() {
         }
     };
     const postalArea = record?.postalCode ? lookupPostalArea(record.postalCode) : undefined;
-    const area = postalArea ? { lat: postalArea.latitude, lng: postalArea.longitude, precisionKm: 1 } : undefined;
+    const countyArea=record?.countyId ? lookupCountyArea(record.countyId) : undefined;
+    const area = countyArea ? {lat:countyArea.latitude,lng:countyArea.longitude,precisionKm:countyArea.precisionKm} : postalArea ? { lat: postalArea.latitude, lng: postalArea.longitude, precisionKm: 1 } : undefined;
     const mapParams = new URLSearchParams({ uri });
     if (record?.postalCode) mapParams.set('zip', record.postalCode);
+    if (countyArea) { mapParams.set('lat',String(countyArea.latitude));mapParams.set('lng',String(countyArea.longitude));mapParams.set('area',countyArea.areaLabel); }
     const mapHref = `/nearby?${mapParams}`;
     const resourceParams = new URLSearchParams({ tab: 'nearby' });
+    if (countyArea) resourceParams.set('area', t('postal.distanceFromCounty', {county:countyArea.areaLabel}));
     if (record?.postalCode) resourceParams.set('area', `ZIP ${record.postalCode} · distances from the ZIP area`);
     if (area) {
         resourceParams.set('lat', String(area.lat));
@@ -172,9 +175,9 @@ export function RequestDetail() {
                                     {record.card.description}
                                 </p>
                             </Surface>
-                            <Surface title='ZIP area'>
+                            <Surface title={countyArea ? t('postal.publicArea') : 'ZIP area'}>
                                 <p>
-                                    {postalArea ? `ZIP ${postalArea.postalCode} · ${postalArea.stateName}` : 'The author has not supplied a ZIP code.'}
+                                    {countyArea ? countyArea.areaLabel : postalArea ? `ZIP ${postalArea.postalCode} · ${postalArea.stateName}` : 'The author has not supplied a ZIP code.'}
                                 </p>
                                 <p className='mt-2 text-sm text-mh-textMuted'>
                                     {t('requestPage.locationPrivacy')}

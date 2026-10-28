@@ -48,6 +48,7 @@ export default defineConfig(({ command, mode }) => {
                     manualChunks(id) {
                         if (
                             id.includes('postal-index.json') ||
+                            id.includes('county-index.json') ||
                             id.includes('geography-names.json') ||
                             id.endsWith('/postal-geography.ts')
                         ) {

@@ -1,3 +1,4 @@
+import {aidPostSchema} from '@patchwork/at-lexicons';
 import { fetchMapResourcePageFromApi } from './api-client';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -8,6 +9,7 @@ import {
     confirmNotificationEmailViaApi,
     createAidPostViaApi,
     createAtAidPostViaApi,
+    updateAtAidPostViaApi,
     createAtDirectoryResourceViaApi,
     createAtVolunteerProfileViaApi,
     createOrganizationViaApi,
@@ -1240,6 +1242,20 @@ describe('api client', () => {
         expect(body['urgency']).toBe('critical');
         expect(body['version']).toBe('2.0.0');
         expect(body['location']).toEqual({ countryCode: 'US', postalCode: '60625' });
+    });
+
+    it('sends only county identity for county-only create and CID-checked edits', async () => {
+        const record=aidPostSchema.parse({$type:'app.patchwork.aid.post',version:'3.0.0',title:'County pickup',
+            description:'Help with groceries.',category:'food',urgency:'medium',status:'open',location:{countryCode:'US',countyId:'17031'},createdAt:'2026-10-28T12:00:00Z'});
+        const uri='at://did:plc:alice/app.patchwork.aid.post/county';
+        const fetchMock=vi.fn(async()=>createJsonResponse({uri,cid:'county-cid',record},true,200));
+        globalThis.fetch=fetchMock as unknown as typeof fetch;
+        await expect(createAtAidPostViaApi(record)).resolves.toMatchObject({ok:true});
+        await expect(updateAtAidPostViaApi({uri,expectedCid:'previous-cid',record})).resolves.toMatchObject({ok:true});
+        const calls=fetchMock.mock.calls as unknown as Array<[unknown,RequestInit]>;
+        expect(JSON.parse(String(calls[0]![1].body)).location).toEqual({countryCode:'US',countyId:'17031'});
+        expect(JSON.parse(String(calls[1]![1].body))).toMatchObject({uri,expectedCid:'previous-cid',record:{location:{countryCode:'US',countyId:'17031'}}});
+        expect(Object.keys(JSON.parse(String(calls[1]![1].body)).record.location).sort()).toEqual(['countryCode','countyId']);
     });
 
     it('creates an authenticated AT aid post with browser credentials', async () => {

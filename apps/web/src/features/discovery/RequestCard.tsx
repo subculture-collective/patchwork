@@ -7,6 +7,7 @@ import { formatLocalizedLabel } from '../shell-shared';
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 interface RequestCardProps {
+    areaLabel?: string;
     title: string;
     description: string;
     category: string;
@@ -25,6 +26,7 @@ interface RequestCardProps {
 /** A single aid request as it appears in discovery lists. */
 export const RequestCard = ({
     title,
+    areaLabel,
     description,
     category,
     updatedAt,
@@ -66,6 +68,7 @@ export const RequestCard = ({
             </div>
             <Heading className='mh-request-card__title'>{title}</Heading>
             <p className='mh-request-card__description'>{description}</p>
+            {areaLabel && <p className='text-sm'>{areaLabel}</p>}
             <div className='mh-request-card__badges'>
                 {badges.map((badge) =>
                     badge ? (
