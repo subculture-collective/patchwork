@@ -25,9 +25,9 @@ test('volunteer pagination restores page one on browser Back without replaying p
             contentType: 'application/json',
             body: JSON.stringify(body),
         });
-        if (path === '/auth/session') return fulfill({ session: { did: 'did:plc:viewer', expiresAt: '2099-01-01T00:00:00.000Z' } });
-        if (path === '/account/onboarding') return fulfill({ policyVersion: '2026-07-28', requiredDocuments: [], consentRequired: false, acceptedAt: '2026-08-07T12:00:00.000Z' });
-        if (path === '/account/preferences') return fulfill({ preferences: { language: 'en' } });
+        // This is a public discovery journey. Introducing a session also
+        // introduces onboarding remounts, whose reads are unrelated to Back.
+        if (path === '/auth/session') return route.fulfill({ status: 401, json: { error: { code: 'AUTHENTICATION_REQUIRED' } } });
         if (path === '/query/volunteers') {
             const requested = url.searchParams.get('page') ?? '1';
             requestedPages.push(requested);
@@ -45,16 +45,14 @@ test('volunteer pagination restores page one on browser Back without replaying p
 
     await page.goto('/volunteer');
     await expect(page.getByText('Helper 1')).toBeVisible();
-    // Let authentication/onboarding-driven rerenders settle before taking the
-    // baseline; the assertion below is specifically about the Back action.
-    await page.waitForLoadState('networkidle');
-    const initialPageOneRequests = requestedPages.filter(value => value === '1').length;
-    expect(initialPageOneRequests).toBeGreaterThan(0);
     await page.getByRole('button', { name: 'Load more' }).click();
     await expect(page).toHaveURL(/\/volunteer\?page=2/);
     await expect(page.getByText('Helper 2')).toBeVisible();
     const pageTwoRequests = requestedPages.filter(value => value === '2').length;
     expect(pageTwoRequests).toBeGreaterThan(0);
+    // Snapshot immediately before Back, after the requested page rendered.
+    const initialPageOneRequests = requestedPages.filter(value => value === '1').length;
+    expect(initialPageOneRequests).toBeGreaterThan(0);
 
     await page.goBack();
     await expect(page).toHaveURL(/\/volunteer$/);

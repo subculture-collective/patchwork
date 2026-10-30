@@ -76,8 +76,21 @@ the shared CI runner, within the existing 60-second test deadline. Local
 assertions keep the five-second default. This accommodates cold lazy chunks
 and fixture hydration; it does not change any measured capacity, loading or
 API latency budget. A persistent missing control still fails. Retained failure
-artifacts still require configured redaction terms and a passing privacy scan;
-passing on retry does not bypass that guard.
+artifacts are never implicitly considered redacted when a retry passes.
+
+The fixture-only quality job refuses external base URLs, stored identities,
+private markers and location credentials before starting browsers. It withholds
+fixture diagnostics in a private temporary directory outside the workspace
+before builds or uploads. These diagnostics remain unreviewed and are not
+uploaded; the job container removes them on teardown. A browser step that
+exhausts its retries still fails the job. Chromium process diagnostics remain
+in the job log to help distinguish renderer crashes from assertion failures.
+Docker build contexts also exclude test results and local browser artifacts.
+
+Credentialed/staging runs cannot use this fixture quarantine path. They still
+require configured redaction terms and the unchanged strict privacy scan before
+any artifact publication. The existing guard also runs over the fixture
+workspace after quarantine to refuse any remaining unreviewed artifact files.
 
 Most browser tests mock API transport to isolate web behavior. They do not
 prove a live OAuth provider, actual AT publication, mail/push delivery, or a

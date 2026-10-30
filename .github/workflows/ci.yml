@@ -60,7 +60,28 @@ jobs:
               working-directory: apps/web
 
             - name: Browser E2E tests (Phase 8.2)
-              run: npm run test:e2e -w @patchwork/web
+              env:
+                  DEBUG: pw:browser
+              run: |
+                  node scripts/quarantine-fixture-browser-artifacts.mjs --check
+                  npm run test:e2e -w @patchwork/web
+
+            - name: Record browser runner resource limits
+              if: always()
+              run: |
+                  df -h / /tmp /dev/shm
+                  for metric in memory.max memory.peak memory.events pids.max pids.events; do
+                    if [ -r "/sys/fs/cgroup/$metric" ]; then
+                      echo "$metric"
+                      cat "/sys/fs/cgroup/$metric"
+                    fi
+                  done
+
+            # Preserve retry diagnostics privately in this ephemeral job, never
+            # as build/upload inputs. A failed browser step still fails the job.
+            - name: Withhold unreviewed fixture browser diagnostics
+              if: always()
+              run: node scripts/quarantine-fixture-browser-artifacts.mjs --quarantine
 
             - name: Refuse unreviewed browser artifacts
               if: always()
