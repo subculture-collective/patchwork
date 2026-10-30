@@ -1,4 +1,6 @@
-# Rollback Policy -- Immutable Versioning & Safe Rollback (#109)
+# Rollback Policy -- Immutable Versioning & Safe Rollback
+
+Tracks: [release qualification #21](https://git.subcult.tv/subculture-collective/patchwork/issues/21).
 
 ## Immutable image digests
 

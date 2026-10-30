@@ -81,6 +81,17 @@ class QueueScanner implements MalwareScanner {
 
 describe('durable private attachment pipeline', () => {
     const pool = new Pool({ connectionString: databaseUrl });
+    // Trigger-created jobs use PostgreSQL microseconds. Sweep only after their
+    // persisted due time, including on fast tmpfs databases within the same ms.
+    const deletionJobsDueAt = async () => {
+        const result = await pool.query<{ due: Date | null }>(
+            `SELECT MAX(next_attempt_at) + INTERVAL '1 millisecond' AS due
+             FROM attachment_deletion_jobs WHERE deleted_at IS NULL`,
+        );
+        const due = result.rows[0]?.due;
+        if (!due) throw new Error('Expected pending deletion jobs.');
+        return due;
+    };
     let objects: MemoryObjectStore;
     let scanner: QueueScanner;
     let service: AttachmentService;
@@ -401,7 +412,7 @@ describe('durable private attachment pipeline', () => {
         expect(jobs.rows).toHaveLength(2);
 
         objects.failDeletion = true;
-        await expect(service.runDeletionSweep()).resolves.toMatchObject({
+        await expect(service.runDeletionSweep(await deletionJobsDueAt())).resolves.toMatchObject({
             failed: 2,
         });
         objects.failDeletion = false;
@@ -442,7 +453,8 @@ describe('durable private attachment pipeline', () => {
                 )
             ).rows[0]?.count,
         ).toBe(2);
-        await service.runDeletionSweep();
+        await expect(service.runDeletionSweep(await deletionJobsDueAt()))
+            .resolves.toMatchObject({ deleted: 2, failed: 0 });
         expect(objects.objects.size).toBe(0);
     });
 
@@ -461,7 +473,7 @@ describe('durable private attachment pipeline', () => {
                 )
             ).rows[0]?.count,
         ).toBe(0);
-        await expect(service.runDeletionSweep()).resolves.toMatchObject({
+        await expect(service.runDeletionSweep(await deletionJobsDueAt())).resolves.toMatchObject({
             deleted: 2,
             failed: 0,
             failedPending: 0,
@@ -519,7 +531,7 @@ describe('durable private attachment pipeline', () => {
         await expect(
             service.runLifecycleReconciliation(),
         ).resolves.toEqual({ removed: 1 });
-        await expect(service.runDeletionSweep()).resolves.toMatchObject({
+        await expect(service.runDeletionSweep(await deletionJobsDueAt())).resolves.toMatchObject({
             deleted: 2,
             failedPending: 0,
         });

@@ -4,13 +4,13 @@ This document defines the v1 AT Lexicon schema set, constraints, and evolution p
 
 ## v1 schema set
 
-> Current runtime scope: `app.patchwork.aid.post`,
-> `app.patchwork.volunteer.profile`, and `app.patchwork.directory.resource` have
-> authenticated repository paths. `app.patchwork.conversation.meta` and
-> `app.patchwork.moderation.report` remain prohibited runtime writes under ADR
-> 0003 and must not be presented as active public-record capabilities.
+> Runtime writes are permitted for aid posts, volunteer profiles and directory
+> resources under the amended ADR 0003. Conversation metadata and moderation
+> reports remain prohibited public writes; their schemas are compatibility/design
+> artifacts, not evidence of a shipped public capability. Private chat and reports
+> stay in the application database. See [current acceptance](../current-acceptance.md).
 
-Records are currently published at:
+The schema catalog contains:
 
 - `app.patchwork.aid.post`
 - `app.patchwork.volunteer.profile`

@@ -8,8 +8,10 @@ import { PublicHttpError } from '../http/error-response.js';
 const sourceIdSchema = z.string().regex(/^[a-z0-9-]{1,80}$/);
 const sha = z.string().regex(/^[a-f0-9]{64}$/);
 const manifestSchema = z.object({
+    adapter: z.string().min(1).max(80).optional(), adapterVersion: z.string().regex(/^\d+\.\d+\.\d+$/).optional(),
     version: z.literal(1), publisher: z.string().min(1).max(200), datasetId: z.string().min(1).max(100),
     requestUrl: z.string().url(), responseUrl: z.string().url(), retrievedAt: z.string().datetime(),
+    catalogRetrievedAt: z.string().datetime().optional(),
     contentType: z.literal('application/json'), etag: z.string().max(1000).nullable(),
     lastModified: z.string().max(1000).nullable(), rawSha256: sha, rawBytes: z.number().int().positive().max(1_000_000),
     rowCount: z.number().int().positive(), normalizedSha256: sha,

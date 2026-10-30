@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-09-20",
+  "reviewBasis": "Repository builders and cited publisher pages; unresolved permissions/access limits remain explicit.",
+  "families": {
+    "cpl": {
+      "format": "Socrata JSON",
+      "stableIdentity": "Publisher branch URL/identifier",
+      "knownExclusions": "Complete-feed validation; display hours only; libraries excluded by default.",
+      "nextIssue": 12,
+      "automationDecision": "existing-review-only",
+      "reuseAssessment": "Unknown; public visibility or historical import is not a redistribution grant.",
+      "termsSources": [],
+      "accessLimits": "Unverified; honor source-specific publisher limits and bounded retries.",
+      "refreshAssessment": "Existing daily runner; natural execution requires independent verification."
+    },
+    "hrsa": {
+      "format": "ArcGIS JSON; CSV/XLSX also published",
+      "stableIdentity": "SITE_SOURCE_ID",
+      "knownExclusions": "Inactive/nonpermanent or restricted settings, suppressed/PO-box addresses, coarse coordinates, unsupported ZIPs, duplicates.",
+      "nextIssue": 33,
+      "automationDecision": "adapter-candidate",
+      "reuseAssessment": "HCSD download entry states no usage limitations. Preserve suppressed addresses; this does not establish API rate limits or transformed-data accuracy.",
+      "termsSources": [
+        "https://data.hrsa.gov/data/download?titleFilter=Health+Center"
+      ],
+      "accessLimits": "Unverified; honor source-specific publisher limits and bounded retries.",
+      "refreshAssessment": "Publisher describes daily refresh; paging and fetch bounds remain to qualify."
+    },
+    "food-networks": {
+      "format": "Access Food JSON API with per-network metadata",
+      "stableIdentity": "regionId plus locationId; resource IDs currently use locationId",
+      "knownExclusions": "Mobile/pop-up/restricted/closed locations, missing provenance, coarse coordinates and ZIP conflicts.",
+      "nextIssue": 34,
+      "automationDecision": "permission-required",
+      "reuseAssessment": "Vivery Site terms restrict automated access/copying; establish permission/applicability for each network/API before scheduling or use partner-approved exports.",
+      "termsSources": [
+        "https://www.vivery.org/terms-of-use/"
+      ],
+      "accessLimits": "Unverified; honor source-specific publisher limits and bounded retries.",
+      "refreshAssessment": "Unverified; qualify before scheduling."
+    },
+    "hud-counseling": {
+      "format": "HUD JSON plus Census geocodes",
+      "stableIdentity": "agcid",
+      "knownExclusions": "In-person counseling and matching street geocode; no beds/funds assertion.",
+      "nextIssue": 35,
+      "automationDecision": "review-required",
+      "reuseAssessment": "Unknown; public visibility or historical import is not a redistribution grant.",
+      "termsSources": [
+        "https://data.hud.gov/housing_counseling.html"
+      ],
+      "accessLimits": "Unverified; honor source-specific publisher limits and bounded retries.",
+      "refreshAssessment": "Unverified; qualify before scheduling."
+    },
+    "hud-pha": {
+      "format": "ArcGIS JSON",
+      "stableIdentity": "PARTICIPANT_CODE",
+      "knownExclusions": "Rooftop LVL2KX=R required; excludes PO boxes, ZIP conflicts and duplicate desks.",
+      "nextIssue": 35,
+      "automationDecision": "review-required",
+      "reuseAssessment": "Unknown; public visibility or historical import is not a redistribution grant.",
+      "termsSources": [
+        "https://www.hud.gov/contactus/public-housing-contacts"
+      ],
+      "accessLimits": "Unverified; honor source-specific publisher limits and bounded retries.",
+      "refreshAssessment": "Unverified; qualify before scheduling."
+    },
+    "ssa": {
+      "format": "Official CSV plus Census geocodes",
+      "stableIdentity": "OFFICE CODE",
+      "knownExclusions": "Unique matching address/state/ZIP and ZIP-boundary validation.",
+      "nextIssue": 35,
+      "automationDecision": "review-required",
+      "reuseAssessment": "Unknown; public visibility or historical import is not a redistribution grant.",
+      "termsSources": [
+        "https://www.ssa.gov/data/FO-RS-Address-Open-Close-Time-App-Devs.html"
+      ],
+      "accessLimits": "Unverified; honor source-specific publisher limits and bounded retries.",
+      "refreshAssessment": "Unverified; qualify before scheduling."
+    },
+    "va": {
+      "format": "Paginated VA facility JSON",
+      "stableIdentity": "Facility id",
+      "knownExclusions": "Nonmobile public benefits/Vet Center subset; excludes overseas/restricted/virtual/closed facilities.",
+      "nextIssue": 35,
+      "automationDecision": "review-required",
+      "reuseAssessment": "Unknown; public visibility or historical import is not a redistribution grant.",
+      "termsSources": [
+        "https://developer.va.gov/explore/api/va-facilities/docs",
+        "https://developer.va.gov/production-access/working-with-va-apis"
+      ],
+      "accessLimits": "Unverified; honor source-specific publisher limits and bounded retries.",
+      "refreshAssessment": "Unverified; qualify before scheduling."
+    },
+    "idhs": {
+      "format": "Locator HTML and officeLocations JSON",
+      "stableIdentity": "OfficeID/id; distinct office type",
+      "knownExclusions": "Map/list agreement; excludes remote/closed/specialized offices and invalid addresses/ZIPs.",
+      "nextIssue": 36,
+      "automationDecision": "review-required",
+      "reuseAssessment": "Unknown; public visibility or historical import is not a redistribution grant.",
+      "termsSources": [],
+      "accessLimits": "Unverified; honor source-specific publisher limits and bounded retries.",
+      "refreshAssessment": "Unverified; qualify before scheduling."
+    },
+    "colorado-wic": {
+      "format": "Directory HTML extraction plus Census evidence",
+      "stableIdentity": "Clinic URL slug",
+      "knownExclusions": "All pages; unique matching street-range geocode and ZIP; intersections excluded.",
+      "nextIssue": 36,
+      "automationDecision": "review-required",
+      "reuseAssessment": "Unknown; public visibility or historical import is not a redistribution grant.",
+      "termsSources": [],
+      "accessLimits": "Unverified; honor source-specific publisher limits and bounded retries.",
+      "refreshAssessment": "Unverified; qualify before scheduling."
+    },
+    "provider-pages": {
+      "format": "Reviewed publisher HTML; geocoder metadata in some entries",
+      "stableIdentity": "Curated source/resource IDs; publisher stability unestablished",
+      "knownExclusions": "Case-by-case public-address eligibility; no inferred program schedule or rights.",
+      "nextIssue": 38,
+      "automationDecision": "manual-stewardship",
+      "reuseAssessment": "Unknown; public visibility or historical import is not a redistribution grant.",
+      "termsSources": [],
+      "accessLimits": "Unverified; honor source-specific publisher limits and bounded retries.",
+      "refreshAssessment": "Unverified; qualify before scheduling."
+    }
+  },
+  "sourceFindings": {
+    "wayside-aurora-programs": [
+      "Recorded apiUrl points to HRSA although the publisher URL is Wayside Cross. Resolve from retained evidence before adapter work; preserve the imported snapshot."
+    ],
+    "grundy": [
+      "Recorded apiUrl is a Census geocoder, not a service feed. Keep coordinate and service evidence separate."
+    ],
+    "food": [
+      "Regional request differs from national shared endpoint; preserve network identity and qualify access separately."
+    ],
+    "hrsa": [
+      "Same endpoint as hrsa-national with a different snapshot hash; retain both histories and reconcile overlap."
+    ],
+    "va-public-offices": [
+      "Catalog uses a v2 locator endpoint; confirm supported API/version/access before scheduling."
+    ]
+  }
+}

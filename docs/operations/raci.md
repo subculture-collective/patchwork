@@ -1,6 +1,6 @@
 # RACI Matrix -- Patchwork Production Operations
 
-Tracks: #68 (Production Readiness), #94 (RACI definition), #71 (Epic A -- Governance)
+Tracks: [incident ownership #18](https://git.subcult.tv/subculture-collective/patchwork/issues/18) and [pilot acceptance #22](https://git.subcult.tv/subculture-collective/patchwork/issues/22).
 
 ---
 
@@ -235,4 +235,4 @@ Legend: **R** = Responsible, **A** = Accountable, **C** = Consulted, **I** = Inf
 ---
 
 *Created as part of Wave 0 governance lane. Updated for Wave 3 legal and
-policy readiness (#113). Tracked by #94, #71, #68, #113.*
+policy readiness. Current ownership and acceptance issues are linked above.*
