@@ -2,6 +2,7 @@ import { Pool } from 'pg';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { recordNsid } from '@patchwork/shared';
 import { PostgresProjectionQueryService } from './query-service.js';
+import { readProjectionPage } from './projected-discovery.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 
@@ -549,6 +550,42 @@ describe('PostgresProjectionQueryService', () => {
         expect(JSON.stringify(result.body)).not.toContain(
             'matchingPreferences',
         );
+    });
+
+    it('matches publisher service and program evidence only while the listing remains public', async () => {
+        const uri = `at://did:plc:pantry/${recordNsid.directoryResource}/a`;
+        await pool.query(`INSERT INTO public_resource_listings
+            (resource_uri,source_name,source_url,source_retrieved_at,source_snapshot,source_expires_at,
+             street_address,postal_code,latitude,longitude,public_access)
+            VALUES($1,'Fixture publisher','https://example.org',NOW(),$2,NOW()+INTERVAL '30 days',
+                   'Public facility','60601',41.881,-87.631,'Public')`,
+        [uri, JSON.stringify({ sourceId: 'idhs-benefits', services: ['health'] })]);
+        const service = new PostgresProjectionQueryService(pool);
+        expect((await service.queryDirectory(new URLSearchParams({ service: 'health' }))).body).toMatchObject({ total: 1, results: [{ uri }] });
+        expect((await service.queryDirectory(new URLSearchParams({ program: 'snap' }))).body).toMatchObject({ total: 1, results: [{ uri }] });
+        await pool.query('UPDATE public_resource_listings SET listed=FALSE WHERE resource_uri=$1', [uri]);
+        expect((await service.queryDirectory(new URLSearchParams({ service: 'health' }))).body).toMatchObject({ total: 0 });
+        expect((await service.queryDirectory(new URLSearchParams({ program: 'snap' }))).body).toMatchObject({ total: 0 });
+        await pool.query('DELETE FROM public_resource_listings WHERE resource_uri=$1', [uri]);
+    });
+
+    it('uses one reviewed address for both geographic filtering and map totals, then falls back when revoked', async () => {
+        const uri = `at://did:plc:pantry/${recordNsid.directoryResource}/a`;
+        await pool.query(`INSERT INTO public_resource_listings
+            (resource_uri,source_name,source_url,source_retrieved_at,source_snapshot,source_expires_at,
+             street_address,postal_code,latitude,longitude,public_access)
+            VALUES($1,'Fixture publisher','https://example.org',NOW(),'{}',NOW()+INTERVAL '30 days',
+                   'Another public location','60601',42,-88,'Public')`, [uri]);
+        const params = new URLSearchParams({ latitude: '41.881', longitude: '-87.631', radiusKm: '1',
+            mapZoom: '14', west: '-87.64', east: '-87.62', south: '41.87', north: '41.89' });
+        const active = await readProjectionPage(pool, params, 'directory');
+        expect(active.rows.map(row => row.uri)).toEqual([uri]);
+        expect(active.resourceMap).toMatchObject({ total: 1, mapped: 1, cells: [{ count: 1, resourceUri: uri }] });
+        await pool.query("UPDATE verification_applications SET status='revoked' WHERE subject_type='organization'");
+        const revoked = await readProjectionPage(pool, params, 'directory');
+        expect(revoked.total).toBe(0);
+        expect(revoked.resourceMap).toMatchObject({ mapped: 0, cells: [] });
+        await pool.query('DELETE FROM public_resource_listings WHERE resource_uri=$1', [uri]);
     });
 
     it('projects an exact public address only while all three approval gates remain active', async () => {
