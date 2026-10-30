@@ -1,0 +1,1006 @@
+{
+  "kind": "national-capacity-investigation-summary",
+  "date": "2026-10-30",
+  "baseRevision": "240339b5172c55c0cd0bf021053002c7c4d8b833",
+  "apiImageId": "sha256:81ba9bf9eeefe90706ea89d2167f9a5641ff03abcd37e321bf6f2be8d11cdeeb",
+  "treatmentFileSha256": "7825c2a594697bf9a2952b25077fbe66f3f68425d297fa514974adb4842b686d",
+  "catalogCount": 29005,
+  "syntheticRequestCount": 10000,
+  "limits": {
+    "apiCpu": 2,
+    "apiMemoryMiB": 1024,
+    "postgresCpu": 2,
+    "postgresMemoryMiB": 1024,
+    "postgresTmpfsMiB": 768
+  },
+  "baselineHighRate": {
+    "durationSeconds": 30,
+    "targetRpsPerScenario": 5,
+    "results": [
+      {
+        "name": "health",
+        "originalTargetRps": 50,
+        "p95BudgetMs": 30,
+        "path": "/health",
+        "durationMs": 30268,
+        "concurrency": 4,
+        "totalRequests": 118,
+        "successCount": 118,
+        "errorCount": 0,
+        "statusCounts": {
+          "200": 118
+        },
+        "actualRps": 3.9,
+        "latency": {
+          "min": 10.362390000000005,
+          "max": 1814.542642999997,
+          "mean": 990.4,
+          "p50": 976.7282940000005,
+          "p95": 1590.7509099999988,
+          "p99": 1814.3767609999995,
+          "sampleCount": 118
+        },
+        "configuredRatePassed": false
+      },
+      {
+        "name": "map-demo-10k",
+        "originalTargetRps": 60,
+        "p95BudgetMs": 400,
+        "path": "/query/map",
+        "durationMs": 30262,
+        "concurrency": 4,
+        "totalRequests": 150,
+        "successCount": 150,
+        "errorCount": 0,
+        "statusCounts": {
+          "200": 150
+        },
+        "actualRps": 4.96,
+        "latency": {
+          "min": 24.09837399999992,
+          "max": 1065.0267959999983,
+          "mean": 516.21,
+          "p50": 468.40612899999905,
+          "p95": 948.7993829999996,
+          "p99": 1060.6414590000004,
+          "sampleCount": 150
+        },
+        "configuredRatePassed": false
+      },
+      {
+        "name": "feed-demo-10k",
+        "originalTargetRps": 80,
+        "p95BudgetMs": 300,
+        "path": "/query/feed",
+        "durationMs": 30256,
+        "concurrency": 4,
+        "totalRequests": 150,
+        "successCount": 150,
+        "errorCount": 0,
+        "statusCounts": {
+          "200": 150
+        },
+        "actualRps": 4.96,
+        "latency": {
+          "min": 13.937815,
+          "max": 1061.5823339999988,
+          "mean": 473.7,
+          "p50": 454.74664199999825,
+          "p95": 857.482251999998,
+          "p99": 967.0948779999999,
+          "sampleCount": 150
+        },
+        "configuredRatePassed": false
+      },
+      {
+        "name": "directory-chicago",
+        "originalTargetRps": 40,
+        "p95BudgetMs": 350,
+        "path": "/query/directory",
+        "durationMs": 30366,
+        "concurrency": 4,
+        "totalRequests": 67,
+        "successCount": 67,
+        "errorCount": 0,
+        "statusCounts": {
+          "200": 67
+        },
+        "actualRps": 2.21,
+        "latency": {
+          "min": 370.66129,
+          "max": 3004.447679000001,
+          "mean": 1784.17,
+          "p50": 1789.2858349999988,
+          "p95": 2787.340721999999,
+          "p99": 3004.447679000001,
+          "sampleCount": 67
+        },
+        "configuredRatePassed": false
+      },
+      {
+        "name": "directory-ny-food",
+        "originalTargetRps": 40,
+        "p95BudgetMs": 350,
+        "path": "/query/directory",
+        "durationMs": 30560,
+        "concurrency": 4,
+        "totalRequests": 71,
+        "successCount": 71,
+        "errorCount": 0,
+        "statusCounts": {
+          "200": 71
+        },
+        "actualRps": 2.32,
+        "latency": {
+          "min": 265.9736680000001,
+          "max": 2698.804436000002,
+          "mean": 1684.74,
+          "p50": 1602.2554899999996,
+          "p95": 2604.8781959999997,
+          "p99": 2698.804436000002,
+          "sampleCount": 71
+        },
+        "configuredRatePassed": false
+      },
+      {
+        "name": "directory-la-health",
+        "originalTargetRps": 40,
+        "p95BudgetMs": 350,
+        "path": "/query/directory",
+        "durationMs": 30472,
+        "concurrency": 4,
+        "totalRequests": 70,
+        "successCount": 70,
+        "errorCount": 0,
+        "statusCounts": {
+          "200": 70
+        },
+        "actualRps": 2.3,
+        "latency": {
+          "min": 266.43866000000025,
+          "max": 3118.415237000001,
+          "mean": 1705.83,
+          "p50": 1682.376132999998,
+          "p95": 2800.2298709999995,
+          "p99": 3118.415237000001,
+          "sampleCount": 70
+        },
+        "configuredRatePassed": false
+      },
+      {
+        "name": "directory-national-search",
+        "originalTargetRps": 40,
+        "p95BudgetMs": 350,
+        "path": "/query/directory",
+        "durationMs": 30269,
+        "concurrency": 4,
+        "totalRequests": 89,
+        "successCount": 89,
+        "errorCount": 0,
+        "statusCounts": {
+          "200": 89
+        },
+        "actualRps": 2.94,
+        "latency": {
+          "min": 61.67395899999997,
+          "max": 2193.4717039999996,
+          "mean": 1331.49,
+          "p50": 1304.1078960000013,
+          "p95": 1904.5213369999983,
+          "p99": 2193.4717039999996,
+          "sampleCount": 89
+        },
+        "configuredRatePassed": false
+      },
+      {
+        "name": "resource-map-national",
+        "originalTargetRps": null,
+        "p95BudgetMs": 500,
+        "path": "/query/resource-map",
+        "durationMs": 30601,
+        "concurrency": 4,
+        "totalRequests": 24,
+        "successCount": 0,
+        "errorCount": 24,
+        "statusCounts": {
+          "network_error": 24
+        },
+        "actualRps": 0.78,
+        "latency": {
+          "min": 4999.429391999998,
+          "max": 5002.065785,
+          "mean": 5000.34,
+          "p50": 5000.110744,
+          "p95": 5001.036829999999,
+          "p99": 5002.065785,
+          "sampleCount": 24
+        },
+        "configuredRatePassed": false
+      }
+    ],
+    "backgroundErrors": [],
+    "refreshCount": 1,
+    "travelCount": 3
+  },
+  "treatmentHighRate": {
+    "durationSeconds": 30,
+    "targetRpsPerScenario": 5,
+    "results": [
+      {
+        "name": "health",
+        "originalTargetRps": 50,
+        "p95BudgetMs": 30,
+        "path": "/health",
+        "durationMs": 30486,
+        "concurrency": 4,
+        "totalRequests": 138,
+        "successCount": 138,
+        "errorCount": 0,
+        "statusCounts": {
+          "200": 138
+        },
+        "actualRps": 4.53,
+        "latency": {
+          "min": 11.000346000000036,
+          "max": 1293.4668999999994,
+          "mean": 857.85,
+          "p50": 897.0018209999998,
+          "p95": 1285.1568269999989,
+          "p99": 1291.686432999999,
+          "sampleCount": 138
+        },
+        "configuredRatePassed": false
+      },
+      {
+        "name": "map-demo-10k",
+        "originalTargetRps": 60,
+        "p95BudgetMs": 400,
+        "path": "/query/map",
+        "durationMs": 30498,
+        "concurrency": 4,
+        "totalRequests": 150,
+        "successCount": 150,
+        "errorCount": 0,
+        "statusCounts": {
+          "200": 150
+        },
+        "actualRps": 4.92,
+        "latency": {
+          "min": 24.176754000000074,
+          "max": 979.9578579999998,
+          "mean": 534.73,
+          "p50": 584.4047660000001,
+          "p95": 884.5456269999995,
+          "p99": 890.4999770000031,
+          "sampleCount": 150
+        },
+        "configuredRatePassed": false
+      },
+      {
+        "name": "feed-demo-10k",
+        "originalTargetRps": 80,
+        "p95BudgetMs": 300,
+        "path": "/query/feed",
+        "durationMs": 30385,
+        "concurrency": 4,
+        "totalRequests": 150,
+        "successCount": 150,
+        "errorCount": 0,
+        "statusCounts": {
+          "200": 150
+        },
+        "actualRps": 4.94,
+        "latency": {
+          "min": 14.810651000000007,
+          "max": 886.3096659999992,
+          "mean": 469.28,
+          "p50": 488.2261279999984,
+          "p95": 781.1539840000005,
+          "p99": 883.8079499999985,
+          "sampleCount": 150
+        },
+        "configuredRatePassed": false
+      },
+      {
+        "name": "directory-chicago",
+        "originalTargetRps": 40,
+        "p95BudgetMs": 350,
+        "path": "/query/directory",
+        "durationMs": 30487,
+        "concurrency": 4,
+        "totalRequests": 85,
+        "successCount": 85,
+        "errorCount": 0,
+        "statusCounts": {
+          "200": 85
+        },
+        "actualRps": 2.79,
+        "latency": {
+          "min": 193.610547,
+          "max": 2303.0064139999995,
+          "mean": 1413.3,
+          "p50": 1318.7972229999996,
+          "p95": 2196.997163000002,
+          "p99": 2303.0064139999995,
+          "sampleCount": 85
+        },
+        "configuredRatePassed": false
+      },
+      {
+        "name": "directory-ny-food",
+        "originalTargetRps": 40,
+        "p95BudgetMs": 350,
+        "path": "/query/directory",
+        "durationMs": 30495,
+        "concurrency": 4,
+        "totalRequests": 78,
+        "successCount": 78,
+        "errorCount": 0,
+        "statusCounts": {
+          "200": 78
+        },
+        "actualRps": 2.56,
+        "latency": {
+          "min": 295.1690409999999,
+          "max": 2299.622940999998,
+          "mean": 1541.41,
+          "p50": 1404.9244560000006,
+          "p95": 2199.234845,
+          "p99": 2299.622940999998,
+          "sampleCount": 78
+        },
+        "configuredRatePassed": false
+      },
+      {
+        "name": "directory-la-health",
+        "originalTargetRps": 40,
+        "p95BudgetMs": 350,
+        "path": "/query/directory",
+        "durationMs": 30692,
+        "concurrency": 4,
+        "totalRequests": 78,
+        "successCount": 78,
+        "errorCount": 0,
+        "statusCounts": {
+          "200": 78
+        },
+        "actualRps": 2.54,
+        "latency": {
+          "min": 409.7316740000001,
+          "max": 2296.1098710000006,
+          "mean": 1545.35,
+          "p50": 1398.2945669999972,
+          "p95": 2293.4771020000007,
+          "p99": 2296.1098710000006,
+          "sampleCount": 78
+        },
+        "configuredRatePassed": false
+      },
+      {
+        "name": "directory-national-search",
+        "originalTargetRps": 40,
+        "p95BudgetMs": 350,
+        "path": "/query/directory",
+        "durationMs": 30585,
+        "concurrency": 4,
+        "totalRequests": 90,
+        "successCount": 90,
+        "errorCount": 0,
+        "statusCounts": {
+          "200": 90
+        },
+        "actualRps": 2.94,
+        "latency": {
+          "min": 179.067855,
+          "max": 2303.1366559999988,
+          "mean": 1335.7,
+          "p50": 1297.3319809999994,
+          "p95": 1805.895926000001,
+          "p99": 2303.1366559999988,
+          "sampleCount": 90
+        },
+        "configuredRatePassed": false
+      },
+      {
+        "name": "resource-map-national",
+        "originalTargetRps": null,
+        "p95BudgetMs": 500,
+        "path": "/query/resource-map",
+        "durationMs": 30695,
+        "concurrency": 4,
+        "totalRequests": 64,
+        "successCount": 64,
+        "errorCount": 0,
+        "statusCounts": {
+          "200": 64
+        },
+        "actualRps": 2.09,
+        "latency": {
+          "min": 1389.3527190000002,
+          "max": 2393.5791449999997,
+          "mean": 1892.27,
+          "p50": 1877.0060219999998,
+          "p95": 2299.4979679999997,
+          "p99": 2393.5791449999997,
+          "sampleCount": 64
+        },
+        "configuredRatePassed": false
+      }
+    ],
+    "backgroundErrors": [],
+    "refreshCount": 1,
+    "travelCount": 3
+  },
+  "acceptedControlledProfile": {
+    "durationSeconds": 300,
+    "targetRpsPerScenario": 1,
+    "results": [
+      {
+        "name": "health",
+        "originalTargetRps": 50,
+        "p95BudgetMs": 30,
+        "path": "/health",
+        "durationMs": 299006,
+        "concurrency": 4,
+        "totalRequests": 300,
+        "successCount": 300,
+        "errorCount": 0,
+        "statusCounts": {
+          "200": 300
+        },
+        "actualRps": 1,
+        "latency": {
+          "min": 3.439902999991318,
+          "max": 19.283566999999948,
+          "mean": 5.83,
+          "p50": 5.665135999995982,
+          "p95": 8.316733000000113,
+          "p99": 9.65625399999999,
+          "sampleCount": 300
+        },
+        "configuredRatePassed": true
+      },
+      {
+        "name": "map-demo-10k",
+        "originalTargetRps": 60,
+        "p95BudgetMs": 400,
+        "path": "/query/map",
+        "durationMs": 299019,
+        "concurrency": 4,
+        "totalRequests": 300,
+        "successCount": 300,
+        "errorCount": 0,
+        "statusCounts": {
+          "200": 300
+        },
+        "actualRps": 1,
+        "latency": {
+          "min": 16.985004999995,
+          "max": 88.03038599999854,
+          "mean": 23.58,
+          "p50": 21.59504499999457,
+          "p95": 28.336751000009826,
+          "p99": 86.30518799996935,
+          "sampleCount": 300
+        },
+        "configuredRatePassed": true
+      },
+      {
+        "name": "feed-demo-10k",
+        "originalTargetRps": 80,
+        "p95BudgetMs": 300,
+        "path": "/query/feed",
+        "durationMs": 299013,
+        "concurrency": 4,
+        "totalRequests": 300,
+        "successCount": 300,
+        "errorCount": 0,
+        "statusCounts": {
+          "200": 300
+        },
+        "actualRps": 1,
+        "latency": {
+          "min": 10.623125999991316,
+          "max": 31.047136000000137,
+          "mean": 13.91,
+          "p50": 13.443768999990425,
+          "p95": 17.13998699998774,
+          "p99": 19.848425000003772,
+          "sampleCount": 300
+        },
+        "configuredRatePassed": true
+      },
+      {
+        "name": "directory-chicago",
+        "originalTargetRps": 40,
+        "p95BudgetMs": 350,
+        "path": "/query/directory",
+        "durationMs": 299195,
+        "concurrency": 4,
+        "totalRequests": 300,
+        "successCount": 300,
+        "errorCount": 0,
+        "statusCounts": {
+          "200": 300
+        },
+        "actualRps": 1,
+        "latency": {
+          "min": 109.61018499999773,
+          "max": 297.764496,
+          "mean": 174.09,
+          "p50": 188.08227100000659,
+          "p95": 201.80064600001788,
+          "p99": 208.15172999998322,
+          "sampleCount": 300
+        },
+        "configuredRatePassed": true
+      },
+      {
+        "name": "directory-ny-food",
+        "originalTargetRps": 40,
+        "p95BudgetMs": 350,
+        "path": "/query/directory",
+        "durationMs": 299217,
+        "concurrency": 4,
+        "totalRequests": 300,
+        "successCount": 300,
+        "errorCount": 0,
+        "statusCounts": {
+          "200": 300
+        },
+        "actualRps": 1,
+        "latency": {
+          "min": 196.02528800000437,
+          "max": 317.006494,
+          "mean": 220.09,
+          "p50": 216.0881800000061,
+          "p95": 286.69156500001554,
+          "p99": 303.1208420000039,
+          "sampleCount": 300
+        },
+        "configuredRatePassed": true
+      },
+      {
+        "name": "directory-la-health",
+        "originalTargetRps": 40,
+        "p95BudgetMs": 350,
+        "path": "/query/directory",
+        "durationMs": 299224,
+        "concurrency": 4,
+        "totalRequests": 300,
+        "successCount": 300,
+        "errorCount": 0,
+        "statusCounts": {
+          "200": 300
+        },
+        "actualRps": 1,
+        "latency": {
+          "min": 197.38236899999902,
+          "max": 316.4982350000064,
+          "mean": 220.42,
+          "p50": 216.4100350000008,
+          "p95": 285.83813499999815,
+          "p99": 310.2247079999943,
+          "sampleCount": 300
+        },
+        "configuredRatePassed": true
+      },
+      {
+        "name": "directory-national-search",
+        "originalTargetRps": 40,
+        "p95BudgetMs": 350,
+        "path": "/query/directory",
+        "durationMs": 299114,
+        "concurrency": 4,
+        "totalRequests": 300,
+        "successCount": 300,
+        "errorCount": 0,
+        "statusCounts": {
+          "200": 300
+        },
+        "actualRps": 1,
+        "latency": {
+          "min": 103.03376000002027,
+          "max": 297.16072099999997,
+          "mean": 150.71,
+          "p50": 183.37003599997843,
+          "p95": 194.76187699998263,
+          "p99": 203.7394889999996,
+          "sampleCount": 300
+        },
+        "configuredRatePassed": true
+      },
+      {
+        "name": "resource-map-national",
+        "originalTargetRps": null,
+        "p95BudgetMs": 500,
+        "path": "/query/resource-map",
+        "durationMs": 299357,
+        "concurrency": 4,
+        "totalRequests": 300,
+        "successCount": 300,
+        "errorCount": 0,
+        "statusCounts": {
+          "200": 300
+        },
+        "actualRps": 1,
+        "latency": {
+          "min": 316.51925200000005,
+          "max": 501.35882200000924,
+          "mean": 350.12,
+          "p50": 338.00508799999807,
+          "p95": 408.116148000001,
+          "p99": 464.78177600000004,
+          "sampleCount": 300
+        },
+        "configuredRatePassed": true
+      }
+    ],
+    "backgroundErrors": [],
+    "refreshCount": 10,
+    "travelCount": 30
+  },
+  "controlledProfileEvaluation": {
+    "engineeringProfilePassed": true,
+    "failures": [],
+    "modeledThroughputTargetsMet": false,
+    "homeStagingQualified": false
+  },
+  "stagingEvaluation": {
+    "evidenceKind": "staging-capacity-evaluation",
+    "passed": false,
+    "failures": [
+      "environment must be nuc-home-staging",
+      "every read route must sustain at least 10 requests per second",
+      "at least 3 lifecycle journeys must complete",
+      "every attempted lifecycle journey must complete",
+      "lifecycle projection must complete within 30 seconds",
+      "lifecycle workload cleanup must complete",
+      "at least 3 moderation items must resolve",
+      "every enqueued moderation item must resolve",
+      "moderation queue age must remain at or below 30 seconds",
+      "moderation workload cleanup must complete",
+      "disk headroom must remain at or above 15%",
+      "service restart count must not increase",
+      "HTTP error count must not increase",
+      "ingestion error count must not increase",
+      "event-source lag must remain at or below 5 seconds",
+      "post-workload recovery must complete within 60 seconds",
+      "all services must be ready after recovery"
+    ]
+  },
+  "resources": {
+    "maximumHostCpuRatio": 0.3725132430841671,
+    "minimumHostMemoryHeadroomRatio": 0.4269138092421557,
+    "minimumDiskHeadroomRatio": 0.0011364115761052986,
+    "maximumContainerMemoryRatio": 0.31629999999999997,
+    "maximumDatabaseConnectionRatio": 0.17
+  },
+  "databasePeakBytes": 163593239,
+  "sampleCount": 43,
+  "maximumContainerCpuPercentOfOneCore": {
+    "patchwork-capacity-20-api": 3.16,
+    "patchwork-capacity-20-db": 80.56
+  },
+  "postLoadRecovery": {
+    "requestMs": 5.262367999996059,
+    "httpStatus": 200,
+    "health": {
+      "service": "api",
+      "status": "ok",
+      "contractVersion": "0.9.0-phase9",
+      "did": "did:example:capacity",
+      "checks": {
+        "database": {
+          "status": "ok"
+        },
+        "projections": {
+          "status": "ok"
+        },
+        "chat": {
+          "status": "ok"
+        },
+        "routing": {
+          "status": "ok"
+        }
+      }
+    }
+  },
+  "isolatedFailureRecovery": {
+    "kind": "isolated-database-pause-recovery",
+    "expectedUnavailableClientExit": 28,
+    "pauseSeconds": 2.0816401560150553,
+    "recoveredAfterUnpauseSeconds": 0.008683710009790957,
+    "sameApiPid": true,
+    "apiOomKilled": false,
+    "publicCatalogCountAfter": 29005,
+    "health": {
+      "service": "api",
+      "status": "ok",
+      "contractVersion": "0.9.0-phase9",
+      "did": "did:example:capacity",
+      "checks": {
+        "database": {
+          "status": "ok"
+        },
+        "projections": {
+          "status": "ok"
+        },
+        "chat": {
+          "status": "ok"
+        },
+        "routing": {
+          "status": "ok"
+        }
+      }
+    }
+  },
+  "travelLatency": {
+    "min": 13.125579000014113,
+    "max": 80.71928300000036,
+    "mean": 33.16,
+    "p50": 30.589966999999888,
+    "p95": 71.2118640000117,
+    "p99": 80.71928300000036,
+    "sampleCount": 30
+  },
+  "browser": {
+    "kind": "national-directory-browser-profile",
+    "samples": [
+      {
+        "mobile": false,
+        "cpuSlowdown": 1,
+        "coldCache": true,
+        "timeToCardsMs": 149,
+        "cardCount": 20,
+        "domContentLoadedMs": 46.29999999701977,
+        "paint": [
+          {
+            "name": "first-paint",
+            "ms": 20
+          },
+          {
+            "name": "first-contentful-paint",
+            "ms": 72
+          }
+        ],
+        "encodedBytes": 1236158,
+        "decodedBytes": 3055136,
+        "transferBytes": 1239758,
+        "nodeCount": 556,
+        "metrics": [
+          {
+            "name": "LayoutDuration",
+            "value": 0.006857
+          },
+          {
+            "name": "ScriptDuration",
+            "value": 0.020353
+          },
+          {
+            "name": "TaskDuration",
+            "value": 0.065507
+          },
+          {
+            "name": "JSHeapUsedSize",
+            "value": 25573564
+          }
+        ]
+      },
+      {
+        "mobile": false,
+        "cpuSlowdown": 1,
+        "coldCache": true,
+        "timeToCardsMs": 144,
+        "cardCount": 20,
+        "domContentLoadedMs": 46.400000005960464,
+        "paint": [
+          {
+            "name": "first-paint",
+            "ms": 16
+          },
+          {
+            "name": "first-contentful-paint",
+            "ms": 76
+          }
+        ],
+        "encodedBytes": 1236159,
+        "decodedBytes": 3055136,
+        "transferBytes": 1239759,
+        "nodeCount": 556,
+        "metrics": [
+          {
+            "name": "LayoutDuration",
+            "value": 0.006929
+          },
+          {
+            "name": "ScriptDuration",
+            "value": 0.01848
+          },
+          {
+            "name": "TaskDuration",
+            "value": 0.058533
+          },
+          {
+            "name": "JSHeapUsedSize",
+            "value": 35396576
+          }
+        ]
+      },
+      {
+        "mobile": false,
+        "cpuSlowdown": 1,
+        "coldCache": true,
+        "timeToCardsMs": 250,
+        "cardCount": 20,
+        "domContentLoadedMs": 52.5,
+        "paint": [
+          {
+            "name": "first-paint",
+            "ms": 24
+          },
+          {
+            "name": "first-contentful-paint",
+            "ms": 88
+          }
+        ],
+        "encodedBytes": 1236159,
+        "decodedBytes": 3055136,
+        "transferBytes": 1239759,
+        "nodeCount": 556,
+        "metrics": [
+          {
+            "name": "LayoutDuration",
+            "value": 0.007907
+          },
+          {
+            "name": "ScriptDuration",
+            "value": 0.018535
+          },
+          {
+            "name": "TaskDuration",
+            "value": 0.070602
+          },
+          {
+            "name": "JSHeapUsedSize",
+            "value": 43475236
+          }
+        ]
+      },
+      {
+        "mobile": true,
+        "cpuSlowdown": 4,
+        "coldCache": true,
+        "timeToCardsMs": 385,
+        "cardCount": 20,
+        "domContentLoadedMs": 95.19999998807907,
+        "paint": [
+          {
+            "name": "first-paint",
+            "ms": 44
+          },
+          {
+            "name": "first-contentful-paint",
+            "ms": 148
+          }
+        ],
+        "encodedBytes": 1236158,
+        "decodedBytes": 3055136,
+        "transferBytes": 1239758,
+        "nodeCount": 556,
+        "metrics": [
+          {
+            "name": "LayoutDuration",
+            "value": 0.029071
+          },
+          {
+            "name": "ScriptDuration",
+            "value": 0.070441
+          },
+          {
+            "name": "TaskDuration",
+            "value": 0.244626
+          },
+          {
+            "name": "JSHeapUsedSize",
+            "value": 53157700
+          }
+        ]
+      },
+      {
+        "mobile": true,
+        "cpuSlowdown": 4,
+        "coldCache": true,
+        "timeToCardsMs": 248,
+        "cardCount": 20,
+        "domContentLoadedMs": 81,
+        "paint": [
+          {
+            "name": "first-paint",
+            "ms": 32
+          },
+          {
+            "name": "first-contentful-paint",
+            "ms": 136
+          }
+        ],
+        "encodedBytes": 1236158,
+        "decodedBytes": 3055136,
+        "transferBytes": 1239758,
+        "nodeCount": 556,
+        "metrics": [
+          {
+            "name": "LayoutDuration",
+            "value": 0.03118
+          },
+          {
+            "name": "ScriptDuration",
+            "value": 0.066342
+          },
+          {
+            "name": "TaskDuration",
+            "value": 0.219411
+          },
+          {
+            "name": "JSHeapUsedSize",
+            "value": 65563996
+          }
+        ]
+      },
+      {
+        "mobile": true,
+        "cpuSlowdown": 4,
+        "coldCache": true,
+        "timeToCardsMs": 294,
+        "cardCount": 20,
+        "domContentLoadedMs": 88.20000000298023,
+        "paint": [
+          {
+            "name": "first-paint",
+            "ms": 36
+          },
+          {
+            "name": "first-contentful-paint",
+            "ms": 144
+          }
+        ],
+        "encodedBytes": 1236158,
+        "decodedBytes": 3055136,
+        "transferBytes": 1239758,
+        "nodeCount": 556,
+        "metrics": [
+          {
+            "name": "LayoutDuration",
+            "value": 0.038497
+          },
+          {
+            "name": "ScriptDuration",
+            "value": 0.076778
+          },
+          {
+            "name": "TaskDuration",
+            "value": 0.253273
+          },
+          {
+            "name": "JSHeapUsedSize",
+            "value": 69550740
+          }
+        ]
+      }
+    ]
+  },
+  "originalThroughputTargets": {
+    "health": 50,
+    "map": 60,
+    "feed": 80,
+    "directoryAggregate": 40
+  },
+  "acceptanceBoundary": "Eight aggregate isolated read RPS plus one real walking-plan call per ten seconds, for five minutes; no certified production/NUC throughput. Original modeled targets and staging qualification do not pass.",
+  "artifactSha256": {
+    "baseline-5rps.json": "d9fe6736d4dff748715ec745088dc50f9ede5bbe4c0f452c2c059647f8a92b6d",
+    "final-5rps.json": "b78eaaaf63d7726e04f7a6698b713036706b8079136e21fdd51a66730fc89398",
+    "soak-final-1rps.json": "38092be207f05c9634285a6a45d15f98fb85a2d490d872059e915cb9fa35f223",
+    "browser.json": "6b7d5d04baef86d23fe8a19872aaa6fce4b20be04456124b94bf0c13aac9cd4a",
+    "recovery.json": "33156cb1d67d1a5eeb5aa4073645028bbd8d97b2e489d3f8172cb689763d8ebd"
+  }
+}

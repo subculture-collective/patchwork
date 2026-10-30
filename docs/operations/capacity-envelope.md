@@ -2,6 +2,12 @@
 
 ## Status
 
+The [October 30 national-directory investigation](evidence/national-capacity-2026-10-30.md)
+records a controlled baseline and query repair against canonical main, with
+national filters, concurrent refresh/review work, bounded real routing, browser
+profiles and recovery measurements. Use its measured configuration and limits;
+it does not certify NUC staging or the original modeled throughput targets.
+
 Patchwork has an executable HTTP capacity probe, one bounded local PostgreSQL
 result, and a historical five-minute mixed NUC home-staging result at
 **40 aggregate read requests per second** across the four alpha routes
@@ -105,3 +111,61 @@ moderation items, and the resource/reliability limits enforced by
 Attach measurements to the tested release, including runtime revision, workload,
 duration, latency, errors, resource use, and cleanup. A bounded staging probe
 does not establish production saturation limits or multi-region capacity.
+
+## National-directory regression profile
+
+`node --import tsx scripts/run-national-capacity.mjs` measures eight simultaneous
+scenarios against an explicitly seeded loopback API and a disposable database
+named `patchwork_capacity_20`. It refuses remote database/API targets. Set
+`API_DATABASE_URL`, `PATCHWORK_CAPACITY_BASE_URL`,
+`PATCHWORK_CAPACITY_OUTPUT`, `PATCHWORK_CAPACITY_DURATION_SECONDS` (300 for
+acceptance), and `PATCHWORK_CAPACITY_TARGET_RPS_PER_ROUTE`. The selected rate
+applies to each scenario, including four separate directory queries. It is
+not the aggregate directory rate or proof of the original throughput targets.
+
+Seed all runtime-eligible public catalog records with `db:seed:resources --apply`
+only in that disposable database. The synthetic request workload requires
+10,000 explicitly labeled demo projections with public postal-area geography;
+it never creates PDS records. Apply API, indexer and moderation migrations in
+that order. Use a fresh database rather than copying private production data.
+
+The harness runs real PostgreSQL preview, candidate persistence, immutable
+replay and review-queue reads over synthetic publisher metadata every 30
+seconds. It makes at most one real travel request per ten seconds, using a
+generated landmark origin and an existing public library destination. Point
+the isolated API at an authorized router and record its image and graph hash.
+Travel responses are reduced to latency/status/itinerary counts; no origins
+or itinerary details enter the result. This is a bounded walking/arrive-by
+sample, not transit or device-location qualification. The isolated projection
+heartbeat is synthetic and must never be described as live ingestion evidence.
+
+For browser measurements, open the loopback production web build with
+`playwright-cli`, then pass `scripts/profile-national-capacity-browser.js` to
+`run-code`. Retain the returned JSON. It takes three cold-cache samples at
+1440×1000 and three at 390×844 with fourfold CPU throttling. The web build must
+use a same-origin `/api` proxy so CSP remains enforced. No geographic tile pack
+is needed for the directory profile; map-tile loading is outside this result.
+
+Evaluate the two evidence files with:
+
+```bash
+node scripts/evaluate-national-capacity.mjs CAPACITY.json BROWSER.json
+```
+
+The evaluator requires populated queries, five minutes of samples, the national
+catalog, successful concurrent work, zero HTTP errors, recovered health and
+95% of the configured paced rate. Existing health/map/feed/directory p95 and
+p99 latency limits remain unchanged; national resource-map aggregation has a
+500 ms p95 / 1200 ms p99 regression budget. Browser budgets are 1.5 MiB encoded
+transfer, 20 rendered cards, and 2 seconds desktop / 4 seconds throttled mobile.
+These are controlled regression limits, not a claim of real mobile-network
+performance. CI exercises the evaluator's refusal cases; run the full profile
+after material query, catalog-scale or bundle changes in a controlled setting.
+
+`engineeringProfilePassed`, `modeledThroughputTargetsMet`, and
+`homeStagingQualified` are separate results. The national evaluator never
+qualifies home staging. Its raw evidence also records root/tmpfs storage,
+container limits and memory, host memory/CPU counters, database connections
+and lock waits. Review those before accepting a deployment envelope. In
+particular, a shared root filesystem below the staging disk-reserve threshold
+remains an operational blocker even when a disposable tmpfs benchmark passes.

@@ -50,12 +50,12 @@ export async function readProjectionPage<T extends QueryResultRow>(pool: Pick<Po
         if (directoryInput.service) {
             const service = bind(directoryInput.service);
             const categories = Object.entries(categoryServices).filter(([, value]) => value === directoryInput.service).map(([key]) => key);
-            where.push(`(p.category = ANY(${bind(categories)}::text[]) OR EXISTS (SELECT 1 FROM public_resource_listings listing WHERE listing.resource_uri=p.uri AND listing.listed AND (listing.source_snapshot->'services' ? ${service} OR (${service} = 'community' AND listing.source_snapshot->>'sourceId' = 'cpl'))))`);
+            where.push(`(p.category = ANY(${bind(categories)}::text[]) OR p.uri IN (SELECT listing.resource_uri FROM public_resource_listings listing WHERE listing.listed AND (listing.source_snapshot->'services' ? ${service} OR (${service} = 'community' AND listing.source_snapshot->>'sourceId' = 'cpl'))))`);
         }
         if (directoryInput.program) {
             const evidence = resourceProgramEvidence[directoryInput.program];
             const phrase = evidence.phrase ? `AND strpos(listing.source_snapshot->>'publicAccess', ${bind(evidence.phrase)}) > 0` : '';
-            where.push(`EXISTS (SELECT 1 FROM public_resource_listings listing WHERE listing.resource_uri=p.uri AND listing.listed
+            where.push(`p.uri IN (SELECT listing.resource_uri FROM public_resource_listings listing WHERE listing.listed
                 AND listing.source_snapshot->>'sourceId' = ANY(${bind(evidence.sourceIds)}::text[]) ${phrase})`);
         }
         // Match each word in any order, including partial names, addresses and service descriptions.
@@ -83,8 +83,7 @@ export async function readProjectionPage<T extends QueryResultRow>(pool: Pick<Po
     }
     const table = kind === 'directory' ? `(SELECT base.*, coalesce(e.latitude,base.latitude) AS search_latitude,
         coalesce(e.longitude,base.longitude) AS search_longitude FROM indexer_directory_resource_projections base
-        LEFT JOIN LATERAL (SELECT latitude,longitude FROM eligible_public_resource_addresses e WHERE e.resource_uri=base.uri
-            ORDER BY basis DESC, valid_until DESC LIMIT 1) e ON TRUE)` : 'indexer_aid_post_projections';
+        LEFT JOIN effective_addresses e ON e.resource_uri=base.uri)` : 'indexer_aid_post_projections';
     if (kind === 'directory') {
         distance = distance.replaceAll('p.latitude', 'p.search_latitude').replaceAll('p.longitude', 'p.search_longitude');
         for (let i=0;i<where.length;i++) where[i]=where[i]!.replaceAll('p.latitude', 'p.search_latitude').replaceAll('p.longitude', 'p.search_longitude');
@@ -103,15 +102,21 @@ export async function readProjectionPage<T extends QueryResultRow>(pool: Pick<Po
     const mapStep=viewport?bind(Math.max(360/(2**viewport.zoom*4), longitudeSpan / 40, (viewport.north - viewport.south) / 40)):undefined;
     const mapWhere=viewport?`e.latitude BETWEEN ${bind(viewport.south)} AND ${bind(viewport.north)} AND ${viewport.west<=viewport.east?`e.longitude BETWEEN ${bind(viewport.west)} AND ${bind(viewport.east)}`:`(e.longitude>=${bind(viewport.west)} OR e.longitude<=${bind(viewport.east)})`}`:'FALSE';
     const mapCte=viewport&&kind==='directory'?`, exact_places AS (
-        SELECT f.uri,p.name,e.latitude,e.longitude FROM filtered f JOIN indexer_directory_resource_projections p ON p.uri=f.uri JOIN LATERAL (
-            SELECT latitude,longitude FROM eligible_public_resource_addresses a WHERE a.resource_uri=f.uri ORDER BY basis DESC,valid_until DESC LIMIT 1
-        ) e ON TRUE WHERE ${mapWhere}
+        SELECT f.uri,p.name,e.latitude,e.longitude FROM filtered f JOIN indexer_directory_resource_projections p ON p.uri=f.uri
+        JOIN effective_addresses e ON e.resource_uri=f.uri WHERE ${mapWhere}
     ), resource_cells AS (
         SELECT avg(latitude) AS latitude,avg(longitude) AS longitude,count(*)::integer AS count,
             CASE WHEN count(*)=1 THEN min(uri) END AS "resourceUri",CASE WHEN count(*)=1 OR (min(latitude)=max(latitude) AND min(longitude)=max(longitude)) THEN to_jsonb((array_agg(jsonb_build_object('uri',uri,'name',name) ORDER BY uri))[1:20]) ELSE '[]'::jsonb END AS members,min(longitude) AS west,max(longitude) AS east,min(latitude) AS south,max(latitude) AS north
         FROM exact_places GROUP BY floor(latitude/${mapStep}::double precision),floor(longitude/${mapStep}::double precision)
     )`:'';
-    const result = await pool.query<{ rows: T[]; all_uris?:string[]; resource_map?:{total:number;mapped:number;cells:ResourceMapCell[]}; aggregates: DiscoveryMapAggregates | null; total: string; projected_at: string | null; state: { latest_cursor: string | null; heartbeat_at: string } | null }>(`WITH candidates AS MATERIALIZED (
+    // Resolve reviewed/source precedence once, then reuse the bounded relation
+    // for filtering, page hydration and map cells. A correlated address lookup
+    // previously repeated the eligibility joins for every national catalog row.
+    const addressesCte = kind === 'directory' ? `effective_addresses AS MATERIALIZED (
+        SELECT DISTINCT ON (resource_uri COLLATE "C") resource_uri,latitude,longitude
+        FROM eligible_public_resource_addresses ORDER BY resource_uri COLLATE "C",basis DESC,valid_until DESC
+    ),` : '';
+    const result = await pool.query<{ rows: T[]; all_uris?:string[]; resource_map?:{total:number;mapped:number;cells:ResourceMapCell[]}; aggregates: DiscoveryMapAggregates | null; total: string; projected_at: string | null; state: { latest_cursor: string | null; heartbeat_at: string } | null }>(`WITH ${addressesCte} candidates AS MATERIALIZED (
         SELECT p.uri, ${kind === 'directory' ? 'NULL::text' : 'p.postal_code'} AS postal_code, ${kind === 'directory' ? 'NULL::text' : 'p.county_id'} AS county_id, ${kind === 'directory' ? 'p.latitude' : 'CASE WHEN p.postal_code IS NOT NULL OR p.county_id IS NOT NULL THEN p.latitude END'} AS latitude, ${kind === 'directory' ? 'p.longitude' : 'CASE WHEN p.postal_code IS NOT NULL OR p.county_id IS NOT NULL THEN p.longitude END'} AS longitude, p.precision_km, p.record_created_at, p.record_updated_at, p.projected_at, ${distance} AS distance_km FROM ${table} p WHERE ${where.join(' AND ')}
     ), filtered AS MATERIALIZED (SELECT * FROM candidates ${radius}), paged AS (
         SELECT * FROM filtered ORDER BY ${order} LIMIT ${limit} OFFSET ${offset}
