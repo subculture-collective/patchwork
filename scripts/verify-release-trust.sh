@@ -44,6 +44,11 @@ fi
 
 git_sha=$(jq -er '.gitSha' "$manifest")
 [[ "$git_sha" =~ ^[0-9a-f]{40}$ ]]
+if [[ "$mode" == key && "$require_attestations" != true ]]; then
+    echo 'Gitea key-based promotion requires source-bound attestations.' >&2
+    exit 4
+fi
+accepted_builder=''
 
 for service in api indexer moderation web; do
     image=$(jq -er ".images.${service}" "$manifest")
@@ -54,8 +59,41 @@ for service in api indexer moderation web; do
     cosign verify "${verify_args[@]}" "$image" >/dev/null
     if [[ "$require_attestations" == true ]]; then
         for attestation_type in spdxjson slsaprovenance; do
-            cosign verify-attestation "${verify_args[@]}" \
-                --type "$attestation_type" "$image" >/dev/null
+            verified=$(cosign verify-attestation "${verify_args[@]}" \
+                --type "$attestation_type" "$image")
+            if [[ "$mode" == key && "$attestation_type" == slsaprovenance ]]; then
+                # Inspect only Cosign's verified DSSE output, never a separately
+                # downloaded predicate. All four components must name this
+                # source, their own service/digest and one Gitea publication run.
+                builder=$(jq -ers \
+                    --arg sha "$git_sha" --arg service "$service" \
+                    --arg name "${image%@sha256:*}" --arg digest "${image##*@sha256:}" '
+                    "https://git.subcult.tv/subculture-collective/patchwork" as $repo |
+                    ("git+" + $repo + "@" + $sha) as $source |
+                    [.[] | (if type == "array" then .[] else . end) |
+                      select(.payloadType == "application/vnd.in-toto+json") |
+                      .payload | @base64d | fromjson |
+                      select((._type == "https://in-toto.io/Statement/v0.1" or ._type == "https://in-toto.io/Statement/v1")
+                        and .predicateType == "https://slsa.dev/provenance/v0.2"
+                        and any(.subject[]; .name == $name and .digest.sha256 == $digest)
+                        and .predicate.invocation.configSource.uri == $source
+                        and .predicate.invocation.configSource.digest.sha1 == $sha
+                        and .predicate.invocation.parameters.service == $service
+                        and .predicate.buildType == ($repo + "/src/branch/main/.github/workflows/deploy-staging.yml")
+                        and any(.predicate.materials[]; .uri == $source and .digest.sha1 == $sha)
+                        and (.predicate.builder.id | test("^https://git\\.subcult\\.tv/subculture-collective/patchwork/actions/runs/[1-9][0-9]*$"))
+                        and .predicate.metadata.buildInvocationId == .predicate.builder.id) |
+                      .predicate.builder.id] | unique | select(length == 1) | .[0]
+                ' <<< "$verified") || {
+                    echo "Verified provenance does not bind the requested source, service and image: ${service}." >&2
+                    exit 4
+                }
+                [[ -z "$accepted_builder" || "$builder" == "$accepted_builder" ]] || {
+                    echo 'All runtime images must belong to one Gitea publication run.' >&2
+                    exit 4
+                }
+                accepted_builder=$builder
+            fi
         done
     fi
 done
