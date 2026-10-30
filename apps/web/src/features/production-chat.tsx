@@ -133,7 +133,7 @@ export const ProductionChat = ({ currentUserDid }: { currentUserDid: string }) =
             { ...(before !== undefined ? { before } : {}), limit: 30 });
         if (activeConversation.current !== conversationId) return true;
         if (!result.ok) {
-            if (result.kind === 'authentication') { setMessages([]); setNextCursor(null); }
+            setMessages([]); setNextCursor(null);
             setError(t('chat.loadError'));
         } else {
             setMessages((current) => {
@@ -263,7 +263,7 @@ export const ProductionChat = ({ currentUserDid }: { currentUserDid: string }) =
                         <button type='button' aria-current={selectedId === conversation.id ? 'page' : undefined}
                             className='mh-button mh-button--secondary mh-button--md w-full justify-start text-left' onClick={() => setSelectedId(conversation.id)}>
                             <strong className='block break-words'>{conversation.title}</strong>
-                            <span className='block text-sm text-mh-textMuted'>{conversation.kind === 'direct' ? t('chat.direct') : t('chat.group')}</span>
+                            <span className='block text-sm text-mh-textMuted'>{conversation.kind === 'direct' ? t('chat.direct') : conversation.kind === 'join-request' ? t('chat.application') : t('chat.group')}</span>
                             {conversation.unreadCount > 0 && <span className='block text-sm font-bold'>{t('chat.unread', { count: conversation.unreadCount })}</span>}
                             {conversation.lastMessageAt && <span className='block text-sm text-mh-textMuted'>{fmt.longDate(conversation.lastMessageAt)}</span>}
                         </button>

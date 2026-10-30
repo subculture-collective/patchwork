@@ -31,6 +31,7 @@ test('authenticated group owner creates a durable group, room, and privacy-safe 
             return fulfill({ group }, 201);
         }
         if (path === '/identity/resolve') return fulfill({ identity: { did: 'did:plc:groups-browser-member', handle: 'member.example' } });
+        if (path === '/groups/join-requests') return fulfill({ requests: [] });
         if (path === '/groups/linkable-requests') return fulfill({ requests: [] });
         if (path === '/groups/invitations') {
             const input = route.request().postDataJSON() as Record<string, string>;

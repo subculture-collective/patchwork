@@ -344,6 +344,14 @@ export class AccountPrivacyService {
             const groupMemberships = await client.query(
                 `UPDATE group_memberships SET role='member',status='removed',updated_at=$2
                  WHERE member_did=$1 AND status='active'`, [did, now]);
+            await client.query(`UPDATE chat_conversations c SET status='closed',closed_at=$2,updated_at=$2,
+                version=version+1 FROM group_join_requests r WHERE c.join_request_id=r.request_id
+                AND r.requester_did=$1 AND c.status='active'`, [did, now]);
+            await client.query(`UPDATE group_join_requests SET introduction=NULL,
+                status=CASE WHEN status='pending' THEN 'withdrawn' ELSE status END,
+                decided_by_did=CASE WHEN decided_by_did=$1 THEN NULL ELSE decided_by_did END,
+                updated_at=$2 WHERE requester_did=$1`, [did, now]);
+            await client.query(`UPDATE group_join_requests SET decided_by_did=NULL WHERE decided_by_did=$1`, [did]);
             const groupInvitations = await client.query(
                 `DELETE FROM group_invitations
                  WHERE invitee_did=$1 OR invited_by_did=$1`, [did]);
@@ -981,6 +989,11 @@ export class AccountPrivacyService {
                     requested_role,status,expires_at,consumed_at,created_at,updated_at
              FROM group_invitations WHERE invitee_did=$1 OR invited_by_did=$1
              ORDER BY created_at,invitation_id`, [did]);
+        const groupJoinRequests = await client.query<{
+            request_id: string; group_id: string; introduction: string | null; status: string;
+            expires_at: Date | string; created_at: Date | string; updated_at: Date | string;
+        }>(`SELECT request_id,group_id,introduction,status,expires_at,created_at,updated_at
+            FROM group_join_requests WHERE requester_did=$1 ORDER BY created_at,request_id`, [did]);
         const chatConversations = await client.query<{
             conversation_id: string; kind: string; connection_id: string | null;
             room_id: string | null; status: string; version: number;
@@ -1505,6 +1518,9 @@ export class AccountPrivacyService {
                     })),
                 },
                 groups: {
+                    joinRequests: groupJoinRequests.rows.map(row => ({ id: row.request_id,
+                        groupId: row.group_id, introduction: row.introduction, status: row.status,
+                        expiresAt: iso(row.expires_at), createdAt: iso(row.created_at), updatedAt: iso(row.updated_at) })),
                     memberships: groupMemberships.rows.map(row => ({
                         groupId: row.group_id,
                         ownerDid: row.owner_did,

@@ -20,8 +20,8 @@ const routes = {
         ['/notifications', 'Notification center'],
         ['/moderation', 'Moderator safety console'],
         ['/settings', 'Account privacy'],
-        ['/chat', "Private messages with people you've connected with and the group rooms you belong to."],
-        ['/groups', 'Private spaces for coordinating with roles, invitations that expire, and access changes that apply immediately.'],
+        ['/chat', "Private messages for accepted connections, group rooms and pending group introductions."],
+        ['/groups', 'Coordinate in groups with invitations, public join requests and access changes that apply immediately.'],
         ['/legal/terms', 'Terms of Service'],
         ['/legal/privacy', 'Privacy Policy'],
         ['/legal/community-guidelines', 'Community Guidelines'],
@@ -43,8 +43,8 @@ const routes = {
         ['/notifications', 'Centro de notificaciones'],
         ['/moderation', 'Consola de seguridad de moderación'],
         ['/settings', 'Privacidad de la cuenta'],
-        ['/chat', 'Mensajes privados con las personas con las que te has conectado y las salas de grupo a las que perteneces.'],
-        ['/groups', 'Espacios privados para coordinarse, con roles, invitaciones que vencen y cambios de acceso que se aplican de inmediato.'],
+        ['/chat', 'Mensajes privados para conexiones aceptadas, salas de grupo y presentaciones pendientes.'],
+        ['/groups', 'Coordina en grupos con invitaciones, solicitudes públicas de ingreso y cambios de acceso inmediatos.'],
         ['/legal/terms', 'Términos del servicio'],
         ['/legal/privacy', 'Política de privacidad'],
         ['/legal/community-guidelines', 'Normas de la comunidad'],
@@ -119,6 +119,7 @@ const mockProductionSession = async (page: Page, language: 'en' | 'es') => {
             results: [],
         });
         if (path === '/coordination/windows') return fulfill({ windows: [] });
+        if (path === '/groups/join-requests') return fulfill({ requests: [] });
         if (path === '/groups') {
             return fulfill({
                 groups: [],

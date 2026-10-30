@@ -51,6 +51,8 @@ export const NOTIFICATION_TYPES = [
     'group_removed',
     'group_role_changed',
     'group_closed',
+    'group_join_requested',
+    'group_join_decided',
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];

@@ -390,7 +390,7 @@ export const FrontendShell = ({ appTitle }: FrontendShellProps) => {
         const pageParams = new URLSearchParams(discoveryQueryString);
         {
             const existing = new URLSearchParams(window.location.search);
-            for (const key of ['uri', 'resource', 'connection', 'conversation', 'resourceName']) if (existing.has(key)) pageParams.set(key, existing.get(key)!);
+            for (const key of ['uri', 'resource', 'connection', 'conversation', 'resourceName', 'group']) if (existing.has(key)) pageParams.set(key, existing.get(key)!);
         }
         if (page > 1) pageParams.set('page', String(page));
         else pageParams.delete('page');

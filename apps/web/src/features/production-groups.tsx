@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useLocale } from '../i18n';
 import {
+    fetchPublicGroupViaApi, fetchGroupJoinRequestsViaApi, requestGroupJoinViaApi, decideGroupJoinViaApi,
+    type PublicGroupDetail, type GroupJoinRequest,
     changeGroupMemberRoleViaApi,
     closeGroupViaApi,
     closeGroupRoomViaApi,
@@ -120,6 +122,8 @@ export const ProductionGroups = () => {
             <div aria-live='polite' role='status'>{busy ? t('groups.loading') : message}</div>
             {error && <p role='alert' className='mh-banner mh-banner--danger'>{error}</p>}
 
+            <GroupApplications onMembershipChange={load} memberGroupIds={data.groups.map(group => group.id)} />
+
             <form onSubmit={createGroup} className='mh-surface grid gap-4 p-5' aria-labelledby='create-group-heading'>
                 <h2 id='create-group-heading' className='font-heading text-xl font-bold'>{t('groups.create')}</h2>
                 <label className='grid gap-1 font-bold'>{t('groups.name')}
@@ -221,6 +225,7 @@ const GroupCard = ({ group, outgoing, busy, run, linkable }: {
         <article className='mh-surface space-y-4 p-5'>
             <header>
                 <h3 className='font-heading text-xl font-bold'>{group.name}</h3>
+                {group.visibility === 'public' && group.status === 'active' && <a className='mh-button mh-button--secondary mh-button--sm' href={`/groups?group=${encodeURIComponent(group.id)}`}>{t('groups.sharePublic')}</a>}
                 <p>{group.description}</p>
                 <p className='text-sm text-mh-textMuted'>{group.purpose}</p>
                 <p className='text-sm'>{t('groups.role', { role: roleLabel(group.actorRole) })} · {t('groups.status', { status: group.status === 'active' ? t('labels.active') : t('labels.closed') })}</p>
@@ -267,4 +272,78 @@ const GroupCard = ({ group, outgoing, busy, run, linkable }: {
             </div>
         </article>
     );
+};
+
+const GroupApplications = ({ onMembershipChange, memberGroupIds }: { onMembershipChange: () => Promise<void>; memberGroupIds: string[] }) => {
+    const { t, fmt } = useLocale();
+    const groupId = new URLSearchParams(window.location.search).get('group');
+    const [detail, setDetail] = useState<PublicGroupDetail | null>(null);
+    const [requests, setRequests] = useState<GroupJoinRequest[]>([]);
+    const [introduction, setIntroduction] = useState('');
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState('');
+    const [unavailable, setUnavailable] = useState(false);
+    const [status, setStatus] = useState('');
+    const handles = useHandles(requests.map(row => row.requesterDid));
+    const load = useCallback(async () => {
+        setBusy(true); setError('');
+        const result = await fetchGroupJoinRequestsViaApi();
+        if (result.ok) setRequests(result.data.requests);
+        else { setRequests([]); setError(t('groups.joinError')); }
+        if (groupId) {
+            const summary = await fetchPublicGroupViaApi(groupId);
+            setDetail(summary.ok ? summary.data.group : null);
+            setUnavailable(!summary.ok);
+        }
+        setBusy(false);
+    }, [groupId, t]);
+    useEffect(() => { void load(); }, [load]);
+    const run = async (operation: () => Promise<{ ok: boolean }>) => {
+        setBusy(true); setError(''); setStatus('');
+        const result = await operation();
+        if (result.ok) { setIntroduction(''); await load(); await onMembershipChange(); setStatus(t('groups.operationComplete')); }
+        else { setError(t('groups.joinError')); setRequests([]); setDetail(null); }
+        setBusy(false);
+    };
+    const ownPending = requests.some(row => row.groupId === groupId && !row.canDecide && row.status === 'pending');
+    return <section className='mh-surface space-y-4 p-5' aria-labelledby='join-requests-heading'>
+        <div className='flex flex-wrap items-center justify-between gap-2'>
+            <h2 id='join-requests-heading' className='font-heading text-xl font-bold'>{t('groups.joinRequests')}</h2>
+            <button type='button' className='mh-button mh-button--secondary mh-button--md' disabled={busy} onClick={() => void load()}>{t('groups.refreshJoin')}</button>
+        </div>
+        <p className='text-sm text-mh-textMuted'>{t('groups.joinPrivacy')}</p>
+        {unavailable && <p role='alert'>{t('groups.unavailable')}</p>}
+        {error && <p role='alert' className='mh-banner mh-banner--danger'>{error}</p>}
+        <p role='status'>{busy ? t('groups.loading') : status}</p>
+        {detail && <section aria-label={t('groups.publicDetails')} className='space-y-3'>
+            <h3 className='font-heading text-lg font-bold'>{detail.name}</h3>
+            <p>{detail.purpose}</p><p>{detail.description}</p>
+            <p>{t('groups.memberCount', { count: detail.memberCount })}</p>
+            {!ownPending && !memberGroupIds.includes(detail.id) && <form className='grid gap-3' onSubmit={(event) => { event.preventDefault(); void run(() => requestGroupJoinViaApi({ groupId: detail.id, introduction })); }}>
+                <label className='grid gap-1 font-bold'>{t('groups.introduction')}
+                    <textarea className='mh-input min-h-24 px-3 py-2' required maxLength={1000} value={introduction} onChange={event => setIntroduction(event.target.value)} disabled={busy} />
+                </label>
+                <p className='text-sm'>{t('groups.joinLifetime')}</p>
+                <button className='mh-button mh-button--primary mh-button--md' disabled={busy || !introduction.trim()}>{t('groups.requestJoin')}</button>
+            </form>}
+        </section>}
+        {requests.length === 0 ? <p>{t('groups.noJoinRequests')}</p> : <ul className='space-y-4'>
+            {requests.map(row => <li key={row.id} className='space-y-2 rounded-md border border-mh-border p-3'>
+                <h3 className='font-bold'>{row.groupName}</h3>
+                {row.canDecide && <p><AccountName did={row.requesterDid} handles={handles} /></p>}
+                <p className='break-words whitespace-pre-wrap'>{row.introduction}</p>
+                <p>{t(`groups.joinStatus.${row.status}`)}</p>
+                {row.status === 'pending' && <>
+                    <p>{t('groups.joinExpires', { date: fmt.longDate(row.expiresAt) })}</p>
+                    <div className='flex flex-wrap gap-2'>
+                        {row.conversationId && <a className='mh-button mh-button--secondary mh-button--md' href={`/chat?conversation=${encodeURIComponent(row.conversationId)}`}>{t('groups.openIntroduction')}</a>}
+                        {row.canDecide ? <>
+                            <button type='button' className='mh-button mh-button--primary mh-button--md' disabled={busy} onClick={() => void run(() => decideGroupJoinViaApi({ groupId:row.groupId,requestId:row.id,action:'approve' }))}>{t('groups.approveJoin')}</button>
+                            <button type='button' className='mh-button mh-button--secondary mh-button--md' disabled={busy} onClick={() => void run(() => decideGroupJoinViaApi({ groupId:row.groupId,requestId:row.id,action:'decline' }))}>{t('groups.declineJoin')}</button>
+                        </> : <button type='button' className='mh-button mh-button--secondary mh-button--md' disabled={busy} onClick={() => void run(() => decideGroupJoinViaApi({ groupId:row.groupId,requestId:row.id,action:'withdraw' }))}>{t('groups.withdrawJoin')}</button>}
+                    </div>
+                </>}
+            </li>)}
+        </ul>}
+    </section>;
 };

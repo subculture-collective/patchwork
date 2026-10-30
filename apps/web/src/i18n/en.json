@@ -637,8 +637,8 @@
     },
     "chat": {
         "heading": "Messages",
-        "description": "Private messages with people you've connected with and the group rooms you belong to.",
-        "trust": "Messages are server-readable and are not end-to-end encrypted. Patchwork stores message text for up to 365 days. Notifications and conversation previews never include message text. Do not share passwords, financial details, or exact personal locations.",
+        "description": "Private messages for accepted connections, group rooms and pending group introductions.",
+        "trust": "Messages are server-readable and are not end-to-end encrypted. Group introduction conversations are retained for up to 90 days; other messages for up to 365 days. Notifications and previews omit message text. Do not share passwords, financial details, or exact personal locations.",
         "offline": "You are offline. Your draft stays on this device; sending is disabled until the connection returns.",
         "loading": "Loading messages…",
         "loaded": "Messages loaded.",
@@ -683,7 +683,8 @@
         "sending": "Sending message…",
         "sent": "Message sent.",
         "sendError": "The message was not sent. Your draft is still here, and retrying will not send it twice.",
-        "retryConfirmed": "The earlier message was already received; no duplicate was created."
+        "retryConfirmed": "The earlier message was already received; no duplicate was created.",
+        "application": "Private group introduction"
     },
     "shellSections": {
         "map": {
@@ -1366,7 +1367,7 @@
     },
     "groups": {
         "heading": "Groups",
-        "description": "Private spaces for coordinating with roles, invitations that expire, and access changes that apply immediately.",
+        "description": "Coordinate in groups with invitations, public join requests and access changes that apply immediately.",
         "trust": "Group membership and room details are stored by Patchwork. Never put exact personal locations, credentials, or private evidence in group fields.",
         "create": "Create group",
         "name": "Group name",
@@ -1374,7 +1375,7 @@
         "purpose": "Purpose",
         "visibility": "Visibility",
         "private": "Private",
-        "public": "Public to authenticated members",
+        "public": "Public by link for signed-in neighbors",
         "linkedRequest": "Linked request (optional)",
         "linkedRequestHelp": "Every member must already be authorized for a linked request.",
         "creating": "Creating group…",
@@ -1426,7 +1427,32 @@
         "noLinkedRequest": "Not linked to a request",
         "untitledRequest": "Untitled request",
         "yourRequest": "your request",
-        "helpingWith": "you're helping"
+        "helpingWith": "you're helping",
+        "joinRequests": "Group join requests",
+        "refreshJoin": "Refresh join requests",
+        "joinPrivacy": "Only the applicant and current group moderators can see a pending introduction and its conversation. Replies are server-readable. Closing the request ends access to the conversation.",
+        "unavailable": "This group is unavailable.",
+        "joinError": "Could not load or update join requests. Refresh to check access and try again.",
+        "publicDetails": "Public group details",
+        "memberCount_one": "{{count}} member",
+        "memberCount_other": "{{count}} members",
+        "introduction": "Your introduction",
+        "joinLifetime": "Use one paragraph, up to 1,000 characters. Requests expire after seven days and are retained for up to 90 days. Keep exact locations and private evidence out of your introduction.",
+        "requestJoin": "Ask to join",
+        "noJoinRequests": "No join requests to show. Open a public group’s shared link to ask to join.",
+        "joinExpires": "Expires {{date}}",
+        "openIntroduction": "Open private conversation",
+        "approveJoin": "Approve membership",
+        "declineJoin": "Decline request",
+        "withdrawJoin": "Withdraw request",
+        "sharePublic": "Share this public group link",
+        "joinStatus": {
+            "pending": "Awaiting a moderator’s decision.",
+            "approved": "Approved. You are now a member.",
+            "declined": "Declined.",
+            "withdrawn": "Withdrawn.",
+            "expired": "Expired."
+        }
     },
     "a11y": {
         "languageSwitcher": "Language",
