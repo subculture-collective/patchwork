@@ -212,7 +212,7 @@ Geoprivacy is enforced at every boundary:
 
 ### 8. Jetstream is the alpha live-ingestion source
 
-The alpha uses Jetstream for live changes because its JSON encoding and collection filtering materially reduce implementation and operating complexity for one small collection. The consumer filters for `app.patchwork.aid.post` and persists its cursor.
+The alpha uses Jetstream for live changes because its JSON encoding and collection filtering materially reduce implementation and operating complexity for one small collection. The consumer filters for the three permitted collections (aid posts, directory resources and volunteer profiles), drops any other collection on the client side as well, and persists its cursor. The [collection audit](../../at-protocol/collection-audit.md) records the current check.
 
 This choice has explicit limits:
 
