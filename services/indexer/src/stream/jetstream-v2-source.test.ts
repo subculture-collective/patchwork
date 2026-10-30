@@ -286,6 +286,45 @@ describe('JetstreamV2EventSource', () => {
         await source.stop();
     });
 
+    it('skips commits outside the subscribed collections and advances past them', async () => {
+        const commit = (seq: number, commitCollection: string) => ({
+            did: 'did:plc:bob', seq, time: '2026-08-14T12:00:00.000Z', kind: 'commit',
+            commit: {
+                operation: 'create', collection: commitCollection, rkey: `r${seq}`,
+                rev: '3jzfcijpj2z2b', cid: 'bafy-record', record: { $type: commitCollection },
+            },
+        }) as unknown as TypedEvent;
+        const controls = vi.fn().mockResolvedValue(undefined);
+        const source = new JetstreamV2EventSource({
+            service: 'https://jetstream.us-east.bsky.network',
+            apiKey: 'test-replay-key', collections: [collection], relevantDids: [],
+            controls: { identity: controls, account: controls, sync: controls },
+            createClient: () => ({
+                replay: () => (async function* () {
+                    yield commit(5, 'app.patchwork.conversation.meta');
+                    yield {
+                        did: 'did:plc:bob', seq: 6, time: '2026-08-14T12:00:01.000Z',
+                        kind: 'sync', sync: { did: 'did:plc:bob', rev: '3jzfcijpj2z2c' },
+                    } as unknown as TypedEvent;
+                    yield commit(7, collection);
+                })(),
+            }) as Pick<Jetstream, 'replay'>,
+        });
+        const events: unknown[] = [];
+        const controlCursors: number[] = [];
+        await source.start(null, async event => { events.push(event); }, async cursor => {
+            controlCursors.push(cursor);
+        });
+        try {
+            await waitFor(() => source.getMetrics().lastAcknowledgedCursor === 7);
+            expect(events).toEqual([expect.objectContaining({ seq: 7, collection })]);
+            expect(controlCursors).toEqual([5, 6]);
+            // The skipped commit must not make its author's controls relevant.
+            expect(controls).not.toHaveBeenCalled();
+            expect(source.getMetrics().malformedFramesTotal).toBe(1);
+        } finally { await source.stop(); }
+    });
+
     it('logs only sanitized metadata when replay stops fatally', async () => {
         const consoleError = vi
             .spyOn(console, 'error')

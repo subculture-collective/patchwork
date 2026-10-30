@@ -79,6 +79,7 @@ export const runJetstreamV2Backfill = async (
 }> => {
     const headSeq = await captureHead(options.client, options.signal);
     const relevantDids = new Set<string>();
+    const collections: ReadonlySet<string> = new Set(options.collections);
     let commits = 0;
     let controls = 0;
 
@@ -93,9 +94,12 @@ export const runJetstreamV2Backfill = async (
     })) {
         for (const raw of batch.events) {
             if (raw.kind !== 'commit') continue;
-            relevantDids.add(raw.did);
             const event = typedEventFromRaw(raw, new Map());
             if (event.kind !== 'commit') continue;
+            // Never project a collection outside the requested set, even if
+            // the snapshot server returns one (ADR 0003).
+            if (!collections.has(event.commit.collection)) continue;
+            relevantDids.add(raw.did);
             await options.onCommit(event);
             commits += 1;
         }
