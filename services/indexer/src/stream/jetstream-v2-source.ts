@@ -88,12 +88,14 @@ export class JetstreamV2EventSource implements AtEventSource {
     private abort: AbortController | null = null;
     private task: Promise<void> | null = null;
     private readonly relevantDids: Set<string>;
+    private readonly collections: ReadonlySet<string>;
 
     constructor(private readonly options: JetstreamV2EventSourceOptions) {
         if (options.collections.length === 0) {
             throw new Error('Jetstream v2 requires collection filters.');
         }
         this.relevantDids = new Set(options.relevantDids);
+        this.collections = new Set(options.collections);
     }
 
     async start(
@@ -219,7 +221,16 @@ export class JetstreamV2EventSource implements AtEventSource {
                 else this.metrics.outOfOrderFramesTotal += 1;
                 continue;
             }
-            if (event.kind === 'commit') {
+            if (
+                event.kind === 'commit' &&
+                !this.collections.has(event.commit.collection)
+            ) {
+                // The server filter is not the only guard: an unsubscribed
+                // collection must never reach projection (ADR 0003). Count it
+                // like v1 does and advance the cursor past it.
+                this.metrics.malformedFramesTotal += 1;
+                await onControlCursor?.(event.seq);
+            } else if (event.kind === 'commit') {
                 this.relevantDids.add(event.did);
                 await onEvent(toAtEvent(event));
             } else {

@@ -95,6 +95,44 @@ describe('runJetstreamV2Backfill', () => {
         expect(saveCheckpoint).toHaveBeenCalledWith(20);
     });
 
+    it('skips snapshot commits outside the requested collections', async () => {
+        const commit = (did: string, seq: number, commitCollection: string) => ({
+            did, seq, time: '2026-08-15T12:00:00.000Z', kind: 'commit',
+            commit: {
+                operation: 'create', collection: commitCollection, rkey: `r${seq}`,
+                rev: '3jzfcijpj2z2a', cid: 'bafy-record', record: { $type: commitCollection },
+            },
+        }) as unknown as RawEvent;
+        const snapshots: SnapshotOpts[] = [];
+        const client = {
+            liveRawBatches: () => (async function* () {
+                yield { events: [{ did: 'did:plc:head', seq: 30, time: '2026-08-15T12:00:02.000Z',
+                    kind: 'identity', identity: { did: 'did:plc:head' } } as unknown as RawEvent], lastCursor: 30 };
+            })(),
+            snapshotRawBatches: (options: SnapshotOpts) => {
+                snapshots.push(options);
+                return (async function* (): AsyncGenerator<EventBatch<RawEvent>> {
+                    yield {
+                        events: options.kinds?.includes('commit')
+                            ? [commit('did:plc:mallory', 10, 'app.patchwork.moderation.report'),
+                                commit('did:plc:alice', 11, collection)]
+                            : [],
+                        lastCursor: 30,
+                    };
+                })();
+            },
+        };
+        const onCommit = vi.fn().mockResolvedValue(undefined);
+
+        await expect(runJetstreamV2Backfill({
+            client, collections: [collection], onCommit,
+            onControl: vi.fn(), saveCheckpoint: vi.fn().mockResolvedValue(undefined),
+        })).resolves.toMatchObject({ commits: 1, relevantDids: 1 });
+        expect(onCommit).toHaveBeenCalledTimes(1);
+        expect(onCommit).toHaveBeenCalledWith(expect.objectContaining({ seq: 11 }));
+        expect(snapshots[1]).toMatchObject({ dids: ['did:plc:alice'] });
+    });
+
     it('does not request network-wide controls when no commit DID exists', async () => {
         const snapshotRawBatches = vi.fn(() =>
             (async function* (): AsyncGenerator<EventBatch<RawEvent>> {
