@@ -73,12 +73,24 @@ test('resource filter changes query the server and Back restores the filter', as
     await expect(page.getByRole('combobox', {name: 'Program or benefit', exact: true})).toHaveValue('wic');
 });
 test('list and marker errors retry independently without claiming zero results', async ({page}) => {
-    let failed = true;
-    await page.route('**/api/query/resource-map?**', route => failed ? route.fulfill({status: 503, json: {error: {code: 'UNAVAILABLE', message: 'Try again.'}}}) : route.fulfill({json: {total: 1, mapped: 1, cells: [point]}}));
+    // ResizeObserver/moveend can request markers while Playwright scrolls the
+    // retry button into view. Keep those requests failed until a real click,
+    // rather than allowing an automatic refresh to remove the button first.
+    await page.addInitScript(() => {
+        document.addEventListener('click', event => {
+            if (event.target instanceof Element && event.target.closest('.pw-resource-map__status button')) {
+                document.documentElement.dataset.markerRetryRequested = 'true';
+            }
+        }, true);
+    });
+    await page.route('**/api/query/resource-map?**', async route => {
+        const retried = await page.evaluate(() => document.documentElement.dataset.markerRetryRequested === 'true');
+        return retried ? route.fulfill({json: {total: 1, mapped: 1, cells: [point]}})
+            : route.fulfill({status: 503, json: {error: {code: 'UNAVAILABLE', message: 'Try again.'}}});
+    });
     await page.goto('/map?zip=60608');
     await expect(page.locator('.pw-explorer__result')).toHaveCount(1);
     await expect(page.locator('.pw-resource-map__status')).toContainText('Map markers could not be loaded.');
-    failed = false;
     await page.locator('.pw-resource-map__status').getByRole('button', {name: 'Retry'}).click();
     await expect(page.getByRole('button', {name: resource.name, exact: true})).toBeVisible();
 });
