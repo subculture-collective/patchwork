@@ -11,3 +11,6 @@ coverage
 *.tsbuildinfo
 apps/web/e2e
 apps/web/playwright-report
+apps/web/test-results
+.playwright-cli
+output

@@ -17,6 +17,9 @@ export default defineConfig({
     testMatch: '**/*.spec.ts',
     fullyParallel: true,
     timeout: 60_000,
+    // Functional readiness can include cold lazy chunks on the shared CI
+    // runner. Capacity probes enforce their separate, much shorter budgets.
+    expect: { timeout: process.env['CI'] ? 15_000 : 5_000 },
     forbidOnly: !!process.env['CI'],
     // Vite/Chromium occasionally yields a transient blank navigation on the
     // constrained local acceptance host. One local retry distinguishes that

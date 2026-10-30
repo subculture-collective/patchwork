@@ -214,6 +214,40 @@ exit ${DEPLOY_EXIT:-0}
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse((self.root / "calls").exists())
 
+    def test_verified_but_wrong_source_provenance_leaves_release_state_unchanged(self):
+        state = self.release_setup()
+        self.executable(self.root / "verify-release-trust.sh",
+                        (SCRIPTS / "verify-release-trust.sh").read_text())
+        digest = "a" * 64
+        manifest = {"gitSha": SHA, "images": {
+            service: f"registry.test/patchwork-{service}@sha256:{digest}"
+            for service in ["api", "indexer", "moderation", "web"]}}
+        (self.root / "artifact-digests.json").write_text(json.dumps(manifest))
+        public_key = self.root / "cosign.pub"
+        public_key.write_text("fixture public key")
+        self.env.update(PATCHWORK_RELEASE_VERIFY_MODE="key",
+                        PATCHWORK_ALLOWED_IMAGE_PREFIX="registry.test/patchwork-",
+                        PATCHWORK_COSIGN_PUBLIC_KEY=str(public_key))
+        # Cosign exits successfully: the payload policy must still reject it.
+        import base64
+        statement = {"_type": "https://in-toto.io/Statement/v0.1",
+                     "predicateType": "https://slsa.dev/provenance/v0.2",
+                     "subject": [{"name": "registry.test/patchwork-api", "digest": {"sha256": digest}}],
+                     "predicate": {"invocation": {"configSource": {"digest": {"sha1": "b" * 40}}}}}
+        envelope = {"payloadType": "application/vnd.in-toto+json",
+                    "payload": base64.b64encode(json.dumps(statement).encode()).decode()}
+        (self.root / "verified.json").write_text(json.dumps(envelope))
+        self.executable(self.bin / "cosign", """#!/bin/bash
+if [[ "$1" == verify-attestation ]]; then cat "$FIXTURES/verified.json"; fi
+exit 0
+""")
+        before = {path.name: path.read_bytes() for path in state.iterdir()}
+        result = self.run_script("run-staging-release.sh", "runtime.env", "deploy.lock")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("does not bind", result.stderr)
+        self.assertFalse((self.root / "calls").exists())
+        self.assertEqual(before, {path.name: path.read_bytes() for path in state.iterdir()})
+
     def test_stale_previous_is_not_used(self):
         self.release_setup()
         self.env.update(DEPLOY_EXIT="1", RETAIN="false")
