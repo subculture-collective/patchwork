@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import { z } from 'zod';
+import { authorizePublicGroup, joinUnavailable } from './group-join-access.js';
 import { PublicHttpError } from './http/error-response.js';
 
 const conversationSchema = z.discriminatedUnion('kind', [
@@ -28,9 +29,11 @@ const reportSchema = z.object({
 
 interface ConversationRow {
     conversation_id: string;
-    kind: 'direct' | 'group';
+    kind: 'direct' | 'group' | 'join-request';
     connection_id: string | null;
     room_id: string | null;
+    join_request_id?: string | null;
+    retention_until?: Date | string;
     status: 'active' | 'closed';
     version: number;
     created_at: Date | string;
@@ -72,12 +75,22 @@ export class DurableChatService {
                 ON connection.connection_id=c.connection_id
              LEFT JOIN group_rooms room ON room.room_id=c.room_id
              LEFT JOIN group_memberships member ON member.group_id=room.group_id
-             WHERE (c.kind='direct' AND $1 IN (connection.requester_did,connection.helper_did))
+             LEFT JOIN group_join_requests application ON application.request_id=c.join_request_id
+             WHERE (c.kind='join-request' AND c.status='active' AND application.status='pending'
+                    AND application.expires_at>NOW() AND (application.requester_did=$1 OR EXISTS (
+                        SELECT 1 FROM group_memberships m WHERE m.group_id=application.group_id
+                        AND m.member_did=$1 AND m.status='active' AND m.role IN ('owner','moderator'))))
+                OR (c.kind='direct' AND $1 IN (connection.requester_did,connection.helper_did))
                 OR (c.kind='group' AND member.member_did=$1 AND member.status='active')
              ORDER BY c.updated_at DESC,c.conversation_id`, [actorDid]);
         const conversations: Record<string, unknown>[] = [];
         for (const row of result.rows) {
-            const authorization = await this.authorize(this.pool, row, actorDid);
+            let authorization: Authorization;
+            try { authorization = await this.authorize(this.pool, row, actorDid); }
+            catch (error) {
+                if (row.kind === 'join-request' && error instanceof PublicHttpError) continue;
+                throw error;
+            }
             const state = await this.pool.query<{
                 last_sequence: string | null; last_message_at: Date | string | null;
                 last_read_sequence: string | null; unread: string;
@@ -187,7 +200,8 @@ export class DurableChatService {
                  ON CONFLICT (conversation_id,author_did,client_message_id) DO NOTHING
                  RETURNING *`,
                 [randomUUID(), conversation.conversation_id, actorDid, parsed.data.body,
-                 parsed.data.clientMessageId, now, plusDays(now, 365)]);
+                 parsed.data.clientMessageId, now, conversation.kind === 'join-request'
+                     ? new Date(conversation.retention_until!) : plusDays(now, 365)]);
             let message = inserted.rows[0];
             const created = Boolean(message);
             if (!message) {
@@ -342,6 +356,10 @@ export class DurableChatService {
                         WHERE connection.connection_id=c.connection_id
                           AND connection.status='active'
                           AND request.current_status IN ('assigned','in_progress')))
+                    OR (c.kind='join-request' AND NOT EXISTS (
+                        SELECT 1 FROM group_join_requests r JOIN groups g USING (group_id)
+                        WHERE r.request_id=c.join_request_id AND r.status='pending'
+                          AND r.expires_at>$1 AND g.status='active'))
                     OR (c.kind='group' AND NOT EXISTS (
                         SELECT 1 FROM group_rooms room JOIN groups g USING (group_id)
                         WHERE room.room_id=c.room_id AND room.status='active' AND g.status='active'))
@@ -355,6 +373,10 @@ export class DurableChatService {
 
     private async loadConversation(client: Pick<Pool | PoolClient, 'query'>,
         id: string, lock = false): Promise<ConversationRow> {
+        if (lock) await client.query(`SELECT g.group_id FROM groups g
+            JOIN group_join_requests r USING (group_id)
+            JOIN chat_conversations c ON c.join_request_id=r.request_id
+            WHERE c.conversation_id=$1 FOR UPDATE OF g`, [id]);
         const result = await client.query<ConversationRow>(
             `SELECT * FROM chat_conversations WHERE conversation_id=$1${lock ? ' FOR UPDATE' : ''}`, [id]);
         const row = result.rows[0];
@@ -365,6 +387,19 @@ export class DurableChatService {
     private async authorize(client: Pick<Pool | PoolClient, 'query'>,
         conversation: ConversationRow, actorDid: string): Promise<Authorization> {
         await this.assertAccountActive(client, actorDid);
+        if (conversation.kind === 'join-request') {
+            const result = await client.query<{ group_id: string; requester_did: string;
+                status: string; expires_at: Date | string }>(`SELECT group_id,requester_did,status,expires_at
+                FROM group_join_requests WHERE request_id=$1`, [conversation.join_request_id]);
+            const application = result.rows[0];
+            if (!application) return joinUnavailable();
+            const { group, participants } = await authorizePublicGroup(client, application.group_id,
+                actorDid, application.requester_did);
+            await this.assertModerationVisible(client, `patchwork:chat:${conversation.conversation_id}`, 'CHAT_MODERATED');
+            if (conversation.status !== 'active' || application.status !== 'pending' || new Date(application.expires_at)<=new Date())
+                throw new PublicHttpError(409, 'CHAT_CONVERSATION_CLOSED', 'The conversation is closed.');
+            return { conversation, participants, title: group.name, groupId: group.group_id };
+        }
         if (conversation.status !== 'active')
             throw new PublicHttpError(409, 'CHAT_CONVERSATION_CLOSED', 'The conversation is closed.');
         await this.assertModerationVisible(client, `patchwork:chat:${conversation.conversation_id}`, 'CHAT_MODERATED');
@@ -506,7 +541,7 @@ export class DurableChatService {
     }): Record<string, unknown> {
         const row = authorization.conversation;
         return { id: row.conversation_id, kind: row.kind,
-            connectionId: row.connection_id, roomId: row.room_id,
+            connectionId: row.connection_id, roomId: row.room_id, joinRequestId: row.join_request_id ?? null,
             title: authorization.title, counterpartDid: authorization.counterpartDid,
             groupId: authorization.groupId, roomName: authorization.roomName,
             status: row.status, version: row.version,

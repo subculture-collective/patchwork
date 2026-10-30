@@ -223,6 +223,8 @@ const spanishNotificationCopy: Readonly<
         title: 'Ventana de coordinación vencida',
         body: 'Abre tu conexión para revisar el estado de la agenda.',
     },
+    group_join_requested: { title: 'Nueva solicitud de ingreso', body: 'Abre Grupos para revisar una solicitud privada de ingreso.' },
+    group_join_decided: { title: 'Solicitud de ingreso actualizada', body: 'Abre Grupos para ver la decisión sobre tu solicitud.' },
     group_invited: {
         title: 'Invitación a un grupo',
         body: 'Tienes una nueva invitación a un grupo.',

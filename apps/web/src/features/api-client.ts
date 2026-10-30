@@ -3099,9 +3099,34 @@ export const createGroupRoomViaApi = (input: { groupId: string; name: string; li
 export const closeGroupRoomViaApi = (input: { groupId: string; roomId: string }): Promise<ApiClientResult<{ room: ProductionGroupRoom }>> =>
     mutateGroup('/groups/room-closures', input, 'room');
 
+export interface PublicGroupDetail {
+    id: string; name: string; description: string; purpose: string; memberCount: number;
+}
+export interface GroupJoinRequest {
+    id: string; groupId: string; groupName: string; requesterDid: string;
+    introduction: string | null; status: 'pending'|'approved'|'declined'|'withdrawn'|'expired';
+    expiresAt: string; createdAt: string; updatedAt: string;
+    conversationId: string | null; canDecide: boolean;
+}
+export const fetchPublicGroupViaApi = async (groupId: string, signal?: AbortSignal): Promise<ApiClientResult<{ group: PublicGroupDetail }>> => {
+    const result = await requestJson('/groups/details', new URLSearchParams({ groupId }), signal);
+    return result.ok ? parseRecordPayload(result.data, 'group', 'Group response was malformed.') : result;
+};
+export const fetchGroupJoinRequestsViaApi = async (signal?: AbortSignal): Promise<ApiClientResult<{ requests: GroupJoinRequest[] }>> => {
+    const result = await requestJson('/groups/join-requests', new URLSearchParams(), signal);
+    if (!result.ok) return result;
+    const requests = parseArrayProperty<GroupJoinRequest>(result.data, 'requests', 'Group response was malformed.');
+    return requests.ok ? { ok: true, data: { requests: requests.data } } : requests;
+};
+export const requestGroupJoinViaApi = (input: { groupId: string; introduction: string }): Promise<ApiClientResult<{ request: GroupJoinRequest }>> =>
+    mutateGroup('/groups/join-requests', input, 'request');
+export const decideGroupJoinViaApi = (input: { groupId: string; requestId: string; action: 'approve'|'decline'|'withdraw' }): Promise<ApiClientResult<{ request: GroupJoinRequest }>> =>
+    mutateGroup('/groups/join-decisions', input, 'request');
+
 export interface ProductionChatConversation {
     id: string;
-    kind: 'direct' | 'group';
+    kind: 'direct' | 'group' | 'join-request';
+    joinRequestId?: string | null;
     connectionId: string | null;
     roomId: string | null;
     title: string;

@@ -11,7 +11,11 @@ describe('group HTTP identity and idempotency boundary', () => {
     const create = vi.fn();
     const invite = vi.fn();
     const listLinkableRequests = vi.fn();
-    const service = { list, create, invite, listLinkableRequests } as unknown as DurableGroupService;
+    const publicDetail = vi.fn();
+    const listJoinRequests = vi.fn();
+    const requestToJoin = vi.fn();
+    const decideJoinRequest = vi.fn();
+    const service = { list, create, invite, listLinkableRequests, publicDetail, listJoinRequests, requestToJoin, decideJoinRequest } as unknown as DurableGroupService;
     const executeIdempotent = vi.fn(async (_request, _actorDid, body, effect) =>
         effect(body as Record<string, unknown>, 'server-key'));
     const handler = createGroupHandler({
@@ -90,4 +94,27 @@ describe('group HTTP identity and idempotency boundary', () => {
         const body = (await response.json()) as { requests: unknown[] };
         expect(body.requests).toHaveLength(1);
     });
+    it('keeps public details authenticated and join commands inside the idempotency boundary', async () => {
+        const groupId = '11111111-1111-4111-8111-111111111111';
+        publicDetail.mockResolvedValue({ group: { id: groupId, name: 'Pantry', memberCount: 1 } });
+        const summary = await fetch(`${origin}/groups/details?groupId=${groupId}&actorDid=did:plc:spoof`);
+        expect(summary.status).toBe(200);
+        expect(summary.headers.get('cache-control')).toBe('no-store');
+        expect(publicDetail).toHaveBeenCalledWith(actorDid, groupId);
+        listJoinRequests.mockResolvedValue({ requests: [] });
+        expect((await fetch(`${origin}/groups/join-requests`)).status).toBe(200);
+        expect(listJoinRequests).toHaveBeenCalledWith(actorDid);
+        const body = { groupId, introduction: 'I can help.' };
+        requestToJoin.mockResolvedValue({ request: { id: 'request' } });
+        const created = await fetch(`${origin}/groups/join-requests`, { method: 'POST',
+            headers: { 'content-type': 'application/json', 'idempotency-key': 'join-command' }, body: JSON.stringify(body) });
+        expect(created.status).toBe(201);
+        expect(requestToJoin).toHaveBeenCalledWith(actorDid, body);
+        const decision = { groupId, requestId: groupId, action: 'approve' };
+        decideJoinRequest.mockResolvedValue({ request: { status: 'approved' } });
+        expect((await fetch(`${origin}/groups/join-decisions`, { method: 'POST',
+            headers: { 'content-type': 'application/json' }, body: JSON.stringify(decision) })).status).toBe(200);
+        expect(decideJoinRequest).toHaveBeenCalledWith(actorDid, decision);
+    });
+
 });

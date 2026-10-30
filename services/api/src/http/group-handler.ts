@@ -8,6 +8,9 @@ import { readJsonBody } from './json-body.js';
 
 const routes = new Map<string, readonly string[]>([
     ['/groups', ['GET', 'POST']],
+    ['/groups/details', ['GET']],
+    ['/groups/join-requests', ['GET', 'POST']],
+    ['/groups/join-decisions', ['POST']],
     ['/groups/linkable-requests', ['GET']],
     ['/groups/invitations', ['POST']],
     ['/groups/invitation-responses', ['POST']],
@@ -46,7 +49,10 @@ export const createGroupHandler = (dependencies: Dependencies) =>
                 response.setHeader('cache-control', 'no-store');
                 const actorDid = (await dependencies.authenticate(request)).principal.did;
                 if (request.method === 'GET') {
-                    writeJsonResponse(response, 200, url.pathname === '/groups/linkable-requests'
+                    writeJsonResponse(response, 200, url.pathname === '/groups/details'
+                        ? await dependencies.service.publicDetail(actorDid, url.searchParams.get('groupId') ?? '')
+                        : url.pathname === '/groups/join-requests' ? await dependencies.service.listJoinRequests(actorDid)
+                        : url.pathname === '/groups/linkable-requests'
                         ? await dependencies.service.listLinkableRequests(actorDid)
                         : await dependencies.service.list(actorDid));
                     return;
@@ -54,7 +60,9 @@ export const createGroupHandler = (dependencies: Dependencies) =>
                 const body = await readJsonBody(request);
                 const result = await dependencies.executeIdempotent(
                     request, actorDid, body, async (commandBody) => {
-                        const operation = url.pathname === '/groups' ? dependencies.service.create(actorDid, commandBody) :
+                        const operation = url.pathname === '/groups/join-requests' ? dependencies.service.requestToJoin(actorDid, commandBody) :
+                            url.pathname === '/groups/join-decisions' ? dependencies.service.decideJoinRequest(actorDid, commandBody) :
+                            url.pathname === '/groups' ? dependencies.service.create(actorDid, commandBody) :
                             url.pathname === '/groups/invitations' ? dependencies.service.invite(actorDid, commandBody) :
                             url.pathname === '/groups/invitation-responses' ? dependencies.service.respondToInvitation(actorDid, commandBody) :
                             url.pathname === '/groups/invitation-revocations' ? dependencies.service.revokeInvitation(actorDid, commandBody) :
@@ -66,7 +74,7 @@ export const createGroupHandler = (dependencies: Dependencies) =>
                             url.pathname === '/groups/rooms' ? dependencies.service.createRoom(actorDid, commandBody) :
                             dependencies.service.closeRoom(actorDid, commandBody);
                         return {
-                            statusCode: url.pathname === '/groups' || url.pathname === '/groups/invitations' || url.pathname === '/groups/rooms' ? 201 : 200,
+                            statusCode: url.pathname === '/groups/join-requests' || url.pathname === '/groups' || url.pathname === '/groups/invitations' || url.pathname === '/groups/rooms' ? 201 : 200,
                             body: await operation,
                         };
                     },

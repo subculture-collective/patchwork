@@ -64,6 +64,7 @@ RUN test -n "$ALPINE_SECURITY_REFRESH" \
     && npm --version
 
 COPY package.json package-lock.json ./
+COPY vendor/decode-uri-component ./vendor/decode-uri-component
 COPY apps/mobile/package.json ./apps/mobile/package.json
 COPY apps/web/package.json ./apps/web/package.json
 COPY services/api/package.json ./services/api/package.json

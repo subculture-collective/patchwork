@@ -127,3 +127,15 @@ in force.
 
 The implementation and verification sequence is recorded in
 [the bounded pickup plan](../superpowers/plans/2026-10-28-bounded-pickup-capacity.md).
+
+### Public group join requests (#134)
+
+All routes require a signed-in session. `GET /groups/details?groupId=<uuid>` returns only `id`, `name`, `purpose`, `description` and `memberCount` for an available public group. Private, missing, closed, blocked and held groups return the same `GROUP_NOT_FOUND` 404. Shared links use `/groups?group=<uuid>`; there is no directory or search endpoint.
+
+`GET /groups/join-requests` lists the caller’s own requests and eligible pending requests for current owners/moderators, capped at 100. Ordinary members cannot read applications or their threads. `POST /groups/join-requests` accepts only `{ groupId, introduction }`; the introduction is one paragraph of 1–1,000 characters with control characters rejected. One pending request per applicant/group is enforced transactionally and by a unique index. Commands use the existing session-owned, CSRF-protected `Idempotency-Key` boundary.
+
+`POST /groups/join-decisions` accepts `{ groupId, requestId, action }`: `approve` and `decline` require a current owner/moderator; `withdraw` requires the applicant. A seven-day deadline applies before the sweep runs. Approval uses the invitation membership path and grants only `member`. Group locks serialize replies and decisions; the first concurrent decision wins and the other receives `GROUP_JOIN_CLOSED`.
+
+Each request creates a `join-request` chat conversation. Replies use the existing bounded `/chat/messages` API, with pagination, receipts, redaction and reporting. Access is recalculated for the applicant and current owner/moderators on every operation, including account status, blocks, group/participant moderation and chat holds. Blocks among these participants hide the entire application thread. Ordinary membership never grants access. Approval, decline, withdrawal, expiry and group closure end thread access. The introduction is stored on the request; replies are stored in chat messages. Neither appears in notifications or audit metadata. Request records and their cascading chat data have a 90-day retention limit; exports include only the account’s own requests. Deactivation removes introduction text, redacts sent chat messages and audit identity, and closes the applicant’s thread.
+
+Apply API migration `0039_public_group_join_requests.sql` before the matching API and web release. Upgrade API readers together before enabling application conversations; earlier readers do not recognize the new chat kind. Rollback removes web entry points while retaining compatible API readers and schema for existing requests. Shared runtime deployment is a separate operation.

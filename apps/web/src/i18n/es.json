@@ -637,8 +637,8 @@
     },
     "chat": {
         "heading": "Mensajes",
-        "description": "Mensajes privados con las personas con las que te has conectado y las salas de grupo a las que perteneces.",
-        "trust": "Los mensajes son legibles por el servidor y no tienen cifrado de extremo a extremo. Patchwork almacena el texto hasta 365 días. Las notificaciones y vistas previas nunca incluyen el texto. No compartas contraseñas, datos financieros ni ubicaciones personales exactas.",
+        "description": "Mensajes privados para conexiones aceptadas, salas de grupo y presentaciones pendientes.",
+        "trust": "Los mensajes son legibles por el servidor y no tienen cifrado de extremo a extremo. Las conversaciones de ingreso se conservan hasta 90 días y los demás mensajes hasta 365 días. Las notificaciones y vistas previas omiten el texto. No compartas contraseñas, datos financieros ni ubicaciones personales exactas.",
         "offline": "No tienes conexión. Tu borrador permanece en este dispositivo; el envío se desactiva hasta que vuelva la conexión.",
         "loading": "Cargando mensajes…",
         "loaded": "Mensajes cargados.",
@@ -683,7 +683,8 @@
         "sending": "Enviando mensaje…",
         "sent": "Mensaje enviado.",
         "sendError": "El mensaje no se envió. Tu borrador sigue aquí, y reintentar no lo enviará dos veces.",
-        "retryConfirmed": "El mensaje anterior ya se recibió; no se creó un duplicado."
+        "retryConfirmed": "El mensaje anterior ya se recibió; no se creó un duplicado.",
+        "application": "Presentación privada al grupo"
     },
     "shellSections": {
         "map": {
@@ -1366,7 +1367,7 @@
     },
     "groups": {
         "heading": "Grupos",
-        "description": "Espacios privados para coordinarse, con roles, invitaciones que vencen y cambios de acceso que se aplican de inmediato.",
+        "description": "Coordina en grupos con invitaciones, solicitudes públicas de ingreso y cambios de acceso inmediatos.",
         "trust": "Patchwork almacena la membresía y los detalles de las salas. Nunca incluyas ubicaciones personales exactas, credenciales ni evidencia privada en los campos del grupo.",
         "create": "Crear grupo",
         "name": "Nombre del grupo",
@@ -1374,7 +1375,7 @@
         "purpose": "Propósito",
         "visibility": "Visibilidad",
         "private": "Privado",
-        "public": "Público para miembros autenticados",
+        "public": "Público por enlace para vecinos con sesión iniciada",
         "linkedRequest": "Solicitud vinculada (opcional)",
         "linkedRequestHelp": "Cada miembro ya debe tener autorización para una solicitud vinculada.",
         "creating": "Creando grupo…",
@@ -1426,7 +1427,32 @@
         "noLinkedRequest": "Sin vincular a una solicitud",
         "untitledRequest": "Solicitud sin título",
         "yourRequest": "tu solicitud",
-        "helpingWith": "estás ayudando"
+        "helpingWith": "estás ayudando",
+        "joinRequests": "Solicitudes de ingreso a grupos",
+        "refreshJoin": "Actualizar solicitudes",
+        "joinPrivacy": "Solo la persona solicitante y los moderadores actuales pueden ver una presentación pendiente y su conversación. El servidor puede leer las respuestas. Cerrar la solicitud termina el acceso a la conversación.",
+        "unavailable": "Este grupo no está disponible.",
+        "joinError": "No se pudieron cargar o actualizar las solicitudes. Actualiza para comprobar el acceso e inténtalo de nuevo.",
+        "publicDetails": "Detalles públicos del grupo",
+        "memberCount_one": "{{count}} miembro",
+        "memberCount_other": "{{count}} miembros",
+        "introduction": "Tu presentación",
+        "joinLifetime": "Escribe un párrafo de hasta 1.000 caracteres. Las solicitudes vencen a los siete días y se conservan hasta 90 días. No incluyas ubicaciones exactas ni pruebas privadas.",
+        "requestJoin": "Solicitar ingreso",
+        "noJoinRequests": "No hay solicitudes para mostrar. Abre el enlace compartido de un grupo público para solicitar ingreso.",
+        "joinExpires": "Vence el {{date}}",
+        "openIntroduction": "Abrir conversación privada",
+        "approveJoin": "Aprobar ingreso",
+        "declineJoin": "Rechazar solicitud",
+        "withdrawJoin": "Retirar solicitud",
+        "sharePublic": "Compartir el enlace público de este grupo",
+        "joinStatus": {
+            "pending": "Esperando la decisión de un moderador.",
+            "approved": "Aprobada. Ya eres miembro.",
+            "declined": "Rechazada.",
+            "withdrawn": "Retirada.",
+            "expired": "Vencida."
+        }
     },
     "a11y": {
         "languageSwitcher": "Idioma",

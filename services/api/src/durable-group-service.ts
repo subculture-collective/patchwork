@@ -1,6 +1,7 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import { z } from 'zod';
+import { activateGroupMembership, authorizePublicGroup, joinUnavailable } from './group-join-access.js';
 import { PublicHttpError } from './http/error-response.js';
 
 const createSchema = z.object({
@@ -30,6 +31,12 @@ const memberActionSchema = z.object({
 const roleSchema = memberActionSchema.extend({
     role: z.enum(['moderator', 'member']),
 }).strict();
+const joinSchema = z.object({ groupId: z.string().uuid(),
+    introduction: z.string().min(1).max(1000).regex(/^[^\x00-\x1f\x7f-\x9f]+$/).transform(value => value.trim()).pipe(z.string().min(1)),
+}).strict();
+const joinDecisionSchema = z.object({ groupId: z.string().uuid(), requestId: z.string().uuid(),
+    action: z.enum(['approve','decline','withdraw']),
+}).strict();
 const groupActionSchema = z.object({ groupId: z.string().uuid() }).strict();
 const roomSchema = groupActionSchema.extend({
     name: z.string().trim().min(1).max(80),
@@ -38,6 +45,12 @@ const roomSchema = groupActionSchema.extend({
 const roomActionSchema = groupActionSchema.extend({
     roomId: z.string().uuid(),
 }).strict();
+
+interface JoinRequestRow {
+    request_id: string; group_id: string; requester_did: string; introduction: string | null;
+    status: 'pending' | 'approved' | 'declined' | 'withdrawn' | 'expired';
+    expires_at: Date | string; created_at: Date | string; updated_at: Date | string;
+}
 
 type GroupRole = 'owner' | 'moderator' | 'member';
 interface GroupRow {
@@ -211,12 +224,140 @@ export class DurableGroupService {
         };
     }
 
+    async publicDetail(actorDid: string, groupId: string): Promise<Record<string, unknown>> {
+        if (!z.string().uuid().safeParse(groupId).success) return joinUnavailable();
+        const { group } = await authorizePublicGroup(this.pool, groupId, actorDid);
+        const count = await this.pool.query<{ count: string }>(`SELECT COUNT(*)::text AS count
+            FROM group_memberships WHERE group_id=$1 AND status='active'`, [groupId]);
+        return { group: { id: group.group_id, name: group.name, purpose: group.purpose,
+            description: group.description, memberCount: Number(count.rows[0]!.count) } };
+    }
+
+    async listJoinRequests(actorDid: string, now = new Date()): Promise<Record<string, unknown>> {
+        await this.assertAccountActive(this.pool, actorDid);
+        const result = await this.pool.query<JoinRequestRow & { conversation_id: string }>(
+            `SELECT r.*,c.conversation_id FROM group_join_requests r
+             JOIN chat_conversations c ON c.join_request_id=r.request_id
+             WHERE r.requester_did=$1 OR (r.status='pending' AND r.expires_at>$2 AND EXISTS (
+                SELECT 1 FROM group_memberships m WHERE m.group_id=r.group_id AND m.member_did=$1
+                    AND m.status='active' AND m.role IN ('owner','moderator')))
+             ORDER BY r.created_at DESC,r.request_id LIMIT 100`, [actorDid, now]);
+        const requests: Record<string, unknown>[] = [];
+        for (const row of result.rows) {
+            try {
+                const { group } = await authorizePublicGroup(this.pool, row.group_id, actorDid, row.requester_did);
+                requests.push({ ...this.renderJoinRequest(row, now), groupName: group.name,
+                    conversationId: row.status === 'pending' && new Date(row.expires_at)>now ? row.conversation_id : null,
+                    canDecide: row.requester_did !== actorDid });
+            } catch (error) {
+                if (!(error instanceof PublicHttpError)) throw error;
+            }
+        }
+        return { requests };
+    }
+
+    async requestToJoin(actorDid: string, input: unknown, now = new Date()): Promise<Record<string, unknown>> {
+        const parsed = joinSchema.safeParse(input);
+        if (!parsed.success) throw new PublicHttpError(400, 'INVALID_GROUP_JOIN', 'Write an introduction of 1–1,000 characters without control characters.');
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query(`SELECT 1 FROM groups WHERE group_id=$1 FOR UPDATE`, [parsed.data.groupId]);
+            const { group, moderators } = await authorizePublicGroup(client, parsed.data.groupId, actorDid);
+            const member = await client.query(`SELECT 1 FROM group_memberships
+                WHERE group_id=$1 AND member_did=$2 AND status='active'`, [group.group_id, actorDid]);
+            if (member.rowCount) throw new PublicHttpError(409, 'ALREADY_GROUP_MEMBER', 'You already belong to this group.');
+            await this.expireJoinRequests(client, now, group.group_id);
+            const pending = await client.query(`SELECT 1 FROM group_join_requests
+                WHERE group_id=$1 AND requester_did=$2 AND status='pending'`, [group.group_id, actorDid]);
+            if (pending.rowCount) throw new PublicHttpError(409, 'GROUP_JOIN_PENDING', 'A join request is already pending.');
+            const id = randomUUID();
+            const conversationId = randomUUID();
+            const inserted = await client.query<JoinRequestRow>(`INSERT INTO group_join_requests
+                (request_id,group_id,requester_did,introduction,status,expires_at,retention_until,created_at,updated_at)
+                VALUES ($1,$2,$3,$4,'pending',$5,$6,$7,$7) RETURNING *`,
+                [id, group.group_id, actorDid, parsed.data.introduction, plusDays(now,7), plusDays(now,90), now]);
+            await client.query(`INSERT INTO chat_conversations (conversation_id,kind,join_request_id,
+                status,retention_until,created_at,updated_at) VALUES ($1,'join-request',$2,'active',$3,$4,$4)`,
+                [conversationId, id, plusDays(now,90), now]);
+            await this.audit(client, group.group_id, actorDid, actorDid, null, 'join-requested', now);
+            for (const did of moderators) await this.notify(client, { ...group, status: 'active' },
+                did, 'group_join_requested', `group-join:${id}:requested:${did}`, now);
+            await client.query('COMMIT');
+            return { request: { ...this.renderJoinRequest(inserted.rows[0]!, now), conversationId } };
+        } catch (error) { await client.query('ROLLBACK'); throw error; }
+        finally { client.release(); }
+    }
+
+    async decideJoinRequest(actorDid: string, input: unknown, now = new Date()): Promise<Record<string, unknown>> {
+        const parsed = joinDecisionSchema.safeParse(input);
+        if (!parsed.success) throw new PublicHttpError(400, 'INVALID_GROUP_JOIN', 'The join request decision is invalid.');
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query(`SELECT 1 FROM groups WHERE group_id=$1 FOR UPDATE`, [parsed.data.groupId]);
+            const found = await client.query<JoinRequestRow>(`SELECT * FROM group_join_requests
+                WHERE request_id=$1 AND group_id=$2 FOR UPDATE`, [parsed.data.requestId, parsed.data.groupId]);
+            const row = found.rows[0];
+            if (!row) return joinUnavailable();
+            const { group, moderators } = await authorizePublicGroup(client, row.group_id, actorDid, row.requester_did);
+            const withdraw = parsed.data.action === 'withdraw';
+            if (withdraw ? actorDid !== row.requester_did : !moderators.includes(actorDid)) return joinUnavailable();
+            if (row.status !== 'pending' || new Date(row.expires_at)<=now)
+                throw new PublicHttpError(409, 'GROUP_JOIN_CLOSED', 'The join request is no longer pending.');
+            if (parsed.data.action === 'approve') {
+                await this.assertLinkedRoomsVisible(client, row.group_id, row.requester_did);
+                await activateGroupMembership(client, row.group_id, row.requester_did, 'member', now);
+            }
+            const status = withdraw ? 'withdrawn' : parsed.data.action === 'approve' ? 'approved' : 'declined';
+            const updated = await client.query<JoinRequestRow>(`UPDATE group_join_requests
+                SET status=$2,decided_by_did=$3,decided_at=$4,updated_at=$4 WHERE request_id=$1 RETURNING *`,
+                [row.request_id, status, actorDid, now]);
+            await client.query(`UPDATE chat_conversations SET status='closed',version=version+1,
+                closed_at=$2,updated_at=$2 WHERE join_request_id=$1 AND status='active'`, [row.request_id, now]);
+            await this.audit(client, row.group_id, actorDid, row.requester_did, null, `join-${status}`, now);
+            if (!withdraw) await this.notify(client, { ...group, status: 'active' }, row.requester_did,
+                'group_join_decided', `group-join:${row.request_id}:${status}`, now);
+            await client.query('COMMIT');
+            return { request: { id: updated.rows[0]!.request_id, groupId: row.group_id, status } };
+        } catch (error) { await client.query('ROLLBACK'); throw error; }
+        finally { client.release(); }
+    }
+
+    private renderJoinRequest(row: JoinRequestRow, now: Date): Record<string, unknown> {
+        return { id: row.request_id, groupId: row.group_id, requesterDid: row.requester_did,
+            introduction: row.introduction, status: row.status === 'pending' && new Date(row.expires_at)<=now ? 'expired' : row.status,
+            expiresAt: iso(row.expires_at), createdAt: iso(row.created_at), updatedAt: iso(row.updated_at) };
+    }
+
+    private async expireJoinRequests(client: PoolClient, now: Date, groupId?: string): Promise<void> {
+        const expired = await client.query<JoinRequestRow>(`UPDATE group_join_requests SET status='expired',updated_at=$1
+            WHERE status='pending' AND (expires_at<=$1 OR EXISTS (SELECT 1 FROM groups g
+                WHERE g.group_id=group_join_requests.group_id AND g.status<>'active'))
+            AND ($2::uuid IS NULL OR group_id=$2) RETURNING *`, [now, groupId ?? null]);
+        for (const row of expired.rows) await this.audit(client, row.group_id, null, row.requester_did, null, 'join-expired', now);
+        await client.query(`UPDATE chat_conversations c SET status='closed',version=version+1,closed_at=$1,updated_at=$1
+            FROM group_join_requests r WHERE c.join_request_id=r.request_id AND c.status='active'
+            AND r.status<>'pending' AND ($2::uuid IS NULL OR r.group_id=$2)`, [now, groupId ?? null]);
+    }
+
     async runSweep(now = new Date()): Promise<{ expiredInvitations: number }> {
-        const result = await this.pool.query(
-            `UPDATE group_invitations
-             SET status='expired',updated_at=$1
-             WHERE status='pending' AND expires_at<=$1`, [now]);
-        return { expiredInvitations: result.rowCount ?? 0 };
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            // Match command lock order: groups, requests, conversations.
+            await client.query(`SELECT group_id FROM groups g WHERE EXISTS (
+                SELECT 1 FROM group_join_requests r WHERE r.group_id=g.group_id
+                AND ((r.status='pending' AND (r.expires_at<=$1 OR g.status<>'active'))
+                    OR r.retention_until<=$1)) ORDER BY group_id FOR UPDATE`, [now]);
+            const result = await client.query(`UPDATE group_invitations SET status='expired',updated_at=$1
+                WHERE status='pending' AND expires_at<=$1`, [now]);
+            await this.expireJoinRequests(client, now);
+            await client.query(`DELETE FROM group_join_requests WHERE retention_until<=$1`, [now]);
+            await client.query('COMMIT');
+            return { expiredInvitations: result.rowCount ?? 0 };
+        } catch (error) { await client.query('ROLLBACK'); throw error; }
+        finally { client.release(); }
     }
 
     async create(actorDid: string, input: unknown, now = new Date()): Promise<Record<string, unknown>> {
@@ -334,14 +475,7 @@ export class DurableGroupService {
                 `UPDATE group_invitations SET status=$2,consumed_at=$3,updated_at=$3
                  WHERE invitation_id=$1`, [row.invitation_id, status, now]);
             if (parsed.data.action === 'accept') {
-                await client.query(
-                    `INSERT INTO group_memberships (group_id,member_did,role,status,
-                        joined_at,updated_at,retention_until)
-                     VALUES ($1,$2,$3,'active',$4,$4,$5)
-                     ON CONFLICT (group_id,member_did) DO UPDATE SET role=EXCLUDED.role,
-                        status='active',joined_at=EXCLUDED.joined_at,
-                        updated_at=EXCLUDED.updated_at,retention_until=EXCLUDED.retention_until`,
-                    [row.group_id, actorDid, row.requested_role, now, plusDays(now, 365)]);
+                await activateGroupMembership(client, row.group_id, actorDid, row.requested_role, now);
             }
             await this.audit(client, row.group_id, actorDid, actorDid, null,
                 parsed.data.action === 'accept' ? 'invitation-accepted' : 'invitation-rejected', now);
@@ -471,6 +605,7 @@ export class DurableGroupService {
             await client.query(`UPDATE groups SET status='closed',version=version+1,closed_at=$2,updated_at=$2 WHERE group_id=$1`, [group.group_id, now]);
             await client.query(`UPDATE group_rooms SET status='closed',version=version+1,closed_at=$2,updated_at=$2 WHERE group_id=$1 AND status='active'`, [group.group_id, now]);
             await client.query(`UPDATE group_invitations SET status='revoked',consumed_at=$2,updated_at=$2 WHERE group_id=$1 AND status='pending'`, [group.group_id, now]);
+            await this.expireJoinRequests(client, now, group.group_id);
             await this.audit(client, group.group_id, actorDid, null, null, 'group-closed', now);
             for (const member of members.rows) if (member.member_did !== actorDid)
                 await this.notify(client, group, member.member_did, 'group_closed',
@@ -617,13 +752,15 @@ export class DurableGroupService {
             [groupId, actorDid, subjectDid, roomId, action, now, plusDays(now, 365)]);
     }
 
-    private async notify(client: PoolClient, group: GroupRow, recipientDid: string,
+    private async notify(client: PoolClient, group: Pick<GroupRow, 'group_id' | 'status'>, recipientDid: string,
         kind: string, key: string, now: Date): Promise<void> {
-        const title = kind === 'group_invited' ? 'Group invitation' :
+        const title = kind === 'group_join_requested' ? 'New group join request' :
+            kind === 'group_join_decided' ? 'Group join request updated' : kind === 'group_invited' ? 'Group invitation' :
             kind === 'group_joined' ? 'A member joined your group' :
             kind === 'group_removed' ? 'Group membership ended' :
             kind === 'group_role_changed' ? 'Group role updated' : 'Group closed';
-        const body = kind === 'group_invited' ? 'You have a new group invitation.' :
+        const body = kind === 'group_join_requested' ? 'Open Groups to review a private join request.' :
+            kind === 'group_join_decided' ? 'Open Groups to see the decision on your join request.' : kind === 'group_invited' ? 'You have a new group invitation.' :
             kind === 'group_joined' ? 'Open the group to review its members.' :
             kind === 'group_removed' ? 'You no longer have access to this group.' :
             kind === 'group_role_changed' ? 'Open the group to review your current role.' :
