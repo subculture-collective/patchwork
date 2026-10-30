@@ -135,9 +135,9 @@ backoff. Publisher-contract, normalization, partial-feed, and evidence failures
 are not retried. Evidence is written only after the entire publisher response
 validates, and candidate persistence remains transactional and replay-safe.
 
-The NUC deployment is prepared to run this command through
-`patchwork-source-refresh.timer`. Enable the staged timer only after the signed
-API image containing this command and its database migration is deployed. The API container supplies the intended
+The NUC deployment runs this command through the enabled
+`patchwork-source-refresh.timer` after deployment of the signed API image and
+its database migrations. The API container supplies the intended
 database connection and `/srv/patchwork-public/source-refresh` is bind-mounted
 at `/var/lib/patchwork/source-refresh`. The wrapper refuses to run at 2 GiB but
 does not delete evidence. It records last-attempt and last-success timestamps in
@@ -156,11 +156,13 @@ archived; no existing application columns or rows need reversal.
    confirmation date and expiry. Cover unknown, contradictory and expired evidence,
    overnight hours, closures and eligibility rules. Demonstrate useful coverage
    before claiming hours/eligibility filtering is qualified.
-2. Qualify real provider journeys separately. The travel API and client are
-   implemented. A pinned OTP 2.10.0 runtime has passed initial Chicago graph,
-   walk, CTA bus and rail, wheelchair, outside-graph, client-disconnect and
-   eight-request concurrency qualification. API activation, the application-level
-   real journey, and the post-activation observation window remain required.
+2. Qualify real OAuth, PDS, mail and push provider journeys separately with
+   disposable identities. Travel is active through the pinned OTP 2.10.0
+   runtime: Chicago walk, CTA bus and rail, wheelchair, arrive-by,
+   outside-graph, client-disconnect and eight-request concurrency checks passed.
+   The signed API returned real Access Living and Chicago Tool Library
+   itineraries, and its initial 15-minute post-activation window retained
+   API/router availability with zero route errors.
 
 Verification: the source-refresh unit suite owns classification, input
 preservation and bounded retries; the PostgreSQL suite owns live-state joins,
@@ -168,6 +170,97 @@ concurrency, correction conflicts, reviewer decisions, supersession, transaction
 cleanup and persisted-row preservation. The browser journey owns evidence
 inspection and the reviewer commands. Run `npm run check`,
 `npm run test:integration`, and the source-refresh reviewer browser scenario.
-These checks do not establish a successful live publisher retrieval, unattended
-production scheduling, Chicago structured service coverage, application routing
-activation, its observation window, or live-provider qualification.
+The activated NUC timer has completed a successful live publisher retrieval,
+replay-safe persistence and operational heartbeat. These checks still do not
+establish Chicago structured service coverage or unrelated live-provider
+qualification.
+
+
+## Registered source jobs
+
+`source-registry.ts` is the reviewed runtime allowlist, separate from the
+[publisher inventory](./data/source-onboarding.md). Only CPL has a qualified
+runtime adapter at present. The other 129 inventory identities are not enabled
+by their presence in the catalog. Each definition records adapter version,
+owner, cadence, geography, complete-feed bounds and bounded retry policy.
+Adapter/version metadata is attached to persisted run evidence; retained raw
+publisher artifacts remain unchanged. Old manifests remain readable.
+
+```sh
+npm run resources:refresh:run -w @patchwork/api -- --list
+npm run resources:refresh:run -w @patchwork/api -- --source=cpl --output=/absolute/evidence --mode=preview
+npm run resources:refresh:run -w @patchwork/api -- --source=cpl --output=/absolute/evidence --mode=persist
+```
+
+Preview retains validated evidence and computes database comparisons but writes
+neither candidate state nor operational success. Persist writes review
+candidates, never listing changes. The original `resources:refresh:cpl-run`
+command remains compatible and uses the same job lock and heartbeat path.
+
+Set `PATCHWORK_SOURCE_REFRESH_PAUSED=cpl` in the executing API container's
+environment to pause the job without fetching or writing a success heartbeat.
+Unknown pause IDs fail rather than silently ignore a typo. This is an operator
+kill switch, not permission to enable arbitrary publishers. The existing
+systemd cadence remains authoritative; registering a source does not install a
+schedule. New sources require an explicit adapter, reviewed access contract,
+source-specific validation, schedule and monitoring qualification.
+
+Jobs lock `source-refresh:<source-id>` independently. A concurrent skip leaves
+the active job's outcome untouched. Only transient fetch failures are retried,
+up to the registered three-attempt ceiling; preview/persistence/validation
+failures are not network retries. Failure preserves the last success timestamp.
+Out-of-order heartbeat writes cannot replace newer status. Disabled and preview
+runs deliberately do not renew freshness, so a sustained pause remains visible
+through existing staleness monitoring. Locks are released on failure, and an
+unlock failure destroys the connection rather than returning a held session
+lock to the pool.
+
+The shared runner does not supply pagination or geography validation for a new
+publisher: those remain adapter contracts. CPL continues to enforce its full
+feed, baseline identifier retention, schema, geography and exact-byte bounds.
+Storage limits and the non-JSON/large-publisher manifest evolution remain
+separate work in issues #27 and #28. No new source schedule is activated by this
+change.
+
+### Publisher quarantine and recovery
+
+Migration 0039 adds durable source-specific quarantine incidents. In persist
+mode, a typed publisher-contract failure (malformed schema, oversized response,
+unexpected response identity, wrong geography or suspicious record loss) records
+a failure and quarantines that source. Later scheduled runs return
+`skipped-quarantined` before fetching and do not renew attempt/success timestamps.
+Other sources can run. Transient network/429/5xx failures retain bounded retries;
+storage and persistence failures do not masquerade as publisher schema failures.
+
+Inspect an incident:
+
+```sh
+npm run resources:refresh:quarantine -w @patchwork/api -- --source=cpl
+```
+
+After investigating/fixing the source contract, use the registered runner's
+`--mode=preview` with a separate retained evidence directory. Preview is allowed
+while quarantined and never clears an incident or writes a success heartbeat.
+Review the complete-feed result before explicitly clearing the exact incident:
+
+```sh
+npm run resources:refresh:quarantine -w @patchwork/api -- \
+  --source=cpl --quarantine=<incident-uuid> \
+  --reason='Reviewed complete publisher preview and corrected source contract.'
+```
+
+Clearance takes the same source lock as the runner and fails during an active
+job or when the incident ID is stale. A later incident cannot be cleared using
+an older ID. History and the operator-supplied review reason remain in the
+database. Clearance does not run a job, renew evidence or change public data.
+Database access controls who can run this administrative CLI; there is no public
+resume endpoint. The CLI does not independently attest that a human reviewed
+the preview, so that remains the responder's responsibility.
+
+`patchwork_source_refresh_quarantined` exposes the active state; the repository's
+`PatchworkSourceRefreshQuarantined` rule targets each affected source using the
+existing staging scrape labels and on-call owner. Deploy/reload and verify the
+rule through the ordinary monitoring rollout; adding the file is not live alert
+qualification. Apply migrations before the new application code. For application
+rollback, pause the source timer first: older runners do not know about the new
+quarantine table. Keep incident history and evidence intact.

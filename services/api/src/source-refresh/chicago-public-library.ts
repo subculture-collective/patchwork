@@ -1,5 +1,7 @@
+import { fetchPublisherBytes } from './publisher-transport.js';
+import { PublisherValidationError } from './publisher-validation-error.js';
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { retainEvidenceBlob, writeImmutableEvidence } from './evidence-storage.js';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { parsePublicResourceCatalog, type PublicResourceCatalogInput } from '../db/public-resource-catalog.js';
@@ -53,6 +55,8 @@ export interface CplEvidenceManifest {
     requestUrl: typeof CPL_API_URL;
     responseUrl: string;
     retrievedAt: string;
+    /** Present only when an identical earlier response fixed the catalog's first-observed date. */
+    catalogRetrievedAt?: string;
     contentType: string;
     etag: string | null;
     lastModified: string | null;
@@ -66,42 +70,44 @@ const hash = (value: Uint8Array | string) => createHash('sha256').update(value).
 const safeTimestamp = (value: string) => value.replaceAll(':', '').replace('.000Z', 'Z');
 
 function branchIdentity(website: string) {
-    const url = new URL(website);
-    if (url.protocol !== 'https:' && url.protocol !== 'http:') throw new Error('CPL website must use HTTP or HTTPS.');
+    let url: URL;
+    try { url = new URL(website); }
+    catch { throw new PublisherValidationError('CPL website URL is invalid.'); }
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') throw new PublisherValidationError('CPL website must use HTTP or HTTPS.');
     const hostname = url.hostname.toLowerCase().replace(/^www\./, '');
-    if (hostname !== 'chipublib.org') throw new Error('CPL website must use the official chipublib.org hostname.');
+    if (hostname !== 'chipublib.org') throw new PublisherValidationError('CPL website must use the official chipublib.org hostname.');
     const match = url.pathname.match(/^\/locations\/(\d{1,3})\/?$/);
-    if (!match) throw new Error('CPL website must contain a stable numeric branch location identifier.');
+    if (!match) throw new PublisherValidationError('CPL website must contain a stable numeric branch location identifier.');
     return { id: match[1]!, website: `https://www.chipublib.org/locations/${match[1]!}/` };
 }
 
 /** Converts complete publisher bytes to a catalog; it does not write or infer service assertions. */
 export function normalizeCplPublisherBytes(raw: Uint8Array, retrievedAt: Date, baselineIds: ReadonlySet<string>) {
     if (!Number.isFinite(retrievedAt.getTime())) throw new Error('Invalid retrieval time.');
-    if (raw.byteLength === 0 || raw.byteLength > MAX_BYTES) throw new Error('CPL response exceeds the permitted evidence size.');
+    if (raw.byteLength === 0 || raw.byteLength > MAX_BYTES) throw new PublisherValidationError('CPL response exceeds the permitted evidence size.');
     let input: unknown;
     try { input = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(raw)); }
-    catch { throw new Error('CPL response is not valid UTF-8 JSON.'); }
-    if (!Array.isArray(input)) throw new Error('CPL response must be a JSON array.');
-    if (input.length < MIN_ROWS || input.length > MAX_ROWS) throw new Error('CPL response row count is outside the complete-feed boundary.');
+    catch { throw new PublisherValidationError('CPL response is not valid UTF-8 JSON.'); }
+    if (!Array.isArray(input)) throw new PublisherValidationError('CPL response must be a JSON array.');
+    if (input.length < MIN_ROWS || input.length > MAX_ROWS) throw new PublisherValidationError('CPL response row count is outside the complete-feed boundary.');
     const resources = input.map((value, index) => {
         const parsed = rawRowSchema.safeParse(value);
-        if (!parsed.success) throw new Error(`CPL row ${index + 1} does not match the publisher contract.`);
+        if (!parsed.success) throw new PublisherValidationError(`CPL row ${index + 1} does not match the publisher contract.`);
         const row = parsed.data;
         const identity = branchIdentity(row.website);
         const postalCode = String(row.zip).match(/^\d{5}/)?.[0];
-        if (!postalCode || !/^60\d{3}$/.test(postalCode)) throw new Error(`CPL branch ${identity.id} has an invalid Chicago ZIP code.`);
-        if (row.city.toLowerCase() !== 'chicago' || row.state.toUpperCase() !== 'IL') throw new Error(`CPL branch ${identity.id} is outside Chicago, Illinois.`);
+        if (!postalCode || !/^60\d{3}$/.test(postalCode)) throw new PublisherValidationError(`CPL branch ${identity.id} has an invalid Chicago ZIP code.`);
+        if (row.city.toLowerCase() !== 'chicago' || row.state.toUpperCase() !== 'IL') throw new PublisherValidationError(`CPL branch ${identity.id} is outside Chicago, Illinois.`);
         if (row.location.latitude < 41.5 || row.location.latitude > 42.1
             || row.location.longitude < -88 || row.location.longitude > -87.4) {
-            throw new Error(`CPL branch ${identity.id} has coordinates outside the Chicago boundary.`);
+            throw new PublisherValidationError(`CPL branch ${identity.id} has coordinates outside the Chicago boundary.`);
         }
         const phoneDigits = row.phone?.replace(/\D/g, '');
         if (phoneDigits !== undefined && phoneDigits.length !== 10) {
-            throw new Error(`CPL branch ${identity.id} has an invalid public phone number.`);
+            throw new PublisherValidationError(`CPL branch ${identity.id} has an invalid public phone number.`);
         }
         const hours = (row.hours_of_operation ?? row.service_hours)!.replace(/\s+/g, ' ').trim();
-        if (hours.length > 200) throw new Error(`CPL branch ${identity.id} hours exceed the catalog limit.`);
+        if (hours.length > 200) throw new PublisherValidationError(`CPL branch ${identity.id} hours exceed the catalog limit.`);
         return {
             id: `cpl-${identity.id}`,
             name: `${(row.name ?? row.name_ ?? row.branch_)!.trim()} — Chicago Public Library`,
@@ -115,10 +121,10 @@ export function normalizeCplPublisherBytes(raw: Uint8Array, retrievedAt: Date, b
         };
     }).sort((a, b) => a.id.localeCompare(b.id));
     const ids = new Set(resources.map(resource => resource.id));
-    if (ids.size !== resources.length) throw new Error('CPL response contains duplicate branch identifiers.');
+    if (ids.size !== resources.length) throw new PublisherValidationError('CPL response contains duplicate branch identifiers.');
     if (baselineIds.size > 0) {
         const retained = [...baselineIds].filter(id => ids.has(id)).length;
-        if (retained / baselineIds.size < 0.9) throw new Error('CPL response is missing more than 10% of baseline branches.');
+        if (retained / baselineIds.size < 0.9) throw new PublisherValidationError('CPL response is missing more than 10% of baseline branches.');
     }
     const digest = hash(raw);
     const retrievedDate = retrievedAt.toISOString().slice(0, 10);
@@ -128,57 +134,39 @@ export function normalizeCplPublisherBytes(raw: Uint8Array, retrievedAt: Date, b
             url: CPL_DATASET_URL, apiUrl: CPL_API_URL, retrievedAt: retrievedDate, sha256: digest } },
         resources,
     };
-    parsePublicResourceCatalog(catalog);
+    try { parsePublicResourceCatalog(catalog); }
+    catch { throw new PublisherValidationError('CPL normalized catalog does not match the supported schema.'); }
     return catalog;
 }
 
-async function writeImmutable(path: string, content: Uint8Array | string) {
-    try { await writeFile(path, content, { flag: 'wx' }); }
-    catch (error) {
-        if (!(error instanceof Error) || !('code' in error) || error.code !== 'EEXIST') throw error;
-        const existing = await readFile(path);
-        const expected = typeof content === 'string' ? Buffer.from(content) : Buffer.from(content);
-        if (!existing.equals(expected)) throw new Error(`Evidence path already contains different bytes: ${path}`);
-    }
-}
-
-/** Writes raw evidence and derived artifacts only after the full response validates. */
+/** Manifest publication is last: its presence means every evidence artifact was retained. */
 export async function retainCplEvidence(outputDir: string, raw: Uint8Array, catalog: CplCatalog, manifest: CplEvidenceManifest) {
+    const normalized = normalizeCplPublisherBytes(raw, new Date(manifest.catalogRetrievedAt ?? manifest.retrievedAt), new Set());
+    if (manifest.version !== 1 || manifest.publisher !== 'City of Chicago' || manifest.datasetId !== CPL_DATASET_ID
+        || manifest.requestUrl !== CPL_API_URL || manifest.responseUrl !== CPL_API_URL
+        || manifest.contentType !== 'application/json' || manifest.rawSha256 !== hash(raw)
+        || manifest.rawBytes !== raw.byteLength || manifest.rowCount !== catalog.resources.length
+        || manifest.normalizedSha256 !== hashRefreshValue(catalog)
+        || hashRefreshValue(normalized) !== manifest.normalizedSha256) {
+        throw new Error('CPL evidence manifest does not match exact raw and normalized evidence.');
+    }
     const evidenceDir = join(outputDir, 'raw');
     const runsDir = join(outputDir, 'runs');
-    await mkdir(evidenceDir, { recursive: true });
-    await mkdir(runsDir, { recursive: true });
     const run = `${safeTimestamp(manifest.retrievedAt)}-${manifest.rawSha256.slice(0, 12)}`;
     const rawPath = join(evidenceDir, `${manifest.rawSha256}.json`);
     const manifestPath = join(runsDir, `${run}.manifest.json`);
     const catalogPath = join(runsDir, `${run}.catalog.json`);
-    await writeImmutable(rawPath, raw);
-    await writeImmutable(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
-    await writeImmutable(catalogPath, `${JSON.stringify(catalog, null, 2)}\n`);
-    return { rawPath, manifestPath, catalogPath };
-}
-
-async function readBoundedBody(response: Response) {
-    if (!response.body) return new Uint8Array();
-    const reader = response.body.getReader();
-    const chunks: Uint8Array[] = [];
-    let length = 0;
-    try {
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            length += value.byteLength;
-            if (length > MAX_BYTES) {
-                await reader.cancel();
-                throw new Error('CPL response exceeds the permitted evidence size.');
-            }
-            chunks.push(value);
-        }
-    } finally { reader.releaseLock(); }
-    const raw = new Uint8Array(length);
-    let offset = 0;
-    for (const chunk of chunks) { raw.set(chunk, offset); offset += chunk.byteLength; }
-    return raw;
+    const storagePath = join(runsDir, `${run}.storage.json`);
+    const blob = await retainEvidenceBlob(outputDir, raw, MAX_BYTES);
+    // Preserve old raw paths for existing manifests, backup tooling and rollback readers.
+    await writeImmutableEvidence(rawPath, raw);
+    await writeImmutableEvidence(catalogPath, Buffer.from(`${JSON.stringify(catalog, null, 2)}\n`));
+    await writeImmutableEvidence(storagePath, Buffer.from(`${JSON.stringify({
+        version: 1, adapter: 'chicago-public-library', adapterVersion: '1.0.0', schemaVersion: 1,
+        raw: blob, normalizedSha256: manifest.normalizedSha256,
+    }, null, 2)}\n`));
+    await writeImmutableEvidence(manifestPath, Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`));
+    return { rawPath, manifestPath, catalogPath, storagePath };
 }
 
 export async function fetchCplPublisherEvidence(options: {
@@ -190,25 +178,24 @@ export async function fetchCplPublisherEvidence(options: {
 }) {
     const fetcher = options.fetch ?? globalThis.fetch;
     const retrievedAt = (options.now ?? (() => new Date()))();
-    const response = await fetcher(CPL_API_URL, { redirect: 'error', signal: AbortSignal.timeout(20_000),
-        headers: { accept: 'application/json', 'user-agent': 'Patchwork resource source refresh/0.1' } });
-    if (!response.ok) throw new Error(`CPL publisher request failed with HTTP ${response.status}.`);
-    if (response.url && response.url !== CPL_API_URL) throw new Error('CPL publisher response URL changed unexpectedly.');
-    const contentType = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase() ?? '';
-    if (contentType !== 'application/json') throw new Error('CPL publisher response is not application/json.');
-    const declaredLength = Number(response.headers.get('content-length'));
-    if (Number.isFinite(declaredLength) && declaredLength > MAX_BYTES) throw new Error('CPL response exceeds the permitted evidence size.');
-    const raw = await readBoundedBody(response);
+    const { raw, responseUrl, contentType, etag, lastModified } = await fetchPublisherBytes({
+        url: CPL_API_URL, maxBytes: MAX_BYTES, contentTypes: ['application/json'],
+    }, fetcher);
     const rawSha256 = hash(raw);
     // Keep the catalog's first-observed date stable for identical publisher bytes.
     // The manifest below still records this fetch's actual observation time.
     const firstRetrievedAt = await options.firstRetrievedAt?.(rawSha256);
-    const catalog = normalizeCplPublisherBytes(raw, firstRetrievedAt ?? retrievedAt, options.baselineIds);
+    const catalogRetrievedAt = firstRetrievedAt ?? retrievedAt;
+    const catalog = normalizeCplPublisherBytes(raw, catalogRetrievedAt, options.baselineIds);
     const manifest: CplEvidenceManifest = {
         version: 1, publisher: 'City of Chicago', datasetId: CPL_DATASET_ID,
-        requestUrl: CPL_API_URL, responseUrl: response.url || CPL_API_URL,
-        retrievedAt: retrievedAt.toISOString(), contentType,
-        etag: response.headers.get('etag'), lastModified: response.headers.get('last-modified'),
+        requestUrl: CPL_API_URL, responseUrl,
+        retrievedAt: retrievedAt.toISOString(),
+        // Recorded so retention and restore audits re-normalize with the same date.
+        ...(catalogRetrievedAt.getTime() === retrievedAt.getTime()
+            ? {} : { catalogRetrievedAt: catalogRetrievedAt.toISOString() }),
+        contentType,
+        etag, lastModified,
         rawSha256, rawBytes: raw.byteLength, rowCount: catalog.resources.length,
         normalizedSha256: hashRefreshValue(catalog),
     };

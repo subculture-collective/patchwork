@@ -17,7 +17,8 @@ defines request ZIPs and eligible public-resource locations.
 | Connection scheduling | PostgreSQL | API | Versioned UTC windows plus originating IANA timezone for active accepted-connection participants; no location field |
 | Groups | PostgreSQL | API | Role-controlled memberships and rooms with hashed, expiring, single-use invitations and optional request-intersection authorization |
 | Bounded text chat | PostgreSQL | API | Server-readable text for active accepted connections or current room members; no body in URLs, list previews, notifications, audits, or moderation history |
-| Exact personal location | Browser memory and an authenticated encrypted WebRTC peer channel | Web peers; API authorizes short-lived signaling | Fresh mutual consent on an active connection; coordinates never enter signaling, PostgreSQL, AT records, exports, notifications, logs, or backups |
+| Exact personal location exchange | Browser memory and an authenticated encrypted WebRTC peer channel | Web peers; API authorizes short-lived signaling | Fresh mutual consent on an active connection; coordinates never enter signaling or persistent state |
+| Travel origin | Transient browser/API/router request memory | API and self-hosted OTP | Explicit visitor action; no persistent origin, public record, URL, log or retained artifact; real-device qualification remains open |
 | Attachments | Private S3-compatible object store for bytes; PostgreSQL for metadata/jobs | API and attachment workers | Authenticated purpose/ownership, type detection, 10 MB limit, malware scanning, transforms, clean-only short-lived access, and deletion reconciliation |
 | Notifications | PostgreSQL durable outbox and delivery attempts | API/notification worker | In-app center plus opted-in email and browser push; private payload fields are forbidden |
 | Moderation and maintenance | PostgreSQL queue, review, urgent-event, audit, appeal, and maintenance state | Moderation worker and API | Pre-publication fail-closed gate, capability-gated console, read-only shutdown, and audited resume |
@@ -50,8 +51,9 @@ flowchart LR
 4. Private workflow, scheduling, group, chat, organization, verification,
    attachment, notification, moderation, and maintenance state remains in
    PostgreSQL/object storage.
-5. Exact personal coordinates can move only between freshly authorized peer
-   browsers and disappear when the exchange closes.
+5. Exact personal coordinates can move between freshly authorized peer browsers
+   for private exchange, or transiently through the API/self-hosted router for an
+   explicitly requested travel plan. Neither path permits persistent retention.
 
 ## Location contracts
 
@@ -81,6 +83,9 @@ flowchart TD
 ## Deliberately deferred contexts
 
 Offline mutation synchronization/PWA, native mobile, multi-region tenancy,
-external partner connectors, and reputation remain outside this roadmap.
-Scheduling, groups, and bounded text chat now have durable production paths;
-that feature completion does not change the operational `NO-GO`.
+external partner connectors, and reputation remain outside the current pilot
+acceptance scope; the Gitea roadmap tracks their deferred or exploratory work.
+Scheduling, groups, and bounded text chat have durable implementation paths.
+Their completion does not establish real-provider or launch qualification. The
+[current acceptance matrix](../current-acceptance.md) retains the unresolved
+release gates and links the deferred contexts to the current Gitea roadmap.

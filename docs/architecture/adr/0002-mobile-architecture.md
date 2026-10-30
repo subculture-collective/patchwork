@@ -5,7 +5,7 @@
 
 ## Context
 
-Issue #135 requires delivering native iOS and Android clients for core Patchwork workflows.
+Native delivery is deferred in the current program. [Issue #60](https://git.subcult.tv/subculture-collective/patchwork/issues/60) tracks completion of the existing scaffolding and reconciliation of this earlier architecture decision; [issue #61](https://git.subcult.tv/subculture-collective/patchwork/issues/61) tracks beta/store qualification.
 The platform already has a web client (`apps/web`) consuming shared TypeScript contracts
 from `packages/shared`. A mobile strategy must be chosen that maximizes code sharing while
 delivering native performance.

@@ -11,12 +11,14 @@ not evidence of public-launch approval.
   workflows, account controls, and moderator controls.
 - Never receives OAuth refresh material and never accepts a DID/role/origin as
   browser authority.
-- Holds an exact personal coordinate only in bounded memory during a mutually
-  authorized encrypted peer exchange.
+- Holds exact personal coordinates only in bounded memory for a mutually
+  authorized encrypted peer exchange or an explicitly requested transient
+  travel plan. The travel API/router exception is described in ADR 0003.
 - Shows loading, empty, error/retry, stale retained-data, offline, and
   maintenance states. Offline mutations are not queued.
-- Has no fixture fallback in a production build. Production Chat has no
-  history, initiation form, or mutation.
+- Has no fixture fallback in a production build. Bounded text chat is available
+  only to active connection participants or authorized room members; real-provider
+  lifecycle qualification is separate from implementation.
 
 ## `services/api`
 
@@ -31,6 +33,9 @@ not evidence of public-launch approval.
   privacy state.
 - Authorizes coordinate-free, short-lived exact-location signaling; it has no
   coordinate field or persisted fallback.
+- Owns private scheduling, group membership and bounded text chat.
+- Handles transient travel planning through the self-hosted router; it neither
+  stores the origin nor returns coordinate geometry to the browser.
 - Exposes only safe moderator previews and short-lived clean-object access.
 
 ## `services/indexer`
@@ -71,7 +76,7 @@ not evidence of public-launch approval.
 | Public AT records | User PDS through API commands | Federation/indexer and AT clients |
 | Public projections, cursor, tombstones | Indexer (showcase seed only for labeled demo records) | API |
 | Organizations, verification, coordination, inbox, outcomes | API | API and narrowly authorized moderator paths |
-| Exact personal coordinate | Peer browser only | The other authorized peer browser |
+| Exact personal coordinate | Browser memory only; no persistent writer | Authorized peer through encrypted exchange, or API/router transiently for an explicitly requested travel plan |
 | Exact public-resource approval | API/moderator workflow | API discovery query |
 | Attachment bytes | API/worker through private object store | API-issued clean-object access only |
 | Attachment metadata/jobs | API/worker | Owner and authorized moderator/API workers |
@@ -97,6 +102,9 @@ not gain cross-service write access merely because storage is co-located.
 
 ## Deferred topology
 
-There is no production chat service, offline-sync service, native client,
-multi-region router, external connector worker, scheduling/group service, or
-reputation service in the buyer-ready program.
+Chat, scheduling and groups run inside the API; there are no separate deployed
+services for these domains. Native clients, offline writes, external partner
+exchange, reputation and multi-region topology remain deferred or exploratory.
+The deployed OTP router is a travel service, not a multi-region application
+router. The [roadmap](https://git.subcult.tv/subculture-collective/patchwork/issues/10)
+and [current acceptance](../current-acceptance.md) distinguish these boundaries.

@@ -6,7 +6,19 @@ Patchwork currently uses an atomic, digest-pinned Compose deployment for the
 single staging host. Canary traffic shifting is not available until a real
 traffic-control layer exists; historical simulated rollout jobs have been removed.
 
-## Build-once promotion flow
+## Current Gitea release lineage
+
+Gitea is the review/CI origin and `main` is the integration and promotion
+branch. The former `codex/chicago-public-resources` lineage was merged into
+`main` with both histories preserved; keep that branch unchanged and do not
+start new work from it. Remaining release reconciliation is tracked in
+[issue #21](https://git.subcult.tv/subculture-collective/patchwork/issues/21).
+The deployed home-host path accepts scoped-key signed, digest-pinned images.
+The GHCR/OIDC procedure below describes a separate configured promotion path;
+it must not be represented as the current Gitea deployment evidence. See
+[current acceptance](../current-acceptance.md).
+
+## GHCR/OIDC build-once promotion flow
 
 1. `CI` completes quality and PostgreSQL integration gates on `main`.
 2. `deploy-staging.yml` builds each of four runtime targets exactly once.
@@ -64,9 +76,9 @@ path keeps its existing verification contract and is not qualified by these
 Gitea checks. No existing release history or live service is changed by updating
 the admission implementation.
 
-Canonical `main` remains the promotion source. The independent Chicago branch
-still requires an explicit reviewed integration plan; a valid attestation from
-that lineage does not bypass current-main source admission. Issue #21 remains
+Canonical `main` remains the promotion source. An attestation built from the
+historical Chicago branch does not bypass current-main source admission, even
+though that branch is now merged into `main`. Issue #21 remains
 open until the actual immutable publication, refusal/recovery and coherent
 release/provider record have been qualified. These offline policy checks do
 not select an alpha tag or authorize a deployment.

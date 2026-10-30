@@ -41,7 +41,7 @@ describe('bounded publisher retry', () => {
         const query = vi.fn().mockResolvedValue({ rowCount: 1, rows: [] });
         const at = new Date('2026-09-20T08:00:00.000Z');
         await recordSourceRefreshAttempt({ query } as never, true, false, at);
-        expect(query).toHaveBeenCalledWith(expect.stringContaining('source_refresh_operational_status'), [at, true, false]);
+        expect(query).toHaveBeenCalledWith(expect.stringContaining('source_refresh_operational_status'), [at, true, false, 'cpl']);
         expect(query.mock.calls[0]![0]).toContain('CASE WHEN $3');
     });
 });

@@ -66,6 +66,11 @@ groups:
         for: 5m
         labels: { severity: warning, owner: patchwork-primary-on-call }
         annotations: { runbook_url: "docs/operations/incident-response.md#source-refresh" }
+      - alert: PatchworkSourceRefreshQuarantined
+        expr: patchwork_source_refresh_quarantined{environment="staging"} == 1
+        for: 1m
+        labels: { severity: warning, owner: patchwork-primary-on-call }
+        annotations: { runbook_url: "docs/operations/incident-response.md#source-refresh" }
       - alert: PatchworkRoutingUnavailable
         expr: up{job="patchwork-routing",environment="staging"} == 0
         for: 5m

@@ -1,9 +1,11 @@
 import { createHash } from 'node:crypto';
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { cp, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { CPL_API_URL, fetchCplPublisherEvidence, normalizeCplPublisherBytes } from './chicago-public-library.js';
+import { CPL_API_URL, fetchCplPublisherEvidence, normalizeCplPublisherBytes, retainCplEvidence } from './chicago-public-library.js';
+
+import { verifyCplEvidence } from './verify-cpl-evidence.js';
 
 const workspaces: string[] = [];
 afterEach(async () => {
@@ -105,6 +107,11 @@ describe('Chicago Public Library publisher adapter', () => {
         expect(replay.catalog).toEqual(first.catalog);
         expect(replay.manifest.normalizedSha256).toBe(first.manifest.normalizedSha256);
         expect(replay.manifest.retrievedAt).toBe(later.toISOString());
+        expect(first.manifest).not.toHaveProperty('catalogRetrievedAt');
+        expect(replay.manifest.catalogRetrievedAt).toBe(now.toISOString());
+        // Restore audits must re-normalize with the stable catalog date, not the replay's fetch time.
+        expect(await verifyCplEvidence(outputDir, basename(replay.paths.manifestPath)))
+            .toMatchObject({ status: 'verified', retrievedAt: later.toISOString() });
         const changedRows = rows(); changedRows[0]!.address = '100 W. Changed Street';
         const changed = await fetchCplPublisherEvidence({ outputDir, baselineIds: baselines(), now: () => later,
             firstRetrievedAt: async () => null,
@@ -167,4 +174,40 @@ describe('Chicago Public Library publisher adapter', () => {
             .rejects.toThrow('size');
         expect(await readdir(outputDir)).toEqual([]);
     });
+});
+
+it('refuses mismatched retention input before publishing a manifest', async () => {
+    const dir = await workspace(); const raw = encode(rows());
+    const result = await fetchCplPublisherEvidence({ outputDir: dir, baselineIds: baselines(), now: () => now,
+        fetch: async () => new Response(raw, { headers: { 'content-type': 'application/json' } }) });
+    const fresh = await workspace();
+    await expect(retainCplEvidence(fresh, raw, result.catalog, { ...result.manifest, rawSha256: '0'.repeat(64) }))
+        .rejects.toThrow('does not match');
+    expect(await readdir(fresh)).toEqual([]);
+    const storage = JSON.parse(await readFile(result.paths.storagePath, 'utf8'));
+    expect(storage).toMatchObject({ adapterVersion: '1.0.0', schemaVersion: 1, raw: { rawSha256: result.manifest.rawSha256 } });
+});
+it('does not publish a new manifest after derived evidence conflicts', async () => {
+    const dir = await workspace(); const raw = encode(rows());
+    const fetcher: typeof fetch = async () => new Response(raw, { headers: { 'content-type': 'application/json' } });
+    const result = await fetchCplPublisherEvidence({ outputDir: dir, baselineIds: baselines(), now: () => now, fetch: fetcher });
+    await rm(result.paths.manifestPath);
+    await writeFile(result.paths.catalogPath, 'corrupt');
+    await expect(fetchCplPublisherEvidence({ outputDir: dir, baselineIds: baselines(), now: () => now, fetch: fetcher })).rejects.toThrow();
+    await expect(readFile(result.paths.manifestPath)).rejects.toThrow();
+});
+
+it('verifies a disposable copied evidence set, including legacy-only manifests, without renewal', async () => {
+    const source = await workspace(); const restored = await workspace();
+    const result = await fetchCplPublisherEvidence({ outputDir: source, baselineIds: baselines(), now: () => now,
+        fetch: async () => new Response(encode(rows()), { headers: { 'content-type': 'application/json' } }) });
+    await cp(source, restored, { recursive: true });
+    const name = basename(result.paths.manifestPath);
+    expect(await verifyCplEvidence(restored, name)).toMatchObject({ status: 'verified', storage: 'gzip-and-legacy', retrievedAt: now.toISOString() });
+    await rm(join(restored, 'runs', basename(result.paths.storagePath)));
+    expect(await verifyCplEvidence(restored, name)).toMatchObject({ storage: 'legacy-only' });
+    await writeFile(join(restored, 'raw', result.manifest.rawSha256 + '.json'), '{}');
+    await expect(verifyCplEvidence(restored, name)).rejects.toThrow('Raw evidence');
+    await expect(verifyCplEvidence(source, '../' + name)).rejects.toThrow('basename');
+    expect(await verifyCplEvidence(source, name)).toMatchObject({ status: 'verified' });
 });
