@@ -106,5 +106,6 @@ Chat, scheduling and groups run inside the API; there are no separate deployed
 services for these domains. Native clients, offline writes, external partner
 exchange, reputation and multi-region topology remain deferred or exploratory.
 The deployed OTP router is a travel service, not a multi-region application
-router. The [roadmap](https://git.subcult.tv/subculture-collective/patchwork/issues/10)
+router. [ADR 0004](adr/0004-single-region-topology.md) records the
+single-region decision and the thresholds that would reopen it. The [roadmap](https://git.subcult.tv/subculture-collective/patchwork/issues/10)
 and [current acceptance](../current-acceptance.md) distinguish these boundaries.
