@@ -233,7 +233,9 @@ jobs:
                     --tag "patchwork-ci-minio:${GITHUB_RUN_ID}" deploy/ci
                   objects_image=$(docker image inspect --format '{{.Id}}' "patchwork-ci-minio:${GITHUB_RUN_ID}")
                   test -n "$objects_image"
+                  # Disposable objects avoid the runner's backing-disk free-space limit.
                   docker run --detach --name "$objects" \
+                    --tmpfs /data:rw,size=1g,uid=10001,gid=10001,mode=0700 \
                     --network "$network" \
                     --env MINIO_ROOT_USER="$ATTACHMENT_OBJECT_ACCESS_KEY" \
                     --env MINIO_ROOT_PASSWORD="$ATTACHMENT_OBJECT_SECRET_KEY" \
