@@ -11,6 +11,8 @@ apps/web/.vite/
 .env.*.local
 *.log
 .DS_Store
+__pycache__/
+*.py[cod]
 
 # Generated test and browser artifacts
 output/
