@@ -1,60 +1,139 @@
 # Patchwork
 
-> Development preview. Please do not arrange real help through it.
-
-![Patchwork: A little help, from a friend. Four stitched neighborhood patches.](https://git.subcult.tv/api/v1/repos/subculture-collective/patchwork/raw/docs/assets/readme/banner.png?ref=19df4570437b398f3fd13eebe6b03aeef64fc135)
-
-**Mutual aid, block by block.**
+![Patchwork: A little help, from a friend. Four stitched neighborhood patches.](docs/assets/readme/banner.png)
 
 Someone two streets over needs a ride on Thursday. You have a car on Thursday.
 Patchwork is where neighbors ask for help like that and offer it. It also keeps
 a map and directory of food banks, clinics, shelters and other local services.
 
-This is a development preview. Please don't arrange real help through it
-yet.
+Patchwork is a pre-alpha demonstration. Please don't arrange real help through
+it yet. It is not an emergency service and cannot promise that anyone will
+answer a request.
 
-[Explore the preview](https://patchwork.subcult.tv) · [Product overview](https://subcult.tv/products/patchwork) · [Give feedback](https://git.subcult.tv/subculture-collective/patchwork/issues)
+Live demo: [patchwork.subcult.tv](https://patchwork.subcult.tv)
 
-![Patchwork home and resource discovery](https://subcult.tv/screenshots/patchwork-home-1440.webp)
-
-## Around the neighborhood
+## Features
 
 - **Requests and offers.** Sign in with an AT Protocol account (a Bluesky
-  account works) to ask for help, offer help on someone else's request, or
-  post an offer of your own ("spare crib, pick up this week"). Neighbors ask
-  for an offer and the poster picks one. Accepted offers and asks continue in
-  the inbox.
-- **Map, feed and directory.** Browse requests, offers and organization
-  listings without an account.
+  account works) to ask for help, offer help on someone's request, or post an
+  offer of your own. Neighbors ask for an offer and the poster picks one.
+- **Map, feed and resource directory.** Browse requests, offers and resource
+  listings without an account. Requests show an approximate area; approved
+  public resources can show their address.
+- **Inbox and outcomes.** Accepted offers and asks continue in an inbox where
+  both sides can record how it went.
 - **Scheduling, groups and chat.** People with an accepted connection can agree
-  a time and message each other. Group members share rooms.
-- **Organization listings.** Organizations maintain their profiles and resource
-  records. Listings can be reported, corrected and moderated.
+  on a time and message each other. Groups take join requests and share rooms.
+  Chat is readable by the server.
+- **Organizations and verification.** Organizations keep profiles and resource
+  records. Listings can be reported, corrected and verified.
+- **Volunteer profiles** with an approximate service area.
+- **Notifications** in the app, by email and by web push.
+- **Moderation.** Reports go to a moderation queue with a separate worker
+  service.
+- **Account settings** with data export and deactivation.
+- **Optional donations.** General-fund giving with Stripe Checkout and gifts to
+  verified organizations through Stripe Connect. Payments are off unless
+  configured.
+- English and Spanish interface.
 
 Patchwork uses [AT Protocol](https://atproto.com) for accounts and public
-records. Requests and volunteer profiles show an approximate area, never an
-address. Approved public resources can show their address. Resource references
-are attributed and do not imply participation, endorsement, or current
-availability.
+records. Resource listings are attributed to their source and do not imply that
+an organization takes part, endorses Patchwork or is currently available.
 
-## Preview status
+## Quick start
 
-Patchwork is **not approved to operate as a public mutual-aid
-service**. The preview may include clearly labeled synthetic examples and
-public-source references. It is not an emergency service and cannot guarantee
-a match, response, or fulfillment. Chat is server-readable.
+You need Node.js 22.15 or later, npm and Docker (for local PostgreSQL).
 
-Read the [evaluator guide](docs/product/buyer-ready-evaluator-guide.md) for the
-available journeys and data labels. The [current release and acceptance
-baseline](docs/operations/release-baseline.md) and [implementation
-inventory](docs/architecture/current-state-matrix.md) document the remaining
-launch requirements.
+```sh
+npm ci
+cp .env.example .env
+# set ATPROTO_SESSION_ENCRYPTION_KEY (openssl rand -base64 32)
+npm run db:up
+npm run db:migrate
+npm run db:seed        # optional sample data
+npm run dev:api        # API on http://localhost:4000
+npm run dev:web        # web app on http://localhost:5173
+```
 
-## Feedback
+The indexer and moderation worker run with `npm run dev:indexer` and
+`npm run dev:moderation`. Each service has its own migrations; see
+[DEVELOPMENT.md](DEVELOPMENT.md) for the full local setup, datasource modes and
+API routes.
 
-Tell us what is confusing or wrong in resource discovery, coordination or
-moderation through [repository issues](https://git.subcult.tv/subculture-collective/patchwork/issues).
-For local setup, service architecture, and tests, use the
-[development guide](DEVELOPMENT.md).
+Tests and checks:
 
-Built by [Subcult](https://subcult.tv). See the [GPL-3.0 license](LICENSE).
+```sh
+npm run lint
+npm run typecheck
+npm run test                                       # unit tests
+npm run test:integration:postgres                  # PostgreSQL + HTTP tests
+npm run test:e2e -w @patchwork/web                 # Playwright browser tests
+npm run check                                      # lint, typecheck, tests
+```
+
+The Makefile wraps the same commands (`make install`, `make dev`, `make check`).
+
+## Configuration
+
+Copy `.env.example` to `.env`. The main groups of settings are:
+
+- **AT Protocol:** `ATPROTO_OAUTH_CLIENT_ID`, `ATPROTO_OAUTH_REDIRECT_URI`,
+  `ATPROTO_SESSION_ENCRYPTION_KEY`, `ATPROTO_PDS_URL`,
+  `ATPROTO_ACCOUNT_PDS_URL`, `ATPROTO_SERVICE_DID`.
+- **API:** `API_DATA_SOURCE` (`postgres`), `API_DATABASE_URL`, `API_PORT`,
+  `API_PUBLIC_ORIGIN`, `API_TRUSTED_PROXIES`.
+- **Indexer:** `INDEXER_FIREHOSE_URL`, `INDEXER_JETSTREAM_VERSION`,
+  `INDEXER_PROJECTION_MODE`.
+- **Moderation worker:** `MODERATION_PORT`, `MODERATION_WORKER_CONCURRENCY`.
+- **Attachments:** S3-compatible object storage (`ATTACHMENT_OBJECT_*`), a
+  signing key and a ClamAV scanner (`ATTACHMENT_CLAMD_HOST`,
+  `ATTACHMENT_CLAMD_PORT`).
+- **Notifications:** email provider (`NOTIFICATION_EMAIL_*`) and web push keys
+  (`NOTIFICATION_VAPID_*`).
+- **Payments:** `PATCHWORK_PAYMENTS_MODE` (default `off`), `STRIPE_*` and
+  `PATCHWORK_GENERAL_FUND_*`.
+- **Web app:** `VITE_API_BASE_URL`, `VITE_MAP_TILE_URL`.
+
+## Deploy
+
+`docker-compose.yml` runs the production stack: the web app (nginx serving the
+Vite build), the API, the indexer, the moderation worker and PostgreSQL. It
+expects an external Docker network named `web` with a reverse proxy in front of
+it. The Makefile has targets for it:
+
+```sh
+make compose-config   # validate the Compose file
+make deploy-up        # build and start
+make deploy-db-migrate
+make deploy-logs
+```
+
+Map tiles are served from a PMTiles file (`PATCHWORK_PM_TILES_*`). The API,
+indexer and moderation worker expose `/metrics`, and Prometheus rules are in
+`monitoring/prometheus/`.
+
+## Project layout
+
+- `apps/web`: React, Vite and Tailwind web app
+- `apps/mobile`: mobile client library (API client, navigation, push); there is no mobile app yet
+- `services/api`: HTTP API, AT Protocol OAuth, chat and scheduling
+- `services/indexer`: ingestion and indexing of AT Protocol records
+- `services/moderation-worker`: moderation queue worker
+- `packages/shared`: shared contracts, config schemas and utilities
+- `packages/at-lexicons`: lexicon schemas, fixtures and validators
+- `packages/at-client`: AT Protocol OAuth and repository client
+- `docs/`: architecture, protocol and product notes
+
+## Contributing
+
+Open a pull request on GitHub against `main`. CI runs lint, type checks, unit
+and PostgreSQL integration tests, Playwright browser tests, a dependency audit
+and a production build on every pull request. Geoprivacy and moderation
+regressions block a merge.
+
+## License
+
+GPL-3.0-or-later. See [LICENSE](LICENSE).
+
+Built by [SUBCULT](https://subcult.tv).
