@@ -48,18 +48,23 @@ You need Node.js 22.15 or later, npm and Docker (for local PostgreSQL).
 ```sh
 npm ci
 cp .env.example .env
-# set ATPROTO_SESSION_ENCRYPTION_KEY (openssl rand -base64 32)
+# in .env: set ATPROTO_SESSION_ENCRYPTION_KEY (openssl rand -base64 32),
+# API_DATA_SOURCE=postgres and
+# API_DATABASE_URL=postgresql://patchwork:patchwork@localhost:5432/patchwork
 npm run db:up
-npm run db:migrate
+export DATABASE_URL=postgresql://patchwork:patchwork@localhost:5432/patchwork
+npm run db:migrate                                   # API tables
+npm run db:migrate -w @patchwork/indexer             # projection tables
+npm run db:migrate -w @patchwork/moderation-worker   # moderation tables
 npm run db:seed        # optional sample data
 npm run dev:api        # API on http://localhost:4000
 npm run dev:web        # web app on http://localhost:5173
 ```
 
-The indexer and moderation worker run with `npm run dev:indexer` and
-`npm run dev:moderation`. Each service has its own migrations; see
-[DEVELOPMENT.md](DEVELOPMENT.md) for the full local setup, datasource modes and
-API routes.
+The API refuses to start until the indexer tables exist. The indexer and
+moderation worker run with `npm run dev:indexer` and `npm run dev:moderation`.
+See [DEVELOPMENT.md](DEVELOPMENT.md) for the full local setup, datasource modes
+and API routes.
 
 Tests and checks:
 
