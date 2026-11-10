@@ -127,7 +127,10 @@ indexer and moderation worker expose `/metrics`, and Prometheus rules are in
 
 ## Contributing
 
-Open a pull request on GitHub against `main`. CI runs lint, type checks, unit
+Report bugs and request features in [GitHub issues](https://github.com/subculture-collective/patchwork/issues).
+Ask questions and share ideas in [GitHub Discussions](https://github.com/subculture-collective/patchwork/discussions).
+
+Send code as a pull request on GitHub against `main`. CI runs lint, type checks, unit
 and PostgreSQL integration tests, Playwright browser tests, a dependency audit
 and a production build on every pull request. Geoprivacy and moderation
 regressions block a merge.
