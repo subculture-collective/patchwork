@@ -8,7 +8,10 @@ const roots: string[] = [];
 const temporary = async () => { const root = await mkdtemp(join(tmpdir(), 'arcgis-evidence-')); roots.push(root); return root; };
 afterEach(async () => { await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true }))); });
 const policy: ArcgisCollectionPolicy = { queryUrl: 'https://publisher.example/MapServer/0/query',
-    contract: { idField: 'OID', fields: { OID: 'esriFieldTypeOID' }, minRecords: 1, maxRecords: 2, maxPageBytes: 2000 }, pageSize: 1, maxPages: 2, maxTotalBytes: 10_000, timeoutMs: 2000 };
+    contract: { idField: 'OID', fields: { OID: 'esriFieldTypeOID' }, minRecords: 1, maxRecords: 2, maxPageBytes: 2000 }, pageSize: 1, maxPages: 2, maxTotalBytes: 10_000,
+    // The collection deadline is wall-clock time and covers fsynced evidence writes;
+    // 2 s expired on a busy CI runner (TimeoutError after 2.9 s).
+    timeoutMs: 30_000 };
 const fetcher: typeof fetch = async input => {
     const url = new URL(String(input));
     const value = url.searchParams.has('returnCountOnly') ? { count: 1 } : url.searchParams.has('returnIdsOnly')
