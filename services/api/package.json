@@ -33,7 +33,7 @@
         "@atproto/oauth-client-node": "0.4.8",
         "@patchwork/at-client": "0.1.0",
         "@patchwork/shared": "0.1.0",
-        "file-type": "^21.3.2",
+        "file-type": "^21.3.4",
         "minio": "^8.0.7",
         "pdf-lib": "^1.17.1",
         "pg": "^8.19.0",
@@ -41,7 +41,7 @@
         "web-push": "^3.6.7"
     },
     "devDependencies": {
-        "@types/pg": "^8.16.0",
+        "@types/pg": "^8.23.1",
         "@types/web-push": "^3.6.4"
     }
 }
