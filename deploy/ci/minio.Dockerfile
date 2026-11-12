@@ -1,7 +1,7 @@
 # Disposable private-attachment test service. Community MinIO is source-only:
 # https://github.com/minio/minio#source-only-distribution
 ARG MINIO_SOURCE_REVISION=7aac2a2c5b7c882e68c1ce017d8256be2feea27f
-FROM golang:1.26.6-alpine@sha256:3889b425f035be855a72fb4755265311293b6d414521f0a519d819df32222d83 AS build
+FROM golang:1.26.11-alpine@sha256:ae52b5bc6ed045a9ed26ab03dc19327a802a9cc9aa8b27ed57f5c6b60579b0bb AS build
 ARG MINIO_SOURCE_REVISION
 RUN apk add --no-cache git ca-certificates
 WORKDIR /src

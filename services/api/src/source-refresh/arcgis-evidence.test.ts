@@ -36,7 +36,8 @@ it('rejects source/policy mismatch, corrupt blobs and manifest tampering', async
     await writeFile(path, original);
     await writeFile(join(root, 'arcgis-runs', retained.manifestSha256 + '.json'), '{}');
     await expect(replayArcgisEvidence(root, retained.manifestSha256, 'fixture-v1', policy)).rejects.toThrow('manifest hash');
-});
+// Four replays of fsynced evidence; the 5 s default timed out on a busy CI runner.
+}, 30_000);
 it('keeps failed-response evidence but never publishes a complete manifest', async () => {
     const root = await temporary();
     await expect(retainArcgisCollection(root, 'fixture-v1', policy, { fetcher: async () => new Response('{"error":{"code":500}}', { headers: { 'content-type': 'application/json' } }) })).rejects.toThrow();
