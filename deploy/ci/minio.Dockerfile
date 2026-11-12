@@ -1,7 +1,7 @@
 # Disposable private-attachment test service. Community MinIO is source-only:
 # https://github.com/minio/minio#source-only-distribution
 ARG MINIO_SOURCE_REVISION=7aac2a2c5b7c882e68c1ce017d8256be2feea27f
-FROM golang:1.26.11-alpine@sha256:ae52b5bc6ed045a9ed26ab03dc19327a802a9cc9aa8b27ed57f5c6b60579b0bb AS build
+FROM golang:1.27.0-alpine@sha256:4c9fe60190a2a3350ddc51de80d0224b8a6698d12bdfc999fee45ea9d6c46dbc AS build
 ARG MINIO_SOURCE_REVISION
 RUN apk add --no-cache git ca-certificates
 WORKDIR /src
@@ -13,7 +13,7 @@ RUN git init . \
 RUN CGO_ENABLED=0 go build -p=2 -trimpath -o /out/minio . \
     && go mod verify
 
-FROM alpine:3.22@sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce
+FROM alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf
 ARG MINIO_SOURCE_REVISION
 LABEL org.opencontainers.image.source="https://github.com/minio/minio" \
       org.opencontainers.image.revision="$MINIO_SOURCE_REVISION" \

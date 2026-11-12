@@ -156,7 +156,7 @@ ENV VITE_MAP_TILE_URL=${VITE_MAP_TILE_URL}
 
 RUN npm run build -w @patchwork/web
 
-FROM nginx:1.29-alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de AS web-runtime
+FROM nginx:1.31-alpine@sha256:713fc2ebfd92e8217db451477182ee91944b123d2b1ee9fd5a8c6e91ca6c3a11 AS web-runtime
 
 ARG GIT_SHA
 ARG GIT_BRANCH
