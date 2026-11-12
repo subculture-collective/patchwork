@@ -1,6 +1,6 @@
 # National-directory capacity investigation, October 30, 2026
 
-Issue: [#20](https://git.subcult.tv/subculture-collective/patchwork/issues/20).
+Issue: [#20](https://github.com/subculture-collective/patchwork/issues/170).
 The machine-readable measurements are in
 [national-capacity-2026-10-30.json](national-capacity-2026-10-30.json).
 

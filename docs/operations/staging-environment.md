@@ -1,6 +1,6 @@
 # Staging Environment -- Parity & Promotion
 
-Tracks: [release qualification #21](https://git.subcult.tv/subculture-collective/patchwork/issues/21).
+Tracks: [release qualification #21](https://github.com/subculture-collective/patchwork/issues/171).
 
 ## Overview
 

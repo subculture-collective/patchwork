@@ -1,6 +1,6 @@
 # RACI Matrix -- Patchwork Production Operations
 
-Tracks: [incident ownership #18](https://git.subcult.tv/subculture-collective/patchwork/issues/18) and [pilot acceptance #22](https://git.subcult.tv/subculture-collective/patchwork/issues/22).
+Tracks: [incident ownership #18](https://github.com/subculture-collective/patchwork/issues/168) and [pilot acceptance #22](https://github.com/subculture-collective/patchwork/issues/172).
 
 ---
 

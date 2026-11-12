@@ -107,5 +107,5 @@ services for these domains. Native clients, offline writes, external partner
 exchange, reputation and multi-region topology remain deferred or exploratory.
 The deployed OTP router is a travel service, not a multi-region application
 router. [ADR 0004](adr/0004-single-region-topology.md) records the
-single-region decision and the thresholds that would reopen it. The [roadmap](https://git.subcult.tv/subculture-collective/patchwork/issues/10)
+single-region decision and the thresholds that would reopen it. The [roadmap](https://github.com/subculture-collective/patchwork/issues/160)
 and [current acceptance](../current-acceptance.md) distinguish these boundaries.

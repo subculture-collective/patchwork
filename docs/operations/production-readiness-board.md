@@ -43,7 +43,7 @@ An issue being represented by code or tests does not mean its subsystem is exter
 | Core lifecycle and account experience | #116, #117, #118, #119, #120, #121, #122, #123 | Rich in-memory services and UX models exist; real AT identity and durable cross-service journeys do not. |
 | Collaboration and trust expansion | #124, #125, #126, #127, #128, #129, #130, #131, #132 | Notifications, scheduling, groups, reputation, offline sync, feedback, verification, and matching are primarily tested models or fixture services. |
 | Global and platform expansion | #133, #134, #135, #136, #137, #138 | i18n and accessibility foundations exist; mobile, multi-region, analytics, and integrations are not production runtime capabilities. |
-| Parallel-wave coordination | #139 | Historical dependency and lane plan represented by `wave-0.md` through `wave-5.md`. |
+| Parallel-wave coordination | #139 | Historical dependency and lane plan. Its `wave-0.md` through `wave-5.md` files were removed in November 2026; the last copy is in commit `a1ad3449`. |
 
 ## Historical milestone sequence
 
@@ -57,7 +57,3 @@ The former board used this sequence. It is retained only to decode issue referen
 6. M5 — Trust and verification
 
 The active sequence is now the eight-phase continuation roadmap. New work must cite a continuation phase and task rather than inferring readiness from an old milestone or wave number.
-
-## Historical helper scripts
-
-`docs/operations/milestone-setup.sh` and `docs/operations/link-issues.sh` target the former GitHub milestone structure. Do not run them as part of continuation work unless they are first revised to match the authoritative roadmap.

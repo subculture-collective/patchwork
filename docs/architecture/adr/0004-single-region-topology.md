@@ -2,7 +2,7 @@
 
 - Status: Accepted (defer multi-region and service extraction)
 - Date: 2026-10-30
-- Issue: [#72](https://git.subcult.tv/subculture-collective/patchwork/issues/72)
+- Issue: [#72](https://github.com/subculture-collective/patchwork/issues/222)
 
 ## Context
 

@@ -1,6 +1,6 @@
 # Mobile Release Checklist
 
-Tracks: [native implementation #60](https://git.subcult.tv/subculture-collective/patchwork/issues/60) and [native release #61](https://git.subcult.tv/subculture-collective/patchwork/issues/61).
+Tracks: [native implementation #60](https://github.com/subculture-collective/patchwork/issues/210) and [native release #61](https://github.com/subculture-collective/patchwork/issues/211).
 
 This is a historical checklist, not a supported-device or release-completion claim. Refresh the device/OS matrix and provider-hosted OAuth scenarios before use; Patchwork must not collect an AT account password.
 

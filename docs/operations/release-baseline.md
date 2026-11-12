@@ -17,10 +17,12 @@ not turn historical evidence into a new live check.
   branch retirement, or default-branch change requires a separate reviewed
   change with an explicit commit comparison and rollback plan.
 - New work and issue references use the
-  [Gitea issue tracker](https://git.subcult.tv/subculture-collective/patchwork/issues).
-  Historical GitHub workflow names, paths, OIDC references, and issue numbers
-  remain only where they identify retained implementation or evidence; they do
-  not make GitHub the current planning authority.
+  [GitHub issue tracker](https://github.com/subculture-collective/patchwork/issues).
+  Issues moved there from Gitea on 2026-11-10: a Gitea issue number from 10 to
+  79 cited in these documents is GitHub issue number plus 150 (Gitea #21 is
+  GitHub #171), and the links already point there. Older GitHub workflow names,
+  paths, OIDC references, and issue numbers below 160 remain only where they
+  identify retained implementation or evidence.
 
 ## Status vocabulary
 

@@ -5,7 +5,7 @@
 
 ## Context
 
-The original v1 scope defined the following boundaries; the [current roadmap](https://git.subcult.tv/subculture-collective/patchwork/issues/10) now tracks delivery:
+The original v1 scope defined the following boundaries; the [current roadmap](https://github.com/subculture-collective/patchwork/issues/160) now tracks delivery:
 
 - Frontend: Vite + React + TypeScript + Tailwind CSS
 - Backend/services: TypeScript (Node.js)

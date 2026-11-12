@@ -12,7 +12,7 @@ Gitea is the review/CI origin and `main` is the integration and promotion
 branch. The former `codex/chicago-public-resources` lineage was merged into
 `main` with both histories preserved; keep that branch unchanged and do not
 start new work from it. Remaining release reconciliation is tracked in
-[issue #21](https://git.subcult.tv/subculture-collective/patchwork/issues/21).
+[issue #21](https://github.com/subculture-collective/patchwork/issues/171).
 The deployed home-host path accepts scoped-key signed, digest-pinned images.
 The GHCR/OIDC procedure below describes a separate configured promotion path;
 it must not be represented as the current Gitea deployment evidence. See

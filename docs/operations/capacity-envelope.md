@@ -17,7 +17,7 @@ contention; its separate 8-RPS zero-error soak established only that dated
 stability point. Neither result establishes the capacity of today's release
 or the expanded national directory and travel workload.
 
-[Issue #20](https://git.subcult.tv/subculture-collective/patchwork/issues/20)
+[Issue #20](https://github.com/subculture-collective/patchwork/issues/170)
 requires a controlled, named-release baseline with representative national
 filters, concurrent refresh/review work, bounded travel traffic, browser
 transfer/render costs, database and host headroom, and recovery. Preserve the

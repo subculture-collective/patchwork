@@ -1,6 +1,6 @@
 # Incident Response Runbook
 
-Tracks: [incident qualification #18](https://git.subcult.tv/subculture-collective/patchwork/issues/18) and [current acceptance](../current-acceptance.md).
+Tracks: [incident qualification #18](https://github.com/subculture-collective/patchwork/issues/168) and [current acceptance](../current-acceptance.md).
 
 ---
 

@@ -1,6 +1,6 @@
 # US source onboarding and coverage
 
-[Issue #23](https://git.subcult.tv/subculture-collective/patchwork/issues/23)
+[Issue #23](https://github.com/subculture-collective/patchwork/issues/173)
 tracks this inventory. It describes existing imported evidence, not a new
 publisher fetch, a legal clearance or a live database count.
 

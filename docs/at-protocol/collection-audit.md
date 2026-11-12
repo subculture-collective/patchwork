@@ -1,7 +1,7 @@
 # Public collection audit
 
 Audited: 2026-10-30, canonical `main`. Issue
-[#73](https://git.subcult.tv/subculture-collective/patchwork/issues/73),
+[#73](https://github.com/subculture-collective/patchwork/issues/223),
 first acceptance criterion. This is a source audit, not a live repository or
 provider check.
 
