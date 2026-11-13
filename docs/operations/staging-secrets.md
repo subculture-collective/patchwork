@@ -48,7 +48,7 @@ their values.
 | `STAGING_COSIGN_PUBLIC_KEY_PATH` | Absolute path to the public key already installed on staging |
 | `STAGING_DEPLOY_PATH` | Existing writable absolute directory; each run transfers into `run-<id>` below it |
 | `STAGING_COMPOSE_PROJECT_NAME` | Existing staging Compose project name; inspect `com.docker.compose.project` on the staging containers before setting it, to preserve the stack's volumes and networks |
-| `STAGING_SSH_USE_SUDO` | Optional `true` to run host preflight and deployment through existing noninteractive sudo; defaults to `false` |
+| `STAGING_SSH_USE_SUDO` | Still validated by `scripts/check-staging-workflow-config.sh`; the host's forced command now decides elevation, so it no longer changes deployment |
 | `STAGING_COMPOSE_OVERRIDE_FILE` | Optional absolute path to the existing host Compose override; passed to deployment and rollback |
 | `STAGING_ENV_FILE` | Absolute path to the existing staging runtime environment file, outside the checkout |
 | `STAGING_PUBLIC_ORIGIN` | HTTPS origin for browser checks, without a trailing slash |
@@ -66,9 +66,13 @@ Provision the staging account and runtime configuration before dispatch. The
 account needs Docker access, Docker Compose v2, Bash, Python 3, `jq`, `flock`, `sha256sum`,
 and Cosign compatible with the workflow's pinned v2.5.2. It must be able to read
 the runtime environment and public key and write the deployment directory and
-`/var/lib/patchwork/releases`. With `STAGING_SSH_USE_SUDO=true`, those reads and
-release-state writes use the account's existing noninteractive sudo access; the
-transfer directory must still be writable by the SSH account. Do not loosen
+`/var/lib/patchwork/releases`. On the host the deploy key is restricted to the
+forced command `/usr/local/lib/patchwork-staging/patchwork-staging-ssh`, which
+accepts five verbs: `preflight`, `cosign-pub`, `e2e-accounts`,
+`reset-test-blocks <run>` and `deploy <run-id> <main sha>`. The runner sends
+only `artifact-digests.json`. The host takes the release scripts and Compose file
+from its own clone of `main` at that commit and runs them as root, so the host
+paths are fixed in the wrapper rather than read from these variables. Do not loosen
 root-owned runtime-file permissions to satisfy preflight. Preserve the existing release manifests and
 checksums. Authenticate Docker and Cosign on the host to `git.subcult.tv` with
 a separate `read:package` credential for private image pulls; the publishing
@@ -144,8 +148,8 @@ York feed origin (40.7128, -74.006), consistent with its default request ZIP
 `10001`. The suite rejects an out-of-area point before publishing a record.
 
 `scripts/bootstrap-staging-sessions.sh` reads the existing root-owned
-`/etc/patchwork/e2e-accounts/accounts.json` over the deployment SSH identity,
-using its configured noninteractive sudo when required. The file must be mode
+`/etc/patchwork/e2e-accounts/accounts.json` through the deploy key's
+`e2e-accounts` verb. The file must be mode
 `0600`, owned by root, and contain `requester`, `helper`, and `maintainer`
 objects with a handle, password, DID, purpose, and `review_by` date. All three
 must be distinct approved accounts with purpose exactly `Patchwork deployment
@@ -166,8 +170,9 @@ secrets are no longer consumed because application sessions expire after
 twelve hours. TLS validation remains enabled throughout.
 
 The AT-record browser suite resets its disposable helper/requester block before
-and after the test. `scripts/reset-staging-test-blocks.sh` uses the deployment
-SSH identity to run the Python helper on NUC. The helper requires the root-owned
+and after the test. `scripts/reset-staging-test-blocks.sh` asks the deploy key's
+`reset-test-blocks` verb to run the Python helper on NUC from the deployed
+commit. The helper requires the root-owned
 account store, current fixture approvals, and the expected staging database
 container. It marks only that pair's known test block deleted and retains its
 previous row under `/var/lib/patchwork/releases/e2e-block-cleanup/` in a

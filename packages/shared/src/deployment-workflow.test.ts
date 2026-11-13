@@ -42,9 +42,10 @@ describe('immutable staging deployment contract', () => {
         expect(workflow).toContain('needs: preflight');
         expect(workflow).toContain('bash scripts/verify-gitea-source.sh');
         expect(workflow).toContain('bash scripts/check-staging-workflow-config.sh');
-        expect(workflow).toContain('PATCHWORK_RELEASE_VERIFY_MODE=key');
-        expect(workflow).toContain('./run-staging-release.sh');
-        expect(workflow).toContain('deploy-staging-digests.sh');
+        expect(workflow).toContain('"deploy $GITHUB_RUN_ID $SOURCE_SHA" < artifact-digests.json');
+        expect(workflow).not.toContain('scp ');
+        expect(workflow).not.toContain('sudo -n');
+        expect(read('scripts/run-staging-release.sh')).toContain('deploy-staging-digests.sh');
         expect(workflow).toContain('at-record-lifecycle.spec.ts');
         expect(deploy).toContain('@sha256:');
         expect(deploy).toContain('--no-build');

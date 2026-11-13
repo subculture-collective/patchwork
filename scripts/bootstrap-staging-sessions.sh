@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Read only the dedicated root-owned test-account store over the deploy identity.
+# Read only the dedicated root-owned test-account store through the deploy key's e2e-accounts verb.
 set -Eeuo pipefail
 : "${STAGING_SSH_USER:?Set STAGING_SSH_USER}"
 : "${STAGING_SSH_HOST:?Set STAGING_SSH_HOST}"
@@ -12,14 +12,9 @@ set -Eeuo pipefail
 umask 077
 scratch=$(mktemp -d "${RUNNER_TEMP:-/tmp}/patchwork-e2e.XXXXXXXX")
 trap 'rm -rf -- "$scratch"' EXIT
-reader='bash -se'
-[[ "${STAGING_SSH_USE_SUDO:-false}" != true ]] || reader="sudo -n $reader"
+# The deploy key's forced command prints the root-owned store after checking its owner and mode.
 ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=10 \
-    "$STAGING_SSH_USER@$STAGING_SSH_HOST" "$reader" > "$scratch/accounts.json" <<'REMOTE'
-accounts=/etc/patchwork/e2e-accounts/accounts.json
-[[ $(stat -c '%u:%a' "$accounts") == 0:600 ]]
-cat "$accounts"
-REMOTE
+    "$STAGING_SSH_USER@$STAGING_SSH_HOST" e2e-accounts < /dev/null > "$scratch/accounts.json"
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 PATCHWORK_E2E_BASE_URL="$STAGING_PUBLIC_ORIGIN" \
     node --import tsx "$script_dir/bootstrap-staging-sessions.mjs" "$scratch/accounts.json" "$scratch/states"
