@@ -68,3 +68,43 @@ Native decoding is documented here, not claimed as passed: the native app/test
 projects are created by #249/#250. Their first screen slices must consume these
 same files. Extend fixtures and production-boundary assertions per feature;
 do not regenerate goldens blindly when a server change breaks the comparison.
+
+## Language preferences and server-owned copy (#259)
+
+`account-preferences-en` and `account-preferences-es` are current
+`GET /account/preferences` and successful `PUT /account/preferences` response
+bodies. PUT accepts `{ preferences: <that canonical object> }`, requires the
+current session and idempotency header, and retains web CSRF rules.
+`account-preferences-unsupported` contains a rejected PUT body and expected
+error code; rejection leaves the stored Spanish preference unchanged.
+The PostgreSQL mobile-language suite compares actual handler responses to
+these fixtures and checks persistence across service instances.
+
+`language` is the interface/notification language, currently `en` or `es`.
+It is independent of device region, date/number formatting, timezone and
+`Accept-Language`. PUT persists the supported choice. After success, switch
+the app's bundled resources and refetch `/notifications` without retaining an
+old-language response; invalidate any cached server-copy screens. Do not
+retranslate already authored member text. Offline language choice can affect
+bundled interface copy, but changing the account preference requires connectivity.
+Do not queue a silent preference write or assume offline changes reached the server.
+
+Notification lists and email/browser-push delivery already use the recipient's
+stored preference. The delivery worker reads language at send time, including
+for intents created before a preference change. #259 tests that boundary with
+English/Spanish and an unrelated device transport locale. Future native APNs/FCM
+workers must use that same preference/rendering boundary; this change does not
+add native delivery providers or installation routes owned by #291/#294/#295.
+
+`native-error-fallback` defines a portable unknown-code example and the semantic
+resource key `common.requestFailed`, with existing English/Spanish copy. Native
+readers should match supported stable codes to bundled message keys and use
+this localized key for all unknown codes, ignoring untrusted `error.message`.
+The contract check binds the fallback copy to the maintained web catalogs;
+actual native screen/error rendering is qualified in #255/#256 and feature
+slices. Never display diagnostic prose just because the code is unfamiliar.
+
+Verification for this slice: 13 focused preference/notification/fixture unit
+tests and 12 disposable PostgreSQL onboarding/durable-delivery/HTTP-contract
+tests passed, plus the API typecheck. Providers are deterministic test doubles;
+these checks do not claim APNs/FCM, live email or physical-device delivery.

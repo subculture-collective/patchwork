@@ -1,0 +1,16 @@
+{
+  "preferences": {
+    "audience": "authenticated",
+    "notifications": {
+      "inApp": true,
+      "email": true,
+      "push": false
+    },
+    "language": "fr",
+    "location": {
+      "sharing": "approximate",
+      "noPermanentAddress": false
+    }
+  },
+  "expectedErrorCode": "INVALID_ACCOUNT_PREFERENCES"
+}

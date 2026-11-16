@@ -1,0 +1,15 @@
+{
+  "preferences": {
+    "audience": "authenticated",
+    "notifications": {
+      "inApp": true,
+      "email": true,
+      "push": false
+    },
+    "language": "en",
+    "location": {
+      "sharing": "approximate",
+      "noPermanentAddress": false
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "error": {
+    "code": "FUTURE_UNRECOGNIZED_CODE",
+    "message": "Synthetic untrusted diagnostic; never display this text."
+  },
+  "messageKey": "common.requestFailed",
+  "translations": {
+    "en": "Patchwork could not finish that. What you entered may still be fine. Try again, or check the service status.",
+    "es": "Patchwork no pudo completar eso. Puede que lo que escribiste esté bien. Inténtalo de nuevo o revisa el estado del servicio."
+  }
+}

@@ -10,6 +10,9 @@ export const requiredPolicyDocuments = [
     'location-sharing-consent',
 ] as const;
 
+export const supportedAccountLanguages = ['en', 'es'] as const;
+export const accountLanguageSchema = z.enum(supportedAccountLanguages);
+
 const canonicalAccountPreferenceSchema = z
     .object({
         audience: z.enum(['public', 'authenticated', 'hidden']),
@@ -20,7 +23,7 @@ const canonicalAccountPreferenceSchema = z
                 push: z.boolean(),
             })
             .strict(),
-        language: z.enum(['en', 'es']),
+        language: accountLanguageSchema,
         location: z
             .object({
                 sharing: z.enum(['approximate', 'hidden']),
@@ -34,7 +37,7 @@ const legacyAccountPreferenceSchema = z.object({
     privacy: z.enum(['public', 'community', 'private']),
     notifications: canonicalAccountPreferenceSchema.shape.notifications,
     visibility: z.enum(['public', 'authenticated', 'hidden']),
-    language: z.enum(['en', 'es']),
+    language: accountLanguageSchema,
     location: canonicalAccountPreferenceSchema.shape.location,
 }).strict();
 
