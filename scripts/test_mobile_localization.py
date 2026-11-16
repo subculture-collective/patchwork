@@ -63,6 +63,11 @@ class NativeLocalizationHandoffTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Placeholder mismatch"):
             mobile.resources(self.seed)
 
+    def test_initial_languages_require_the_singular_plural_variant(self):
+        del self.seed["messages"][3]["translations"]["es"]["one"]
+        with self.assertRaisesRegex(ValueError, "incomplete variants"):
+            mobile.resources(self.seed)
+
     def test_colliding_android_identifiers_are_rejected(self):
         collision = copy.deepcopy(self.seed["messages"][1])
         collision["key"] = "nav_map"

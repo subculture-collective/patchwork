@@ -46,7 +46,8 @@ def validate(seed: dict) -> None:
         if set(translations) != set(locales):
             raise ValueError(f"Missing or unregistered locale: {key}")
         for locale, variants in translations.items():
-            if (plural and ("other" not in variants or not set(variants) <= CATEGORIES)) or (
+            required_variants = {"one", "other"} if locale in {"en", "es"} else {"other"}
+            if (plural and (not required_variants <= set(variants) or not set(variants) <= CATEGORIES)) or (
                 not plural and set(variants) != {"value"}
             ):
                 raise ValueError(f"Invalid or incomplete variants: {key}/{locale}")
