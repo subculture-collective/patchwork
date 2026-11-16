@@ -21,5 +21,5 @@ jobs:
       - name: Lint, unit test and build app and instrumentation APKs
         run: |
           apps/android/gradlew -p apps/android --no-daemon \
-            :app:lintDebug :app:testDebugUnitTest :app:assembleDebug \
+            :app:lintDebug :app:testDebugUnitTest :app:testStagingUnitTest :app:assembleDebug \
             :app:assembleDebugAndroidTest :app:assembleStaging
