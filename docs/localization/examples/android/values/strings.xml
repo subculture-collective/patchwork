@@ -1,0 +1,18 @@
+<resources>
+  <!-- Product name. Do not translate. -->
+  <string name="app_title" translatable="false">Patchwork</string>
+  <!-- Primary discovery navigation destination. -->
+  <string name="nav_map">Map</string>
+  <!-- Accessible label for opening a public resource; name is the listing display name. -->
+  <string name="resources_open_details_for">Details for %1$s</string>
+  <!-- Count of results after discovery filters; count is an integer, not a localized number string. -->
+  <plurals name="discovery_result_count">
+    <item quantity="one">%1$d result</item>
+    <item quantity="other">%1$d results</item>
+  </plurals>
+  <!-- Number of public places within a selected-area distance. distance is already formatted using product distance units. -->
+  <plurals name="dashboard_excerpt_place_count">
+    <item quantity="one">%1$d public place within %2$s</item>
+    <item quantity="other">%1$d public places within %2$s</item>
+  </plurals>
+</resources>

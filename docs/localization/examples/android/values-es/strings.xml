@@ -1,0 +1,16 @@
+<resources>
+  <!-- Primary discovery navigation destination. -->
+  <string name="nav_map">Mapa</string>
+  <!-- Accessible label for opening a public resource; name is the listing display name. -->
+  <string name="resources_open_details_for">Detalles de %1$s</string>
+  <!-- Count of results after discovery filters; count is an integer, not a localized number string. -->
+  <plurals name="discovery_result_count">
+    <item quantity="one">%1$d resultado</item>
+    <item quantity="other">%1$d resultados</item>
+  </plurals>
+  <!-- Number of public places within a selected-area distance. distance is already formatted using product distance units. -->
+  <plurals name="dashboard_excerpt_place_count">
+    <item quantity="one">%1$d lugar público a menos de %2$s</item>
+    <item quantity="other">%1$d lugares públicos a menos de %2$s</item>
+  </plurals>
+</resources>

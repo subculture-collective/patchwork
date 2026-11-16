@@ -1,0 +1,112 @@
+{
+  "source_language": "en",
+  "locales": [
+    "en",
+    "es"
+  ],
+  "messages": [
+    {
+      "key": "app.title",
+      "context": "Product name. Do not translate.",
+      "arguments": {},
+      "plural_argument": null,
+      "translatable": false,
+      "source_keys": {
+        "value": "app.title"
+      },
+      "translations": {
+        "en": {
+          "value": "Patchwork"
+        },
+        "es": {
+          "value": "Patchwork"
+        }
+      }
+    },
+    {
+      "key": "nav.map",
+      "context": "Primary discovery navigation destination.",
+      "arguments": {},
+      "plural_argument": null,
+      "translatable": true,
+      "source_keys": {
+        "value": "nav.map"
+      },
+      "translations": {
+        "en": {
+          "value": "Map"
+        },
+        "es": {
+          "value": "Mapa"
+        }
+      }
+    },
+    {
+      "key": "resources.openDetailsFor",
+      "context": "Accessible label for opening a public resource; name is the listing display name.",
+      "arguments": {
+        "name": "string"
+      },
+      "plural_argument": null,
+      "translatable": true,
+      "source_keys": {
+        "value": "resources.openDetailsFor"
+      },
+      "translations": {
+        "en": {
+          "value": "Details for {{name}}"
+        },
+        "es": {
+          "value": "Detalles de {{name}}"
+        }
+      }
+    },
+    {
+      "key": "discovery.resultCount",
+      "context": "Count of results after discovery filters; count is an integer, not a localized number string.",
+      "arguments": {
+        "count": "integer"
+      },
+      "plural_argument": "count",
+      "translatable": true,
+      "source_keys": {
+        "one": "discovery.resultCount_one",
+        "other": "discovery.resultCount_other"
+      },
+      "translations": {
+        "en": {
+          "one": "{{count}} result",
+          "other": "{{count}} results"
+        },
+        "es": {
+          "one": "{{count}} resultado",
+          "other": "{{count}} resultados"
+        }
+      }
+    },
+    {
+      "key": "dashboard.excerptPlaceCount",
+      "context": "Number of public places within a selected-area distance. distance is already formatted using product distance units.",
+      "arguments": {
+        "count": "integer",
+        "distance": "string"
+      },
+      "plural_argument": "count",
+      "translatable": true,
+      "source_keys": {
+        "one": "dashboard.excerptPlaceCount_one",
+        "other": "dashboard.excerptPlaceCount_other"
+      },
+      "translations": {
+        "en": {
+          "one": "{{count}} public place within {{distance}}",
+          "other": "{{count}} public places within {{distance}}"
+        },
+        "es": {
+          "one": "{{count}} lugar público a menos de {{distance}}",
+          "other": "{{count}} lugares públicos a menos de {{distance}}"
+        }
+      }
+    }
+  ]
+}
