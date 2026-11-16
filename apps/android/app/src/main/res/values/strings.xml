@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_title">Patchwork</string>
+    <string name="shell_browse">Browse</string>
+    <string name="shell_settings">Settings</string>
+    <string name="shell_about">About Patchwork</string>
+    <string name="shell_welcome">Find requests, offers and public resources.</string>
+    <string name="shell_purpose">Mutual aid, close to home.</string>
+    <string name="shell_environment">Environment: %1$s</string>
+    <string name="shell_version">Version: %1$s (%2$d)</string>
+    <string name="shell_back">Back</string>
+</resources>

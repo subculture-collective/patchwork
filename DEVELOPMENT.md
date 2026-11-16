@@ -236,3 +236,9 @@ https://www2.onnwee.me
 
 
 Transactional email can use Brevo; see [the setup and cutover guide](docs/brevo-email.md).
+
+## Native Android shell
+
+The independent Gradle/Compose app, pinned wrapper, environment settings and
+build/device commands are in [apps/android/README.md](apps/android/README.md).
+It is not an npm workspace; use JDK 21 and the native Android SDK for its checks.
