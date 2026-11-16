@@ -91,4 +91,34 @@
     <string name="status_unavailable">Unavailable</string>
     <string name="status_unknown">Status unavailable</string>
     <string name="discovery_time_unknown">Time unavailable</string>
+    <!-- Native account/session states and versioned policy acknowledgements (#258). -->
+    <string name="auth_title">Account</string>
+    <string name="auth_loading">Checking your session…</string>
+    <string name="auth_handle">AT Protocol handle</string>
+    <string name="auth_sign_in">Sign in with your provider</string>
+    <string name="auth_cancel">Cancel sign-in</string>
+    <string name="auth_browser_pending">Complete sign-in in your browser. If you closed it, cancel here and start again.</string>
+    <string name="auth_cancelled">Sign-in cancelled.</string>
+    <string name="auth_interrupted">This sign-in was interrupted or is no longer valid. Start again.</string>
+    <string name="auth_expired">Your session has ended. Sign in again.</string>
+    <string name="auth_unavailable">Native sign-in is not configured for this environment.</string>
+    <string name="auth_storage_unavailable">Protected session storage is unavailable. Sign-in was stopped.</string>
+    <string name="auth_local_logout">Signed out on this device. Server revocation could not be confirmed; the previous session expires within one hour.</string>
+    <string name="auth_invalid_handle">Enter a valid AT Protocol handle.</string>
+    <string name="auth_failed">Sign-in could not be completed. Check your connection and try again.</string>
+    <string name="auth_session_unavailable">Your saved session cannot be checked. Protected actions are unavailable until it is verified.</string>
+    <string name="auth_policy_unavailable">These policies need a newer app. Update before accepting.</string>
+    <string name="auth_signed_in">Signed in as %1$s</string>
+    <string name="auth_refresh">Check session again</string>
+    <string name="auth_sign_out">Sign out or change account</string>
+    <string name="consent_title">Review current policies</string>
+    <string name="consent_version">Version %1$s. Material changes require a new acceptance before protected actions are available.</string>
+    <string name="consent_accept">I accept the %1$s.</string>
+    <string name="consent_age">I confirm that I am at least 18 years old.</string>
+    <string name="consent_continue">Accept and continue</string>
+    <string name="consent_terms">Terms of Use</string>
+    <string name="consent_privacy">Privacy Notice</string>
+    <string name="consent_guidelines">Community Guidelines</string>
+    <string name="consent_synthetic">Synthetic-data disclosure</string>
+    <string name="consent_location">Location-sharing consent</string>
 </resources>

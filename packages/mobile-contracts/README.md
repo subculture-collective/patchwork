@@ -38,7 +38,7 @@ strings. Schema evolution must be checked against actual server responses.
 | --- | --- | --- |
 | Public discovery | `GET /query/feed`; `page`, `pageSize`, `dataset`, post/category/status/search and optional selected-area filters | This slice covers feed responses and invalid page input; global Latest does not require GPS |
 | Map/directory/profile reads | `/query/map`, `/query/directory`, `/query/volunteers`, public organization/resource detail routes | Later slices add their own current handler examples; feed is not a complete map/resource contract |
-| Browser AT login | `POST /oauth/login`, `GET /oauth/callback`, `/auth/session`, `/auth/refresh` | Existing browser completion uses cookies; native handoff is future #248, not supplied by this fixture set |
+| AT login | `POST /oauth/login`, `GET /oauth/callback`, `/auth/session`, `/auth/refresh`; native `/auth/native/start` and `/auth/native/exchange` | Browser completion uses cookies; native completion uses the verifier-bound #248 handoff and explicit bearer sessions |
 | Authenticated member commands | Existing post/lifecycle, coordination, groups and bounded `/chat/*` handlers | Session-derived authority and command idempotency remain server concerns; this slice does not grant mutation permission |
 | Notifications | `/notifications` and browser subscriptions at `/notifications/push` | Native installation/APNs/FCM registration is future work, not `/push/register` |
 | Errors | Stable `error.code` and safe `message`; optional `details` and `requestId` vary by handler | Match known codes to localized text; unknown codes use a safe localized fallback |
@@ -116,3 +116,12 @@ Verification for this slice: 13 focused preference/notification/fixture unit
 tests and 12 disposable PostgreSQL onboarding/durable-delivery/HTTP-contract
 tests passed, plus the API typecheck. Providers are deterministic test doubles;
 these checks do not claim APNs/FCM, live email or physical-device delivery.
+
+## Android sign-in fixtures (#258)
+
+`native-auth-session` describes the bounded bearer exchange response; its token
+is a synthetic test value. `native-auth-policy` describes a current account that
+needs versioned consent. `native-auth-wire-contracts.test.ts` binds them to the
+production handoff and onboarding services. The Android HTTP/auth tests read
+these same files in a deterministic caller journey. They do not qualify real
+provider login or device callback delivery.

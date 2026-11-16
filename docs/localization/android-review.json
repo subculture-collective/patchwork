@@ -1,6 +1,6 @@
 {
-  "status": "Existing shell Spanish retained; settings and discovery labels reviewed by the implementing agent. Independent linguistic review remains part of #308.",
-  "provenance": "shell_* from #250; discovery.resultCount from the #254 web seed; settings.*, discovery.*, category.* and status.* are native interface copy. Public/member-authored content stays in its source language.",
+  "status": "Existing shell Spanish retained; settings, discovery and auth copy reviewed by the implementing agent. Independent linguistic review remains part of #308.",
+  "provenance": "shell_* from #250; discovery.resultCount from the #254 web seed; settings.*, discovery.*, category.*, status.* and auth.* are native interface copy. Public/member-authored content stays in its source language; consent.* reuses the maintained web en/es policy-consent text for #258.",
   "resources": {
     "en": {
       "shell_browse": {
@@ -338,6 +338,122 @@
       "discovery_time_unknown": {
         "source": "df61dccac7af6d6f6d159413061e0c09eee31f34910a3642a3394d620d65a7c3",
         "translation": "df61dccac7af6d6f6d159413061e0c09eee31f34910a3642a3394d620d65a7c3"
+      },
+      "auth_title": {
+        "source": "845c2f310c5c5fd6380e4ed29bb91f44e8380062149c23753936bc2939d3b74c",
+        "translation": "845c2f310c5c5fd6380e4ed29bb91f44e8380062149c23753936bc2939d3b74c"
+      },
+      "auth_loading": {
+        "source": "b51c6a2a982211f34790750831716654bc6ebd496d3728388d964a5cf8be20ab",
+        "translation": "b51c6a2a982211f34790750831716654bc6ebd496d3728388d964a5cf8be20ab"
+      },
+      "auth_handle": {
+        "source": "f666793f4f6989b10d40f28e5f4c10ed0888a1907d0ccf81aef08355ce9a5e33",
+        "translation": "f666793f4f6989b10d40f28e5f4c10ed0888a1907d0ccf81aef08355ce9a5e33"
+      },
+      "auth_sign_in": {
+        "source": "88e65c05ef316a395d7a250c69d7b52b38c77f4a3aa385f2a8f609f67311410d",
+        "translation": "88e65c05ef316a395d7a250c69d7b52b38c77f4a3aa385f2a8f609f67311410d"
+      },
+      "auth_cancel": {
+        "source": "a8a3936da3d1d0db379684f2c2b036f1ce8e45e4e863a472140a533473165be1",
+        "translation": "a8a3936da3d1d0db379684f2c2b036f1ce8e45e4e863a472140a533473165be1"
+      },
+      "auth_browser_pending": {
+        "source": "79b0e1445b3164f32d517e5d8d0a9cc917d37f5f0036208181e69a842b1b549f",
+        "translation": "79b0e1445b3164f32d517e5d8d0a9cc917d37f5f0036208181e69a842b1b549f"
+      },
+      "auth_cancelled": {
+        "source": "4dd05928203a335520badd366a938dc841958917e73bfe9f68dab1a85d3afdcf",
+        "translation": "4dd05928203a335520badd366a938dc841958917e73bfe9f68dab1a85d3afdcf"
+      },
+      "auth_interrupted": {
+        "source": "5731163be91e6bffca6669e413c68fa6079d25618c80fc034e13e4868d45794c",
+        "translation": "5731163be91e6bffca6669e413c68fa6079d25618c80fc034e13e4868d45794c"
+      },
+      "auth_expired": {
+        "source": "258f081c64ed4c4b8ecca6b57d3e23e70e8562cc40735750e4d3b1cd893cefd4",
+        "translation": "258f081c64ed4c4b8ecca6b57d3e23e70e8562cc40735750e4d3b1cd893cefd4"
+      },
+      "auth_unavailable": {
+        "source": "f1f114e29516165fcea2ab630241fd037e9a801d3afb93cfcf23eae0877526a7",
+        "translation": "f1f114e29516165fcea2ab630241fd037e9a801d3afb93cfcf23eae0877526a7"
+      },
+      "auth_storage_unavailable": {
+        "source": "d60236727ec1a515dff8dd121db2b3a94154ed7c54a00af1f1974174f18d357c",
+        "translation": "d60236727ec1a515dff8dd121db2b3a94154ed7c54a00af1f1974174f18d357c"
+      },
+      "auth_local_logout": {
+        "source": "6219c9a12998f9714414f842ad1b9b46e4ba7be78e64ccdd53cfec92d4add021",
+        "translation": "6219c9a12998f9714414f842ad1b9b46e4ba7be78e64ccdd53cfec92d4add021"
+      },
+      "auth_invalid_handle": {
+        "source": "48890773eeb298945c1f7ece571352780c52223ebdc8251d0bcbc1cef2f738d4",
+        "translation": "48890773eeb298945c1f7ece571352780c52223ebdc8251d0bcbc1cef2f738d4"
+      },
+      "auth_failed": {
+        "source": "06eb60dc0d130cf51ba0ad2bf4981240e9100f5f944b5008e169e3fa10962886",
+        "translation": "06eb60dc0d130cf51ba0ad2bf4981240e9100f5f944b5008e169e3fa10962886"
+      },
+      "auth_session_unavailable": {
+        "source": "8a2a4cb6a4bbbe3f349219f0ad3fecc4c6a33debe9dfb2ad9054dc9551db1d70",
+        "translation": "8a2a4cb6a4bbbe3f349219f0ad3fecc4c6a33debe9dfb2ad9054dc9551db1d70"
+      },
+      "auth_policy_unavailable": {
+        "source": "d4232e6ce5cb8f3377541ec489610983997d6fa5279cd8b0e0bbeab3f36c7790",
+        "translation": "d4232e6ce5cb8f3377541ec489610983997d6fa5279cd8b0e0bbeab3f36c7790"
+      },
+      "auth_signed_in": {
+        "source": "8d96c67bb242b14ee5e86d33be583def52b4c82cf325cb803c8c7c4249f7d0de",
+        "translation": "8d96c67bb242b14ee5e86d33be583def52b4c82cf325cb803c8c7c4249f7d0de"
+      },
+      "auth_refresh": {
+        "source": "7620aa6376d80ee00150eded4abc902aa97e602ac3796e157ec08407d93f6e1b",
+        "translation": "7620aa6376d80ee00150eded4abc902aa97e602ac3796e157ec08407d93f6e1b"
+      },
+      "auth_sign_out": {
+        "source": "5776a0897a9dee3aaeae5f3b1da43b293c93c55b1f55d43bfd1c47f3513c182d",
+        "translation": "5776a0897a9dee3aaeae5f3b1da43b293c93c55b1f55d43bfd1c47f3513c182d"
+      },
+      "consent_title": {
+        "source": "8b0544bf1c2bf14e988e467dc6415803fe51b739d1af063ddd573de05562363d",
+        "translation": "8b0544bf1c2bf14e988e467dc6415803fe51b739d1af063ddd573de05562363d"
+      },
+      "consent_version": {
+        "source": "f9aa1323a2cd81c41dc7fe5cc0811120c7dee897071ee0f627912a8cf471b6e7",
+        "translation": "f9aa1323a2cd81c41dc7fe5cc0811120c7dee897071ee0f627912a8cf471b6e7"
+      },
+      "consent_accept": {
+        "source": "f8a61aa0e1e08927aae8b56cfe31cb1dc2a7ec97ad816febaa10d93a8e34f112",
+        "translation": "f8a61aa0e1e08927aae8b56cfe31cb1dc2a7ec97ad816febaa10d93a8e34f112"
+      },
+      "consent_age": {
+        "source": "e37d0ae9ed7580968963c47996b4281372b720683355819fcc946b4255a90b48",
+        "translation": "e37d0ae9ed7580968963c47996b4281372b720683355819fcc946b4255a90b48"
+      },
+      "consent_continue": {
+        "source": "cc0575f0a286ef70559b8a80daa0fd5eaacadb8cc9d859a4c323f321a4fb27de",
+        "translation": "cc0575f0a286ef70559b8a80daa0fd5eaacadb8cc9d859a4c323f321a4fb27de"
+      },
+      "consent_terms": {
+        "source": "2baf5e6f236035b330f81c8ec83571db5bbcfd4eede92ad960d789bed32d594f",
+        "translation": "2baf5e6f236035b330f81c8ec83571db5bbcfd4eede92ad960d789bed32d594f"
+      },
+      "consent_privacy": {
+        "source": "2f73469bf693facf55a6c9c78511ebb27bd1247740d044fec0f0893615576050",
+        "translation": "2f73469bf693facf55a6c9c78511ebb27bd1247740d044fec0f0893615576050"
+      },
+      "consent_guidelines": {
+        "source": "7ed6aa3c4ca01e0a3ee91ca5256138ffff2c6f7873985cc312f0bf1db1381633",
+        "translation": "7ed6aa3c4ca01e0a3ee91ca5256138ffff2c6f7873985cc312f0bf1db1381633"
+      },
+      "consent_synthetic": {
+        "source": "0778090d44ffbd0025d8c4319c42861b0c2826616e083034364c082f8f2d2fc3",
+        "translation": "0778090d44ffbd0025d8c4319c42861b0c2826616e083034364c082f8f2d2fc3"
+      },
+      "consent_location": {
+        "source": "abef1bcdd04692c976c1272b18f69eafc5eb7cb54d1142287eb7e3e4bc274d2d",
+        "translation": "abef1bcdd04692c976c1272b18f69eafc5eb7cb54d1142287eb7e3e4bc274d2d"
       }
     },
     "es": {
@@ -676,6 +792,122 @@
       "discovery_time_unknown": {
         "source": "df61dccac7af6d6f6d159413061e0c09eee31f34910a3642a3394d620d65a7c3",
         "translation": "4a66434fd38c24b42429f4b89b8910b503a13ce004ebcde448984b21edfd0713"
+      },
+      "auth_title": {
+        "source": "845c2f310c5c5fd6380e4ed29bb91f44e8380062149c23753936bc2939d3b74c",
+        "translation": "3c3fce61c2af493c26f88255917e350f3b7433ec273f8702df918d1a3eaac00d"
+      },
+      "auth_loading": {
+        "source": "b51c6a2a982211f34790750831716654bc6ebd496d3728388d964a5cf8be20ab",
+        "translation": "2aa7d55f0a3555e454fbc876b99e1bd869f76664abdd8201004bc8f74d437853"
+      },
+      "auth_handle": {
+        "source": "f666793f4f6989b10d40f28e5f4c10ed0888a1907d0ccf81aef08355ce9a5e33",
+        "translation": "9b50e37adca144db55eca3e028233915ec1dbb90fa8dc0d8cb922a520c594bd3"
+      },
+      "auth_sign_in": {
+        "source": "88e65c05ef316a395d7a250c69d7b52b38c77f4a3aa385f2a8f609f67311410d",
+        "translation": "542cae098eaa5480c0db70fde4e49fe46c4e7c64a01906d9db1bcb6a40ac300d"
+      },
+      "auth_cancel": {
+        "source": "a8a3936da3d1d0db379684f2c2b036f1ce8e45e4e863a472140a533473165be1",
+        "translation": "d9a9b1b1e2ed3ee938c997e2b5b332b1fe30c196799c0fbc259dfb6d2eb5872a"
+      },
+      "auth_browser_pending": {
+        "source": "79b0e1445b3164f32d517e5d8d0a9cc917d37f5f0036208181e69a842b1b549f",
+        "translation": "08f8473a886b7f29b5ec03d1e3e9170e55c4088252479ae454c13523ae4a0f47"
+      },
+      "auth_cancelled": {
+        "source": "4dd05928203a335520badd366a938dc841958917e73bfe9f68dab1a85d3afdcf",
+        "translation": "466bff8d7bb05ba13094faa1209a93e34a205b1cd5ad362be2d79cd3b98f489e"
+      },
+      "auth_interrupted": {
+        "source": "5731163be91e6bffca6669e413c68fa6079d25618c80fc034e13e4868d45794c",
+        "translation": "2ec59668be5dc05b849fcb359be45be08a62ecbc9206f3695bc35881c5a140b0"
+      },
+      "auth_expired": {
+        "source": "258f081c64ed4c4b8ecca6b57d3e23e70e8562cc40735750e4d3b1cd893cefd4",
+        "translation": "97cbd6328fb53b582b673d02bb8d93a31b044a08074700de12ca58c050f0b11e"
+      },
+      "auth_unavailable": {
+        "source": "f1f114e29516165fcea2ab630241fd037e9a801d3afb93cfcf23eae0877526a7",
+        "translation": "4de9ec908f809c8459ade5fb98cc9029e0fa470ccf7dd017fc29694ccf17cdb8"
+      },
+      "auth_storage_unavailable": {
+        "source": "d60236727ec1a515dff8dd121db2b3a94154ed7c54a00af1f1974174f18d357c",
+        "translation": "39cbeaf752cd5498d08db34d4eae3f22e65de7fd750b03279a5c6f2bebd88af5"
+      },
+      "auth_local_logout": {
+        "source": "6219c9a12998f9714414f842ad1b9b46e4ba7be78e64ccdd53cfec92d4add021",
+        "translation": "b4bed91c229fa26ac3fffe3715314656eec90a62b41a19fd3ef9a2b95ce2122f"
+      },
+      "auth_invalid_handle": {
+        "source": "48890773eeb298945c1f7ece571352780c52223ebdc8251d0bcbc1cef2f738d4",
+        "translation": "dead26323cbac3cfb276c9c3e419fc79e5108a5b6630f0857cd47439e177e94a"
+      },
+      "auth_failed": {
+        "source": "06eb60dc0d130cf51ba0ad2bf4981240e9100f5f944b5008e169e3fa10962886",
+        "translation": "41a9023a89e4e86e64ed288a38188b10c8398bb44aa545b372c0040ef6a863ba"
+      },
+      "auth_session_unavailable": {
+        "source": "8a2a4cb6a4bbbe3f349219f0ad3fecc4c6a33debe9dfb2ad9054dc9551db1d70",
+        "translation": "404ea502f3d1234bcfac9ca5d26bc9fe55f6bce257ae701097a8c9ba618fe489"
+      },
+      "auth_policy_unavailable": {
+        "source": "d4232e6ce5cb8f3377541ec489610983997d6fa5279cd8b0e0bbeab3f36c7790",
+        "translation": "0bce8d1ae03451ad884e7764575370e9b1a4d669820198711b0db191ba3e0ada"
+      },
+      "auth_signed_in": {
+        "source": "8d96c67bb242b14ee5e86d33be583def52b4c82cf325cb803c8c7c4249f7d0de",
+        "translation": "42d97c97d9195e073dd47ac8424b87af4bc5198758d38c625058b468df503c6f"
+      },
+      "auth_refresh": {
+        "source": "7620aa6376d80ee00150eded4abc902aa97e602ac3796e157ec08407d93f6e1b",
+        "translation": "e2565ff1823c1ee40eea97b435febced73a14c0837d571c71e131ab81d6b65d4"
+      },
+      "auth_sign_out": {
+        "source": "5776a0897a9dee3aaeae5f3b1da43b293c93c55b1f55d43bfd1c47f3513c182d",
+        "translation": "35bb3e5ecad35fb71a7d11e01fa9006dee8ca558883343e7b7a5f6148a4f67d1"
+      },
+      "consent_title": {
+        "source": "8b0544bf1c2bf14e988e467dc6415803fe51b739d1af063ddd573de05562363d",
+        "translation": "612e542350a983e970717375a71e59217dd8113d702a2f1d9af71a206bc952d2"
+      },
+      "consent_version": {
+        "source": "f9aa1323a2cd81c41dc7fe5cc0811120c7dee897071ee0f627912a8cf471b6e7",
+        "translation": "ab29ce1ce8e3dc9c54c0e2121c50f32224d9f238985e427d4e1eb528679bd117"
+      },
+      "consent_accept": {
+        "source": "f8a61aa0e1e08927aae8b56cfe31cb1dc2a7ec97ad816febaa10d93a8e34f112",
+        "translation": "c0382826ab9a02b8d5ddbe70cf1365bb5069a7f2618321a0d6bd1dab82a3bb0e"
+      },
+      "consent_age": {
+        "source": "e37d0ae9ed7580968963c47996b4281372b720683355819fcc946b4255a90b48",
+        "translation": "cb36d9383293572fc943f08be5cd24a603466fe62a23d55c6944f576cd6ab471"
+      },
+      "consent_continue": {
+        "source": "cc0575f0a286ef70559b8a80daa0fd5eaacadb8cc9d859a4c323f321a4fb27de",
+        "translation": "38cb05e5e24af39c9c206172518514925f10c09b73ba70e162e8c50c80bc3d50"
+      },
+      "consent_terms": {
+        "source": "2baf5e6f236035b330f81c8ec83571db5bbcfd4eede92ad960d789bed32d594f",
+        "translation": "534cfba3716dcbd39aa8afaa6dd27b7c0ebf0bc0936915dcf998887a2d44b9cb"
+      },
+      "consent_privacy": {
+        "source": "2f73469bf693facf55a6c9c78511ebb27bd1247740d044fec0f0893615576050",
+        "translation": "f7a094dbb800eb5bb5d80adf2abb54c13f8ee8bfb42a9af05db8959f03579828"
+      },
+      "consent_guidelines": {
+        "source": "7ed6aa3c4ca01e0a3ee91ca5256138ffff2c6f7873985cc312f0bf1db1381633",
+        "translation": "bc8432121719ad6456a430cf858866d914389be3a67ed7b2be301d674ecc842a"
+      },
+      "consent_synthetic": {
+        "source": "0778090d44ffbd0025d8c4319c42861b0c2826616e083034364c082f8f2d2fc3",
+        "translation": "5b225927676cbe57c7bc20ffba77ed000f0daeb4049848fbc8522ca9581dc6af"
+      },
+      "consent_location": {
+        "source": "abef1bcdd04692c976c1272b18f69eafc5eb7cb54d1142287eb7e3e4bc274d2d",
+        "translation": "74b4a5a4f8b827e17d107db49696af4ee08e5b43244ab28084ec71450b6bc067"
       }
     }
   }

@@ -88,4 +88,34 @@
     <string name="status_unavailable">No disponible</string>
     <string name="status_unknown">Estado no disponible</string>
     <string name="discovery_time_unknown">Fecha no disponible</string>
+    <!-- Native account/session states and versioned policy acknowledgements (#258). -->
+    <string name="auth_title">Cuenta</string>
+    <string name="auth_loading">Comprobando tu sesión…</string>
+    <string name="auth_handle">Identificador de AT Protocol</string>
+    <string name="auth_sign_in">Iniciar sesión con tu proveedor</string>
+    <string name="auth_cancel">Cancelar inicio de sesión</string>
+    <string name="auth_browser_pending">Completa el inicio de sesión en el navegador. Si lo cerraste, cancela aquí y vuelve a empezar.</string>
+    <string name="auth_cancelled">Inicio de sesión cancelado.</string>
+    <string name="auth_interrupted">Este inicio de sesión se interrumpió o ya no es válido. Vuelve a empezar.</string>
+    <string name="auth_expired">Tu sesión ha terminado. Inicia sesión de nuevo.</string>
+    <string name="auth_unavailable">El inicio de sesión nativo no está configurado para este entorno.</string>
+    <string name="auth_storage_unavailable">El almacenamiento protegido de la sesión no está disponible. Se detuvo el inicio de sesión.</string>
+    <string name="auth_local_logout">Se cerró la sesión en este dispositivo. No se pudo confirmar la revocación en el servidor; la sesión anterior caduca en una hora como máximo.</string>
+    <string name="auth_invalid_handle">Introduce un identificador válido de AT Protocol.</string>
+    <string name="auth_failed">No se pudo completar el inicio de sesión. Comprueba tu conexión y vuelve a intentarlo.</string>
+    <string name="auth_session_unavailable">No se puede comprobar tu sesión guardada. Las acciones protegidas no están disponibles hasta que se verifique.</string>
+    <string name="auth_policy_unavailable">Estas políticas requieren una versión más reciente de la aplicación. Actualízala antes de aceptar.</string>
+    <string name="auth_signed_in">Sesión iniciada como %1$s</string>
+    <string name="auth_refresh">Comprobar sesión de nuevo</string>
+    <string name="auth_sign_out">Cerrar sesión o cambiar de cuenta</string>
+    <string name="consent_title">Revisar las políticas vigentes</string>
+    <string name="consent_version">Versión %1$s. Los cambios sustanciales requieren una nueva aceptación antes de habilitar acciones protegidas.</string>
+    <string name="consent_accept">Acepto: %1$s.</string>
+    <string name="consent_age">Confirmo que tengo al menos 18 años.</string>
+    <string name="consent_continue">Aceptar y continuar</string>
+    <string name="consent_terms">Términos de uso</string>
+    <string name="consent_privacy">Aviso de privacidad</string>
+    <string name="consent_guidelines">Normas de la comunidad</string>
+    <string name="consent_synthetic">Divulgación de datos sintéticos</string>
+    <string name="consent_location">Consentimiento para compartir ubicación</string>
 </resources>

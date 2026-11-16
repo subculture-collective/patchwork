@@ -1,0 +1,12 @@
+{
+  "policyVersion": "2026-07-28",
+  "requiredDocuments": [
+    "terms-of-use",
+    "privacy-notice",
+    "community-guidelines",
+    "synthetic-data-disclosure",
+    "location-sharing-consent"
+  ],
+  "consentRequired": true,
+  "acceptedAt": null
+}

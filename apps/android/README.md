@@ -2,17 +2,21 @@
 
 Independent Kotlin/Compose phone shell for #250, minimum API 29 and target API
 36. It uses native Material navigation, system text sizing, light/dark colors
-and external English/Spanish XML resources. Browse and Settings link to About;
-Android back dismisses About. Feature screens and authentication follow in
-separate issues. It makes no API calls or simulated successful member actions.
+and external English/Spanish XML resources. Browse includes anonymous public
+discovery; Settings provides native sign-in and protected-session controls.
+Both tabs link to About, and Android back dismisses About.
 
 Settings includes a persisted system-default/English/Spanish language choice.
 See [Android localization](../../docs/localization/android.md) for native
 resource validation, translator export/import and large-text pseudolocale tests.
 
-Browse includes the anonymous public-discovery and bounded cache implementation
-for #261. [Android public discovery](../../docs/operations/android-public-discovery.md)
+Browse includes anonymous public discovery and its bounded cache for #261.
+[Android public discovery](../../docs/operations/android-public-discovery.md)
 records the contract, offline limits, checks and pending device gate.
+
+Settings also provides the native provider-login and protected-session surface
+for #258. See [Android native sign-in](../../docs/operations/android-native-auth.md)
+for callback allowlists, storage boundaries, fixture tests and pending device/security gates.
 
 Build with JDK 21 and Android SDK platform 36/build tools 35.0.0:
 

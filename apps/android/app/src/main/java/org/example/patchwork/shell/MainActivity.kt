@@ -1,6 +1,8 @@
 package org.example.patchwork.shell
 
 import android.os.Bundle
+import android.content.Intent
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
@@ -29,16 +31,33 @@ import androidx.compose.ui.unit.dp
 import java.util.Locale
 import org.xmlpull.v1.XmlPullParser
 import org.example.patchwork.shell.discovery.NativeDiscoveryPanel
+import org.example.patchwork.shell.auth.AuthViewModel
+import org.example.patchwork.shell.auth.NativeAuthPanel
 
 class MainActivity : AppCompatActivity() {
+    private val auth: AuthViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        intent.dataString?.let { auth.callback(it) }
+        // Drop the single-use callback from activity recreation/task state immediately.
+        setIntent(Intent(this, MainActivity::class.java))
         setContent {
             val colors = if (isSystemInDarkTheme()) darkColorScheme(primary = Color(0xffbed2b1))
                 else lightColorScheme(primary = Color(0xff45593b))
             MaterialTheme(colorScheme = colors) { PatchworkShell() }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        intent.dataString?.let { auth.callback(it) }
+        setIntent(Intent(this, MainActivity::class.java))
+    }
+
+    override fun onResume() {
+        super.onResume()
+        auth.revalidateIfSignedIn()
     }
 }
 
@@ -75,7 +94,10 @@ fun PatchworkShell(discoveryContent: @Composable () -> Unit = { NativeDiscoveryP
                 }
             } else {
                 if (selectedTab == 0) discoveryContent()
-                else LanguagePicker()
+                else {
+                    LanguagePicker()
+                    NativeAuthPanel()
+                }
                 Button(onClick = { about = true }, modifier = Modifier.testTag("shell.about")) {
                     Text(stringResource(R.string.shell_about))
                 }
