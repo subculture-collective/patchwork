@@ -50,3 +50,7 @@ Android 15 (API 35) emulator. The checks were repeated after adapting system
 bar icons with `enableEdgeToEdge()`. Test runner installation is disposable;
 install the app APK separately for interactive review. No physical phone,
 minimum-API device, release signing or store distribution was qualified.
+
+Interactive shared-device review also confirmed launch, About navigation and
+readable system-bar icons in light and dark appearance. The device was returned
+to light appearance and the task's Device panel session was closed.
