@@ -42,3 +42,11 @@ are recorded separately in the PR.
 
 The app is not an npm workspace. Root npm commands continue to cover only the
 existing JavaScript/TypeScript workspaces.
+
+On 2026-11-15, Kvant JDK 21/SDK 36 passed Debug lint, the configuration unit
+test, Debug and Staging APK builds, instrumentation APK build, and the
+launch/navigation instrumentation smoke on the acquired `T3_Pixel_API_35`
+Android 15 (API 35) emulator. The checks were repeated after adapting system
+bar icons with `enableEdgeToEdge()`. Test runner installation is disposable;
+install the app APK separately for interactive review. No physical phone,
+minimum-API device, release signing or store distribution was qualified.
