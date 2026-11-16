@@ -1,7 +1,7 @@
 name: Native Android shell
 on:
   pull_request:
-    paths: ['apps/android/**', 'scripts/*android_localization.py', 'docs/localization/android*', '.github/workflows/native-android.yml']
+    paths: ['apps/android/**', 'packages/mobile-contracts/**', 'packages/at-lexicons/src/*index.json', 'packages/at-lexicons/src/geography-names.json', 'scripts/*android_localization.py', 'docs/localization/android*', '.github/workflows/native-android.yml']
   workflow_dispatch:
 permissions:
   contents: read

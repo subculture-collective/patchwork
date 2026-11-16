@@ -1,0 +1,39 @@
+{
+  "total": 1,
+  "page": 1,
+  "pageSize": 20,
+  "hasNextPage": false,
+  "results": [
+    {
+      "uri": "at://did:example:mobile-fixture/app.patchwork.directory.resource/demo",
+      "authorDid": "did:example:mobile-fixture",
+      "cid": "fixture-cid",
+      "createdAt": "2026-11-16T12:00:00.000Z",
+      "updatedAt": "2026-11-16T12:00:00.000Z",
+      "recordOrigin": "sourced-public",
+      "name": "Fictional Community Kitchen",
+      "category": "food-bank",
+      "serviceArea": "Cook County, Illinois",
+      "status": "unverified",
+      "contact": {
+        "url": "https://resources.example.test/info",
+        "phone": "+1-202-555-0100"
+      },
+      "openHours": "Call the public number for hours.",
+      "eligibilityNotes": "Fictional listing for native tests.",
+      "operationalStatus": "unknown",
+      "publicListing": {
+        "sourceName": "Fictional source",
+        "sourceUrl": "https://resources.example.test/info",
+        "sourceRetrievedAt": "2026-11-16T12:00:00.000Z",
+        "claimStatus": "unclaimed"
+      }
+    }
+  ],
+  "projectionFreshness": {
+    "latestCursor": null,
+    "projectedAt": "2026-11-16T12:00:00.000Z",
+    "observedAt": null,
+    "lagSeconds": null
+  }
+}

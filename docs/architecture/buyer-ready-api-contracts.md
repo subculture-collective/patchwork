@@ -32,6 +32,12 @@ legacy fixture `/chat/initiate` route remains absent.
 | `GET /query/volunteers` | Public volunteer profiles and approximate service areas |
 | `GET /organizations` / `GET /organizations/profile` | Public organization profiles, provenance, and non-participation labels |
 
+`GET /organizations` optionally accepts `page` (1–100000), `pageSize` (1–100)
+and `dataset` (`all`, `community`, `demo`). Supplying any selects bounded SQL
+pagination and adds `total`, `page`, `pageSize` and `hasNextPage` alongside
+`organizations`. Omitting them preserves the legacy unpaged response. The
+native caller uses pages of 20; search text remains bounded to 120 characters.
+
 Discovery records can include the server-issued `recordOrigin` value
 `synthetic`, `sourced-public`, or `visitor-created`. Clients must treat an
 absent value from an older server as `visitor-created`, never as synthetic.

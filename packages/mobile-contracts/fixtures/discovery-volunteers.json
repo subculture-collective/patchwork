@@ -1,0 +1,36 @@
+{
+  "total": 1,
+  "page": 1,
+  "pageSize": 20,
+  "hasNextPage": false,
+  "results": [
+    {
+      "uri": "at://did:example:mobile-fixture/app.patchwork.volunteer.profile/demo",
+      "cid": "fixture-cid",
+      "authorDid": "did:example:mobile-fixture",
+      "displayName": "Fictional Volunteer",
+      "bio": "Fictional public profile for native tests.",
+      "capabilities": [
+        "food"
+      ],
+      "availability": "scheduled",
+      "contactPreference": "chat",
+      "skills": [],
+      "languages": [
+        "en",
+        "es"
+      ],
+      "serviceArea": {
+        "areaLabel": "Cook County, Illinois",
+        "noPermanentAddress": false
+      },
+      "updatedAt": "2026-11-16T12:00:00.000Z",
+      "recordOrigin": "synthetic"
+    }
+  ],
+  "projectionFreshness": {
+    "latestCursor": null,
+    "projectedAt": null,
+    "lagSeconds": null
+  }
+}

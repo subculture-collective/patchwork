@@ -10,6 +10,10 @@ Settings includes a persisted system-default/English/Spanish language choice.
 See [Android localization](../../docs/localization/android.md) for native
 resource validation, translator export/import and large-text pseudolocale tests.
 
+Browse includes the anonymous public-discovery and bounded cache implementation
+for #261. [Android public discovery](../../docs/operations/android-public-discovery.md)
+records the contract, offline limits, checks and pending device gate.
+
 Build with JDK 21 and Android SDK platform 36/build tools 35.0.0:
 
 ```sh

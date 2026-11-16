@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.Density
@@ -46,7 +47,9 @@ class LocalizationLayoutTest {
                 LocalLayoutDirection provides if (tag == "ar-XB") LayoutDirection.Rtl else LayoutDirection.Ltr
             ) {
                 MaterialTheme {
-                    Box(Modifier.width(320.dp).fillMaxHeight()) { PatchworkShell() }
+                    Box(Modifier.width(320.dp).fillMaxHeight()) {
+                        PatchworkShell { Text(stringResource(R.string.shell_welcome)) }
+                    }
                 }
             }
         }

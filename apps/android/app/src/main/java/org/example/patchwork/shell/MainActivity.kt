@@ -28,6 +28,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import java.util.Locale
 import org.xmlpull.v1.XmlPullParser
+import org.example.patchwork.shell.discovery.NativeDiscoveryPanel
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,7 +44,7 @@ class MainActivity : AppCompatActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PatchworkShell() {
+fun PatchworkShell(discoveryContent: @Composable () -> Unit = { NativeDiscoveryPanel() }) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var about by rememberSaveable { mutableStateOf(false) }
     BackHandler(enabled = about) { about = false }
@@ -73,7 +74,7 @@ fun PatchworkShell() {
                     Text(stringResource(R.string.shell_back))
                 }
             } else {
-                if (selectedTab == 0) Text(stringResource(R.string.shell_welcome))
+                if (selectedTab == 0) discoveryContent()
                 else LanguagePicker()
                 Button(onClick = { about = true }, modifier = Modifier.testTag("shell.about")) {
                     Text(stringResource(R.string.shell_about))

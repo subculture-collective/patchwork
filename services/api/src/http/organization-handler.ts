@@ -67,9 +67,11 @@ export const createOrganizationHandler = (
                 writeJsonResponse(
                     response,
                     200,
-                    await dependencies.service.listPublic(
-                        requestUrl.searchParams.get('searchText') ?? undefined,
-                    ),
+                    ['page', 'pageSize', 'dataset'].some(key => requestUrl.searchParams.has(key))
+                        ? await dependencies.service.listPublicPage(
+                            requestUrl.searchParams.get('searchText') ?? undefined, requestUrl.searchParams,
+                        )
+                        : await dependencies.service.listPublic(requestUrl.searchParams.get('searchText') ?? undefined),
                 );
                 return;
             }

@@ -172,6 +172,41 @@ export class OrganizationService {
 
     constructor(private readonly pool: Pool) {}
 
+    /** Optional bounded reader contract; existing unpaged web callers retain their response. */
+    async listPublicPage(searchText: string | undefined, params: URLSearchParams): Promise<Record<string, unknown>> {
+        const search = searchText?.trim().toLowerCase();
+        const parsed = z.object({
+            page: z.number().int().min(1).max(100_000),
+            pageSize: z.number().int().min(1).max(100),
+            dataset: z.enum(['all', 'community', 'demo']),
+        }).safeParse({
+            page: Number(params.get('page') ?? 1),
+            pageSize: Number(params.get('pageSize') ?? 20),
+            dataset: params.get('dataset') ?? 'all',
+        });
+        if (!parsed.success || (search?.length ?? 0) > 120) {
+            invalid('INVALID_ORGANIZATION_QUERY', 'The organization query is invalid.');
+        }
+        const { page, pageSize, dataset } = parsed.data!;
+        const result = await this.pool.query<{ total: string; rows: OrganizationRow[] }>(
+            `WITH filtered AS MATERIALIZED (
+                SELECT organization_id, slug, name, description, origin,
+                    source_url, source_retrieved_at, source_last_verified_at,
+                    non_endorsement_label, created_at, updated_at
+                FROM organizations
+                WHERE ($1::text IS NULL OR lower(name || ' ' || description) LIKE '%' || $1 || '%')
+                    AND ($2::boolean IS NULL OR (origin = 'synthetic') = $2)
+            ), paged AS (
+                SELECT * FROM filtered ORDER BY name, organization_id LIMIT $3 OFFSET $4
+            ) SELECT (SELECT count(*)::text FROM filtered) AS total,
+                coalesce((SELECT jsonb_agg(to_jsonb(paged) ORDER BY name, organization_id) FROM paged), '[]'::jsonb) AS rows`,
+            [search || null, dataset === 'all' ? null : dataset === 'demo', pageSize, (page - 1) * pageSize],
+        );
+        const total = Number(result.rows[0]?.total ?? 0);
+        return { organizations: (result.rows[0]?.rows ?? []).map(publicOrganization),
+            total, page, pageSize, hasNextPage: page * pageSize < total };
+    }
+
     async listPublic(searchText?: string): Promise<Record<string, unknown>> {
         const search = searchText?.trim().toLowerCase();
         if (search && search.length > 120) {

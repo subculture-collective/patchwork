@@ -6,12 +6,14 @@ import { createOrganizationHandler } from './organization-handler.js';
 describe('organization HTTP boundary', () => {
     let origin: string;
     const listPublic = vi.fn();
+    const listPublicPage = vi.fn();
     const getPublic = vi.fn();
     const create = vi.fn();
     const invite = vi.fn();
     const listResources = vi.fn();
     const service = {
         listPublic,
+        listPublicPage,
         getPublic,
         create,
         invite,
@@ -76,6 +78,15 @@ describe('organization HTTP boundary', () => {
         );
         expect(response.status).toBe(200);
         expect(listPublic).toHaveBeenCalledWith('pantry');
+        expect(authenticate).not.toHaveBeenCalled();
+    });
+
+    it('passes optional native pagination and dataset without requiring authentication', async () => {
+        listPublicPage.mockResolvedValueOnce({ organizations: [], total: 0, page: 2, pageSize: 20, hasNextPage: false });
+        const response = await fetch(`${origin}/organizations?searchText=pantry&page=2&pageSize=20&dataset=community`);
+        expect(response.status).toBe(200);
+        expect(listPublicPage).toHaveBeenCalledWith('pantry', expect.any(URLSearchParams));
+        expect(listPublicPage.mock.calls.at(-1)?.[1].get('dataset')).toBe('community');
         expect(authenticate).not.toHaveBeenCalled();
     });
 

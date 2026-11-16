@@ -1,6 +1,6 @@
 {
-  "status": "Existing shell Spanish retained; new settings copy reviewed in shell context by the implementing agent. Independent linguistic review remains part of #308.",
-  "provenance": "shell_* from #250; discovery.resultCount from the reviewed #254 web seed; settings.language and settings.languageSystem are native settings copy.",
+  "status": "Existing shell Spanish retained; settings and discovery labels reviewed by the implementing agent. Independent linguistic review remains part of #308.",
+  "provenance": "shell_* from #250; discovery.resultCount from the #254 web seed; settings.*, discovery.*, category.* and status.* are native interface copy. Public/member-authored content stays in its source language.",
   "resources": {
     "en": {
       "shell_browse": {
@@ -46,6 +46,298 @@
       "discovery_result_count": {
         "source": "07464b63691b22dd615c3f883613db4b94db20fc061ce470dbec926b1756ea0d",
         "translation": "07464b63691b22dd615c3f883613db4b94db20fc061ce470dbec926b1756ea0d"
+      },
+      "discovery_requests": {
+        "source": "22cf7ff867669c2694ad6483d5777bfdb8e3a4a886990d0af7d9d9caed135184",
+        "translation": "22cf7ff867669c2694ad6483d5777bfdb8e3a4a886990d0af7d9d9caed135184"
+      },
+      "discovery_offers": {
+        "source": "ea584742ca59696b98c072446d1a0173e2940146f07bfbdf5d824ade9cad3ca5",
+        "translation": "ea584742ca59696b98c072446d1a0173e2940146f07bfbdf5d824ade9cad3ca5"
+      },
+      "discovery_resources": {
+        "source": "13b7c62aa87d69e6817a882084f3ab62a1890db4faf3e391e9c6a67b38da29a3",
+        "translation": "13b7c62aa87d69e6817a882084f3ab62a1890db4faf3e391e9c6a67b38da29a3"
+      },
+      "discovery_volunteers": {
+        "source": "c5d04e95d3f45a190850484608ee6ba246f5a1c184fcafa4aeb4a81a4c27a2d8",
+        "translation": "c5d04e95d3f45a190850484608ee6ba246f5a1c184fcafa4aeb4a81a4c27a2d8"
+      },
+      "discovery_organizations": {
+        "source": "b839c703c00dded046215537566e816f3304ec50ce40aa58d2f2b9053c9e444c",
+        "translation": "b839c703c00dded046215537566e816f3304ec50ce40aa58d2f2b9053c9e444c"
+      },
+      "discovery_search": {
+        "source": "53efae1fdc0c06b668285bb5bddeeb37611368b29aea323673521bbfe0b5726e",
+        "translation": "53efae1fdc0c06b668285bb5bddeeb37611368b29aea323673521bbfe0b5726e"
+      },
+      "discovery_area_help": {
+        "source": "f0bdc17c23f9ff84bfeb379be4fd3974af361f7a2bc37b7d510bab3ebbf485b6",
+        "translation": "f0bdc17c23f9ff84bfeb379be4fd3974af361f7a2bc37b7d510bab3ebbf485b6"
+      },
+      "discovery_zip": {
+        "source": "c838e25456c97119693ef6dadc62b7ac559274d8313d67f1938f6bd45771f596",
+        "translation": "c838e25456c97119693ef6dadc62b7ac559274d8313d67f1938f6bd45771f596"
+      },
+      "discovery_county": {
+        "source": "14d3e87847a0e2eaca0d3a7bcc01b4f21737723cc0e57f262b9126d076a5145b",
+        "translation": "14d3e87847a0e2eaca0d3a7bcc01b4f21737723cc0e57f262b9126d076a5145b"
+      },
+      "discovery_all_categories": {
+        "source": "c4b719eef70a59a0a94959069ccb983e675d2bb8cab09d6f18a01c0867ac1c10",
+        "translation": "c4b719eef70a59a0a94959069ccb983e675d2bb8cab09d6f18a01c0867ac1c10"
+      },
+      "discovery_all_statuses": {
+        "source": "cea3af48eb9422ebfd52dae8de5b10d283c4f09a48c0361beeec1c1d4abc1c73",
+        "translation": "cea3af48eb9422ebfd52dae8de5b10d283c4f09a48c0361beeec1c1d4abc1c73"
+      },
+      "discovery_community": {
+        "source": "30a318025e2d09e5faf2fce24cb9ad992671ed7a985bf2c6614a7f2f509afacc",
+        "translation": "30a318025e2d09e5faf2fce24cb9ad992671ed7a985bf2c6614a7f2f509afacc"
+      },
+      "discovery_demo_only": {
+        "source": "41302a7ae3e4c9d6581d28d88fa4b982dffd87452503a5910963a9ecef70cf46",
+        "translation": "41302a7ae3e4c9d6581d28d88fa4b982dffd87452503a5910963a9ecef70cf46"
+      },
+      "discovery_all_data": {
+        "source": "44f5749556d0c733c32c95c1873b539075485010acb2c2978ee1122c2927bfd1",
+        "translation": "44f5749556d0c733c32c95c1873b539075485010acb2c2978ee1122c2927bfd1"
+      },
+      "discovery_find": {
+        "source": "e63c25cb93f11b01a8d14f7dc94ed6e9a442964f205179d63b0db4a2d90320e2",
+        "translation": "e63c25cb93f11b01a8d14f7dc94ed6e9a442964f205179d63b0db4a2d90320e2"
+      },
+      "discovery_loading": {
+        "source": "e0ee37084aa0e97efad1963b65293eac53a594256d6a6a072a544f52d9eaa6ce",
+        "translation": "e0ee37084aa0e97efad1963b65293eac53a594256d6a6a072a544f52d9eaa6ce"
+      },
+      "discovery_invalid_query": {
+        "source": "8d630bc5487dd32f245b6a862220c22ea55a55928513ecd8e132aa50de0c6c93",
+        "translation": "8d630bc5487dd32f245b6a862220c22ea55a55928513ecd8e132aa50de0c6c93"
+      },
+      "discovery_maintenance": {
+        "source": "ebf11906ec295efa312539a400d477e9e0c73a1c2b361348cf20601659368176",
+        "translation": "ebf11906ec295efa312539a400d477e9e0c73a1c2b361348cf20601659368176"
+      },
+      "discovery_failed": {
+        "source": "22836ad6e081fb60bbecfed221063bf56cd4c5afe359458b4d4b523a6e99acff",
+        "translation": "22836ad6e081fb60bbecfed221063bf56cd4c5afe359458b4d4b523a6e99acff"
+      },
+      "discovery_detail_unavailable": {
+        "source": "667e874383965ccd9279d8b744b04c7c94c4540cd4707e796e022ce2fef5262e",
+        "translation": "667e874383965ccd9279d8b744b04c7c94c4540cd4707e796e022ce2fef5262e"
+      },
+      "discovery_maintenance_cached": {
+        "source": "28530f86cec21f00c87288c35e4742b54d3df99c84b313b3f4edf115e59921da",
+        "translation": "28530f86cec21f00c87288c35e4742b54d3df99c84b313b3f4edf115e59921da"
+      },
+      "discovery_cached": {
+        "source": "d99ca3ebeaa0374e803f2fc200da7ccd5c9cb2fde5122ffc50f9c1a06587bc46",
+        "translation": "d99ca3ebeaa0374e803f2fc200da7ccd5c9cb2fde5122ffc50f9c1a06587bc46"
+      },
+      "discovery_fetched": {
+        "source": "2caca81bcc57dfefcd992c6acaf718454052e74dc737cb17a1a9ecae7f219998",
+        "translation": "2caca81bcc57dfefcd992c6acaf718454052e74dc737cb17a1a9ecae7f219998"
+      },
+      "discovery_projected": {
+        "source": "b66c212e777e39951aeec80b45860db2861f4796823e763555b12311d8c54a84",
+        "translation": "b66c212e777e39951aeec80b45860db2861f4796823e763555b12311d8c54a84"
+      },
+      "discovery_empty": {
+        "source": "4825e0d7b1c23627efa1cebc57c336abd11d97d0248314fde0ebab1bcae2491c",
+        "translation": "4825e0d7b1c23627efa1cebc57c336abd11d97d0248314fde0ebab1bcae2491c"
+      },
+      "discovery_details": {
+        "source": "7554de4db1e3025968a56f6ce1ebe9fc59600ec9d380abd6662a4f716dbe7fb2",
+        "translation": "7554de4db1e3025968a56f6ce1ebe9fc59600ec9d380abd6662a4f716dbe7fb2"
+      },
+      "discovery_back": {
+        "source": "c782b0b710e614a6e7e10044074a8bc05a55394820796c32cf4b4ffd57cc6260",
+        "translation": "c782b0b710e614a6e7e10044074a8bc05a55394820796c32cf4b4ffd57cc6260"
+      },
+      "discovery_previous": {
+        "source": "1f8f6d29b2adac1399f250b0e5ddc9ae0e4a8841e7fd75cd035a94555df39c8a",
+        "translation": "1f8f6d29b2adac1399f250b0e5ddc9ae0e4a8841e7fd75cd035a94555df39c8a"
+      },
+      "discovery_next": {
+        "source": "9875220488d8a775b423484b7edd3969af2b8f8124e912c7545fda5e16d5ba6f",
+        "translation": "9875220488d8a775b423484b7edd3969af2b8f8124e912c7545fda5e16d5ba6f"
+      },
+      "discovery_page": {
+        "source": "3fe4ac998b2ca93a86c6af82595a5698c64506fa2b5dee1aa3b5836a61c93c10",
+        "translation": "3fe4ac998b2ca93a86c6af82595a5698c64506fa2b5dee1aa3b5836a61c93c10"
+      },
+      "discovery_demo": {
+        "source": "c50d70312c20d40d902046f772bb9bde14f63f858c36571998906e2d5fe2321b",
+        "translation": "c50d70312c20d40d902046f772bb9bde14f63f858c36571998906e2d5fe2321b"
+      },
+      "discovery_sourced": {
+        "source": "ece1a99bd26cc3bd6710455e3dbf957d929a563f171475220e9aebd481c3d098",
+        "translation": "ece1a99bd26cc3bd6710455e3dbf957d929a563f171475220e9aebd481c3d098"
+      },
+      "discovery_member": {
+        "source": "ccb0de4e6b1f87b0f22686a10732e69a379fbd22a2cf1482e1ee64d49cd6d0b1",
+        "translation": "ccb0de4e6b1f87b0f22686a10732e69a379fbd22a2cf1482e1ee64d49cd6d0b1"
+      },
+      "discovery_origin_unknown": {
+        "source": "68b9782207fa9aca98c38e666557766afa2f8b7f6eb9687f0e2cb471afb8613e",
+        "translation": "68b9782207fa9aca98c38e666557766afa2f8b7f6eb9687f0e2cb471afb8613e"
+      },
+      "discovery_non_participation": {
+        "source": "e6cfb461ac4e6232ae0ff5393ddfb16338f9c224e6f0f989b61ac30cffcfc656",
+        "translation": "e6cfb461ac4e6232ae0ff5393ddfb16338f9c224e6f0f989b61ac30cffcfc656"
+      },
+      "discovery_type_unknown": {
+        "source": "16388ab7926cf1e5bfcbe7afa3996d8328274d9dc29566572ab46265b5af66f2",
+        "translation": "16388ab7926cf1e5bfcbe7afa3996d8328274d9dc29566572ab46265b5af66f2"
+      },
+      "discovery_service_area": {
+        "source": "74f5f218161624769b4f9462440348029ebba10aceb2a7970e7b2a75a6e0c9b7",
+        "translation": "74f5f218161624769b4f9462440348029ebba10aceb2a7970e7b2a75a6e0c9b7"
+      },
+      "discovery_hours": {
+        "source": "19fe63d846093f969326730b3bc4433cae44718b55980155947388b20af02119",
+        "translation": "19fe63d846093f969326730b3bc4433cae44718b55980155947388b20af02119"
+      },
+      "discovery_eligibility": {
+        "source": "6975d33b3f2ceb26ccaffd37d380dcbc432c43b82be28888a633be8d2b9f4f56",
+        "translation": "6975d33b3f2ceb26ccaffd37d380dcbc432c43b82be28888a633be8d2b9f4f56"
+      },
+      "discovery_phone": {
+        "source": "e624a8df48cd4ef9395ab010f67a8489f45cb7b897fae8a771025acb2445be4f",
+        "translation": "e624a8df48cd4ef9395ab010f67a8489f45cb7b897fae8a771025acb2445be4f"
+      },
+      "discovery_website": {
+        "source": "a2a379b5ccc03c84315c9bb58dd9e8147520b8fdf5d1d414bafe32cede8b5212",
+        "translation": "a2a379b5ccc03c84315c9bb58dd9e8147520b8fdf5d1d414bafe32cede8b5212"
+      },
+      "discovery_source": {
+        "source": "b2d27d48559ae6d800d4c8cf8f9074a3fab6b646952480d070c3041be1817477",
+        "translation": "b2d27d48559ae6d800d4c8cf8f9074a3fab6b646952480d070c3041be1817477"
+      },
+      "discovery_source_url": {
+        "source": "b9e062dc2bda190449f63b75ab6f92f0df0ad5f9bfe12136146ec25845ae957a",
+        "translation": "b9e062dc2bda190449f63b75ab6f92f0df0ad5f9bfe12136146ec25845ae957a"
+      },
+      "discovery_retrieved": {
+        "source": "df1929249f92aedb92bbe40cc6b6fdfc79ac2223cbf69622ea0c5b0ac594dfd2",
+        "translation": "df1929249f92aedb92bbe40cc6b6fdfc79ac2223cbf69622ea0c5b0ac594dfd2"
+      },
+      "discovery_verified": {
+        "source": "893addd41cd2c3ce2650c7d3be4c52f1041b4eba5324ee66526e08cfbf956cde",
+        "translation": "893addd41cd2c3ce2650c7d3be4c52f1041b4eba5324ee66526e08cfbf956cde"
+      },
+      "discovery_capabilities": {
+        "source": "c83924e44cbd3add28ddcda64dd38c3245aedf12952c9b5c0c5277c3eab72dd1",
+        "translation": "c83924e44cbd3add28ddcda64dd38c3245aedf12952c9b5c0c5277c3eab72dd1"
+      },
+      "discovery_languages": {
+        "source": "5169423f946f66cce62d3a938df7316453f55a585c2c7b263b5f966d66a43eb9",
+        "translation": "5169423f946f66cce62d3a938df7316453f55a585c2c7b263b5f966d66a43eb9"
+      },
+      "discovery_linked_resource": {
+        "source": "920698d5c37193ff4e1355afc9112f521371e75649b7b1fbbaf6928f64555509",
+        "translation": "920698d5c37193ff4e1355afc9112f521371e75649b7b1fbbaf6928f64555509"
+      },
+      "category_food": {
+        "source": "8516a5bf994fdabe9f45c2bea7d7c3bc713822597196aba66fc2baf7824a33d4",
+        "translation": "8516a5bf994fdabe9f45c2bea7d7c3bc713822597196aba66fc2baf7824a33d4"
+      },
+      "category_shelter": {
+        "source": "06706dd960ecdc32f650f83f6cb3339fe46daba2667d2abcc7e7f5ba37745953",
+        "translation": "06706dd960ecdc32f650f83f6cb3339fe46daba2667d2abcc7e7f5ba37745953"
+      },
+      "category_medical": {
+        "source": "0c7456b917dba66d6de248417a899a14c63453f2e2e1d3e0a567c565dc3a7f03",
+        "translation": "0c7456b917dba66d6de248417a899a14c63453f2e2e1d3e0a567c565dc3a7f03"
+      },
+      "category_transport": {
+        "source": "f85406d0e42ea03c108372b7ed91d81d8487863e2305a0a1ae0fafeaee59bbf1",
+        "translation": "f85406d0e42ea03c108372b7ed91d81d8487863e2305a0a1ae0fafeaee59bbf1"
+      },
+      "category_childcare": {
+        "source": "8c48a5ed01e933e4a6574f819c090e0ba488aa01e833c2d224b1e5baa7a27c84",
+        "translation": "8c48a5ed01e933e4a6574f819c090e0ba488aa01e833c2d224b1e5baa7a27c84"
+      },
+      "category_other": {
+        "source": "3fb397ac96a28dc80d29d40343315d9b0fa19522837ae0fd4361d899f25bf9a6",
+        "translation": "3fb397ac96a28dc80d29d40343315d9b0fa19522837ae0fd4361d899f25bf9a6"
+      },
+      "category_food_bank": {
+        "source": "46c691db1e5204a466ba9d1f808c7c0413c1c3180a654bff3021a5e921722365",
+        "translation": "46c691db1e5204a466ba9d1f808c7c0413c1c3180a654bff3021a5e921722365"
+      },
+      "category_clinic": {
+        "source": "45bc3614eb856f98fba81c4152f60849592c399704f29bee97d9e41fbd4ecd94",
+        "translation": "45bc3614eb856f98fba81c4152f60849592c399704f29bee97d9e41fbd4ecd94"
+      },
+      "category_legal_aid": {
+        "source": "23312fd2efa32429939dff2ccd879a41d5984bc91c6b538dcfe3339c667f3d8c",
+        "translation": "23312fd2efa32429939dff2ccd879a41d5984bc91c6b538dcfe3339c667f3d8c"
+      },
+      "category_hotline": {
+        "source": "d08991b6ede7d2fcd0028710e97a2b92fd35a9d4b62a70abff5e1e07a2da209c",
+        "translation": "d08991b6ede7d2fcd0028710e97a2b92fd35a9d4b62a70abff5e1e07a2da209c"
+      },
+      "category_library": {
+        "source": "e9aba0809d8cd0cecba6d323c82fcb5ef8b4e6d350241124277e1da6e7c8347d",
+        "translation": "e9aba0809d8cd0cecba6d323c82fcb5ef8b4e6d350241124277e1da6e7c8347d"
+      },
+      "category_unknown": {
+        "source": "492c4ce1ed1c4e24208641a2239d34291257abe8e124aa456e008d25e9001553",
+        "translation": "492c4ce1ed1c4e24208641a2239d34291257abe8e124aa456e008d25e9001553"
+      },
+      "status_open": {
+        "source": "bb6363375725fdc6c38e723f6770149de0b837c7f5e67a7d43e0d055ae73f63d",
+        "translation": "bb6363375725fdc6c38e723f6770149de0b837c7f5e67a7d43e0d055ae73f63d"
+      },
+      "status_in_progress": {
+        "source": "6ffa74496faf0aae177c0acf3b13a27289e7897683c298be38e502dbf336a29e",
+        "translation": "6ffa74496faf0aae177c0acf3b13a27289e7897683c298be38e502dbf336a29e"
+      },
+      "status_resolved": {
+        "source": "11ace7a6578b99e24444ddd847eecd9f51038257aec025e06767eae3090294d3",
+        "translation": "11ace7a6578b99e24444ddd847eecd9f51038257aec025e06767eae3090294d3"
+      },
+      "status_closed": {
+        "source": "4c16e43a080522194d3b1eafdec9c986786b498eee140c39a4f893ceb8c9c97a",
+        "translation": "4c16e43a080522194d3b1eafdec9c986786b498eee140c39a4f893ceb8c9c97a"
+      },
+      "status_unverified": {
+        "source": "61aa6926ea9f31f9a4b09206e98941ebf238ab6d2dab3161f2926861f27f13e6",
+        "translation": "61aa6926ea9f31f9a4b09206e98941ebf238ab6d2dab3161f2926861f27f13e6"
+      },
+      "status_community_verified": {
+        "source": "281800fd049757bc2a1d5207c7e220426722c7241afc9b45173b8d7d40e931ec",
+        "translation": "281800fd049757bc2a1d5207c7e220426722c7241afc9b45173b8d7d40e931ec"
+      },
+      "status_partner_verified": {
+        "source": "63f7304d92a77d7d2ffc9a332262053b62b26bcd05253bbe0dde0f55dffc7090",
+        "translation": "63f7304d92a77d7d2ffc9a332262053b62b26bcd05253bbe0dde0f55dffc7090"
+      },
+      "status_immediate": {
+        "source": "48ee3269ea465d3f6d5b63369ff8a0355c3a3b5db0f86aa760a74bd85fed8f61",
+        "translation": "48ee3269ea465d3f6d5b63369ff8a0355c3a3b5db0f86aa760a74bd85fed8f61"
+      },
+      "status_within_day": {
+        "source": "cacc925427e043bfd29e3c2284146e3f6d0d6b39fa2cd4879fbe1f3ef9f60b61",
+        "translation": "cacc925427e043bfd29e3c2284146e3f6d0d6b39fa2cd4879fbe1f3ef9f60b61"
+      },
+      "status_scheduled": {
+        "source": "8ce6d908d5cf152342b3a3b4fd469f349c483ee3faff11f2a2e6b1a954d4d0b5",
+        "translation": "8ce6d908d5cf152342b3a3b4fd469f349c483ee3faff11f2a2e6b1a954d4d0b5"
+      },
+      "status_unavailable": {
+        "source": "b92472517ca075e7988d0b74d19b539f85fc7dabaa3d0b1052a8cbad87486414",
+        "translation": "b92472517ca075e7988d0b74d19b539f85fc7dabaa3d0b1052a8cbad87486414"
+      },
+      "status_unknown": {
+        "source": "df05b3a070b6925ff35aab9000943f690cd92d390d65cf115db93833960b7a6c",
+        "translation": "df05b3a070b6925ff35aab9000943f690cd92d390d65cf115db93833960b7a6c"
+      },
+      "discovery_time_unknown": {
+        "source": "df61dccac7af6d6f6d159413061e0c09eee31f34910a3642a3394d620d65a7c3",
+        "translation": "df61dccac7af6d6f6d159413061e0c09eee31f34910a3642a3394d620d65a7c3"
       }
     },
     "es": {
@@ -92,6 +384,298 @@
       "discovery_result_count": {
         "source": "07464b63691b22dd615c3f883613db4b94db20fc061ce470dbec926b1756ea0d",
         "translation": "dc8c19a801e185c85f4c5eb8aad56b2272011fee86505ecf5c0fddd21d681bf5"
+      },
+      "discovery_requests": {
+        "source": "22cf7ff867669c2694ad6483d5777bfdb8e3a4a886990d0af7d9d9caed135184",
+        "translation": "cc4922773b1dd8795417c2472df9ec0e80b0bafe4ea6618c8b1cc39d1b2f468b"
+      },
+      "discovery_offers": {
+        "source": "ea584742ca59696b98c072446d1a0173e2940146f07bfbdf5d824ade9cad3ca5",
+        "translation": "71265a9690e54403ceee6097788f869f42b2b120dedfde5df745c95e58024604"
+      },
+      "discovery_resources": {
+        "source": "13b7c62aa87d69e6817a882084f3ab62a1890db4faf3e391e9c6a67b38da29a3",
+        "translation": "addabb33bbe573bf08fdbb2b63151041df77b2e3882fcc5b0d11cf44bbb496a8"
+      },
+      "discovery_volunteers": {
+        "source": "c5d04e95d3f45a190850484608ee6ba246f5a1c184fcafa4aeb4a81a4c27a2d8",
+        "translation": "ba36dfef712168b9cb3e8ce3f6a3a76f937091b9a3894c87478c127600046ac1"
+      },
+      "discovery_organizations": {
+        "source": "b839c703c00dded046215537566e816f3304ec50ce40aa58d2f2b9053c9e444c",
+        "translation": "43afbb03dab59b1fa6b8c747d1dea156f0631d221a776681f195cb75a0e7a3ec"
+      },
+      "discovery_search": {
+        "source": "53efae1fdc0c06b668285bb5bddeeb37611368b29aea323673521bbfe0b5726e",
+        "translation": "226d468826e761dc493e23366caa4b578ab991f138632a13b98fe916f147e605"
+      },
+      "discovery_area_help": {
+        "source": "f0bdc17c23f9ff84bfeb379be4fd3974af361f7a2bc37b7d510bab3ebbf485b6",
+        "translation": "9097ce98ac4d00ce558c5810cc42e00e0fbde9d8e5860f8705893bde034c87b6"
+      },
+      "discovery_zip": {
+        "source": "c838e25456c97119693ef6dadc62b7ac559274d8313d67f1938f6bd45771f596",
+        "translation": "c8134a13b65aca24a25a9d6779e162affa9016b4a1742bbcc9bea71130c9d1e8"
+      },
+      "discovery_county": {
+        "source": "14d3e87847a0e2eaca0d3a7bcc01b4f21737723cc0e57f262b9126d076a5145b",
+        "translation": "0c131de4bb6ec03031f47a46d99b0d23b108d8da78bb98a547b9fec0756dac23"
+      },
+      "discovery_all_categories": {
+        "source": "c4b719eef70a59a0a94959069ccb983e675d2bb8cab09d6f18a01c0867ac1c10",
+        "translation": "5cdf2e6111fd1a118c85c89904b73b765623ac9dc30cf24c813a653d24a6db14"
+      },
+      "discovery_all_statuses": {
+        "source": "cea3af48eb9422ebfd52dae8de5b10d283c4f09a48c0361beeec1c1d4abc1c73",
+        "translation": "17645a59dd88b4bc9f2294c1252e6ad0536ae0944580b54006d163db928625ce"
+      },
+      "discovery_community": {
+        "source": "30a318025e2d09e5faf2fce24cb9ad992671ed7a985bf2c6614a7f2f509afacc",
+        "translation": "3451a9afc15a422119aab26f9583ccfafd2425fc5d2402480c54a3aca8e532da"
+      },
+      "discovery_demo_only": {
+        "source": "41302a7ae3e4c9d6581d28d88fa4b982dffd87452503a5910963a9ecef70cf46",
+        "translation": "a401a3693a14deb61bc0ebf90ff563028cb7b48e8510fe3e9c10584c5b89f79e"
+      },
+      "discovery_all_data": {
+        "source": "44f5749556d0c733c32c95c1873b539075485010acb2c2978ee1122c2927bfd1",
+        "translation": "e43ed6c3475d1130ea332587811324fa08a3c7e999b9d7a9139da9564efe0ebc"
+      },
+      "discovery_find": {
+        "source": "e63c25cb93f11b01a8d14f7dc94ed6e9a442964f205179d63b0db4a2d90320e2",
+        "translation": "966b0b234910ab055a3c2267faeef4a691fcfdbdb8f517228eb1db0fbe4cd96e"
+      },
+      "discovery_loading": {
+        "source": "e0ee37084aa0e97efad1963b65293eac53a594256d6a6a072a544f52d9eaa6ce",
+        "translation": "cd2c01f1e978b240e83fd7aa0090edb40c6d3fed6b9a92f8f63c910c7c1e60ea"
+      },
+      "discovery_invalid_query": {
+        "source": "8d630bc5487dd32f245b6a862220c22ea55a55928513ecd8e132aa50de0c6c93",
+        "translation": "8e1e5de0f6c9be994cd6c51b51349c97b1240bdfcbfdb0822bd147f6edc447f5"
+      },
+      "discovery_maintenance": {
+        "source": "ebf11906ec295efa312539a400d477e9e0c73a1c2b361348cf20601659368176",
+        "translation": "be312792385e927b8e6cc2de2d9da759bfe852b0c3731c858018622e71b49a00"
+      },
+      "discovery_failed": {
+        "source": "22836ad6e081fb60bbecfed221063bf56cd4c5afe359458b4d4b523a6e99acff",
+        "translation": "0f0d85eabed00b4db090fef8039e61a385dbeaa2be7186f653312fa3cfff93e2"
+      },
+      "discovery_detail_unavailable": {
+        "source": "667e874383965ccd9279d8b744b04c7c94c4540cd4707e796e022ce2fef5262e",
+        "translation": "ccd680d648db6d58525919258f75e698421ff82f8e57d1230e78ad6513cb424c"
+      },
+      "discovery_maintenance_cached": {
+        "source": "28530f86cec21f00c87288c35e4742b54d3df99c84b313b3f4edf115e59921da",
+        "translation": "07defa7631c03245d7289ccdc4d2718ae41b3c14a0815e48d94cdda22411122f"
+      },
+      "discovery_cached": {
+        "source": "d99ca3ebeaa0374e803f2fc200da7ccd5c9cb2fde5122ffc50f9c1a06587bc46",
+        "translation": "4067caff10aaa41e46c750dcb1fd037b42017c7dfe3a07261cef67196acf4450"
+      },
+      "discovery_fetched": {
+        "source": "2caca81bcc57dfefcd992c6acaf718454052e74dc737cb17a1a9ecae7f219998",
+        "translation": "c29ccce3ebf09d0f99b70c83a2019655c469ebfbe1eb18a15a10e7e4808ed773"
+      },
+      "discovery_projected": {
+        "source": "b66c212e777e39951aeec80b45860db2861f4796823e763555b12311d8c54a84",
+        "translation": "a7ac0f39d9fc67b382a29ae3f791d6d92c8828c5834f53dc2c80535a1b9d4769"
+      },
+      "discovery_empty": {
+        "source": "4825e0d7b1c23627efa1cebc57c336abd11d97d0248314fde0ebab1bcae2491c",
+        "translation": "c4040cf5025a12c9abf329f9922f5de6cc70c30f8396e978fb9f36916b76cc9c"
+      },
+      "discovery_details": {
+        "source": "7554de4db1e3025968a56f6ce1ebe9fc59600ec9d380abd6662a4f716dbe7fb2",
+        "translation": "d8de3fd0b789fce915165ded28c0bc9dcdc3506d5fcffc2a212c1555766deefc"
+      },
+      "discovery_back": {
+        "source": "c782b0b710e614a6e7e10044074a8bc05a55394820796c32cf4b4ffd57cc6260",
+        "translation": "955977c272e1258573676ab56d9f442468fb38d918b2790484b27f3f281b3bc8"
+      },
+      "discovery_previous": {
+        "source": "1f8f6d29b2adac1399f250b0e5ddc9ae0e4a8841e7fd75cd035a94555df39c8a",
+        "translation": "415a3e208b924a9427c2fd0642c506917d9274196d6a8652ec9a89919118c60e"
+      },
+      "discovery_next": {
+        "source": "9875220488d8a775b423484b7edd3969af2b8f8124e912c7545fda5e16d5ba6f",
+        "translation": "d82391cec5ebb65dbacec25c10927f34b3f67d173284da54ee7965b47ee6d0df"
+      },
+      "discovery_page": {
+        "source": "3fe4ac998b2ca93a86c6af82595a5698c64506fa2b5dee1aa3b5836a61c93c10",
+        "translation": "78aeb2dba67ce0362942548e361167af0c0e48a58a6bb238c179f46c3b231816"
+      },
+      "discovery_demo": {
+        "source": "c50d70312c20d40d902046f772bb9bde14f63f858c36571998906e2d5fe2321b",
+        "translation": "e57053c974dd5d50cc0a2906689ac20b45b3c1ae3aad062975ceb77957b02dd1"
+      },
+      "discovery_sourced": {
+        "source": "ece1a99bd26cc3bd6710455e3dbf957d929a563f171475220e9aebd481c3d098",
+        "translation": "86e139201a5ddac5cbb78d36986d8f3d8b1b51321f9dbf39988a4efb2d6d4d84"
+      },
+      "discovery_member": {
+        "source": "ccb0de4e6b1f87b0f22686a10732e69a379fbd22a2cf1482e1ee64d49cd6d0b1",
+        "translation": "ad41cb5719951c33ca3ed05172762fcaaa81de867ab407f217d35ac89f28fad6"
+      },
+      "discovery_origin_unknown": {
+        "source": "68b9782207fa9aca98c38e666557766afa2f8b7f6eb9687f0e2cb471afb8613e",
+        "translation": "8a3f7d5cfd32ac7960a3c1cdc5a8984661679276e3800f21cfac4cb2873f253b"
+      },
+      "discovery_non_participation": {
+        "source": "e6cfb461ac4e6232ae0ff5393ddfb16338f9c224e6f0f989b61ac30cffcfc656",
+        "translation": "e99d61971b5c40ae0760d24c4e041c0f5cd708f412cca66bfe165fc4ee6aec6f"
+      },
+      "discovery_type_unknown": {
+        "source": "16388ab7926cf1e5bfcbe7afa3996d8328274d9dc29566572ab46265b5af66f2",
+        "translation": "5759e979d4f9c4a554df35502267d05091757349397be3ad3fcfa162f7867d84"
+      },
+      "discovery_service_area": {
+        "source": "74f5f218161624769b4f9462440348029ebba10aceb2a7970e7b2a75a6e0c9b7",
+        "translation": "ce327c12f9b1b3a97067f613b45d975b8864524268da90baa5448597ecb631d0"
+      },
+      "discovery_hours": {
+        "source": "19fe63d846093f969326730b3bc4433cae44718b55980155947388b20af02119",
+        "translation": "b9d3c8fe5131a8ecfc1a702d0a8cd581bbbdc72bc4308ce481b15a3efe1d9cb7"
+      },
+      "discovery_eligibility": {
+        "source": "6975d33b3f2ceb26ccaffd37d380dcbc432c43b82be28888a633be8d2b9f4f56",
+        "translation": "c852d157f993120931395c6f17a001e4e0c75adddb1734343a54c2c12dd3e3f2"
+      },
+      "discovery_phone": {
+        "source": "e624a8df48cd4ef9395ab010f67a8489f45cb7b897fae8a771025acb2445be4f",
+        "translation": "981dab4ee3036172fd52d60ed92e9f51f2990806a088c11e9e547e4e502fe5b7"
+      },
+      "discovery_website": {
+        "source": "a2a379b5ccc03c84315c9bb58dd9e8147520b8fdf5d1d414bafe32cede8b5212",
+        "translation": "74c5de9af86835866013689aa0338aa01f9bbd10463b385ed49c8b73863d5bc0"
+      },
+      "discovery_source": {
+        "source": "b2d27d48559ae6d800d4c8cf8f9074a3fab6b646952480d070c3041be1817477",
+        "translation": "35920d2fb1b39dd805cb7659358e239c81855387e1981a78a1949254a9d8d102"
+      },
+      "discovery_source_url": {
+        "source": "b9e062dc2bda190449f63b75ab6f92f0df0ad5f9bfe12136146ec25845ae957a",
+        "translation": "04183a054c4b5bdedc9052508754e11af598f8c9665d4ecee611fede074550fa"
+      },
+      "discovery_retrieved": {
+        "source": "df1929249f92aedb92bbe40cc6b6fdfc79ac2223cbf69622ea0c5b0ac594dfd2",
+        "translation": "2368b5422dea92c1e9e9c45c59395671c89f228dc094ac214ad26f71b78094fb"
+      },
+      "discovery_verified": {
+        "source": "893addd41cd2c3ce2650c7d3be4c52f1041b4eba5324ee66526e08cfbf956cde",
+        "translation": "f1da0df916fc329872c61426fa13bc8b406972ffa10b18023af8b28831aa5fac"
+      },
+      "discovery_capabilities": {
+        "source": "c83924e44cbd3add28ddcda64dd38c3245aedf12952c9b5c0c5277c3eab72dd1",
+        "translation": "84452a2262e35321fe1cb7ac243cb700265a3b5e228088fd9d807162e4e36982"
+      },
+      "discovery_languages": {
+        "source": "5169423f946f66cce62d3a938df7316453f55a585c2c7b263b5f966d66a43eb9",
+        "translation": "9c11a44032c3567ec4823d78b9d03d387cdd60891ea9d72ddc6f3619fdd3aac8"
+      },
+      "discovery_linked_resource": {
+        "source": "920698d5c37193ff4e1355afc9112f521371e75649b7b1fbbaf6928f64555509",
+        "translation": "9aa44fde9b9bc028ed3f951cd04709bffe6ed170510baacbaaf909d58491e7a7"
+      },
+      "category_food": {
+        "source": "8516a5bf994fdabe9f45c2bea7d7c3bc713822597196aba66fc2baf7824a33d4",
+        "translation": "7956bdd8edd0070b7e9fde2299527c9849e7aa9c30be6d4cded74ac8666783a3"
+      },
+      "category_shelter": {
+        "source": "06706dd960ecdc32f650f83f6cb3339fe46daba2667d2abcc7e7f5ba37745953",
+        "translation": "53e10580512d9206266447619d78736fb7cc6e8c2b5bb374c9cf85c54d29a15f"
+      },
+      "category_medical": {
+        "source": "0c7456b917dba66d6de248417a899a14c63453f2e2e1d3e0a567c565dc3a7f03",
+        "translation": "d70e97adb719873415b4f49e4b6d70cf7eab440a40d7266957b0caef59371625"
+      },
+      "category_transport": {
+        "source": "f85406d0e42ea03c108372b7ed91d81d8487863e2305a0a1ae0fafeaee59bbf1",
+        "translation": "776363efc4245daee296f8685cd26ed192874dcfaac5678ebc699a595edb81ea"
+      },
+      "category_childcare": {
+        "source": "8c48a5ed01e933e4a6574f819c090e0ba488aa01e833c2d224b1e5baa7a27c84",
+        "translation": "7c23325652aa05102f021c15efd73a69ee826e7f13d2ada5b0c3fea02a38ace4"
+      },
+      "category_other": {
+        "source": "3fb397ac96a28dc80d29d40343315d9b0fa19522837ae0fd4361d899f25bf9a6",
+        "translation": "47d9146a30dac07db1185783b99a2ecfe4bbe85fc8e53943a364436e9c3fada6"
+      },
+      "category_food_bank": {
+        "source": "46c691db1e5204a466ba9d1f808c7c0413c1c3180a654bff3021a5e921722365",
+        "translation": "4b607df3d1fbbf92a2cb1ea9ece8d9fc2ff61722c065751ad2a81177b425475b"
+      },
+      "category_clinic": {
+        "source": "45bc3614eb856f98fba81c4152f60849592c399704f29bee97d9e41fbd4ecd94",
+        "translation": "c4e103041774de2c91935cd6791078ce4a46e144e1e44cf3f597501adba11f4c"
+      },
+      "category_legal_aid": {
+        "source": "23312fd2efa32429939dff2ccd879a41d5984bc91c6b538dcfe3339c667f3d8c",
+        "translation": "3bfcc66e5deef57cfaf171352e05c777f4cbdd72c1c606a7012ebcdbe62895b8"
+      },
+      "category_hotline": {
+        "source": "d08991b6ede7d2fcd0028710e97a2b92fd35a9d4b62a70abff5e1e07a2da209c",
+        "translation": "c6824705b9f3311d265d6e8374d9fa7282aa274ff7ee9ac163d1d3cef9895ef6"
+      },
+      "category_library": {
+        "source": "e9aba0809d8cd0cecba6d323c82fcb5ef8b4e6d350241124277e1da6e7c8347d",
+        "translation": "4155f9d3709412f71e0d53745f381b469256bbc697308bb49c1dbe49162a4599"
+      },
+      "category_unknown": {
+        "source": "492c4ce1ed1c4e24208641a2239d34291257abe8e124aa456e008d25e9001553",
+        "translation": "7e800f416c6da2fa19f2f866cad8fa3aa1400c599eb346712aeda3bedebf6c26"
+      },
+      "status_open": {
+        "source": "bb6363375725fdc6c38e723f6770149de0b837c7f5e67a7d43e0d055ae73f63d",
+        "translation": "570cf1bac67ebf1f4393a141fb9867e630578f8d86f1d49f761054986d583f28"
+      },
+      "status_in_progress": {
+        "source": "6ffa74496faf0aae177c0acf3b13a27289e7897683c298be38e502dbf336a29e",
+        "translation": "5d3d4a15e34333dca2c6aaf9f6f364a82a1dfa767820cc288cd865465d253a1c"
+      },
+      "status_resolved": {
+        "source": "11ace7a6578b99e24444ddd847eecd9f51038257aec025e06767eae3090294d3",
+        "translation": "1a7857985d0a456952c095188581e76cd644c7a8c6a9efaded3d622137e2cfb4"
+      },
+      "status_closed": {
+        "source": "4c16e43a080522194d3b1eafdec9c986786b498eee140c39a4f893ceb8c9c97a",
+        "translation": "86aab86fc46de7118cb4fc533a3425efe8425540c0b7b645d6503240ebe3b1c6"
+      },
+      "status_unverified": {
+        "source": "61aa6926ea9f31f9a4b09206e98941ebf238ab6d2dab3161f2926861f27f13e6",
+        "translation": "ebcda8cd3d2e6e0c34454bccd843f8adce42a79d3f2555db8f0fe4ae747a176d"
+      },
+      "status_community_verified": {
+        "source": "281800fd049757bc2a1d5207c7e220426722c7241afc9b45173b8d7d40e931ec",
+        "translation": "d6ac7cc46e033e86289939caa036e2e8442f6ec9c6f52a47e5a1665c36c2252c"
+      },
+      "status_partner_verified": {
+        "source": "63f7304d92a77d7d2ffc9a332262053b62b26bcd05253bbe0dde0f55dffc7090",
+        "translation": "7ff03205a7a2789ea0094b3a7c5d216839df23abdfae52537429c43f02e2f85d"
+      },
+      "status_immediate": {
+        "source": "48ee3269ea465d3f6d5b63369ff8a0355c3a3b5db0f86aa760a74bd85fed8f61",
+        "translation": "336a746825c74d448f6011eb27e26485eb367a2d872e6b117e044df305bf2338"
+      },
+      "status_within_day": {
+        "source": "cacc925427e043bfd29e3c2284146e3f6d0d6b39fa2cd4879fbe1f3ef9f60b61",
+        "translation": "f46dbc789df2636c19798b92c825654e532293d0dd1c1d025c8adc8a334b195f"
+      },
+      "status_scheduled": {
+        "source": "8ce6d908d5cf152342b3a3b4fd469f349c483ee3faff11f2a2e6b1a954d4d0b5",
+        "translation": "e38efa4c4154ac7446013d4de5469301fa128cbae17fc9e808ba9cacd111e5c5"
+      },
+      "status_unavailable": {
+        "source": "b92472517ca075e7988d0b74d19b539f85fc7dabaa3d0b1052a8cbad87486414",
+        "translation": "72cbff44a3042df3533030991b591db3e704e7d44507f6093ae6fa50b7c86302"
+      },
+      "status_unknown": {
+        "source": "df05b3a070b6925ff35aab9000943f690cd92d390d65cf115db93833960b7a6c",
+        "translation": "d761abe1b86476485924d7f80177492614f92f30350b9c94a197c4cf47d3a5b0"
+      },
+      "discovery_time_unknown": {
+        "source": "df61dccac7af6d6f6d159413061e0c09eee31f34910a3642a3394d620d65a7c3",
+        "translation": "4a66434fd38c24b42429f4b89b8910b503a13ce004ebcde448984b21edfd0713"
       }
     }
   }

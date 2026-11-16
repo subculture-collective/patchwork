@@ -1,5 +1,13 @@
 # Mobile wire fixtures, slice 1
 
+The #261 extension adds `discovery-resources`, `discovery-volunteers`,
+`discovery-organizations` (legacy), `discovery-organizations-page` and
+`discovery-organization-profile`. `native-discovery-wire-contracts.test.ts`
+binds them to production query/organization services. The Android decoder/HTTP
+journey tests consume these fixtures; a separate PostgreSQL test verifies bounded
+organization pages and legacy response compatibility. All examples are fictional
+public data. Device qualification remains separate from these contract checks.
+
 Addresses [#247](https://github.com/subculture-collective/patchwork/issues/247).
 These bundled JSON files can be copied into Swift/Kotlin test resources without
 a JavaScript runtime or generated client SDK. This directory is fixture-only;
