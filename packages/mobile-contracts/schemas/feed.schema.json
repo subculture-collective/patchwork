@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Patchwork mobile feed response slice v1",
+  "description": "Reader compatibility fragment. State/category/origin strings remain open for safe unknown-state handling; current server examples are checked against the production presenter.",
+  "type": "object",
+  "required": [
+    "total",
+    "page",
+    "pageSize",
+    "hasNextPage",
+    "results"
+  ],
+  "properties": {
+    "total": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "page": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "pageSize": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "hasNextPage": {
+      "type": "boolean"
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "uri",
+          "authorDid",
+          "title",
+          "summary",
+          "status",
+          "category",
+          "urgency",
+          "ranking"
+        ],
+        "properties": {
+          "uri": {
+            "type": "string"
+          },
+          "authorDid": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "urgency": {
+            "type": "string"
+          },
+          "postType": {
+            "type": "string"
+          },
+          "recordOrigin": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string"
+          },
+          "countyId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "ranking": {
+            "type": "object",
+            "required": [
+              "distanceBandScore",
+              "recencyScore",
+              "trustScore",
+              "finalScore"
+            ],
+            "properties": {
+              "distanceBandScore": {
+                "type": "number"
+              },
+              "recencyScore": {
+                "type": "number"
+              },
+              "trustScore": {
+                "type": "number"
+              },
+              "finalScore": {
+                "type": "number"
+              }
+            },
+            "additionalProperties": true
+          },
+          "approximateGeo": {
+            "type": "object",
+            "required": [
+              "latitude",
+              "longitude",
+              "precisionKm"
+            ],
+            "properties": {
+              "latitude": {
+                "type": "number"
+              },
+              "longitude": {
+                "type": "number"
+              },
+              "precisionKm": {
+                "type": "number",
+                "minimum": 1
+              }
+            },
+            "additionalProperties": true
+          },
+          "distanceKm": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "projectionFreshness": {
+      "type": "object",
+      "required": [
+        "latestCursor",
+        "projectedAt",
+        "lagSeconds"
+      ],
+      "properties": {
+        "latestCursor": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "projectedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "observedAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lagSeconds": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "INVALID_QUERY",
+    "message": "Query parameters failed validation."
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "INTERNAL_ERROR",
+    "message": "The server could not complete the request.",
+    "requestId": "mobile-fixture-request"
+  }
+}

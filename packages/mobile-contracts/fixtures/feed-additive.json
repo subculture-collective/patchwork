@@ -1,0 +1,38 @@
+{
+  "total": 1,
+  "page": 1,
+  "pageSize": 20,
+  "hasNextPage": false,
+  "results": [
+    {
+      "uri": "at://did:example:mobile-fixture/app.patchwork.aid.post/demo",
+      "authorDid": "did:example:mobile-fixture",
+      "cid": "demo-cid",
+      "createdAt": "2026-11-15T12:00:00.000Z",
+      "updatedAt": "2026-11-15T12:00:00.000Z",
+      "recordOrigin": "synthetic",
+      "title": "Share spare groceries",
+      "summary": "Fictional example for native contract tests.",
+      "postType": "offer",
+      "category": "food",
+      "urgency": "low",
+      "status": "future-state",
+      "ranking": {
+        "distanceBandScore": 0.3,
+        "recencyScore": 1,
+        "trustScore": 0.5,
+        "finalScore": 0.585
+      },
+      "futureField": true
+    }
+  ],
+  "projectionFreshness": {
+    "latestCursor": null,
+    "projectedAt": "2026-11-15T12:00:00.000Z",
+    "observedAt": null,
+    "lagSeconds": null
+  },
+  "serverExtension": {
+    "version": 2
+  }
+}

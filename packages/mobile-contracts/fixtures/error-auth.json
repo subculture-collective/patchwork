@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "AUTHENTICATION_REQUIRED",
+    "message": "An authenticated session is required.",
+    "requestId": "mobile-fixture-request"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "total": 0,
+  "page": 1,
+  "pageSize": 20,
+  "hasNextPage": false,
+  "results": [],
+  "projectionFreshness": {
+    "latestCursor": null,
+    "projectedAt": null,
+    "observedAt": null,
+    "lagSeconds": null
+  }
+}
