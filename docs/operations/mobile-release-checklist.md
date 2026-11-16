@@ -1,5 +1,11 @@
 # Mobile Release Checklist
 
+The 2026-11-15 owner decision replaces the React Native strategy with separate
+Swift/SwiftUI and Kotlin/Jetpack Compose apps. Use the
+[native delivery plan](../superpowers/plans/2026-11-15-native-mobile-apps.md)
+for the agreed first-beta scope and new device/release gates. The matrix below
+is historical and must not be copied as a current supported-device list.
+
 Tracks: [native implementation #60](https://github.com/subculture-collective/patchwork/issues/210) and [native release #61](https://github.com/subculture-collective/patchwork/issues/211).
 
 This is a historical checklist, not a supported-device or release-completion claim. Refresh the device/OS matrix and provider-hosted OAuth scenarios before use; Patchwork must not collect an AT account password.

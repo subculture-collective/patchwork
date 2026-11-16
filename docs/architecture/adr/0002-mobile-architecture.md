@@ -1,7 +1,11 @@
 # ADR-0002: Mobile client architecture
 
-- Status: Accepted
+- Status: Superseded by [ADR-0005](0005-separate-native-mobile-apps.md)
 - Date: 2026-03-02
+
+On 2026-11-15, the product owner replaced this React Native decision with
+separate Swift/SwiftUI and Kotlin/Jetpack Compose applications. The original
+decision below remains as history; it does not direct new implementation.
 
 ## Context
 

@@ -78,7 +78,12 @@ does not waive them or infer launch approval from an already accessible site.
 ## Deferred and optional scope
 
 Native client files and offline-sync primitives are scaffolding/design inputs,
-not device or offline-delivery qualification. Track native implementation/release
+not device or offline-delivery qualification. The 2026-11-15 owner interview
+approved planning separate Swift/SwiftUI and Kotlin/Jetpack Compose apps;
+[ADR-0005](./architecture/adr/0005-separate-native-mobile-apps.md) and the
+[native delivery plan](./superpowers/plans/2026-11-15-native-mobile-apps.md)
+replace the earlier React Native direction. Native implementation and release
+remain unqualified. Track native implementation/release
 in [#60](https://github.com/subculture-collective/patchwork/issues/210) and
 [#61](https://github.com/subculture-collective/patchwork/issues/211), read-only
 offline packs in [#58](https://github.com/subculture-collective/patchwork/issues/208),
