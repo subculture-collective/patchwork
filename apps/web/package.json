@@ -19,7 +19,7 @@
         "@patchwork/at-lexicons": "file:../../packages/at-lexicons",
         "@patchwork/shared": "file:../../packages/shared",
         "@protomaps/basemaps": "^5.7.2",
-        "i18next": "^24.2.2",
+        "i18next": "^26.3.4",
         "leaflet": "^1.9.4",
         "protomaps-leaflet": "^5.1.0",
         "react": "19.2.9",
